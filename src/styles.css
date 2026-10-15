@@ -1,0 +1,196 @@
+:root {
+  --bg: #f3f5f4;
+  --card: #ffffff;
+  --text: #1a1f1d;
+  --muted: #5d6964;
+  --border: #dde3e0;
+  --accent: #1d6b57;
+  --danger: #b42318;
+
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101412;
+    --card: #1a1f1d;
+    --text: #e4e9e6;
+    --muted: #9aa5a0;
+    --border: #2c3431;
+    --danger: #f97066;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+header {
+  padding: 0.75rem 1rem;
+  background: var(--accent);
+  color: #fff;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+main {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+h2 {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1.4rem;
+}
+
+.hint {
+  margin: 0 0 1rem;
+  color: var(--muted);
+}
+
+.card {
+  margin-bottom: 1rem;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+h3 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0.75rem 1rem 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+h3 span {
+  text-transform: none;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  border-top: 1px solid var(--border);
+}
+
+/* Formulärelement ärver inte typsnittet av sig själva. Minst 16px, annars zoomar iPhone in vid fokus. */
+button,
+input,
+select {
+  font: inherit;
+  font-size: 1rem;
+  color: inherit;
+}
+
+button {
+  padding: 0.6rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button.danger {
+  margin-left: auto;
+  color: var(--danger);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+}
+
+@media (hover: hover) {
+  .row:hover {
+    background: var(--bg);
+  }
+}
+
+.row,
+h3,
+.total {
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 1rem;
+  padding: 0 1rem;
+  font-size: 1.05rem;
+}
+
+.add {
+  width: 100%;
+}
+
+.category-form {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+input,
+select {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+}
+
+.error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
