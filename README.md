@@ -24,9 +24,13 @@ npm run preview   # visar den byggda appen på http://localhost:4173
 
 Offline-stödet (service workern) är bara aktivt i den byggda appen.
 
-## Installera på mobilen
+## Publicera och installera på mobilen
 
-Appen måste ligga på en webbplats med https för att gå att installera. Lägg upp innehållet i `dist/` på en tjänst för statiska webbplatser, till exempel GitHub Pages, Netlify eller Cloudflare Pages. Öppna sedan adressen på mobilen:
+Appen publiceras automatiskt på **https://erikkjellsten99-lgtm.github.io/Budgetapp/** varje gång `main` uppdateras. Det sköts av arbetsflödet `.github/workflows/deploy.yml`, och du kan följa det under fliken Actions på GitHub.
+
+Första gången behöver GitHub Pages slås på: **Settings → Pages → Build and deployment → Source: GitHub Actions**. Har en publicering misslyckats för att Pages inte var påslaget kör du arbetsflödet igen under Actions → Publicera → Run workflow.
+
+Öppna adressen på mobilen och installera appen:
 
 - **iPhone (Safari):** Dela-knappen → Lägg till på hemskärmen.
 - **Android (Chrome):** menyn ⋮ → Installera app.
