@@ -38,7 +38,9 @@ export default function Assets({ onChange }: AssetsProps) {
   }
 
   const sorted = [...assets].sort((a, b) => a.name.localeCompare(b.name, 'sv'));
-  const total = assets.reduce((sum, asset) => sum + asset.amount, 0);
+  const total = assets
+    .filter((asset) => !asset.spending)
+    .reduce((sum, asset) => sum + asset.amount, 0);
 
   return (
     <>
