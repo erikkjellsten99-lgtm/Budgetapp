@@ -26,6 +26,15 @@ export interface Transaction {
   note: string;
 }
 
+/** Pengar du är skyldig någon. */
+export interface Debt {
+  id: string;
+  /** Vem du är skyldig, t.ex. "Mamma". */
+  name: string;
+  /** Kvar att betala i kronor. */
+  amount: number;
+}
+
 /** Inkomsten för en månad. Det finns högst en post per månad. */
 export interface MonthlyIncome {
   /** Månad som "2026-10". Fungerar som nyckel. */
