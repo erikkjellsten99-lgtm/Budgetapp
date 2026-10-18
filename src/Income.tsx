@@ -9,6 +9,11 @@ interface IncomeProps {
 }
 
 /** Månadens inkomst: CSN och RZ Zampart. */
+/** "2026-10" som "oktober 2026". */
+function monthName(month: string): string {
+  return new Date(`${month}-01T12:00`).toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
+}
+
 export default function Income({ income, onChanged }: IncomeProps) {
   const [editing, setEditing] = useState(false);
   const [csn, setCsn] = useState('');
@@ -27,7 +32,7 @@ export default function Income({ income, onChanged }: IncomeProps) {
   return (
     <section className="card">
       <h3>
-        Inkomst {income.month} <span>{formatKr(income.csn + income.other)}</span>
+        Inkomst {monthName(income.month)} <span>{formatKr(income.csn + income.other)}</span>
       </h3>
       {editing ? (
         <form

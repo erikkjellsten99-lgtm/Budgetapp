@@ -431,13 +431,6 @@ h3,
   gap: 0.85rem;
 }
 
-.overview-breakdown h3 {
-  min-height: 2.6rem;
-  color: var(--text);
-  font-size: 0.88rem;
-  letter-spacing: -0.01em;
-  text-transform: none;
-}
 
 .overview-breakdown p + p {
   border-top: 1px solid var(--border);
@@ -446,8 +439,7 @@ h3,
 .net-worth-card {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 1rem 0 0.85rem;
+  padding: 0.2rem 0 0.85rem;
 }
 
 .net-worth-card > .eyebrow {
@@ -456,7 +448,7 @@ h3,
 
 .net-worth {
   display: block;
-  margin: 0.15rem 1rem 0.8rem;
+  margin: 0.1rem 1rem 0.8rem;
   font-size: clamp(1.9rem, 8vw, 2.5rem);
   line-height: 1.05;
   font-weight: 680;
@@ -823,6 +815,81 @@ main > div > h2 + .hint {
 .net-worth-card p.net-worth-detail {
   display: flex;
   justify-content: space-between;
+}
+
+/* Ikoner i menyn: syns i mobilens bottenmeny, döljs på större skärmar. */
+.nav-icon {
+  display: none;
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 639px) {
+  .nav-icon {
+    display: block;
+  }
+
+  .nav-item {
+    border: 0;
+    background: transparent;
+  }
+
+  .nav-item.active {
+    background: transparent;
+    color: var(--accent);
+    font-weight: 700;
+  }
+}
+
+/* Sparmålet i liten form på översikten. Hela kortet är en knapp till fliken Sparmål. */
+.goal-summary {
+  display: grid;
+  gap: 0.6rem;
+  width: 100%;
+  margin-top: 0;
+  padding: 0.9rem 1rem 1rem;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-summary-head {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.goal-summary-head span:last-child {
+  font-size: 1.2rem;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.goal-summary-amount {
+  color: var(--muted);
+}
+
+.goal-summary-amount strong {
+  color: var(--text);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.goal-summary .bar {
+  display: block;
+}
+
+.goal-summary-status {
+  font-weight: 650;
 }
 
 :focus-visible {

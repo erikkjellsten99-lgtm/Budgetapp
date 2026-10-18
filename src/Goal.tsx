@@ -19,7 +19,7 @@ interface Projection {
  * Ränta på ränta: varje månad växer saldot med månadens avkastning och månadssparandet läggs till.
  * Kurvan räknas tills målet är nått (avrundat uppåt till helt år) och minst 10 år framåt, så att ränta-på-ränta-effekten syns.
  */
-function project(start: number, goal: SavingsGoal): Projection {
+export function project(start: number, goal: SavingsGoal): Projection {
   const monthlyRate = Math.pow(1 + goal.annualReturn / 100, 1 / 12) - 1;
   const withReturn = [start];
   const depositsOnly = [start];
@@ -36,7 +36,7 @@ function project(start: number, goal: SavingsGoal): Projection {
 }
 
 /** Datum om ett antal månader, t.ex. "mars 2031". */
-function monthLabel(monthsFromNow: number): string {
+export function monthLabel(monthsFromNow: number): string {
   const date = new Date();
   date.setDate(1);
   date.setMonth(date.getMonth() + monthsFromNow);
@@ -44,7 +44,7 @@ function monthLabel(monthsFromNow: number): string {
 }
 
 /** T.ex. "4 år och 3 månader". */
-function durationLabel(months: number): string {
+export function durationLabel(months: number): string {
   const years = Math.floor(months / 12);
   const rest = months % 12;
   const parts = [];
@@ -68,15 +68,33 @@ function niceStep(max: number): number {
 
 interface GoalProps {
   assets: Asset[];
+  /** Får målet när det har lästs in och varje gång det ändras. */
+  onChange?: (goal: SavingsGoal) => void;
+}
+
+/** Summan av kontona som räknas mot målet. */
+export function goalCurrent(goal: SavingsGoal, assets: Asset[]): number {
+  return assets.filter((asset) => goal.assetIds.includes(asset.id)).reduce((sum, asset) => sum + asset.amount, 0);
+}
+
+/** Kort text om när målet nås, t.ex. "Målet nås i mars 2029, om 2 år och 5 månader." */
+export function goalStatus(reachedAt: number | null): string {
+  if (reachedAt === 0) return 'Målet är nått!';
+  if (reachedAt === null) return 'Med de här siffrorna nås målet inte inom 40 år. Öka månadssparandet.';
+  return `Målet nås i ${monthLabel(reachedAt)}, om ${durationLabel(reachedAt)}.`;
 }
 
 /** Sparmålet med en prognos över när målet nås. */
-export default function Goal({ assets }: GoalProps) {
+export default function Goal({ assets, onChange }: GoalProps) {
   const [goal, setGoal] = useState<SavingsGoal | null>(null);
 
   useEffect(() => {
     getGoals().then((goals) => setGoal(goals[0] ?? null));
   }, []);
+
+  useEffect(() => {
+    if (goal) onChange?.(goal);
+  }, [goal]);
 
   if (!goal) return null;
 
@@ -106,11 +124,7 @@ export default function Goal({ assets }: GoalProps) {
             <div style={{ width: `${progress * 100}%` }} />
           </div>
           <p className="goal-result">
-            {projection.reachedAt === 0
-              ? 'Målet är nått!'
-              : projection.reachedAt === null
-                ? 'Med de här siffrorna nås målet inte inom 40 år. Öka månadssparandet.'
-                : `Målet nås i ${monthLabel(projection.reachedAt)}, om ${durationLabel(projection.reachedAt)}.`}
+            {goalStatus(projection.reachedAt)}
           </p>
           <GoalChart projection={projection} target={goal.target} />
           <div className="goal-inputs">

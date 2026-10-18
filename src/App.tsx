@@ -3,20 +3,21 @@ import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import { currentMonth, getCategories, getIncome } from './db';
 import Debts from './Debts';
-import Goal from './Goal';
+import Goal, { goalCurrent, goalStatus, project } from './Goal';
 import Income from './Income';
 import { formatKr } from './money';
-import type { Asset, Category, MonthlyIncome } from './types';
+import type { Asset, Category, MonthlyIncome, SavingsGoal } from './types';
 
 type View = 'overview' | 'goal' | 'budget' | 'assets' | 'debts';
 
 /** Flikarna i menyn. Kort namn används i mobilens bottenmeny. */
-const VIEWS: { id: View; label: string; short: string }[] = [
-  { id: 'overview', label: 'Översikt', short: 'Översikt' },
-  { id: 'goal', label: 'Sparmål', short: 'Sparmål' },
-  { id: 'budget', label: 'Inkomst & kategorier', short: 'Budget' },
-  { id: 'assets', label: 'Tillgångar', short: 'Konton' },
-  { id: 'debts', label: 'Skulder', short: 'Skulder' },
+const VIEWS: { id: View; label: string; short: string; icon: string }[] = [
+  // Ikonerna är enkla linjer i ett 24×24-rutnät (SVG-sökvägar), ritade för appen.
+  { id: 'overview', label: 'Översikt', short: 'Översikt', icon: 'M4 11l8-7 8 7M6 9.5V20h4.5v-5.5h3V20H18V9.5' },
+  { id: 'goal', label: 'Sparmål', short: 'Sparmål', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01' },
+  { id: 'budget', label: 'Inkomst & kategorier', short: 'Budget', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
+  { id: 'assets', label: 'Tillgångar', short: 'Konton', icon: 'M3 7.5h18v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5zM3 7.5l2-3.5h14l2 3.5M16 14h2' },
+  { id: 'debts', label: 'Skulder', short: 'Skulder', icon: 'M7 4h10a1 1 0 0 1 1 1v15l-3-2-3 2-3-2-3 2V5a1 1 0 0 1 1-1zM9 9h6M9 13h4' },
 ];
 
 /** Senast öppnade flik, så att appen öppnas där du var. */
@@ -32,6 +33,7 @@ function savedView(): View {
 
 export default function App() {
   const [view, setView] = useState<View>(savedView);
+  const [goal, setGoal] = useState<SavingsGoal | null>(null);
 
   function showView(next: View) {
     setView(next);
@@ -67,6 +69,8 @@ export default function App() {
   const netWorth = sumAmounts(assets.filter((asset) => !asset.spending));
   const spendingTotal = sumAmounts(assets.filter((asset) => asset.spending));
 
+  const goalNow = goal ? goalCurrent(goal, assets) : 0;
+  const goalPercent = goal && goal.target > 0 ? Math.min(100, Math.round((goalNow / goal.target) * 100)) : 0;
   const month = new Date().toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
 
   return (
@@ -82,6 +86,9 @@ export default function App() {
               aria-current={item.id === view ? 'page' : undefined}
               onClick={() => showView(item.id)}
             >
+              <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d={item.icon} />
+              </svg>
               <span className="nav-label">{item.label}</span>
               <span className="nav-short-label">{item.short}</span>
             </button>
@@ -121,7 +128,7 @@ export default function App() {
               </p>
             </section>
             <section className="card summary net-worth-card">
-              <p className="eyebrow">NETTOVÄRDE (SPARKONTON)</p>
+              <h3>Nettovärde (sparkonton)</h3>
               <strong className={netWorth < 0 ? 'net-worth negative' : 'net-worth'}>{formatKr(netWorth)}</strong>
               {spendingTotal > 0 && (
                 <p className="net-worth-detail">
@@ -132,15 +139,24 @@ export default function App() {
               <p className="note">Skulderna betalas med månadens inkomst och är redan avdragna i budgeten.</p>
             </section>
           </div>
-          {VIEWS.filter((item) => item.id !== 'overview').map((item) => (
-            <button key={item.id} type="button" className="overview-link" onClick={() => showView(item.id)}>
-              {item.label}
-              <span aria-hidden="true">›</span>
+          {goal && (
+            <button type="button" className="card goal-summary" onClick={() => showView('goal')}>
+              <span className="goal-summary-head">
+                <span>{goal.name}</span>
+                <span aria-hidden="true">›</span>
+              </span>
+              <span className="goal-summary-amount">
+                <strong>{formatKr(goalNow)}</strong> av {formatKr(goal.target)} · {goalPercent} %
+              </span>
+              <span className="bar" aria-hidden="true">
+                <span style={{ width: `${goalPercent}%` }} />
+              </span>
+              <span className="goal-summary-status">{goalStatus(project(goalNow, goal).reachedAt)}</span>
             </button>
-          ))}
+          )}
         </div>
         <div hidden={view !== 'goal'}>
-          <Goal assets={assets} />
+          <Goal assets={assets} onChange={setGoal} />
         </div>
         <div hidden={view !== 'budget'}>
           <Income income={income} onChanged={reload} />
