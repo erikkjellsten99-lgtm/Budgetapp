@@ -1206,6 +1206,24 @@ main > div > h2 + .hint {
   border-top: 1px solid var(--border);
 }
 
+.category-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-list > .item-wrap.dragging > .category-row {
+  background: var(--accent-soft);
+  box-shadow: var(--shadow);
+}
+
+.category-row .item-handle {
+  width: 2.4rem;
+  min-height: auto;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;

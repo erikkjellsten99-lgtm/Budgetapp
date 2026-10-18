@@ -16,6 +16,8 @@ export interface Category {
   monthlyBudget: number;
   /** Egna rader under kategorin, t.ex. Claude och ChatGPT under Övriga kostnader. */
   items?: CategoryItem[];
+  /** Plats i gruppen (0 = överst). Saknas tills kategorin har flyttats. */
+  order?: number;
   /** Månaden ("2026-10") då kategorin senast markerades som betald. Används när kategorin saknar rader. */
   paidMonth?: string;
 }

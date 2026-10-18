@@ -37,6 +37,14 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
 
   const [focusItem, setFocusItem] = useState<string | null>(null);
 
+  /** Sparar ny ordning för kategorierna i en grupp. */
+  async function reorderCategories(list: Category[]) {
+    for (const [index, category] of list.entries()) {
+      if (category.order !== index) await saveCategory({ ...category, order: index });
+    }
+    await onChanged();
+  }
+
   /** Markerar kategorin som betald eller obetald denna månad. Har den rader gäller det alla rader. */
   async function togglePaid(category: Category) {
     const month = currentMonth();
@@ -62,12 +70,12 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
   return (
     <>
       <h2>Kategorier</h2>
-      <p className="hint">Månadsbudget per kategori. Tryck på en kategori för att ändra den, på + för att lägga till egna rader under den, och dra i ⠿ för att flytta en rad.</p>
+      <p className="hint">Månadsbudget per kategori. Tryck på en kategori för att ändra den, på + för att lägga till egna rader under den, och dra i ⠿ för att flytta en kategori eller rad.</p>
 
       {CATEGORY_TYPES.map(({ type, label }) => {
         const items = categories
           .filter((category) => category.type === type)
-          .sort((a, b) => a.name.localeCompare(b.name, 'sv'));
+          .sort(byOrder);
         return (
           <section key={type} className="card">
             <h3>
@@ -78,9 +86,12 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                 Betalt {formatKr(sumPaid(items))} · kvar {formatKr(sumBudgets(items) - sumPaid(items))}
               </p>
             )}
-            <ul>
-              {items.map((category) => (
-                <li key={category.id}>
+            <SortableList
+              items={items}
+              listClass="category-list"
+              onReorder={reorderCategories}
+              renderItem={(category, categoryHandle) => (
+                <>
                   {editing === category.id ? (
                     <CategoryForm
                       category={category}
@@ -107,11 +118,13 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                       >
                         +
                       </button>
+                      {categoryHandle}
                     </div>
                   )}
                   {editing !== category.id && !!category.items?.length && (
-                    <ItemList
+                    <SortableList
                       items={category.items}
+                      listClass="items"
                       onReorder={(items) => saveItems(category, items)}
                       renderItem={(item, handle) => (
                         <ItemRow
@@ -137,9 +150,9 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                       )}
                     />
                   )}
-                </li>
-              ))}
-            </ul>
+                </>
+              )}
+            />
             {editing === `new:${type}` ? (
               <div className="new-in-group">
                 <CategoryForm defaultType={type} onSave={handleSave} onCancel={() => setEditing(null)} />
@@ -160,6 +173,11 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
 
     </>
   );
+}
+
+/** Sorterar efter vald ordning. Kategorier som aldrig flyttats hamnar sist, i bokstavsordning. */
+function byOrder(a: Category, b: Category): number {
+  return (a.order ?? Infinity) - (b.order ?? Infinity) || a.name.localeCompare(b.name, 'sv');
 }
 
 /** Är posten markerad som betald denna månad? */
@@ -203,17 +221,19 @@ export function sumBudgets(categories: Category[]): number {
   return categories.reduce((sum, category) => sum + category.monthlyBudget, 0);
 }
 
-interface ItemListProps {
-  items: CategoryItem[];
-  onReorder: (items: CategoryItem[]) => void;
-  renderItem: (item: CategoryItem, handle: ReactNode) => ReactNode;
+interface SortableListProps<T extends { id: string; name: string }> {
+  items: T[];
+  onReorder: (items: T[]) => void;
+  renderItem: (item: T, handle: ReactNode) => ReactNode;
+  /** CSS-klass för listan, t.ex. "items" för raderna under en kategori. */
+  listClass: string;
 }
 
 /**
- * Raderna under en kategori. Dra i handtaget (⋮⋮) för att flytta en rad.
+ * En lista där raderna kan flyttas genom att dra i handtaget (⠿): kategorier i en grupp och raderna under en kategori.
  * Byggt med pointer-händelser, så att det fungerar med finger, mus och penna utan bibliotek.
  */
-function ItemList({ items, onReorder, renderItem }: ItemListProps) {
+function SortableList<T extends { id: string; name: string }>({ items, onReorder, renderItem, listClass }: SortableListProps<T>) {
   const [order, setOrder] = useState(items);
   const [dragging, setDragging] = useState<string | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -274,7 +294,7 @@ function ItemList({ items, onReorder, renderItem }: ItemListProps) {
   }, [dragging]);
 
   return (
-    <ul className={dragging ? 'items sorting' : 'items'} ref={listRef}>
+    <ul className={dragging ? `${listClass} sorting` : listClass} ref={listRef}>
       {order.map((item) => (
         <li key={item.id} className={item.id === dragging ? 'item-wrap dragging' : 'item-wrap'}>
           {renderItem(
