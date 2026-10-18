@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { currentMonth, deleteCategory, newId, saveCategory } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import { CATEGORY_TYPES, type Category, type CategoryItem, type CategoryType } from './types';
@@ -7,9 +7,12 @@ interface CategoriesProps {
   categories: Category[];
   /** Anropas efter varje ändring, så att App kan läsa in kategorierna igen. */
   onChanged: () => Promise<void>;
+  /** Månadens inkomster och skulder, för summeringen av vad som kan sparas. */
+  income: number;
+  debts: number;
 }
 
-export default function Categories({ categories, onChanged }: CategoriesProps) {
+export default function Categories({ categories, onChanged, income, debts }: CategoriesProps) {
   // Id på kategorin som redigeras, 'new' när en ny läggs till, annars null.
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -91,7 +94,8 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
           .filter((category) => category.type === type)
           .sort(byOrder);
         return (
-          <section key={type} className="card">
+          <Fragment key={type}>
+          <section className="card">
             <h3>
               {label} <span>{formatKr(sumBudgets(items))}</span>
             </h3>
@@ -196,6 +200,8 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
               </button>
             )}
           </section>
+          {type === 'variable' && <SavingsSummary categories={categories} income={income} debts={debts} />}
+          </Fragment>
         );
       })}
 
@@ -205,6 +211,49 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
       </p>
 
     </>
+  );
+}
+
+/** Summerar fasta och rörliga utgifter och visar hur mycket som kan sparas, jämfört med planerat sparande. */
+function SavingsSummary({ categories, income, debts }: { categories: Category[]; income: number; debts: number }) {
+  const fixed = sumBudgets(categories.filter((category) => category.type === 'fixed'));
+  const variable = sumBudgets(categories.filter((category) => category.type === 'variable'));
+  const planned = sumBudgets(categories.filter((category) => category.type === 'savings'));
+  const canSave = income - fixed - variable - debts;
+  const afterPlan = canSave - planned;
+
+  return (
+    <section className="card summary savings-summary">
+      <h3>Kvar att spara</h3>
+      <p>
+        <span>Inkomster</span>
+        <span>{formatKr(income)}</span>
+      </p>
+      <p>
+        <span>Fasta utgifter</span>
+        <span>− {formatKr(fixed)}</span>
+      </p>
+      <p>
+        <span>Rörliga utgifter</span>
+        <span>− {formatKr(variable)}</span>
+      </p>
+      {debts > 0 && (
+        <p>
+          <span>Skulder</span>
+          <span>− {formatKr(debts)}</span>
+        </p>
+      )}
+      <p className={canSave < 0 ? 'left negative' : 'left'}>
+        <span>Kan sparas per månad</span>
+        <strong>{formatKr(canSave)}</strong>
+      </p>
+      <p className="note">
+        Planerat sparande nedan: {formatKr(planned)}.{' '}
+        {afterPlan >= 0
+          ? `Det blir ${formatKr(afterPlan)} över att spara extra.`
+          : `Det är ${formatKr(-afterPlan)} mer än det som finns kvar.`}
+      </p>
+    </section>
   );
 }
 

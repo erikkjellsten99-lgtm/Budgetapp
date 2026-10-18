@@ -177,7 +177,7 @@ export default function App() {
         </div>
         <div hidden={view !== 'budget'}>
           <Income income={income} onChanged={reload} />
-          <Categories categories={categories} onChanged={reload} />
+          <Categories categories={categories} onChanged={reload} income={totalIncome} debts={debtTotal} />
         </div>
         <div hidden={view !== 'assets'}>
           <Assets onChange={setAssets} />
