@@ -1185,6 +1185,10 @@ main > div > h2 + .hint {
   width: 2rem;
 }
 
+.info.notice {
+  margin: 0 0 0.85rem;
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;

@@ -19,6 +19,13 @@ export default function Account({ sync }: { sync: SyncState }) {
         siffrorna från sin telefon. Allt sparas fortfarande på telefonen, så appen fungerar
         även utan internet.
       </p>
+      {sync.notice && <p className="info notice">{sync.notice}</p>}
+      {!sync.email && sync.pending > 0 && (
+        <p className="info notice">
+          Du är inte inloggad här, så {sync.pending} {sync.pending === 1 ? 'ändring' : 'ändringar'} på den här enheten
+          syns inte för hushållet. Logga in för att skicka dem.
+        </p>
+      )}
       {sync.recovering ? <NewPassword /> : sync.email ? <SignedIn sync={sync} /> : <SignIn />}
     </>
   );
@@ -203,7 +210,10 @@ function SignedIn({ sync }: { sync: SyncState }) {
           <span>{sync.email}</span>
         </p>
         <p className={sync.status === 'fel' ? 'negative' : undefined}>
-          <span>{STATUS_TEXT[sync.status]}</span>
+          <span>
+            {STATUS_TEXT[sync.status]}
+            {sync.pending > 0 && ` · ${sync.pending} ${sync.pending === 1 ? 'ändring väntar' : 'ändringar väntar'}`}
+          </span>
           <span>{sync.lastSynced && sync.status === 'synkad' ? sync.lastSynced.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
         </p>
         {sync.error && <p className="note negative">{sync.error}</p>}

@@ -12,7 +12,9 @@ const SUPABASE_URL = 'https://gnmbtioxwgzdooswpwxy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_WouDt4r7MqW-uJUCy32IvA_GcqHO9o4';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  // Länkar i mejl loggar inte in automatiskt. Annars blir man inloggad i den webbläsare där
+  // länken råkar öppnas (t.ex. Safari eller datorn) och inte i appen på hemskärmen.
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
 });
 
 /** Hur många sekunder bakåt varje hämtning tittar, så att inget missas om två ändringar sker samtidigt. */
@@ -30,9 +32,13 @@ export interface SyncState {
   error: string | null;
   /** Användaren har öppnat länken för nytt lösenord och ska välja ett. */
   recovering: boolean;
+  /** Ett meddelande efter att en länk i mejlet har öppnats, t.ex. att mejladressen är bekräftad. */
+  notice: string | null;
+  /** Antal ändringar på den här enheten som inte har skickats än. */
+  pending: number;
 }
 
-let state: SyncState = { status: 'utloggad', email: null, householdId: null, lastSynced: null, error: null, recovering: false };
+let state: SyncState = { status: 'utloggad', email: null, householdId: null, lastSynced: null, error: null, recovering: false, notice: null, pending: 0 };
 const listeners = new Set<(state: SyncState) => void>();
 
 export function getSyncState(): SyncState {
@@ -63,6 +69,8 @@ let again = false;
 
 /** Startar synken. Anropas en gång när appen startar. */
 export function startSync() {
+  handleEmailLink();
+  updatePending();
   supabase.auth.getSession().then(({ data }) => handleSession(data.session));
   supabase.auth.onAuthStateChange((event, next) => {
     if (event === 'PASSWORD_RECOVERY') setState({ recovering: true });
@@ -72,12 +80,17 @@ export function startSync() {
 
   let pushTimer: number | undefined;
   onDataChange((kind) => {
+    if (kind === 'local') updatePending();
     if (kind !== 'local' || !session) return;
     clearTimeout(pushTimer);
     pushTimer = window.setTimeout(syncNow, 1500);
   });
 
   window.addEventListener('online', () => syncNow());
+  // iPhone pausar appen när den läggs i bakgrunden. Skicka ändringarna direkt i stället för att vänta.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') syncNow();
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') syncNow();
   });
@@ -130,6 +143,7 @@ async function runSync() {
     await push(meta.householdId);
     await pull(meta);
     setState({ status: 'synkad', lastSynced: new Date() });
+    await updatePending();
   } catch (error) {
     console.error(error);
     const offline = !navigator.onLine || (error instanceof TypeError && /fetch/i.test(error.message));
@@ -192,6 +206,34 @@ async function hasOwnData(): Promise<boolean> {
   return records.some((record) => record.store === 'assets' && Number((record.data as { amount?: number }).amount) > 0);
 }
 
+async function updatePending() {
+  setState({ pending: (await getOutbox()).length });
+}
+
+/**
+ * Hanterar länkar från mejlet (bekräfta mejladress, nytt lösenord). Bekräftelsen loggar inte in,
+ * den visar bara att adressen är bekräftad. Länken för nytt lösenord loggar in här så att man kan välja lösenord.
+ */
+async function handleEmailLink() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const type = hash.get('type');
+  const error = hash.get('error_description');
+  if (!type && !error) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  if (error) {
+    setState({ notice: `Länken fungerade inte: ${error}. Försök igen.` });
+  } else if (type === 'recovery') {
+    const access_token = hash.get('access_token');
+    const refresh_token = hash.get('refresh_token');
+    if (access_token && refresh_token) {
+      await supabase.auth.setSession({ access_token, refresh_token });
+      setState({ recovering: true });
+    }
+  } else if (type === 'signup' || type === 'email' || type === 'magiclink') {
+    setState({ notice: 'Mejladressen är bekräftad! Öppna appen på hemskärmen och logga in med mejl och lösenord.' });
+  }
+}
+
 async function push(householdId: string) {
   const outbox = await getOutbox();
   if (!outbox.length) return;
@@ -206,6 +248,7 @@ async function push(householdId: string) {
     })),
   );
   await clearOutbox(outbox);
+  await updatePending();
 }
 
 async function pushRows(rows: object[]) {
