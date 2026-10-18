@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import { currentMonth, getCategories, getIncome } from './db';
 import Debts from './Debts';
@@ -9,6 +10,7 @@ import type { Category, MonthlyIncome } from './types';
 export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [debtTotal, setDebtTotal] = useState(0);
+  const [assetTotal, setAssetTotal] = useState(0);
   const [income, setIncome] = useState<MonthlyIncome>({ month: currentMonth(), csn: 0, other: 0 });
 
   async function reload() {
@@ -53,8 +55,23 @@ export default function App() {
             <strong>{formatKr(leftForSavings)}</strong>
           </p>
         </section>
+        <section className="card summary">
+          <p>
+            <span>Tillgångar</span>
+            <span>{formatKr(assetTotal)}</span>
+          </p>
+          <p>
+            <span>Skulder</span>
+            <span>− {formatKr(debtTotal)}</span>
+          </p>
+          <p className={assetTotal - debtTotal < 0 ? 'left negative' : 'left'}>
+            <span>Nettovärde</span>
+            <strong>{formatKr(assetTotal - debtTotal)}</strong>
+          </p>
+        </section>
         <Income income={income} onChanged={reload} />
         <Categories categories={categories} onChanged={reload} />
+        <Assets onTotalChange={setAssetTotal} />
         <Debts onTotalChange={setDebtTotal} />
       </main>
     </>
