@@ -43,7 +43,7 @@ export default function Assets({ onTotalChange }: AssetsProps) {
   return (
     <>
       <h2>Tillgångar</h2>
-      <p className="hint">Skriv av saldot från Avanza när du vill, t.ex. en gång i månaden.</p>
+      <p className="hint">Skriv av saldona från banken och Avanza när du vill, t.ex. en gång i månaden.</p>
       <section className="card">
         <h3>
           Totalt <span>{formatKr(total)}</span>
