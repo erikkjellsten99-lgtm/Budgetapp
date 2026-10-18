@@ -16,8 +16,8 @@ type View = 'overview' | 'goal' | 'budget' | 'assets' | 'debts' | 'account';
 const VIEWS: { id: View; label: string; short: string; icon: string }[] = [
   // Ikonerna är enkla linjer i ett 24×24-rutnät (SVG-sökvägar), ritade för appen.
   { id: 'overview', label: 'Översikt', short: 'Översikt', icon: 'M4 11l8-7 8 7M6 9.5V20h4.5v-5.5h3V20H18V9.5' },
+  { id: 'budget', label: 'Inkomster & utgifter', short: 'Budget', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
   { id: 'goal', label: 'Sparmål', short: 'Sparmål', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01' },
-  { id: 'budget', label: 'Inkomst & kategorier', short: 'Budget', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
   { id: 'assets', label: 'Tillgångar', short: 'Konton', icon: 'M3 7.5h18v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5zM3 7.5l2-3.5h14l2 3.5M16 14h2' },
   { id: 'debts', label: 'Skulder', short: 'Skulder', icon: 'M7 4h10a1 1 0 0 1 1 1v15l-3-2-3 2-3-2-3 2V5a1 1 0 0 1 1-1zM9 9h6M9 13h4' },
 ];
