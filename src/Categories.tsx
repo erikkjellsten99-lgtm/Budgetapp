@@ -140,6 +140,15 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                 </li>
               ))}
             </ul>
+            {editing === `new:${type}` ? (
+              <div className="new-in-group">
+                <CategoryForm defaultType={type} onSave={handleSave} onCancel={() => setEditing(null)} />
+              </div>
+            ) : (
+              <button type="button" className="group-add" onClick={() => setEditing(`new:${type}`)}>
+                + Ny kategori i {label.toLowerCase()}
+              </button>
+            )}
           </section>
         );
       })}
@@ -149,16 +158,6 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
         <strong>{formatKr(sumBudgets(categories))}</strong>
       </p>
 
-      {editing === 'new' ? (
-        <section className="card">
-          <h3>Ny kategori</h3>
-          <CategoryForm onSave={handleSave} onCancel={() => setEditing(null)} />
-        </section>
-      ) : (
-        <button className="add" onClick={() => setEditing('new')}>
-          + Ny kategori
-        </button>
-      )}
     </>
   );
 }
@@ -373,14 +372,16 @@ function ItemRow({ item, handle, autoFocus, onChange, onDelete, onTogglePaid }: 
 interface CategoryFormProps {
   /** Kategorin som ändras. Saknas när en ny läggs till. */
   category?: Category;
+  /** Typ för en ny kategori, när den läggs till inifrån en grupp. */
+  defaultType?: CategoryType;
   onSave: (category: Category) => void;
   onCancel: () => void;
   onDelete?: () => void;
 }
 
-function CategoryForm({ category, onSave, onCancel, onDelete }: CategoryFormProps) {
+function CategoryForm({ category, defaultType, onSave, onCancel, onDelete }: CategoryFormProps) {
   const [name, setName] = useState(category?.name ?? '');
-  const [type, setType] = useState<CategoryType>(category?.type ?? 'variable');
+  const [type, setType] = useState<CategoryType>(category?.type ?? defaultType ?? 'variable');
   const [budget, setBudget] = useState(
     toInputKr(category?.monthlyBudget),
   );

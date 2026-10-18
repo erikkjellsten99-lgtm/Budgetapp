@@ -1189,6 +1189,23 @@ main > div > h2 + .hint {
   margin: 0 0 0.85rem;
 }
 
+.group-add {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--accent);
+  font-weight: 650;
+  text-align: left;
+}
+
+.new-in-group {
+  border-top: 1px solid var(--border);
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
