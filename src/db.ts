@@ -1,7 +1,7 @@
 import type { Asset, Category, Debt, MonthlyIncome, Transaction } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 type StoreName = 'categories' | 'transactions' | 'income' | 'debts' | 'assets';
 
@@ -25,6 +25,9 @@ const MY_DEBTS: Omit<Debt, 'id'>[] = [
   { name: 'Mamma', amount: 17183 },
   { name: 'Filip', amount: 1000 },
 ];
+
+/** Hushållskontot är dit matpengarna sätts in. */
+const MY_ACCOUNTS = ['Hushållskonto', 'Erik spar', 'Cassandra spar'];
 
 const MY_INCOME = { csn: 18156, other: 29852 };
 
@@ -91,6 +94,18 @@ function openDb(): Promise<IDBDatabase> {
       if (event.oldVersion < 4) {
         const assets = db.createObjectStore('assets', { keyPath: 'id' });
         assets.add({ id: newId(), name: 'Avanza (gemensamt)', amount: 0, updated: '' });
+      }
+
+      if (event.oldVersion < 5) {
+        // Fler konton. Läggs bara till om det inte redan finns ett konto med samma namn.
+        const assets = tx.objectStore('assets');
+        const existing = assets.getAll();
+        existing.onsuccess = () => {
+          const names = (existing.result as Asset[]).map((asset) => asset.name.toLowerCase());
+          for (const name of MY_ACCOUNTS) {
+            if (!names.includes(name.toLowerCase())) assets.add({ id: newId(), name, amount: 0, updated: '' });
+          }
+        };
       }
     };
     request.onsuccess = () => resolve(request.result);
