@@ -35,6 +35,17 @@ export interface Debt {
   amount: number;
 }
 
+/** Något du äger, t.ex. ett sparkonto. Saldot uppdaterar du själv. */
+export interface Asset {
+  id: string;
+  /** T.ex. "Avanza (gemensamt)". */
+  name: string;
+  /** Saldo i kronor. */
+  amount: number;
+  /** Datum då saldot senast uppdaterades, som "2026-10-18". Tomt om det aldrig har fyllts i. */
+  updated: string;
+}
+
 /** Inkomsten för en månad. Det finns högst en post per månad. */
 export interface MonthlyIncome {
   /** Månad som "2026-10". Fungerar som nyckel. */

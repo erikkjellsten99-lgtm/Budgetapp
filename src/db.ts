@@ -1,9 +1,9 @@
-import type { Category, Debt, MonthlyIncome, Transaction } from './types';
+import type { Asset, Category, Debt, MonthlyIncome, Transaction } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
-type StoreName = 'categories' | 'transactions' | 'income' | 'debts';
+type StoreName = 'categories' | 'transactions' | 'income' | 'debts' | 'assets';
 
 /** 5 000 kr var till eget sparande. */
 const SEPARATE_SAVINGS = 10000;
@@ -86,6 +86,11 @@ function openDb(): Promise<IDBDatabase> {
             }
           }
         };
+      }
+
+      if (event.oldVersion < 4) {
+        const assets = db.createObjectStore('assets', { keyPath: 'id' });
+        assets.add({ id: newId(), name: 'Avanza (gemensamt)', amount: 0, updated: '' });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -178,4 +183,24 @@ export function saveDebt(debt: Debt): Promise<void> {
 
 export function deleteDebt(id: string): Promise<void> {
   return write('debts', (store) => store.delete(id));
+}
+
+// Tillgångar
+
+export function getAssets(): Promise<Asset[]> {
+  return read('assets', (store) => store.getAll());
+}
+
+export function saveAsset(asset: Asset): Promise<void> {
+  return write('assets', (store) => store.put(asset));
+}
+
+export function deleteAsset(id: string): Promise<void> {
+  return write('assets', (store) => store.delete(id));
+}
+
+/** Dagens datum som "2026-10-18". */
+export function today(): string {
+  const now = new Date();
+  return `${currentMonth()}-${String(now.getDate()).padStart(2, '0')}`;
 }
