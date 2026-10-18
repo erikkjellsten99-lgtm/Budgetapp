@@ -1253,6 +1253,21 @@ main > div > h2 + .hint {
   padding: 0 1rem 0.5rem 3.3rem;
 }
 
+.amount-field {
+  padding: 0.1rem 1rem 0.4rem 3.3rem;
+}
+
+.amount-field input {
+  max-width: 12rem;
+  min-height: 2.6rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-field input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;

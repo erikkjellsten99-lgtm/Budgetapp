@@ -176,6 +176,15 @@ export default function Categories({ categories, onChanged, income }: Categories
                       )}
                     />
                   )}
+                  {editing !== category.id && expanded.has(category.id) && !category.items?.length && (
+                    <AmountField
+                      category={category}
+                      onSave={async (monthlyBudget) => {
+                        await saveCategory({ ...category, monthlyBudget });
+                        await onChanged();
+                      }}
+                    />
+                  )}
                   {editing !== category.id && expanded.has(category.id) && (
                     <div className="category-actions">
                       <button type="button" className="link-button" onClick={() => addItem(category)}>
@@ -210,6 +219,35 @@ export default function Categories({ categories, onChanged, income }: Categories
       </p>
 
     </>
+  );
+}
+
+/** Beloppet per månad för en kategori utan rader. Skrivs direkt och sparas medan du skriver. */
+function AmountField({ category, onSave }: { category: Category; onSave: (amount: number) => void }) {
+  const [text, setText] = useState(toInputKr(category.monthlyBudget));
+  const amount = parseKr(text);
+  const ok = Number.isFinite(amount) && amount >= 0;
+
+  // Hämta nytt värde om beloppet har ändrats någon annanstans, t.ex. på den andra telefonen.
+  useEffect(() => {
+    if (parseKr(text) !== category.monthlyBudget) setText(toInputKr(category.monthlyBudget));
+  }, [category.monthlyBudget]);
+
+  return (
+    <label className="amount-field">
+      Belopp per månad (kr)
+      <input
+        value={text}
+        inputMode="decimal"
+        placeholder="0"
+        aria-invalid={!ok}
+        onChange={(event) => {
+          setText(event.target.value);
+          const next = parseKr(event.target.value);
+          if (Number.isFinite(next) && next >= 0) onSave(next);
+        }}
+      />
+    </label>
   );
 }
 
