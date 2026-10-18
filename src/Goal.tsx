@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getGoals, saveGoal } from './db';
+import { getGoals, onDataChange, saveGoal } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import type { Asset, SavingsGoal } from './types';
 
@@ -89,7 +89,9 @@ export default function Goal({ assets, onChange }: GoalProps) {
   const [goal, setGoal] = useState<SavingsGoal | null>(null);
 
   useEffect(() => {
-    getGoals().then((goals) => setGoal(goals[0] ?? null));
+    const load = () => getGoals().then((goals) => setGoal(goals[0] ?? null));
+    load();
+    return onDataChange((kind) => kind === 'remote' && load());
   }, []);
 
   useEffect(() => {

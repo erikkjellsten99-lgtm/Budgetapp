@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
-import { currentMonth, getCategories, getIncome } from './db';
+import Account from './Account';
+import { currentMonth, getCategories, getIncome, onDataChange } from './db';
+import { getSyncState, onSyncState, type SyncState } from './sync';
 import Debts from './Debts';
 import Goal, { goalCurrent, goalStatus, project } from './Goal';
 import Income from './Income';
 import { formatKr } from './money';
 import type { Asset, Category, MonthlyIncome, SavingsGoal } from './types';
 
-type View = 'overview' | 'goal' | 'budget' | 'assets' | 'debts';
+type View = 'overview' | 'goal' | 'budget' | 'assets' | 'debts' | 'account';
 
 /** Flikarna i menyn. Kort namn används i mobilens bottenmeny. */
 const VIEWS: { id: View; label: string; short: string; icon: string }[] = [
@@ -24,7 +26,7 @@ const VIEWS: { id: View; label: string; short: string; icon: string }[] = [
 function savedView(): View {
   try {
     const saved = localStorage.getItem('view');
-    if (VIEWS.some((item) => item.id === saved)) return saved as View;
+    if (saved === 'account' || VIEWS.some((item) => item.id === saved)) return saved as View;
   } catch {
     // Lagring kan vara avstängd, då börjar appen på översikten.
   }
@@ -57,7 +59,11 @@ export default function App() {
 
   useEffect(() => {
     reload();
+    return onDataChange((kind) => kind === 'remote' && reload());
   }, []);
+
+  const [sync, setSync] = useState<SyncState>(getSyncState);
+  useEffect(() => onSyncState(setSync), []);
 
   const totalIncome = income.csn + income.other;
   const costs = sumBudgets(categories.filter((category) => category.type !== 'savings'));
@@ -94,6 +100,17 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <button
+          type="button"
+          className={view === 'account' ? 'account-button active' : 'account-button'}
+          onClick={() => showView('account')}
+          aria-label={`Konto och synk: ${sync.status}`}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20a7.5 7.5 0 0 1 15 0" />
+          </svg>
+          <span className={`sync-dot ${sync.status}`} aria-hidden="true" />
+        </button>
       </header>
       <main>
         {/* Alla vyer ligger kvar i bakgrunden, så att summorna (t.ex. skulder) alltid är uppdaterade. */}
@@ -167,6 +184,9 @@ export default function App() {
         </div>
         <div hidden={view !== 'debts'}>
           <Debts onTotalChange={setDebtTotal} />
+        </div>
+        <div hidden={view !== 'account'}>
+          <Account sync={sync} />
         </div>
       </main>
     </div>

@@ -892,6 +892,88 @@ main > div > h2 + .hint {
   font-weight: 650;
 }
 
+/* Konto-knappen i sidhuvudet, med en prick som visar synkens status. */
+.app-nav {
+  margin-left: auto;
+}
+
+.account-button {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.7rem;
+  min-height: 2.7rem;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+}
+
+.account-button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.account-button svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sync-dot {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  background: var(--chart-ref);
+  border: 2px solid var(--bg);
+  border-radius: 999px;
+}
+
+.sync-dot.synkad {
+  background: var(--accent);
+}
+
+.sync-dot.synkar {
+  background: var(--accent);
+  opacity: 0.55;
+}
+
+.sync-dot.offline {
+  background: #c98a1b;
+}
+
+.sync-dot.fel {
+  background: var(--danger);
+}
+
+.account-actions {
+  padding: 0.4rem 1rem 0.6rem;
+}
+
+.muted-text {
+  color: var(--muted);
+  font-weight: 500 !important;
+}
+
+.hint.small {
+  margin: -0.4rem 0 0;
+  font-size: 0.85rem;
+}
+
+.row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;

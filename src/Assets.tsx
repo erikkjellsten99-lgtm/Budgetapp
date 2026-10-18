@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { deleteAsset, getAssets, newId, saveAsset, today } from './db';
+import { deleteAsset, getAssets, newId, saveAsset, today, onDataChange } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import type { Asset } from './types';
 
@@ -22,6 +22,8 @@ export default function Assets({ onChange }: AssetsProps) {
 
   useEffect(() => {
     reload();
+    // Hämta igen när synken har tagit emot ändringar från den andra telefonen.
+    return onDataChange((kind) => kind === 'remote' && reload());
   }, []);
 
   async function handleSave(asset: Asset) {

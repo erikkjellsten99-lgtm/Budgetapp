@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { deleteDebt, getDebts, newId, saveDebt } from './db';
+import { deleteDebt, getDebts, newId, saveDebt, onDataChange } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import type { Debt } from './types';
 
@@ -22,6 +22,8 @@ export default function Debts({ onTotalChange }: DebtsProps) {
 
   useEffect(() => {
     reload();
+    // Hämta igen när synken har tagit emot ändringar från den andra telefonen.
+    return onDataChange((kind) => kind === 'remote' && reload());
   }, []);
 
   async function handleSave(debt: Debt) {

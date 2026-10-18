@@ -1,9 +1,30 @@
 import type { Asset, Category, Debt, MonthlyIncome, SavingsGoal, Transaction } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 
-type StoreName = 'categories' | 'transactions' | 'income' | 'debts' | 'assets' | 'goals';
+/** Listorna med appens data. Det är dessa som synkas mellan telefonerna. */
+export const DATA_STORES = ['categories', 'transactions', 'income', 'debts', 'assets', 'goals'] as const;
+export type DataStore = (typeof DATA_STORES)[number];
+type StoreName = DataStore | 'outbox' | 'meta';
+
+/** En lokal ändring som väntar på att skickas till servern. Bara den senaste per post sparas. */
+export interface OutboxEntry {
+  /** "store:id" */
+  key: string;
+  store: DataStore;
+  id: string;
+  /** Posten, eller null om den är borttagen. */
+  data: unknown;
+  deleted: boolean;
+  /** När ändringen gjordes (ms). Den senaste ändringen vinner om två ändrar samma post. */
+  ts: number;
+}
+
+/** Nyckeln för en post: inkomster nycklas på månad, allt annat på id. */
+function keyOf(store: DataStore, record: Record<string, unknown>): string {
+  return String(store === 'income' ? record.month : record.id);
+}
 
 /** 5 000 kr var till eget sparande. */
 const SEPARATE_SAVINGS = 10000;
@@ -135,6 +156,11 @@ function openDb(): Promise<IDBDatabase> {
           goals.add({ ...MY_GOAL, id: newId(), assetIds });
         };
       }
+
+      if (event.oldVersion < 8) {
+        db.createObjectStore('outbox', { keyPath: 'key' });
+        db.createObjectStore('meta', { keyPath: 'key' });
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -163,6 +189,129 @@ async function write(storeName: StoreName, change: (store: IDBObjectStore) => vo
   });
 }
 
+/** Sparar en post lokalt och köar den för synk. */
+async function putRecord(store: DataStore, record: object): Promise<void> {
+  const db = await openDb();
+  const id = keyOf(store, record as Record<string, unknown>);
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([store, 'outbox'], 'readwrite');
+    tx.objectStore(store).put(record);
+    const entry: OutboxEntry = { key: `${store}:${id}`, store, id, data: record, deleted: false, ts: Date.now() };
+    tx.objectStore('outbox').put(entry);
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  emit('local');
+}
+
+/** Tar bort en post lokalt och köar borttagningen för synk. */
+async function removeRecord(store: DataStore, id: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([store, 'outbox'], 'readwrite');
+    tx.objectStore(store).delete(id);
+    const entry: OutboxEntry = { key: `${store}:${id}`, store, id, data: null, deleted: true, ts: Date.now() };
+    tx.objectStore('outbox').put(entry);
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  emit('local');
+}
+
+// Ändringar: 'local' när något ändrats här, 'remote' när synken har hämtat ändringar från servern.
+
+type ChangeKind = 'local' | 'remote';
+const listeners = new Set<(kind: ChangeKind) => void>();
+
+/** Lyssnar på ändringar i datan. Svarar med en funktion som slutar lyssna. */
+export function onDataChange(listener: (kind: ChangeKind) => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function emit(kind: ChangeKind) {
+  for (const listener of listeners) listener(kind);
+}
+
+// För synken
+
+export async function getOutbox(): Promise<OutboxEntry[]> {
+  return read('outbox', (store) => store.getAll()) as Promise<OutboxEntry[]>;
+}
+
+/** Tar bort skickade ändringar ur kön, men bara om posten inte har ändrats igen under tiden. */
+export async function clearOutbox(sent: OutboxEntry[]): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction('outbox', 'readwrite');
+    const outbox = tx.objectStore('outbox');
+    for (const entry of sent) {
+      const current = outbox.get(entry.key);
+      current.onsuccess = () => {
+        if ((current.result as OutboxEntry | undefined)?.ts === entry.ts) outbox.delete(entry.key);
+      };
+    }
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+/** Alla lokala poster i alla listor, för första uppladdningen till ett nytt hushåll. */
+export async function getAllRecords(): Promise<{ store: DataStore; id: string; data: unknown }[]> {
+  const all = [];
+  for (const store of DATA_STORES) {
+    const records = (await read(store, (s) => s.getAll())) as Record<string, unknown>[];
+    for (const record of records) all.push({ store, id: keyOf(store, record), data: record });
+  }
+  return all;
+}
+
+export interface RemoteRecord {
+  store: string;
+  id: string;
+  data: unknown;
+  deleted: boolean;
+}
+
+/**
+ * Lägger in ändringar från servern. Poster som har en ändring här som inte skickats än hoppas över,
+ * de skickas strax och servern avgör vilken som är nyast. Med replace töms listorna först
+ * (används när en ny telefon går med i ett hushåll som redan har data).
+ */
+export async function applyRemote(rows: RemoteRecord[], replace = false): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([...DATA_STORES, 'outbox'], 'readwrite');
+    const outbox = tx.objectStore('outbox');
+    if (replace) {
+      for (const store of DATA_STORES) tx.objectStore(store).clear();
+      outbox.clear();
+    }
+    for (const row of rows) {
+      if (!(DATA_STORES as readonly string[]).includes(row.store)) continue;
+      const store = tx.objectStore(row.store);
+      const pending = outbox.get(`${row.store}:${row.id}`);
+      pending.onsuccess = () => {
+        if (pending.result) return;
+        if (row.deleted || row.data == null) store.delete(row.id);
+        else store.put(row.data);
+      };
+    }
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  emit('remote');
+}
+
+export async function getMeta<T>(key: string): Promise<T | undefined> {
+  const row = (await read('meta', (store) => store.get(key))) as { key: string; value: T } | undefined;
+  return row?.value;
+}
+
+export async function setMeta(key: string, value: unknown): Promise<void> {
+  await write('meta', (store) => (value === undefined ? store.delete(key) : store.put({ key, value })));
+}
+
 // Kategorier
 
 export function getCategories(): Promise<Category[]> {
@@ -170,14 +319,14 @@ export function getCategories(): Promise<Category[]> {
 }
 
 export function saveCategory(category: Category): Promise<void> {
-  return write('categories', (store) => store.put(category));
+  return putRecord('categories', category);
 }
 
 /** Tar bort kategorin och svarar true, eller låter bli och svarar false om den har transaktioner. */
 export async function deleteCategory(id: string): Promise<boolean> {
   const count = await read('transactions', (store) => store.index('categoryId').count(id));
   if (count > 0) return false;
-  await write('categories', (store) => store.delete(id));
+  await removeRecord('categories', id);
   return true;
 }
 
@@ -191,11 +340,11 @@ export function getTransactions(month: string): Promise<Transaction[]> {
 }
 
 export function saveTransaction(transaction: Transaction): Promise<void> {
-  return write('transactions', (store) => store.put(transaction));
+  return putRecord('transactions', transaction);
 }
 
 export function deleteTransaction(id: string): Promise<void> {
-  return write('transactions', (store) => store.delete(id));
+  return removeRecord('transactions', id);
 }
 
 // Inkomst
@@ -211,7 +360,7 @@ export async function getIncome(month: string): Promise<MonthlyIncome> {
 }
 
 export function saveIncome(income: MonthlyIncome): Promise<void> {
-  return write('income', (store) => store.put(income));
+  return putRecord('income', income);
 }
 
 // Skulder
@@ -221,11 +370,11 @@ export function getDebts(): Promise<Debt[]> {
 }
 
 export function saveDebt(debt: Debt): Promise<void> {
-  return write('debts', (store) => store.put(debt));
+  return putRecord('debts', debt);
 }
 
 export function deleteDebt(id: string): Promise<void> {
-  return write('debts', (store) => store.delete(id));
+  return removeRecord('debts', id);
 }
 
 // Tillgångar
@@ -235,11 +384,11 @@ export function getAssets(): Promise<Asset[]> {
 }
 
 export function saveAsset(asset: Asset): Promise<void> {
-  return write('assets', (store) => store.put(asset));
+  return putRecord('assets', asset);
 }
 
 export function deleteAsset(id: string): Promise<void> {
-  return write('assets', (store) => store.delete(id));
+  return removeRecord('assets', id);
 }
 
 // Sparmål
@@ -249,7 +398,7 @@ export function getGoals(): Promise<SavingsGoal[]> {
 }
 
 export function saveGoal(goal: SavingsGoal): Promise<void> {
-  return write('goals', (store) => store.put(goal));
+  return putRecord('goals', goal);
 }
 
 /** Dagens datum som "2026-10-18". */
