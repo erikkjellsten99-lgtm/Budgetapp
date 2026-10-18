@@ -1224,6 +1224,39 @@ main > div > h2 + .hint {
   border-radius: 0;
 }
 
+/* Fälla in och ut raderna under en kategori */
+.item-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+  min-height: 2.2rem;
+  margin-top: -0.35rem;
+  padding: 0 1rem 0.45rem 3.3rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.item-toggle svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 160ms ease;
+}
+
+.item-toggle.open svg {
+  transform: rotate(180deg);
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;

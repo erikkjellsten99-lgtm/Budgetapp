@@ -32,10 +32,24 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
     if (!items.length && category.monthlyBudget > 0) items.push({ id: newId(), name: 'Övrigt', amount: category.monthlyBudget });
     items.push({ id: newId(), name: '', amount: 0 });
     setFocusItem(items[items.length - 1].id);
+    setOpen(category.id, true);
     await saveItems(category, items);
   }
 
   const [focusItem, setFocusItem] = useState<string | null>(null);
+
+  // Vilka kategorier som är utfällda. Sparas bara på den här enheten.
+  const [expanded, setExpanded] = useState<Set<string>>(loadExpanded);
+
+  function setOpen(id: string, open: boolean) {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (open) next.add(id);
+      else next.delete(id);
+      saveExpanded(next);
+      return next;
+    });
+  }
 
   /** Sparar ny ordning för kategorierna i en grupp. */
   async function reorderCategories(list: Category[]) {
@@ -122,6 +136,21 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                     </div>
                   )}
                   {editing !== category.id && !!category.items?.length && (
+                    <button
+                      type="button"
+                      className={expanded.has(category.id) ? 'item-toggle open' : 'item-toggle'}
+                      aria-expanded={expanded.has(category.id)}
+                      onClick={() => setOpen(category.id, !expanded.has(category.id))}
+                    >
+                      {expanded.has(category.id)
+                        ? 'Fäll in raderna'
+                        : `Visa ${category.items.length} ${category.items.length === 1 ? 'rad' : 'rader'}`}
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 10l4 4 4-4" />
+                      </svg>
+                    </button>
+                  )}
+                  {editing !== category.id && !!category.items?.length && expanded.has(category.id) && (
                     <SortableList
                       items={category.items}
                       listClass="items"
@@ -178,6 +207,24 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
 /** Sorterar efter vald ordning. Kategorier som aldrig flyttats hamnar sist, i bokstavsordning. */
 function byOrder(a: Category, b: Category): number {
   return (a.order ?? Infinity) - (b.order ?? Infinity) || a.name.localeCompare(b.name, 'sv');
+}
+
+const EXPANDED_KEY = 'expandedCategories';
+
+function loadExpanded(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(EXPANDED_KEY) ?? '[]') as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveExpanded(ids: Set<string>) {
+  try {
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...ids]));
+  } catch {
+    // Lagring avstängd: utfällningen glöms när appen stängs, inget annat händer.
+  }
 }
 
 /** Är posten markerad som betald denna månad? */
