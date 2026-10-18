@@ -1,9 +1,12 @@
 import type { Category, Debt, MonthlyIncome, Transaction } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 type StoreName = 'categories' | 'transactions' | 'income' | 'debts';
+
+/** 5 000 kr var till eget sparande. */
+const SEPARATE_SAVINGS = 10000;
 
 /** Din budget. Läggs in när databasen skapas, sedan kan du ändra allt i appen. */
 const MY_CATEGORIES: Omit<Category, 'id'>[] = [
@@ -14,7 +17,7 @@ const MY_CATEGORIES: Omit<Category, 'id'>[] = [
   { name: 'Abonnemang', type: 'fixed', monthlyBudget: 1701 },
   { name: 'Övriga kostnader', type: 'fixed', monthlyBudget: 5625 },
   { name: 'Gemensamt sparande', type: 'savings', monthlyBudget: 0 },
-  { name: 'Separat sparande', type: 'savings', monthlyBudget: 0 },
+  { name: 'Separat sparande', type: 'savings', monthlyBudget: SEPARATE_SAVINGS },
   { name: 'Lsfk', type: 'savings', monthlyBudget: 0 },
 ];
 
@@ -68,6 +71,19 @@ function openDb(): Promise<IDBDatabase> {
           if ((existing.result as Category[]).every((category) => category.monthlyBudget === 0)) {
             categories.clear();
             for (const category of MY_CATEGORIES) categories.add({ ...category, id: newId() });
+          }
+        };
+      }
+
+      if (event.oldVersion >= 2 && event.oldVersion < 3) {
+        // Lägg in 5 000 kr var på separat sparande, om du inte redan har fyllt i ett belopp där.
+        const categories = tx.objectStore('categories');
+        const existing = categories.getAll();
+        existing.onsuccess = () => {
+          for (const category of existing.result as Category[]) {
+            if (category.name === 'Separat sparande' && category.monthlyBudget === 0) {
+              categories.put({ ...category, monthlyBudget: SEPARATE_SAVINGS });
+            }
           }
         };
       }
