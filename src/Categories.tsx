@@ -84,7 +84,7 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
   return (
     <>
       <h2>Kategorier</h2>
-      <p className="hint">Månadsbudget per kategori. Tryck på en kategori för att ändra den, på + för att lägga till egna rader under den, och dra i ⠿ för att flytta en kategori eller rad.</p>
+      <p className="hint">Månadsbudget per kategori. Tryck på en kategori för att visa raderna under den, på + för att lägga till en rad, och dra i ⠿ för att flytta en kategori eller rad.</p>
 
       {CATEGORY_TYPES.map(({ type, label }) => {
         const items = categories
@@ -120,9 +120,18 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                         label={category.name}
                         onToggle={() => togglePaid(category)}
                       />
-                      <button className="row" onClick={() => setEditing(category.id)}>
+                      <button
+                        className="row"
+                        aria-expanded={expanded.has(category.id)}
+                        onClick={() => setOpen(category.id, !expanded.has(category.id))}
+                      >
                         <span>{category.name}</span>
-                        <span>{formatKr(category.monthlyBudget)}</span>
+                        <span className="row-amount">
+                          {formatKr(category.monthlyBudget)}
+                          <svg className={expanded.has(category.id) ? 'chevron open' : 'chevron'} viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 10l4 4 4-4" />
+                          </svg>
+                        </span>
                       </button>
                       <button
                         type="button"
@@ -134,21 +143,6 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                       </button>
                       {categoryHandle}
                     </div>
-                  )}
-                  {editing !== category.id && !!category.items?.length && (
-                    <button
-                      type="button"
-                      className={expanded.has(category.id) ? 'item-toggle open' : 'item-toggle'}
-                      aria-expanded={expanded.has(category.id)}
-                      onClick={() => setOpen(category.id, !expanded.has(category.id))}
-                    >
-                      {expanded.has(category.id)
-                        ? 'Fäll in raderna'
-                        : `Visa ${category.items.length} ${category.items.length === 1 ? 'rad' : 'rader'}`}
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M8 10l4 4 4-4" />
-                      </svg>
-                    </button>
                   )}
                   {editing !== category.id && !!category.items?.length && expanded.has(category.id) && (
                     <SortableList
@@ -178,6 +172,16 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                         />
                       )}
                     />
+                  )}
+                  {editing !== category.id && expanded.has(category.id) && (
+                    <div className="category-actions">
+                      <button type="button" className="link-button" onClick={() => addItem(category)}>
+                        + Lägg till rad
+                      </button>
+                      <button type="button" className="link-button" onClick={() => setEditing(category.id)}>
+                        Ändra namn och typ
+                      </button>
+                    </div>
                   )}
                 </>
               )}
