@@ -12,8 +12,18 @@ export interface Category {
   id: string;
   name: string;
   type: CategoryType;
-  /** Månadsbudget i kronor. */
+  /** Månadsbudget i kronor. Har kategorin rader är det summan av raderna. */
   monthlyBudget: number;
+  /** Egna rader under kategorin, t.ex. Claude och ChatGPT under Övriga kostnader. */
+  items?: CategoryItem[];
+}
+
+/** En rad under en kategori. */
+export interface CategoryItem {
+  id: string;
+  name: string;
+  /** Belopp per månad i kronor. */
+  amount: number;
 }
 
 export interface Transaction {
