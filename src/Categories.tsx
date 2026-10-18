@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { currentMonth, deleteCategory, newId, saveCategory } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import { CATEGORY_TYPES, type Category, type CategoryItem, type CategoryType } from './types';
@@ -62,7 +62,7 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
   return (
     <>
       <h2>Kategorier</h2>
-      <p className="hint">Månadsbudget per kategori. Tryck på en kategori för att ändra den, eller på + för att lägga till egna rader under den.</p>
+      <p className="hint">Månadsbudget per kategori. Tryck på en kategori för att ändra den, på + för att lägga till egna rader under den, och dra i ⠿ för att flytta en rad.</p>
 
       {CATEGORY_TYPES.map(({ type, label }) => {
         const items = categories
@@ -110,11 +110,14 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                     </div>
                   )}
                   {editing !== category.id && !!category.items?.length && (
-                    <ul className="items">
-                      {category.items.map((item) => (
+                    <ItemList
+                      items={category.items}
+                      onReorder={(items) => saveItems(category, items)}
+                      renderItem={(item, handle) => (
                         <ItemRow
                           key={item.id}
                           item={item}
+                          handle={handle}
                           autoFocus={item.id === focusItem}
                           onChange={(changed) =>
                             saveItems(category, category.items!.map((other) => (other.id === item.id ? changed : other)))
@@ -131,8 +134,8 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                             )
                           }
                         />
-                      ))}
-                    </ul>
+                      )}
+                    />
                   )}
                 </li>
               ))}
@@ -201,8 +204,119 @@ export function sumBudgets(categories: Category[]): number {
   return categories.reduce((sum, category) => sum + category.monthlyBudget, 0);
 }
 
+interface ItemListProps {
+  items: CategoryItem[];
+  onReorder: (items: CategoryItem[]) => void;
+  renderItem: (item: CategoryItem, handle: ReactNode) => ReactNode;
+}
+
+/**
+ * Raderna under en kategori. Dra i handtaget (⋮⋮) för att flytta en rad.
+ * Byggt med pointer-händelser, så att det fungerar med finger, mus och penna utan bibliotek.
+ */
+function ItemList({ items, onReorder, renderItem }: ItemListProps) {
+  const [order, setOrder] = useState(items);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // Följ ändringar utifrån (t.ex. från den andra telefonen) när ingen rad dras.
+  useEffect(() => {
+    if (!dragging) setOrder(items);
+  }, [items, dragging]);
+
+  // Senaste ordningen, så att lyssnarna nedan alltid ser den aktuella listan.
+  const orderRef = useRef(order);
+  orderRef.current = order;
+
+  function start(event: PointerEvent<HTMLButtonElement>, id: string) {
+    event.preventDefault();
+    setDragging(id);
+  }
+
+  // Under dragningen lyssnar fönstret på fingret. Raden flyttas i listan medan man drar,
+  // och då skulle en lyssnare på själva handtaget tappa fingret.
+  useEffect(() => {
+    if (!dragging) return;
+
+    function move(event: globalThis.PointerEvent) {
+      if (!listRef.current) return;
+      event.preventDefault();
+      const current = orderRef.current;
+      const rows = [...listRef.current.children] as HTMLElement[];
+      // Raden hamnar före första raden vars mitt ligger under fingret.
+      let target = rows.findIndex((row) => {
+        const rect = row.getBoundingClientRect();
+        return event.clientY < rect.top + rect.height / 2;
+      });
+      if (target === -1) target = rows.length;
+      const from = current.findIndex((item) => item.id === dragging);
+      // När raden flyttas nedåt försvinner den först från sin gamla plats, så platsen blir ett steg tidigare.
+      const to = target > from ? target - 1 : target;
+      if (to === from) return;
+      const next = [...current];
+      next.splice(to, 0, next.splice(from, 1)[0]);
+      setOrder(next);
+    }
+
+    function end() {
+      setDragging(null);
+      const final = orderRef.current;
+      if (final.some((item, index) => item.id !== items[index]?.id)) onReorder(final);
+    }
+
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+  }, [dragging]);
+
+  return (
+    <ul className={dragging ? 'items sorting' : 'items'} ref={listRef}>
+      {order.map((item) => (
+        <li key={item.id} className={item.id === dragging ? 'item-wrap dragging' : 'item-wrap'}>
+          {renderItem(
+            item,
+            <button
+              type="button"
+              className="item-handle"
+              aria-label={`Flytta ${item.name || 'raden'}`}
+              onPointerDown={(event) => start(event, item.id)}
+              onKeyDown={(event) => {
+                // Med tangentbord: pil upp/ned flyttar raden ett steg.
+                const from = order.findIndex((other) => other.id === item.id);
+                const to = event.key === 'ArrowUp' ? from - 1 : event.key === 'ArrowDown' ? from + 1 : -1;
+                if (to < 0 || to >= order.length) return;
+                event.preventDefault();
+                const next = [...order];
+                next.splice(to, 0, next.splice(from, 1)[0]);
+                setOrder(next);
+                onReorder(next);
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="9" cy="6" r="1.4" />
+                <circle cx="15" cy="6" r="1.4" />
+                <circle cx="9" cy="12" r="1.4" />
+                <circle cx="15" cy="12" r="1.4" />
+                <circle cx="9" cy="18" r="1.4" />
+                <circle cx="15" cy="18" r="1.4" />
+              </svg>
+            </button>,
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 interface ItemRowProps {
   item: CategoryItem;
+  /** Handtaget som raden dras i. */
+  handle: ReactNode;
   autoFocus: boolean;
   onChange: (item: CategoryItem) => void;
   onDelete: () => void;
@@ -210,7 +324,7 @@ interface ItemRowProps {
 }
 
 /** En rad under en kategori: namn och belopp som skrivs direkt i listan. Sparas medan du skriver. */
-function ItemRow({ item, autoFocus, onChange, onDelete, onTogglePaid }: ItemRowProps) {
+function ItemRow({ item, handle, autoFocus, onChange, onDelete, onTogglePaid }: ItemRowProps) {
   const [name, setName] = useState(item.name);
   const [amountText, setAmountText] = useState(toInputKr(item.amount));
 
@@ -224,7 +338,7 @@ function ItemRow({ item, autoFocus, onChange, onDelete, onTogglePaid }: ItemRowP
   const amountOk = Number.isFinite(amount) && amount >= 0;
 
   return (
-    <li className={isPaid(item) ? 'item-row paid' : 'item-row'}>
+    <div className={isPaid(item) ? 'item-row paid' : 'item-row'}>
       <PaidCheck paid={isPaid(item)} label={name} onToggle={onTogglePaid} />
       <input
         className="item-name"
@@ -251,7 +365,8 @@ function ItemRow({ item, autoFocus, onChange, onDelete, onTogglePaid }: ItemRowP
       <button type="button" className="item-delete" aria-label={`Ta bort ${name || 'raden'}`} onClick={onDelete}>
         ×
       </button>
-    </li>
+      {handle}
+    </div>
   );
 }
 

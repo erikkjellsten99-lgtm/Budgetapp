@@ -1144,6 +1144,47 @@ main > div > h2 + .hint {
   font-variant-numeric: tabular-nums;
 }
 
+/* Flytta rader genom att dra i handtaget */
+.item-handle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  min-height: 2.4rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.item-handle svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: currentColor;
+}
+
+.items.sorting {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.items.sorting .item-handle {
+  cursor: grabbing;
+}
+
+.item-wrap.dragging .item-row {
+  background: var(--accent-soft);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow);
+}
+
+.item-row .item-delete {
+  width: 2rem;
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
