@@ -21,8 +21,9 @@ export default function App() {
   }, []);
 
   const totalIncome = income.csn + income.other;
-  const budgeted = sumBudgets(categories);
-  const left = totalIncome - budgeted;
+  const costs = sumBudgets(categories.filter((category) => category.type !== 'savings'));
+  const plannedSavings = sumBudgets(categories.filter((category) => category.type === 'savings'));
+  const leftForSavings = totalIncome - costs - debtTotal - plannedSavings;
 
   return (
     <>
@@ -36,20 +37,20 @@ export default function App() {
             <span>{formatKr(totalIncome)}</span>
           </p>
           <p>
-            <span>Budgeterat</span>
-            <span>− {formatKr(budgeted)}</span>
-          </p>
-          <p className="left">
-            <span>Kvar</span>
-            <strong>{formatKr(left)}</strong>
+            <span>Kostnader</span>
+            <span>− {formatKr(costs)}</span>
           </p>
           <p>
             <span>Skulder</span>
             <span>− {formatKr(debtTotal)}</span>
           </p>
-          <p className="left">
-            <span>Kvar om skulderna betalas</span>
-            <strong>{formatKr(left - debtTotal)}</strong>
+          <p>
+            <span>Planerat sparande</span>
+            <span>− {formatKr(plannedSavings)}</span>
+          </p>
+          <p className={leftForSavings < 0 ? 'left negative' : 'left'}>
+            <span>Kvar att sätta in på sparande</span>
+            <strong>{formatKr(leftForSavings)}</strong>
           </p>
         </section>
         <Income income={income} onChanged={reload} />

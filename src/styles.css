@@ -170,6 +170,10 @@ h3,
   font-variant-numeric: tabular-nums;
 }
 
+.summary .negative {
+  color: var(--danger);
+}
+
 .summary .left {
   border-top: 1px solid var(--border);
   font-size: 1.15rem;
