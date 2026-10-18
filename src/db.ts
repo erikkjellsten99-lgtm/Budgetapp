@@ -1,7 +1,7 @@
 import type { Asset, Category, Debt, MonthlyIncome, Transaction } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 type StoreName = 'categories' | 'transactions' | 'income' | 'debts' | 'assets';
 
@@ -27,7 +27,8 @@ const MY_DEBTS: Omit<Debt, 'id'>[] = [
 ];
 
 /** Hushållskontot är dit matpengarna sätts in. */
-const MY_ACCOUNTS = ['Hushållskonto', 'Erik spar', 'Cassandra spar'];
+const SPENDING_ACCOUNT = 'Hushållskonto';
+const MY_ACCOUNTS = [SPENDING_ACCOUNT, 'Erik spar', 'Cassandra spar'];
 
 const MY_INCOME = { csn: 18156, other: 29852 };
 
@@ -103,7 +104,20 @@ function openDb(): Promise<IDBDatabase> {
         existing.onsuccess = () => {
           const names = (existing.result as Asset[]).map((asset) => asset.name.toLowerCase());
           for (const name of MY_ACCOUNTS) {
-            if (!names.includes(name.toLowerCase())) assets.add({ id: newId(), name, amount: 0, updated: '' });
+            if (!names.includes(name.toLowerCase())) {
+              assets.add({ id: newId(), name, amount: 0, updated: '', spending: name === SPENDING_ACCOUNT });
+            }
+          }
+        };
+      }
+
+      if (event.oldVersion >= 5 && event.oldVersion < 6) {
+        // Hushållskontot är matpengar, inte sparande, och ska inte räknas i nettovärdet.
+        const assets = tx.objectStore('assets');
+        const existing = assets.getAll();
+        existing.onsuccess = () => {
+          for (const asset of existing.result as Asset[]) {
+            if (asset.name.toLowerCase() === SPENDING_ACCOUNT.toLowerCase()) assets.put({ ...asset, spending: true });
           }
         };
       }

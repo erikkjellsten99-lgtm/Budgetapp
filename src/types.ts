@@ -44,6 +44,8 @@ export interface Asset {
   amount: number;
   /** Datum då saldot senast uppdaterades, som "2026-10-18". Tomt om det aldrig har fyllts i. */
   updated: string;
+  /** Pengar som ska användas, t.ex. matpengar på hushållskontot. Räknas inte i nettovärdet. */
+  spending?: boolean;
 }
 
 /** Inkomsten för en månad. Det finns högst en post per månad. */

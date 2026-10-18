@@ -4,12 +4,12 @@ import { formatKr, parseKr, toInputKr } from './money';
 import type { Asset } from './types';
 
 interface AssetsProps {
-  /** Får tillgångarnas totalsumma varje gång de har lästs in. */
-  onTotalChange: (total: number) => void;
+  /** Får alla tillgångar varje gång de har lästs in. */
+  onChange: (assets: Asset[]) => void;
 }
 
 /** Tillgångar, t.ex. Avanza-kontot. Saldot skriver du in själv när du vill. */
-export default function Assets({ onTotalChange }: AssetsProps) {
+export default function Assets({ onChange }: AssetsProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   // Id på tillgången som redigeras, 'new' när en ny läggs till, annars null.
   const [editing, setEditing] = useState<string | null>(null);
@@ -17,7 +17,7 @@ export default function Assets({ onTotalChange }: AssetsProps) {
   async function reload() {
     const loaded = await getAssets();
     setAssets(loaded);
-    onTotalChange(loaded.reduce((sum, asset) => sum + asset.amount, 0));
+    onChange(loaded);
   }
 
   useEffect(() => {
@@ -64,6 +64,7 @@ export default function Assets({ onTotalChange }: AssetsProps) {
                     {asset.name}
                     <small className="updated">
                       {asset.updated ? `Uppdaterat ${formatDate(asset.updated)}` : 'Inte ifyllt än'}
+                      {asset.spending && ' · räknas inte i nettovärdet'}
                     </small>
                   </span>
                   <span>{formatKr(asset.amount)}</span>
@@ -103,6 +104,7 @@ interface AssetFormProps {
 function AssetForm({ asset, onSave, onCancel, onDelete }: AssetFormProps) {
   const [name, setName] = useState(asset?.name ?? '');
   const [amountText, setAmountText] = useState(toInputKr(asset?.amount));
+  const [spending, setSpending] = useState(asset?.spending ?? false);
 
   const amount = parseKr(amountText);
   const amountOk = Number.isFinite(amount) && amount >= 0;
@@ -113,7 +115,7 @@ function AssetForm({ asset, onSave, onCancel, onDelete }: AssetFormProps) {
       className="category-form"
       onSubmit={(event) => {
         event.preventDefault();
-        if (valid) onSave({ id: asset?.id ?? newId(), name: name.trim(), amount, updated: today() });
+        if (valid) onSave({ id: asset?.id ?? newId(), name: name.trim(), amount, updated: today(), spending });
       }}
     >
       <label>
@@ -129,6 +131,10 @@ function AssetForm({ asset, onSave, onCancel, onDelete }: AssetFormProps) {
           placeholder="0"
           autoFocus={!!asset}
         />
+      </label>
+      <label className="checkbox">
+        <input type="checkbox" checked={spending} onChange={(event) => setSpending(event.target.checked)} />
+        Pengar att använda, t.ex. matpengar (räknas inte i nettovärdet)
       </label>
       {!amountOk && <p className="error">Skriv ett belopp, till exempel 25000 eller 49,90.</p>}
       <div className="actions">

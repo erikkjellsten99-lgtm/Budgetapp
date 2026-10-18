@@ -5,12 +5,12 @@ import { currentMonth, getCategories, getIncome } from './db';
 import Debts from './Debts';
 import Income from './Income';
 import { formatKr } from './money';
-import type { Category, MonthlyIncome } from './types';
+import type { Asset, Category, MonthlyIncome } from './types';
 
 export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [debtTotal, setDebtTotal] = useState(0);
-  const [assetTotal, setAssetTotal] = useState(0);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [income, setIncome] = useState<MonthlyIncome>({ month: currentMonth(), csn: 0, other: 0 });
 
   async function reload() {
@@ -26,9 +26,11 @@ export default function App() {
   const costs = sumBudgets(categories.filter((category) => category.type !== 'savings'));
   const plannedSavings = sumBudgets(categories.filter((category) => category.type === 'savings'));
   const leftForSavings = totalIncome - costs - debtTotal - plannedSavings;
-  // Det som hamnar på sparande när månaden är slut: planerat sparande plus det som blir över.
-  const savedThisMonth = plannedSavings + leftForSavings;
-  const netWorth = assetTotal + savedThisMonth;
+  // Nettovärdet är det som finns på sparkontona. Pengar att använda (hushållskontot) räknas inte,
+  // och skulderna betalas med månadens inkomst, så de är redan avdragna i översikten.
+  const sumAmounts = (list: Asset[]) => list.reduce((sum, asset) => sum + asset.amount, 0);
+  const netWorth = sumAmounts(assets.filter((asset) => !asset.spending));
+  const spendingTotal = sumAmounts(assets.filter((asset) => asset.spending));
 
   return (
     <>
@@ -59,25 +61,21 @@ export default function App() {
           </p>
         </section>
         <section className="card summary">
-          <p>
-            <span>Tillgångar idag</span>
-            <span>{formatKr(assetTotal)}</span>
-          </p>
-          <p>
-            <span>Sparande denna månad</span>
-            <span>
-              {savedThisMonth < 0 ? '−' : '+'} {formatKr(Math.abs(savedThisMonth))}
-            </span>
-          </p>
           <p className={netWorth < 0 ? 'left negative' : 'left'}>
-            <span>Nettovärde efter månaden</span>
+            <span>Nettovärde (sparkonton)</span>
             <strong>{formatKr(netWorth)}</strong>
           </p>
+          {spendingTotal > 0 && (
+            <p>
+              <span>Pengar att använda (räknas inte)</span>
+              <span>{formatKr(spendingTotal)}</span>
+            </p>
+          )}
           <p className="note">Skulderna betalas med månadens inkomst och är redan avdragna ovan.</p>
         </section>
         <Income income={income} onChanged={reload} />
         <Categories categories={categories} onChanged={reload} />
-        <Assets onTotalChange={setAssetTotal} />
+        <Assets onChange={setAssets} />
         <Debts onTotalChange={setDebtTotal} />
       </main>
     </>
