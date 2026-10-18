@@ -1,32 +1,29 @@
-import { useEffect, useState } from 'react';
-import { deleteCategory, getCategories, newId, saveCategory } from './db';
-import { formatKr, parseKr } from './money';
+import { useState } from 'react';
+import { deleteCategory, newId, saveCategory } from './db';
+import { formatKr, parseKr, toInputKr } from './money';
 import { CATEGORY_TYPES, type Category, type CategoryType } from './types';
 
-export default function Categories() {
-  const [categories, setCategories] = useState<Category[]>([]);
+interface CategoriesProps {
+  categories: Category[];
+  /** Anropas efter varje ändring, så att App kan läsa in kategorierna igen. */
+  onChanged: () => Promise<void>;
+}
+
+export default function Categories({ categories, onChanged }: CategoriesProps) {
   // Id på kategorin som redigeras, 'new' när en ny läggs till, annars null.
   const [editing, setEditing] = useState<string | null>(null);
-
-  async function reload() {
-    setCategories(await getCategories());
-  }
-
-  useEffect(() => {
-    reload();
-  }, []);
 
   async function handleSave(category: Category) {
     await saveCategory(category);
     setEditing(null);
-    await reload();
+    await onChanged();
   }
 
   async function handleDelete(category: Category) {
     if (!confirm(`Ta bort kategorin ${category.name}?`)) return;
     if (await deleteCategory(category.id)) {
       setEditing(null);
-      await reload();
+      await onChanged();
     } else {
       alert(`${category.name} har transaktioner och kan inte tas bort.`);
     }
@@ -88,7 +85,7 @@ export default function Categories() {
   );
 }
 
-function sumBudgets(categories: Category[]): number {
+export function sumBudgets(categories: Category[]): number {
   return categories.reduce((sum, category) => sum + category.monthlyBudget, 0);
 }
 
@@ -104,7 +101,7 @@ function CategoryForm({ category, onSave, onCancel, onDelete }: CategoryFormProp
   const [name, setName] = useState(category?.name ?? '');
   const [type, setType] = useState<CategoryType>(category?.type ?? 'variable');
   const [budget, setBudget] = useState(
-    category?.monthlyBudget ? String(category.monthlyBudget).replace('.', ',') : '',
+    toInputKr(category?.monthlyBudget),
   );
 
   const amount = parseKr(budget);
