@@ -8,6 +8,7 @@ import type { Category, MonthlyIncome } from './types';
 
 export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [debtTotal, setDebtTotal] = useState(0);
   const [income, setIncome] = useState<MonthlyIncome>({ month: currentMonth(), csn: 0, other: 0 });
 
   async function reload() {
@@ -21,6 +22,7 @@ export default function App() {
 
   const totalIncome = income.csn + income.other;
   const budgeted = sumBudgets(categories);
+  const left = totalIncome - budgeted;
 
   return (
     <>
@@ -39,12 +41,20 @@ export default function App() {
           </p>
           <p className="left">
             <span>Kvar</span>
-            <strong>{formatKr(totalIncome - budgeted)}</strong>
+            <strong>{formatKr(left)}</strong>
+          </p>
+          <p>
+            <span>Skulder</span>
+            <span>− {formatKr(debtTotal)}</span>
+          </p>
+          <p className="left">
+            <span>Kvar om skulderna betalas</span>
+            <strong>{formatKr(left - debtTotal)}</strong>
           </p>
         </section>
         <Income income={income} onChanged={reload} />
         <Categories categories={categories} onChanged={reload} />
-        <Debts />
+        <Debts onTotalChange={setDebtTotal} />
       </main>
     </>
   );

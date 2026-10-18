@@ -3,14 +3,21 @@ import { deleteDebt, getDebts, newId, saveDebt } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import type { Debt } from './types';
 
+interface DebtsProps {
+  /** Får skuldernas totalsumma varje gång de har lästs in. */
+  onTotalChange: (total: number) => void;
+}
+
 /** Skulder: vem du är skyldig och hur mycket som är kvar. */
-export default function Debts() {
+export default function Debts({ onTotalChange }: DebtsProps) {
   const [debts, setDebts] = useState<Debt[]>([]);
   // Id på skulden som redigeras, 'new' när en ny läggs till, annars null.
   const [editing, setEditing] = useState<string | null>(null);
 
   async function reload() {
-    setDebts(await getDebts());
+    const loaded = await getDebts();
+    setDebts(loaded);
+    onTotalChange(loaded.reduce((sum, debt) => sum + debt.amount, 0));
   }
 
   useEffect(() => {
