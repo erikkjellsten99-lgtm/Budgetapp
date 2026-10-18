@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { deleteCategory, newId, saveCategory } from './db';
+import { currentMonth, deleteCategory, newId, saveCategory } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import { CATEGORY_TYPES, type Category, type CategoryItem, type CategoryType } from './types';
 
@@ -37,6 +37,18 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
 
   const [focusItem, setFocusItem] = useState<string | null>(null);
 
+  /** Markerar kategorin som betald eller obetald denna månad. Har den rader gäller det alla rader. */
+  async function togglePaid(category: Category) {
+    const month = currentMonth();
+    const paid = !isCategoryPaid(category);
+    if (category.items?.length) {
+      await saveItems(category, category.items.map((item) => ({ ...item, paidMonth: paid ? month : undefined })));
+    } else {
+      await saveCategory({ ...category, paidMonth: paid ? month : undefined });
+      await onChanged();
+    }
+  }
+
   async function handleDelete(category: Category) {
     if (!confirm(`Ta bort kategorin ${category.name}?`)) return;
     if (await deleteCategory(category.id)) {
@@ -61,6 +73,11 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
             <h3>
               {label} <span>{formatKr(sumBudgets(items))}</span>
             </h3>
+            {sumBudgets(items) > 0 && (
+              <p className="paid-summary">
+                Betalt {formatKr(sumPaid(items))} · kvar {formatKr(sumBudgets(items) - sumPaid(items))}
+              </p>
+            )}
             <ul>
               {items.map((category) => (
                 <li key={category.id}>
@@ -72,7 +89,12 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                       onDelete={() => handleDelete(category)}
                     />
                   ) : (
-                    <div className="category-row">
+                    <div className={isCategoryPaid(category) ? 'category-row paid' : 'category-row'}>
+                      <PaidCheck
+                        paid={isCategoryPaid(category)}
+                        label={category.name}
+                        onToggle={() => togglePaid(category)}
+                      />
                       <button className="row" onClick={() => setEditing(category.id)}>
                         <span>{category.name}</span>
                         <span>{formatKr(category.monthlyBudget)}</span>
@@ -98,6 +120,16 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
                             saveItems(category, category.items!.map((other) => (other.id === item.id ? changed : other)))
                           }
                           onDelete={() => saveItems(category, category.items!.filter((other) => other.id !== item.id))}
+                          onTogglePaid={() =>
+                            saveItems(
+                              category,
+                              category.items!.map((other) =>
+                                other.id === item.id
+                                  ? { ...other, paidMonth: isPaid(other) ? undefined : currentMonth() }
+                                  : other,
+                              ),
+                            )
+                          }
                         />
                       ))}
                     </ul>
@@ -128,6 +160,43 @@ export default function Categories({ categories, onChanged }: CategoriesProps) {
   );
 }
 
+/** Är posten markerad som betald denna månad? */
+function isPaid(entry: { paidMonth?: string }): boolean {
+  return entry.paidMonth === currentMonth();
+}
+
+/** En kategori är betald när den själv är markerad, eller när alla dess rader är det. */
+function isCategoryPaid(category: Category): boolean {
+  return category.items?.length ? category.items.every(isPaid) : isPaid(category);
+}
+
+/** Hur mycket som är betalt denna månad. */
+export function sumPaid(categories: Category[]): number {
+  return categories.reduce((sum, category) => {
+    if (category.items?.length) return sum + category.items.filter(isPaid).reduce((s, item) => s + item.amount, 0);
+    return sum + (isPaid(category) ? category.monthlyBudget : 0);
+  }, 0);
+}
+
+/** Rund bock-knapp som markerar något som betalt denna månad. */
+function PaidCheck({ paid, label, onToggle }: { paid: boolean; label: string; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className={paid ? 'paid-check checked' : 'paid-check'}
+      role="checkbox"
+      aria-checked={paid}
+      aria-label={`${label || 'Raden'} betald denna månad`}
+      onClick={onToggle}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        {paid && <path d="M8 12.5l2.7 2.7L16 9.8" />}
+      </svg>
+    </button>
+  );
+}
+
 export function sumBudgets(categories: Category[]): number {
   return categories.reduce((sum, category) => sum + category.monthlyBudget, 0);
 }
@@ -137,10 +206,11 @@ interface ItemRowProps {
   autoFocus: boolean;
   onChange: (item: CategoryItem) => void;
   onDelete: () => void;
+  onTogglePaid: () => void;
 }
 
 /** En rad under en kategori: namn och belopp som skrivs direkt i listan. Sparas medan du skriver. */
-function ItemRow({ item, autoFocus, onChange, onDelete }: ItemRowProps) {
+function ItemRow({ item, autoFocus, onChange, onDelete, onTogglePaid }: ItemRowProps) {
   const [name, setName] = useState(item.name);
   const [amountText, setAmountText] = useState(toInputKr(item.amount));
 
@@ -154,7 +224,8 @@ function ItemRow({ item, autoFocus, onChange, onDelete }: ItemRowProps) {
   const amountOk = Number.isFinite(amount) && amount >= 0;
 
   return (
-    <li className="item-row">
+    <li className={isPaid(item) ? 'item-row paid' : 'item-row'}>
+      <PaidCheck paid={isPaid(item)} label={name} onToggle={onTogglePaid} />
       <input
         className="item-name"
         value={name}

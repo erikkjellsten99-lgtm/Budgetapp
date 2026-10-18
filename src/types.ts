@@ -16,6 +16,8 @@ export interface Category {
   monthlyBudget: number;
   /** Egna rader under kategorin, t.ex. Claude och ChatGPT under Övriga kostnader. */
   items?: CategoryItem[];
+  /** Månaden ("2026-10") då kategorin senast markerades som betald. Används när kategorin saknar rader. */
+  paidMonth?: string;
 }
 
 /** En rad under en kategori. */
@@ -24,6 +26,8 @@ export interface CategoryItem {
   name: string;
   /** Belopp per månad i kronor. */
   amount: number;
+  /** Månaden ("2026-10") då raden senast markerades som betald. Nästa månad är den obetald igen. */
+  paidMonth?: string;
 }
 
 export interface Transaction {

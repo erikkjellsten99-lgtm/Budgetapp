@@ -1076,6 +1076,74 @@ main > div > h2 + .hint {
   line-height: 1;
 }
 
+/* Betald denna månad */
+.paid-check {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  min-height: 2.6rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--muted);
+}
+
+.paid-check svg {
+  width: 1.45rem;
+  height: 1.45rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.paid-check.checked {
+  color: var(--accent);
+}
+
+.paid-check.checked circle {
+  fill: var(--accent);
+}
+
+.paid-check.checked path {
+  stroke: var(--card);
+  stroke-width: 2.2;
+}
+
+.category-row .paid-check {
+  margin-left: 0.35rem;
+}
+
+.category-row .paid-check + .row {
+  padding-left: 0.25rem;
+}
+
+.paid .row > span:first-child,
+.item-row.paid .item-name {
+  color: var(--muted);
+}
+
+.item-row .paid-check {
+  width: 2.2rem;
+  min-height: 2.2rem;
+}
+
+.items {
+  padding-left: 0.6rem;
+}
+
+.paid-summary {
+  margin: -0.45rem 0 0;
+  padding: 0 1rem 0.65rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
