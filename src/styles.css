@@ -974,6 +974,32 @@ main > div > h2 + .hint {
   overflow-wrap: anywhere;
 }
 
+.auth-links {
+  display: grid;
+  justify-items: start;
+  gap: 0.15rem;
+}
+
+.link-button {
+  min-height: 2.4rem;
+  padding: 0.3rem 0;
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.info {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  background: var(--accent-soft);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;

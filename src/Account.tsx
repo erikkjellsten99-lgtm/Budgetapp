@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getMembers, invite, sendLoginCode, signOut, syncNow, verifyLoginCode, type Member, type SyncState } from './sync';
+import { getMembers, invite, sendPasswordReset, setNewPassword, signIn, signOut, signUp, syncNow, type Member, type SyncState } from './sync';
 
 const STATUS_TEXT: Record<SyncState['status'], string> = {
   utloggad: 'Inte inloggad. Datan finns bara på den här enheten.',
@@ -15,28 +15,53 @@ export default function Account({ sync }: { sync: SyncState }) {
     <>
       <h2>Konto och synk</h2>
       <p className="hint">
-        Logga in för att dela budgeten med hushållet. Allt sparas fortfarande på telefonen, så appen fungerar
+        Logga in för att dela budgeten med hushållet. Den som loggar in först skapar hushållet och tar med sig
+        siffrorna från sin telefon. Allt sparas fortfarande på telefonen, så appen fungerar
         även utan internet.
       </p>
-      {sync.email ? <SignedIn sync={sync} /> : <SignIn />}
+      {sync.recovering ? <NewPassword /> : sync.email ? <SignedIn sync={sync} /> : <SignIn />}
     </>
   );
 }
 
+type Mode = 'login' | 'signup' | 'reset';
+
 function SignIn() {
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const emailOk = /^\S+@\S+\.\S+$/.test(email.trim());
+  const passwordOk = password.length >= 8;
+  const valid = emailOk && (mode === 'reset' || passwordOk);
 
-  async function run(action: () => Promise<void>) {
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setInfo(null);
+  }
+
+  async function submit() {
     setBusy(true);
     setError(null);
+    setInfo(null);
     try {
-      await action();
+      if (mode === 'login') {
+        await signIn(email, password);
+      } else if (mode === 'signup') {
+        const mustConfirm = await signUp(email, password);
+        if (mustConfirm) {
+          setInfo('Kontot är skapat. Öppna mejlet och tryck på bekräftelselänken, kom sedan tillbaka hit och logga in.');
+          setMode('login');
+        }
+      } else {
+        await sendPasswordReset(email);
+        setInfo('Vi har skickat en länk för att välja nytt lösenord. Öppna den, välj lösenord och logga sedan in här.');
+        setMode('login');
+      }
     } catch (err) {
       setError(swedishError(err));
     } finally {
@@ -44,72 +69,105 @@ function SignIn() {
     }
   }
 
+  const title = { login: 'Logga in', signup: 'Skapa konto', reset: 'Glömt lösenord' }[mode];
+  const button = { login: 'Logga in', signup: 'Skapa konto', reset: 'Skicka länk' }[mode];
+
   return (
     <section className="card">
-      <h3>Logga in</h3>
-      {!sent ? (
-        <form
-          className="category-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (emailOk) run(async () => {
-              await sendLoginCode(email);
-              setSent(true);
-            });
-          }}
-        >
+      <h3>{title}</h3>
+      <form
+        className="category-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (valid && !busy) submit();
+        }}
+      >
+        {info && <p className="info">{info}</p>}
+        <label>
+          Mejladress
+          <input
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="namn@exempel.se"
+          />
+        </label>
+        {mode !== 'reset' && (
           <label>
-            Mejladress
+            Lösenord{mode === 'signup' && ' (minst 8 tecken)'}
             <input
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="namn@exempel.se"
+              type="password"
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
             />
           </label>
-          {error && <p className="error">{error}</p>}
-          <div className="actions">
-            <button type="submit" className="primary" disabled={!emailOk || busy}>
-              {busy ? 'Skickar…' : 'Skicka inloggningskod'}
+        )}
+        {error && <p className="error">{error}</p>}
+        <div className="actions">
+          <button type="submit" className="primary" disabled={!valid || busy}>
+            {busy ? 'Vänta…' : button}
+          </button>
+        </div>
+        <div className="auth-links">
+          {mode !== 'login' && (
+            <button type="button" className="link-button" onClick={() => switchMode('login')}>
+              Har du redan ett konto? Logga in
             </button>
-          </div>
-        </form>
-      ) : (
-        <form
-          className="category-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            run(() => verifyLoginCode(email, code));
-          }}
-        >
-          <p className="hint">
-            Vi har skickat ett mejl till <strong>{email.trim()}</strong>. Skriv in koden från mejlet här, eller
-            tryck på länken i mejlet.
-          </p>
-          <label>
-            Kod från mejlet
-            <input
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="123456"
-              autoFocus
-            />
-          </label>
-          {error && <p className="error">{error}</p>}
-          <div className="actions">
-            <button type="submit" className="primary" disabled={code.trim().length < 6 || busy}>
-              {busy ? 'Loggar in…' : 'Logga in'}
+          )}
+          {mode !== 'signup' && (
+            <button type="button" className="link-button" onClick={() => switchMode('signup')}>
+              Inget konto? Skapa ett
             </button>
-            <button type="button" onClick={() => setSent(false)}>
-              Byt mejladress
+          )}
+          {mode === 'login' && (
+            <button type="button" className="link-button" onClick={() => switchMode('reset')}>
+              Glömt lösenordet?
             </button>
-          </div>
-        </form>
-      )}
+          )}
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function NewPassword() {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <section className="card">
+      <h3>Välj nytt lösenord</h3>
+      <form
+        className="category-form"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          if (password.length < 8) return;
+          setBusy(true);
+          setError(null);
+          try {
+            await setNewPassword(password);
+          } catch (err) {
+            setError(swedishError(err));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label>
+          Nytt lösenord (minst 8 tecken)
+          <input type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus />
+        </label>
+        {error && <p className="error">{error}</p>}
+        <div className="actions">
+          <button type="submit" className="primary" disabled={password.length < 8 || busy}>
+            Spara lösenord
+          </button>
+        </div>
+      </form>
     </section>
   );
 }
@@ -217,7 +275,10 @@ function SignedIn({ sync }: { sync: SyncState }) {
 function swedishError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
   if (/rate limit|security purposes|too many/i.test(message)) return 'För många försök. Vänta en minut och försök igen.';
-  if (/expired|invalid|otp/i.test(message)) return 'Koden stämmer inte eller har gått ut. Försök igen eller skicka en ny kod.';
+  if (/invalid login credentials/i.test(message)) return 'Fel mejladress eller lösenord.';
+  if (/email not confirmed/i.test(message)) return 'Mejladressen är inte bekräftad än. Tryck på länken i mejlet först.';
+  if (/password should|weak password/i.test(message)) return 'Lösenordet är för svagt. Välj minst 8 tecken.';
+  if (/same password|different from the old/i.test(message)) return 'Välj ett annat lösenord än det gamla.';
   if (/fetch|network/i.test(message)) return 'Ingen internetanslutning. Försök igen när du har nät.';
   return message;
 }

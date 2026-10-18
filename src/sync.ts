@@ -28,9 +28,11 @@ export interface SyncState {
   /** Senaste lyckade synk. */
   lastSynced: Date | null;
   error: string | null;
+  /** Användaren har öppnat länken för nytt lösenord och ska välja ett. */
+  recovering: boolean;
 }
 
-let state: SyncState = { status: 'utloggad', email: null, householdId: null, lastSynced: null, error: null };
+let state: SyncState = { status: 'utloggad', email: null, householdId: null, lastSynced: null, error: null, recovering: false };
 const listeners = new Set<(state: SyncState) => void>();
 
 export function getSyncState(): SyncState {
@@ -62,7 +64,8 @@ let again = false;
 /** Startar synken. Anropas en gång när appen startar. */
 export function startSync() {
   supabase.auth.getSession().then(({ data }) => handleSession(data.session));
-  supabase.auth.onAuthStateChange((_event, next) => {
+  supabase.auth.onAuthStateChange((event, next) => {
+    if (event === 'PASSWORD_RECOVERY') setState({ recovering: true });
     // Supabase rekommenderar att inte vänta på andra anrop inne i den här callbacken.
     setTimeout(() => handleSession(next), 0);
   });
@@ -240,25 +243,39 @@ async function fetchSince(householdId: string, since: string | null): Promise<Se
   }
 }
 
-// Inloggning med kod via mejl. En kod fungerar även i appen på hemskärmen,
-// där en länk annars skulle öppnas i Safari i stället för i appen.
+// Inloggning med mejl och lösenord. Fungerar även i appen på hemskärmen.
+// Mejladressen bekräftas en gång via en länk, så att ingen annan kan registrera sig med någons adress.
 
-/** Skickar en inloggningskod (och länk) till mejladressen. */
-export async function sendLoginCode(email: string): Promise<void> {
-  const { error } = await supabase.auth.signInWithOtp({
+const appUrl = () => location.origin + location.pathname;
+
+/** Skapar ett konto. Svarar true om mejladressen måste bekräftas innan man kan logga in. */
+export async function signUp(email: string, password: string): Promise<boolean> {
+  const { data, error } = await supabase.auth.signUp({
     email: email.trim().toLowerCase(),
-    options: { emailRedirectTo: location.origin + location.pathname },
+    password,
+    options: { emailRedirectTo: appUrl() },
   });
+  if (error) throw error;
+  // Finns adressen redan returnerar Supabase en användare utan identiteter.
+  if (data.user && data.user.identities?.length === 0) throw new Error('Det finns redan ett konto med den mejladressen. Logga in i stället.');
+  return !data.session;
+}
+
+export async function signIn(email: string, password: string): Promise<void> {
+  const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
   if (error) throw error;
 }
 
-export async function verifyLoginCode(email: string, code: string): Promise<void> {
-  const { error } = await supabase.auth.verifyOtp({
-    email: email.trim().toLowerCase(),
-    token: code.replace(/\s/g, ''),
-    type: 'email',
-  });
+/** Skickar en länk för att välja nytt lösenord. */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: appUrl() });
   if (error) throw error;
+}
+
+export async function setNewPassword(password: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+  setState({ recovering: false });
 }
 
 /** Loggar ut. Datan ligger kvar på telefonen. */
