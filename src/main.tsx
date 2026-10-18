@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles.css';
 import { startSync } from './sync';
+import { startAutoUpdate } from './update';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -11,6 +12,7 @@ createRoot(document.getElementById('root')!).render(
 );
 
 startSync();
+startAutoUpdate();
 
 // Offline-stöd. Bara i den byggda appen, så att inget cachas medan du utvecklar.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
