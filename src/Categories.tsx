@@ -7,12 +7,11 @@ interface CategoriesProps {
   categories: Category[];
   /** Anropas efter varje ändring, så att App kan läsa in kategorierna igen. */
   onChanged: () => Promise<void>;
-  /** Månadens inkomster och skulder, för summeringen av vad som kan sparas. */
+  /** Månadens inkomster, för summeringen av vad som kan sparas. */
   income: number;
-  debts: number;
 }
 
-export default function Categories({ categories, onChanged, income, debts }: CategoriesProps) {
+export default function Categories({ categories, onChanged, income }: CategoriesProps) {
   // Id på kategorin som redigeras, 'new' när en ny läggs till, annars null.
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -200,7 +199,7 @@ export default function Categories({ categories, onChanged, income, debts }: Cat
               </button>
             )}
           </section>
-          {type === 'variable' && <SavingsSummary categories={categories} income={income} debts={debts} />}
+          {type === 'variable' && <SavingsSummary categories={categories} income={income} />}
           </Fragment>
         );
       })}
@@ -215,11 +214,11 @@ export default function Categories({ categories, onChanged, income, debts }: Cat
 }
 
 /** Summerar fasta och rörliga utgifter och visar hur mycket som kan sparas, jämfört med planerat sparande. */
-function SavingsSummary({ categories, income, debts }: { categories: Category[]; income: number; debts: number }) {
+function SavingsSummary({ categories, income }: { categories: Category[]; income: number }) {
   const fixed = sumBudgets(categories.filter((category) => category.type === 'fixed'));
   const variable = sumBudgets(categories.filter((category) => category.type === 'variable'));
   const planned = sumBudgets(categories.filter((category) => category.type === 'savings'));
-  const canSave = income - fixed - variable - debts;
+  const canSave = income - fixed - variable;
   const afterPlan = canSave - planned;
 
   return (
@@ -237,12 +236,6 @@ function SavingsSummary({ categories, income, debts }: { categories: Category[];
         <span>Rörliga utgifter</span>
         <span>− {formatKr(variable)}</span>
       </p>
-      {debts > 0 && (
-        <p>
-          <span>Skulder</span>
-          <span>− {formatKr(debts)}</span>
-        </p>
-      )}
       <p className={canSave < 0 ? 'left negative' : 'left'}>
         <span>Kan sparas per månad</span>
         <strong>{formatKr(canSave)}</strong>
