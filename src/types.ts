@@ -57,3 +57,18 @@ export interface MonthlyIncome {
   /** Övriga inkomster i kronor. */
   other: number;
 }
+
+/** Ett sparmål med prognos, t.ex. gemensamt sparande till 300 000 kr. */
+export interface SavingsGoal {
+  id: string;
+  /** T.ex. "Gemensamt sparmål". */
+  name: string;
+  /** Målbelopp i kronor. */
+  target: number;
+  /** Hur mycket som sätts in varje månad, i kronor. */
+  monthlyDeposit: number;
+  /** Antagen avkastning per år i procent, t.ex. 7. */
+  annualReturn: number;
+  /** Tillgångarna (konton) vars saldo räknas mot målet. */
+  assetIds: string[];
+}

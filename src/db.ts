@@ -1,9 +1,9 @@
-import type { Asset, Category, Debt, MonthlyIncome, Transaction } from './types';
+import type { Asset, Category, Debt, MonthlyIncome, SavingsGoal, Transaction } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
-type StoreName = 'categories' | 'transactions' | 'income' | 'debts' | 'assets';
+type StoreName = 'categories' | 'transactions' | 'income' | 'debts' | 'assets' | 'goals';
 
 /** 5 000 kr var till eget sparande. */
 const SEPARATE_SAVINGS = 10000;
@@ -31,6 +31,9 @@ const SPENDING_ACCOUNT = 'Hushållskonto';
 const MY_ACCOUNTS = [SPENDING_ACCOUNT, 'Erik spar', 'Cassandra spar'];
 
 const MY_INCOME = { csn: 18156, other: 29852 };
+
+/** Det gemensamma sparmålet. Räknar konton med "gemensam" i namnet, t.ex. Avanza (gemensamt). */
+const MY_GOAL = { name: 'Gemensamt sparmål', target: 300000, monthlyDeposit: 0, annualReturn: 7 };
 
 export function newId(): string {
   // randomUUID finns bara över https och på localhost, inte när mobilen når datorn via http.
@@ -119,6 +122,17 @@ function openDb(): Promise<IDBDatabase> {
           for (const asset of existing.result as Asset[]) {
             if (asset.name.toLowerCase() === SPENDING_ACCOUNT.toLowerCase()) assets.put({ ...asset, spending: true });
           }
+        };
+      }
+
+      if (event.oldVersion < 7) {
+        const goals = db.createObjectStore('goals', { keyPath: 'id' });
+        const existing = tx.objectStore('assets').getAll();
+        existing.onsuccess = () => {
+          const assetIds = (existing.result as Asset[])
+            .filter((asset) => asset.name.toLowerCase().includes('gemensam'))
+            .map((asset) => asset.id);
+          goals.add({ ...MY_GOAL, id: newId(), assetIds });
         };
       }
     };
@@ -226,6 +240,16 @@ export function saveAsset(asset: Asset): Promise<void> {
 
 export function deleteAsset(id: string): Promise<void> {
   return write('assets', (store) => store.delete(id));
+}
+
+// Sparmål
+
+export function getGoals(): Promise<SavingsGoal[]> {
+  return read('goals', (store) => store.getAll());
+}
+
+export function saveGoal(goal: SavingsGoal): Promise<void> {
+  return write('goals', (store) => store.put(goal));
 }
 
 /** Dagens datum som "2026-10-18". */

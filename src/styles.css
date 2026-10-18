@@ -19,6 +19,8 @@
   --danger: #b5473f;
   --danger-soft: #fbedeb;
   --shadow: 0 8px 26px rgb(34 54 43 / 5%);
+  --chart-main: #256b52;
+  --chart-ref: #8a958e;
 
   color: var(--text);
   background: var(--bg);
@@ -39,6 +41,8 @@
     --danger: #ff9c91;
     --danger-soft: #472c2a;
     --shadow: 0 10px 30px rgb(0 0 0 / 18%);
+    --chart-main: #6fbf91;
+    --chart-ref: #7d8a82;
   }
 }
 
@@ -391,6 +395,196 @@ label.checkbox input {
   color: var(--muted);
   font-size: 0.85rem;
   font-weight: 450;
+}
+
+/* Sparmål */
+
+.goal-body {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 1.1rem 1.1rem;
+}
+
+.goal-progress {
+  margin: 0;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-progress strong {
+  color: var(--text);
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+}
+
+.bar {
+  height: 0.6rem;
+  overflow: hidden;
+  background: var(--accent-soft);
+  border-radius: 999px;
+}
+
+.bar > div {
+  height: 100%;
+  background: var(--chart-main);
+  border-radius: 999px;
+}
+
+.goal-result {
+  margin: 0;
+  font-weight: 650;
+}
+
+.goal-chart {
+  margin: 0;
+}
+
+.goal-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.6rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-readout span:first-child {
+  color: var(--muted);
+}
+
+.goal-readout strong {
+  font-size: 1.05rem;
+}
+
+.goal-readout .muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.goal-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.goal-chart .grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.goal-chart .axis {
+  fill: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-chart .target {
+  stroke: var(--text);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.55;
+}
+
+.goal-chart .target-label {
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.goal-chart .line-return,
+.goal-chart .line-deposits {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.goal-chart .line-return {
+  stroke: var(--chart-main);
+}
+
+.goal-chart .line-deposits {
+  stroke: var(--chart-ref);
+  stroke-dasharray: 2 4;
+}
+
+.goal-chart .reached,
+.goal-chart .hover-dot {
+  fill: var(--chart-main);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.goal-chart .crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend i {
+  display: inline-block;
+  width: 1.1rem;
+  height: 0;
+  border-top: 2px solid var(--chart-main);
+}
+
+.legend .swatch-deposits {
+  border-top: 2px dashed var(--chart-ref);
+}
+
+.goal-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+}
+
+.goal-inputs label:last-child {
+  grid-column: 1 / -1;
+}
+
+.goal-inputs input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.goal-accounts {
+  display: grid;
+  gap: 0.6rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.goal-accounts summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.goal-accounts label {
+  margin-top: 0.55rem;
+  color: var(--text);
+}
+
+.goal .note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 @media (min-width: 700px) {

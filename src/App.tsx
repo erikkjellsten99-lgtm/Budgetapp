@@ -3,6 +3,7 @@ import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import { currentMonth, getCategories, getIncome } from './db';
 import Debts from './Debts';
+import Goal from './Goal';
 import Income from './Income';
 import { formatKr } from './money';
 import type { Asset, Category, MonthlyIncome } from './types';
@@ -73,6 +74,7 @@ export default function App() {
           )}
           <p className="note">Skulderna betalas med månadens inkomst och är redan avdragna ovan.</p>
         </section>
+        <Goal assets={assets} />
         <Income income={income} onChanged={reload} />
         <Categories categories={categories} onChanged={reload} />
         <Assets onChange={setAssets} />
