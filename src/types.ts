@@ -3,8 +3,8 @@ export type CategoryType = 'fixed' | 'variable' | 'savings';
 
 /** Kategorityperna i den ordning de visas, med svenska namn. */
 export const CATEGORY_TYPES: { type: CategoryType; label: string }[] = [
-  { type: 'fixed', label: 'Fast' },
-  { type: 'variable', label: 'Rörlig' },
+  { type: 'fixed', label: 'Fasta utgifter' },
+  { type: 'variable', label: 'Rörliga utgifter' },
   { type: 'savings', label: 'Sparande' },
 ];
 
