@@ -26,6 +26,9 @@ export default function App() {
   const costs = sumBudgets(categories.filter((category) => category.type !== 'savings'));
   const plannedSavings = sumBudgets(categories.filter((category) => category.type === 'savings'));
   const leftForSavings = totalIncome - costs - debtTotal - plannedSavings;
+  // Det som hamnar på sparande när månaden är slut: planerat sparande plus det som blir över.
+  const savedThisMonth = plannedSavings + leftForSavings;
+  const netWorth = assetTotal + savedThisMonth;
 
   return (
     <>
@@ -57,17 +60,20 @@ export default function App() {
         </section>
         <section className="card summary">
           <p>
-            <span>Tillgångar</span>
+            <span>Tillgångar idag</span>
             <span>{formatKr(assetTotal)}</span>
           </p>
           <p>
-            <span>Skulder</span>
-            <span>− {formatKr(debtTotal)}</span>
+            <span>Sparande denna månad</span>
+            <span>
+              {savedThisMonth < 0 ? '−' : '+'} {formatKr(Math.abs(savedThisMonth))}
+            </span>
           </p>
-          <p className={assetTotal - debtTotal < 0 ? 'left negative' : 'left'}>
-            <span>Nettovärde</span>
-            <strong>{formatKr(assetTotal - debtTotal)}</strong>
+          <p className={netWorth < 0 ? 'left negative' : 'left'}>
+            <span>Nettovärde efter månaden</span>
+            <strong>{formatKr(netWorth)}</strong>
           </p>
+          <p className="note">Skulderna betalas med månadens inkomst och är redan avdragna ovan.</p>
         </section>
         <Income income={income} onChanged={reload} />
         <Categories categories={categories} onChanged={reload} />
