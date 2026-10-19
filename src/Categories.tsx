@@ -9,9 +9,13 @@ interface CategoriesProps {
   onChanged: () => Promise<void>;
   /** Månadens inkomster, för summeringen av vad som kan sparas. */
   income: number;
+  /** Det som är ikryssat på önskelistan denna månad. Räknas in i rörliga utgifter. */
+  wishTotal: number;
+  /** Öppnar fliken Önskelista. */
+  onOpenWishlist: () => void;
 }
 
-export default function Categories({ categories, onChanged, income }: CategoriesProps) {
+export default function Categories({ categories, onChanged, income, wishTotal, onOpenWishlist }: CategoriesProps) {
   // Id på kategorin som redigeras, 'new' när en ny läggs till, annars null.
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -92,16 +96,24 @@ export default function Categories({ categories, onChanged, income }: Categories
         const items = categories
           .filter((category) => category.type === type)
           .sort(byOrder);
+        // Ikryssat på önskelistan räknas som köpt, alltså betalt, i rörliga utgifter.
+        const extra = type === 'variable' ? wishTotal : 0;
         return (
           <Fragment key={type}>
           <section className="card">
             <h3>
-              {label} <span>{formatKr(sumBudgets(items))}</span>
+              {label} <span>{formatKr(sumBudgets(items) + extra)}</span>
             </h3>
-            {sumBudgets(items) > 0 && (
+            {sumBudgets(items) + extra > 0 && (
               <p className="paid-summary">
-                Betalt {formatKr(sumPaid(items))} · kvar {formatKr(sumBudgets(items) - sumPaid(items))}
+                Betalt {formatKr(sumPaid(items) + extra)} · kvar {formatKr(sumBudgets(items) - sumPaid(items))}
               </p>
+            )}
+            {type === 'variable' && wishTotal > 0 && (
+              <button type="button" className="row wish-link" onClick={onOpenWishlist}>
+                <span>Från önskelistan</span>
+                <span className="row-amount">{formatKr(wishTotal)} ›</span>
+              </button>
             )}
             <SortableList
               items={items}
@@ -208,7 +220,7 @@ export default function Categories({ categories, onChanged, income }: Categories
               </button>
             )}
           </section>
-          {type === 'variable' && <SavingsSummary categories={categories} income={income} />}
+          {type === 'variable' && <SavingsSummary categories={categories} income={income} wishTotal={wishTotal} />}
           </Fragment>
         );
       })}
@@ -252,9 +264,9 @@ function AmountField({ category, onSave }: { category: Category; onSave: (amount
 }
 
 /** Summerar fasta och rörliga utgifter och visar hur mycket som kan sparas, jämfört med planerat sparande. */
-function SavingsSummary({ categories, income }: { categories: Category[]; income: number }) {
+function SavingsSummary({ categories, income, wishTotal }: { categories: Category[]; income: number; wishTotal: number }) {
   const fixed = sumBudgets(categories.filter((category) => category.type === 'fixed'));
-  const variable = sumBudgets(categories.filter((category) => category.type === 'variable'));
+  const variable = sumBudgets(categories.filter((category) => category.type === 'variable')) + wishTotal;
   const planned = sumBudgets(categories.filter((category) => category.type === 'savings'));
   const canSave = income - fixed - variable;
   const afterPlan = canSave - planned;
@@ -312,7 +324,7 @@ function saveExpanded(ids: Set<string>) {
 }
 
 /** Är posten markerad som betald denna månad? */
-function isPaid(entry: { paidMonth?: string }): boolean {
+export function isPaid(entry: { paidMonth?: string }): boolean {
   return entry.paidMonth === currentMonth();
 }
 
@@ -330,7 +342,7 @@ export function sumPaid(categories: Category[]): number {
 }
 
 /** Rund bock-knapp som markerar något som betalt denna månad. */
-function PaidCheck({ paid, label, onToggle }: { paid: boolean; label: string; onToggle: () => void }) {
+export function PaidCheck({ paid, label, onToggle }: { paid: boolean; label: string; onToggle: () => void }) {
   return (
     <button
       type="button"
@@ -364,7 +376,7 @@ interface SortableListProps<T extends { id: string; name: string }> {
  * En lista där raderna kan flyttas genom att dra i handtaget (⠿): kategorier i en grupp och raderna under en kategori.
  * Byggt med pointer-händelser, så att det fungerar med finger, mus och penna utan bibliotek.
  */
-function SortableList<T extends { id: string; name: string }>({ items, onReorder, renderItem, listClass }: SortableListProps<T>) {
+export function SortableList<T extends { id: string; name: string }>({ items, onReorder, renderItem, listClass }: SortableListProps<T>) {
   const [order, setOrder] = useState(items);
   const [dragging, setDragging] = useState<string | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -471,10 +483,12 @@ interface ItemRowProps {
   onChange: (item: CategoryItem) => void;
   onDelete: () => void;
   onTogglePaid: () => void;
+  /** Exempeltext i namnfältet. */
+  placeholder?: string;
 }
 
 /** En rad under en kategori: namn och belopp som skrivs direkt i listan. Sparas medan du skriver. */
-function ItemRow({ item, handle, autoFocus, onChange, onDelete, onTogglePaid }: ItemRowProps) {
+export function ItemRow({ item, handle, autoFocus, onChange, onDelete, onTogglePaid, placeholder }: ItemRowProps) {
   const [name, setName] = useState(item.name);
   const [amountText, setAmountText] = useState(toInputKr(item.amount));
 
@@ -493,7 +507,7 @@ function ItemRow({ item, handle, autoFocus, onChange, onDelete, onTogglePaid }: 
       <input
         className="item-name"
         value={name}
-        placeholder="Namn, t.ex. Claude"
+        placeholder={placeholder ?? 'Namn, t.ex. Claude'}
         aria-label="Namn på raden"
         autoFocus={autoFocus}
         onChange={(event) => setName(event.target.value)}

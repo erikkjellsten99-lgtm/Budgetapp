@@ -1,10 +1,10 @@
-import type { Asset, Category, Debt, MonthlyIncome, SavingsGoal, Transaction } from './types';
+import type { Asset, Category, Debt, MonthlyIncome, SavingsGoal, Transaction, Wish } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 
 /** Listorna med appens data. Det är dessa som synkas mellan telefonerna. */
-export const DATA_STORES = ['categories', 'transactions', 'income', 'debts', 'assets', 'goals'] as const;
+export const DATA_STORES = ['categories', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes'] as const;
 export type DataStore = (typeof DATA_STORES)[number];
 type StoreName = DataStore | 'outbox' | 'meta';
 
@@ -160,6 +160,10 @@ function openDb(): Promise<IDBDatabase> {
       if (event.oldVersion < 8) {
         db.createObjectStore('outbox', { keyPath: 'key' });
         db.createObjectStore('meta', { keyPath: 'key' });
+      }
+
+      if (event.oldVersion < 9) {
+        db.createObjectStore('wishes', { keyPath: 'id' });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -389,6 +393,20 @@ export function saveAsset(asset: Asset): Promise<void> {
 
 export function deleteAsset(id: string): Promise<void> {
   return removeRecord('assets', id);
+}
+
+// Önskelista
+
+export function getWishes(): Promise<Wish[]> {
+  return read('wishes', (store) => store.getAll()) as Promise<Wish[]>;
+}
+
+export function saveWish(wish: Wish): Promise<void> {
+  return putRecord('wishes', wish);
+}
+
+export function deleteWish(id: string): Promise<void> {
+  return removeRecord('wishes', id);
 }
 
 // Sparmål

@@ -88,3 +88,25 @@ export interface SavingsGoal {
   /** Tillgångarna (konton) vars saldo räknas mot målet. */
   assetIds: string[];
 }
+
+/** Vems önskelista en önskan står på. */
+export type WishList = 'erik' | 'cassandra';
+
+/** Önskelistornas namn, i den ordning de visas. */
+export const WISH_LISTS: { id: WishList; label: string }[] = [
+  { id: 'erik', label: 'Erik' },
+  { id: 'cassandra', label: 'Cassandra' },
+];
+
+/** En sak på önskelistan. Är den ikryssad denna månad räknas den in i rörliga utgifter. */
+export interface Wish {
+  id: string;
+  list: WishList;
+  name: string;
+  /** Pris i kronor. */
+  amount: number;
+  /** Månaden ("2026-10") då saken bockades i. Räknas bara in i rörliga utgifter den månaden. */
+  paidMonth?: string;
+  /** Plats i listan. */
+  order?: number;
+}

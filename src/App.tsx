@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import Account from './Account';
-import { currentMonth, getCategories, getIncome, onDataChange } from './db';
+import { currentMonth, getCategories, getIncome, getWishes, onDataChange } from './db';
+import Wishlist, { sumCheckedWishes } from './Wishlist';
 import { getSyncState, onSyncState, type SyncState } from './sync';
 import Goal, { goalCurrent, goalStatus, project } from './Goal';
 import Income from './Income';
 import { formatKr } from './money';
-import type { Asset, Category, MonthlyIncome, SavingsGoal } from './types';
+import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
-type View = 'overview' | 'goal' | 'budget' | 'assets' | 'account';
+type View = 'overview' | 'goal' | 'budget' | 'wishlist' | 'assets' | 'account';
 
 /** Flikarna i menyn. Kort namn används i mobilens bottenmeny. */
 const VIEWS: { id: View; label: string; short: string; icon: string }[] = [
@@ -17,6 +18,7 @@ const VIEWS: { id: View; label: string; short: string; icon: string }[] = [
   { id: 'overview', label: 'Översikt', short: 'Översikt', icon: 'M4 11l8-7 8 7M6 9.5V20h4.5v-5.5h3V20H18V9.5' },
   { id: 'budget', label: 'Inkomster & utgifter', short: 'Budget', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
   { id: 'goal', label: 'Sparmål', short: 'Sparmål', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01' },
+  { id: 'wishlist', label: 'Önskelista', short: 'Önskelista', icon: 'M12 20s-7.5-4.6-7.5-10.2A4.1 4.1 0 0 1 12 7.4a4.1 4.1 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z' },
   { id: 'assets', label: 'Tillgångar', short: 'Konton', icon: 'M3 7.5h18v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5zM3 7.5l2-3.5h14l2 3.5M16 14h2' },
 ];
 
@@ -48,9 +50,11 @@ export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [income, setIncome] = useState<MonthlyIncome>({ month: currentMonth(), csn: 0, other: 0 });
+  const [wishes, setWishes] = useState<Wish[]>([]);
 
   async function reload() {
     setCategories(await getCategories());
+    setWishes(await getWishes());
     setIncome(await getIncome(currentMonth()));
   }
 
@@ -63,7 +67,9 @@ export default function App() {
   useEffect(() => onSyncState(setSync), []);
 
   const totalIncome = income.csn + income.other;
-  const costs = sumBudgets(categories.filter((category) => category.type !== 'savings'));
+  // Det som är ikryssat på önskelistan denna månad räknas in i rörliga utgifter.
+  const wishTotal = sumCheckedWishes(wishes);
+  const costs = sumBudgets(categories.filter((category) => category.type !== 'savings')) + wishTotal;
   const plannedSavings = sumBudgets(categories.filter((category) => category.type === 'savings'));
   const leftForSavings = totalIncome - costs - plannedSavings;
   // Nettovärdet är det som finns på sparkontona. Pengar att använda (hushållskontot) räknas inte.
@@ -168,7 +174,16 @@ export default function App() {
         </div>
         <div hidden={view !== 'budget'}>
           <Income income={income} onChanged={reload} />
-          <Categories categories={categories} onChanged={reload} income={totalIncome} />
+          <Categories
+            categories={categories}
+            onChanged={reload}
+            income={totalIncome}
+            wishTotal={wishTotal}
+            onOpenWishlist={() => showView('wishlist')}
+          />
+        </div>
+        <div hidden={view !== 'wishlist'}>
+          <Wishlist wishes={wishes} onChanged={reload} />
         </div>
         <div hidden={view !== 'assets'}>
           <Assets onChange={setAssets} />
