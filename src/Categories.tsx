@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
-import { currentMonth, deleteCategory, newId, saveCategory } from './db';
+import { budgetMonth, deleteCategory, newId, saveCategory } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import { CATEGORY_TYPES, type Category, type CategoryItem, type CategoryType } from './types';
 
@@ -67,7 +67,7 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
 
   /** Markerar kategorin som betald eller obetald denna månad. Har den rader gäller det alla rader. */
   async function togglePaid(category: Category) {
-    const month = currentMonth();
+    const month = budgetMonth();
     const paid = !isCategoryPaid(category);
     if (category.items?.length) {
       await saveItems(category, category.items.map((item) => ({ ...item, paidMonth: paid ? month : undefined })));
@@ -179,7 +179,7 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
                               category,
                               category.items!.map((other) =>
                                 other.id === item.id
-                                  ? { ...other, paidMonth: isPaid(other) ? undefined : currentMonth() }
+                                  ? { ...other, paidMonth: isPaid(other) ? undefined : budgetMonth() }
                                   : other,
                               ),
                             )
@@ -323,9 +323,9 @@ function saveExpanded(ids: Set<string>) {
   }
 }
 
-/** Är posten markerad som betald denna månad? */
+/** Är posten markerad som betald den valda budgetmånaden? */
 export function isPaid(entry: { paidMonth?: string }): boolean {
-  return entry.paidMonth === currentMonth();
+  return entry.paidMonth === budgetMonth();
 }
 
 /** En kategori är betald när den själv är markerad, eller när alla dess rader är det. */

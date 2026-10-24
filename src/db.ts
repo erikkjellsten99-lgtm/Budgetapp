@@ -67,6 +67,49 @@ export function currentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/** Månaden flyttad ett antal steg, t.ex. shiftMonth("2026-12", 1) = "2027-01". */
+export function shiftMonth(month: string, steps: number): string {
+  const [year, number] = month.split('-').map(Number);
+  const index = year * 12 + (number - 1) + steps;
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
+}
+
+/** "2026-10" som "oktober 2026". */
+export function monthName(month: string): string {
+  return new Date(`${month}-01T12:00`).toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
+}
+
+const BUDGET_MONTH_KEY = 'budgetMonth';
+let selectedMonth: string | undefined;
+
+/**
+ * Månaden som budgeten visar (inkomst, betalt-markeringar, önskelistan).
+ * Väljs med pilarna på översikten och sparas. Har den sparade månaden passerat
+ * när appen öppnas börjar den på innevarande månad, så att den aldrig fastnar på en gammal.
+ */
+export function budgetMonth(): string {
+  if (selectedMonth) return selectedMonth;
+  const now = currentMonth();
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(BUDGET_MONTH_KEY);
+  } catch {
+    // Lagring avstängd: visa innevarande månad.
+  }
+  selectedMonth = saved && /^\d{4}-\d{2}$/.test(saved) && saved > now ? saved : now;
+  return selectedMonth;
+}
+
+export function setBudgetMonth(month: string): void {
+  selectedMonth = month;
+  try {
+    if (month > currentMonth()) localStorage.setItem(BUDGET_MONTH_KEY, month);
+    else localStorage.removeItem(BUDGET_MONTH_KEY);
+  } catch {
+    // Lagring avstängd: valet gäller bara tills appen stängs.
+  }
+}
+
 let dbPromise: Promise<IDBDatabase> | undefined;
 
 function openDb(): Promise<IDBDatabase> {

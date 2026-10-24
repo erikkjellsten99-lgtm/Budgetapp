@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ItemRow, PaidCheck, SortableList, isPaid } from './Categories';
-import { currentMonth, deleteWish, newId, saveWish } from './db';
+import { budgetMonth, deleteWish, newId, saveWish } from './db';
 import { formatKr } from './money';
 import { WISH_LISTS, type Wish, type WishList } from './types';
 
@@ -66,7 +66,7 @@ export default function Wishlist({ wishes, onChanged }: WishlistProps) {
   /** Bocken på en lista kryssar i alla saker på den, eller kryssar ur alla om alla redan är ikryssade. */
   async function toggleList(items: Wish[]) {
     const checked = !items.every(isPaid);
-    for (const wish of items) await saveWish({ ...wish, paidMonth: checked ? currentMonth() : undefined });
+    for (const wish of items) await saveWish({ ...wish, paidMonth: checked ? budgetMonth() : undefined });
     await onChanged();
   }
 
@@ -141,7 +141,7 @@ export default function Wishlist({ wishes, onChanged }: WishlistProps) {
                           await deleteWish(wish.id);
                           await onChanged();
                         }}
-                        onTogglePaid={() => save({ ...wish, paidMonth: isPaid(wish) ? undefined : currentMonth() })}
+                        onTogglePaid={() => save({ ...wish, paidMonth: isPaid(wish) ? undefined : budgetMonth() })}
                       />
                     )}
                   />

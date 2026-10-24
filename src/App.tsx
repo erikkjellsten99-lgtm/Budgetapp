@@ -2,7 +2,17 @@ import { useEffect, useState } from 'react';
 import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import Account from './Account';
-import { currentMonth, getCategories, getIncome, getWishes, onDataChange } from './db';
+import {
+  budgetMonth,
+  currentMonth,
+  getCategories,
+  getIncome,
+  getWishes,
+  monthName,
+  onDataChange,
+  setBudgetMonth,
+  shiftMonth,
+} from './db';
 import Wishlist, { sumCheckedWishes } from './Wishlist';
 import { getSyncState, onSyncState, type SyncState } from './sync';
 import Goal, { goalCurrent, goalStatus, project } from './Goal';
@@ -49,13 +59,22 @@ export default function App() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [income, setIncome] = useState<MonthlyIncome>({ month: currentMonth(), csn: 0, other: 0 });
+  const [income, setIncome] = useState<MonthlyIncome>({ month: budgetMonth(), csn: 0, other: 0 });
+  const [selectedMonth, setSelectedMonth] = useState(budgetMonth);
   const [wishes, setWishes] = useState<Wish[]>([]);
 
   async function reload() {
     setCategories(await getCategories());
     setWishes(await getWishes());
-    setIncome(await getIncome(currentMonth()));
+    setIncome(await getIncome(budgetMonth()));
+  }
+
+  /** Bläddrar budgeten en månad bakåt eller framåt, eller tillbaka till innevarande (steps = 0). */
+  function changeMonth(steps: number) {
+    const next = steps === 0 ? currentMonth() : shiftMonth(budgetMonth(), steps);
+    setBudgetMonth(next);
+    setSelectedMonth(next);
+    reload();
   }
 
   useEffect(() => {
@@ -79,7 +98,8 @@ export default function App() {
 
   const goalNow = goal ? goalCurrent(goal, assets) : 0;
   const goalPercent = goal && goal.target > 0 ? Math.min(100, Math.round((goalNow / goal.target) * 100)) : 0;
-  const month = new Date().toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
+  const month = monthName(selectedMonth);
+  const isThisMonth = selectedMonth === currentMonth();
 
   return (
     <div className="app-shell">
@@ -118,7 +138,26 @@ export default function App() {
         {/* Alla vyer ligger kvar i bakgrunden, så att summorna (t.ex. tillgångar) alltid är uppdaterade. */}
         <div hidden={view !== 'overview'}>
           <div className="view-intro">
-            <p className="eyebrow">{month.toUpperCase()}</p>
+            <div className="month-picker" role="group" aria-label="Budgetmånad">
+              <button type="button" className="month-step" onClick={() => changeMonth(-1)} aria-label="Föregående månad">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M14.5 6l-6 6 6 6" />
+                </svg>
+              </button>
+              <p className="eyebrow month-name" aria-live="polite">
+                {month.toUpperCase()}
+              </p>
+              <button type="button" className="month-step" onClick={() => changeMonth(1)} aria-label="Nästa månad">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9.5 6l6 6-6 6" />
+                </svg>
+              </button>
+              {!isThisMonth && (
+                <button type="button" className="month-today" onClick={() => changeMonth(0)}>
+                  Denna månad
+                </button>
+              )}
+            </div>
             <h2>Översikt</h2>
           </div>
           <section className={leftForSavings < 0 ? 'card balance-hero negative' : 'card balance-hero'}>

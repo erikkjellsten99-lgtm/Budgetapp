@@ -147,6 +147,69 @@ main {
   letter-spacing: 0.09em;
 }
 
+/* Välj budgetmånad på översikten: ‹ NOVEMBER 2026 › */
+.month-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin: -0.55rem 0 0.15rem -0.6rem;
+}
+
+.month-picker .month-name {
+  margin: 0;
+  min-width: 8.5rem;
+  text-align: center;
+  color: var(--text);
+}
+
+.month-step {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.month-step svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+  .month-step:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+}
+
+.month-step:active {
+  transform: scale(0.92);
+}
+
+.month-today {
+  margin-left: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
 h2 {
   margin: 0;
   font-size: clamp(1.55rem, 5vw, 1.9rem);

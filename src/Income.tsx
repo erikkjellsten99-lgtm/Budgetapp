@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { saveIncome } from './db';
+import { monthName, saveIncome } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import type { MonthlyIncome } from './types';
 
@@ -9,11 +9,6 @@ interface IncomeProps {
 }
 
 /** Månadens inkomst: CSN och RZ Zampart. */
-/** "2026-10" som "oktober 2026". */
-function monthName(month: string): string {
-  return new Date(`${month}-01T12:00`).toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
-}
-
 export default function Income({ income, onChanged }: IncomeProps) {
   const [editing, setEditing] = useState(false);
   const [csn, setCsn] = useState('');
