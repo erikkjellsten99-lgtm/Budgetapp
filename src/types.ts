@@ -74,6 +74,16 @@ export interface MonthlyIncome {
   other: number;
 }
 
+/**
+ * Budgeten (kategorier och rader) för en enskild månad. Skapas första gången något ändras
+ * i månaden. Månader utan egen budget utgår från närmaste tidigare månad som har en.
+ */
+export interface MonthBudget {
+  /** Månad som "2026-12". Fungerar som nyckel. */
+  month: string;
+  categories: Category[];
+}
+
 /** Ett sparmål med prognos, t.ex. gemensamt sparande till 300 000 kr. */
 export interface SavingsGoal {
   id: string;
