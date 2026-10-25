@@ -1759,7 +1759,7 @@ main > div > h2 + .hint {
 .forecast-table .table-head,
 .month-row {
   display: grid;
-  grid-template-columns: 4.6rem repeat(3, minmax(0, 1fr));
+  grid-template-columns: 5.4rem repeat(3, minmax(0, 1fr));
   gap: 0.4rem;
   font-variant-numeric: tabular-nums;
 }
@@ -1898,4 +1898,12 @@ main > div > h2 + .hint {
 .month-details dl div.sub {
   padding-left: 0.8rem;
   font-size: 0.82rem;
+}
+
+.forecast-table li.now .month-row {
+  background: var(--bg);
+}
+
+.now-hint {
+  margin: 0.2rem 0 0 !important;
 }

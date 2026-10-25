@@ -13,7 +13,7 @@ import {
   saveLoan,
   shiftMonth,
 } from './db';
-import { CSN_PLAN, csnPayouts, forecast, planCsn, type Forecast as ForecastResult, type Loan, type MonthInput } from './forecast';
+import { CSN_PLAN, csnPayouts, forecast, planCsn, type Forecast as ForecastResult, type Loan, type MonthInput, type MonthResult } from './forecast';
 import { formatKr, parseKr, toInputKr } from './money';
 import type { MonthlyIncome } from './types';
 
@@ -67,24 +67,41 @@ async function loadData(first: string, count: number): Promise<Data> {
 export default function Forecast() {
   // Prognosen börjar med nästa månad. Den betalas med pengarna som kommer den 23–25:e den här
   // månaden, och det som blir över sätts in direkt – alltså redan i slutet av den här månaden.
-  const first = shiftMonth(currentMonth(), 1);
+  // Innevarande månad visas också, som utgångsläget: den är redan betald och det som blev över
+  // finns redan i sparandet.
+  const now = currentMonth();
+  const first = shiftMonth(now, 1);
   const [horizon, setHorizon] = useState(24);
   const [data, setData] = useState<Data | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-    const load = () => loadData(first, horizon).then((d) => alive && setData(d));
+    const load = () => loadData(now, horizon + 1).then((d) => alive && setData(d));
     load();
     const stop = onDataChange(load);
     return () => {
       alive = false;
       stop();
     };
-  }, [first, horizon]);
+  }, [now, horizon]);
 
   if (!data) return null;
-  const result = forecast(data.inputs, data.startSavings, data.loan, data.goalTarget);
+  const [nowInput, ...futureInputs] = data.inputs;
+  const result = forecast(futureInputs, data.startSavings, data.loan, data.goalTarget);
+  const nowRow: MonthResult = {
+    ...nowInput,
+    left: nowInput.income - nowInput.costs - nowInput.plannedSavings,
+    freed: 0,
+    extraToLoan: 0,
+    interest: 0,
+    amortized: 0,
+    loanLeft: data.loan?.balance ?? 0,
+    toSavings: 0,
+    savings: data.startSavings,
+  };
+  const rows = [nowRow, ...result.months];
+  const withNow: ForecastResult = { ...result, months: rows };
   const last = result.months.at(-1);
   // Visa CSN-kortet om någon månad i planen inte stämmer med det som ligger i appen.
   const csnMissing = CSN_PLAN.some((p) => {
@@ -144,7 +161,7 @@ export default function Forecast() {
         ))}
       </div>
 
-      <Chart result={result} goal={data.goalTarget} />
+      <Chart result={withNow} goal={data.goalTarget} />
 
       {data.loan && <LoanCard loan={data.loan} />}
 
@@ -163,8 +180,8 @@ export default function Forecast() {
           <span>Sparat</span>
         </div>
         <ul>
-          {result.months.map((m, i) => (
-            <li key={m.month}>
+          {rows.map((m, i) => (
+            <li key={m.month} className={i === 0 ? 'now' : undefined}>
               <button
                 type="button"
                 className={open === m.month ? 'row month-row open' : 'row month-row'}
@@ -173,7 +190,7 @@ export default function Forecast() {
               >
                 <span className="m">
                   {shortMonth(m.month)}
-                  <CsnTag month={m.month} csn={data.incomes[i].csn} />
+                  {i === 0 ? <small className="csn-tag">Nu</small> : <CsnTag month={m.month} csn={data.incomes[i].csn} />}
                 </span>
                 <span className={m.left < 0 ? 'negative' : undefined}>{kr(m.left)}</span>
                 {data.loan && <span>{m.loanLeft > 0 ? kr(m.loanLeft) : 'Betalt'}</span>}
@@ -185,6 +202,7 @@ export default function Forecast() {
                   income={data.incomes[i]}
                   own={data.ownIncome.has(m.month)}
                   hasLoan={!!data.loan}
+                  isNow={i === 0}
                 />
               )}
             </li>
@@ -200,11 +218,13 @@ function MonthDetails({
   income,
   own,
   hasLoan,
+  isNow,
 }: {
   month: ForecastResult['months'][number];
   income: MonthlyIncome;
   own: boolean;
   hasLoan: boolean;
+  isNow: boolean;
 }) {
   const [csn, setCsn] = useState(toInputKr(income.csn));
   const [other, setOther] = useState(toInputKr(income.other));
@@ -215,6 +235,11 @@ function MonthDetails({
 
   return (
     <div className="month-details">
+      {isNow && (
+        <p className="hint now-hint">
+          {monthName(month.month)} är redan betald. Det som blev över finns redan med i sparandet ({kr(month.savings)}).
+        </p>
+      )}
       <dl>
         <div>
           <dt>Inkomster</dt>
