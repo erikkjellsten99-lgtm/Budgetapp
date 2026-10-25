@@ -246,7 +246,7 @@ function MonthDetails({
       >
         <p className="hint">
           Inkomst {monthName(month.month)}
-          {own ? '' : ' (samma som månaden innan)'}. Ändrar du här gäller det även kommande månader tills nästa ändring.
+          {own ? '' : ' (samma som månaden innan än så länge)'}. Ändrar du här gäller det bara {monthName(month.month)}.
         </p>
         <div className="two">
           <label>
@@ -389,7 +389,7 @@ function CsnPlan({ first }: { first: string }) {
     for (const p of CSN_PLAN) {
       if (p.month < first) continue;
       const income = await getIncome(p.month);
-      await saveIncome({ month: p.month, csn: p.csn, other: income.other });
+      await saveIncome({ month: p.month, csn: p.csn, other: income.other }, true);
     }
     setBusy(false);
   }

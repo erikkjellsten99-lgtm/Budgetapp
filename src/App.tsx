@@ -264,11 +264,11 @@ function BudgetSource({ month, from }: { month: string; from: string | null }) {
   const own = from === month;
   return (
     <p className={own ? 'budget-source own' : 'budget-source'}>
-      <strong>{own ? `Egen budget för ${name}` : from ? `Samma som ${monthName(from)}` : 'Samma som tidigare månader'}</strong>
+      <strong>{own ? `Budget för ${name}` : from ? `Samma som ${monthName(from)} än så länge` : 'Samma som tidigare månader än så länge'}</strong>
       <span>
         {own
-          ? 'Tidigare månader påverkas inte av ändringar här. Senare månader utan egna ändringar följer med.'
-          : `Ändrar du något får ${name} en egen budget, och ${from ? monthName(from) : 'tidigare månader'} påverkas inte.`}
+          ? `Ändringar här gäller bara ${name}. Andra månader påverkas inte.`
+          : `Utgår från ${from ? monthName(from) : 'tidigare månader'}. Ändrar du något gäller det bara ${name}.`}
       </span>
     </p>
   );

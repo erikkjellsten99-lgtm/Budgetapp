@@ -414,12 +414,18 @@ export async function getBudget(month: string): Promise<BudgetForMonth> {
 let budgetQueue: Promise<unknown> = Promise.resolve();
 
 /**
- * Ändrar budgeten för en månad. Första ändringen ger månaden en egen kopia,
- * så att andra månader inte påverkas.
+ * Ändrar budgeten för en månad, och bara den månaden. Första ändringen ger månaden en egen kopia.
+ * En ny månad som aldrig ändrats utgår från närmaste tidigare månad.
  */
 export function updateBudget(month: string, change: (categories: Category[]) => Category[]): Promise<void> {
   const next = budgetQueue.then(async () => {
     const { categories } = await getBudget(month);
+    // Nästa månad ska inte följa med: utgår den från den här månaden får den först en egen
+    // kopia av budgeten som den var. Då gäller ändringen bara den här månaden.
+    const following = shiftMonth(month, 1);
+    if ((await getBudget(following)).from !== following) {
+      await putRecord('budgets', { month: following, categories } satisfies MonthBudget);
+    }
     await putRecord('budgets', { month, categories: change(categories) } satisfies MonthBudget);
   });
   budgetQueue = next.catch(() => undefined);
@@ -480,8 +486,21 @@ export function getIncomeRecords(): Promise<MonthlyIncome[]> {
   return read('income', (store) => store.getAll());
 }
 
-export function saveIncome(income: MonthlyIncome): Promise<void> {
-  return putRecord('income', income);
+/**
+ * Sparar inkomsten för en månad, och bara den månaden: utgår nästa månad från den här
+ * får den först en egen post med beloppen som de var. Med alsoLater: true följer
+ * senare månader utan egna belopp med (används av CSN-planen).
+ */
+export async function saveIncome(income: MonthlyIncome, alsoLater = false): Promise<void> {
+  if (!alsoLater) {
+    const following = shiftMonth(income.month, 1);
+    const records = await getIncomeRecords();
+    if (!records.some((r) => r.month === following)) {
+      const before = await getIncome(following);
+      await putRecord('income', before);
+    }
+  }
+  await putRecord('income', income);
 }
 
 // Skulder
