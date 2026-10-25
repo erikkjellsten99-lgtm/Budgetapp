@@ -210,6 +210,31 @@ main {
   cursor: pointer;
 }
 
+/* Om budgeten är månadens egen eller utgår från en tidigare månad. */
+.budget-source {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.85rem 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--muted);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.budget-source strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.budget-source.own {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 h2 {
   margin: 0;
   font-size: clamp(1.55rem, 5vw, 1.9rem);

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
-import { budgetMonth, deleteCategory, newId, saveCategory } from './db';
+import { budgetMonth, deleteCategory, monthName, newId, saveCategories, saveCategory, updateBudget } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import { CATEGORY_TYPES, type Category, type CategoryItem, type CategoryType } from './types';
 
@@ -19,27 +19,44 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
   // Id på kategorin som redigeras, 'new' när en ny läggs till, annars null.
   const [editing, setEditing] = useState<string | null>(null);
 
+  // Alla ändringar gäller den valda budgetmånaden. Andra månader påverkas inte.
+
   async function handleSave(category: Category) {
-    await saveCategory(category);
+    await saveCategory(budgetMonth(), category);
     setEditing(null);
     await onChanged();
   }
 
-  /** Sparar raderna och sätter kategorins budget till deras summa. */
-  async function saveItems(category: Category, items: CategoryItem[]) {
-    const monthlyBudget = items.reduce((sum, item) => sum + item.amount, 0);
-    await saveCategory({ ...category, items, monthlyBudget: items.length ? monthlyBudget : category.monthlyBudget });
+  /** Ändrar fält i en kategori, utifrån den senast sparade versionen. */
+  async function patchCategory(id: string, patch: Partial<Category>) {
+    await updateBudget(budgetMonth(), (list) => list.map((other) => (other.id === id ? { ...other, ...patch } : other)));
+    await onChanged();
+  }
+
+  /** Ändrar raderna i en kategori och sätter kategorins budget till deras summa. */
+  async function updateItems(categoryId: string, change: (items: CategoryItem[], category: Category) => CategoryItem[]) {
+    await updateBudget(budgetMonth(), (list) =>
+      list.map((category) => {
+        if (category.id !== categoryId) return category;
+        const items = change(category.items ?? [], category);
+        const sum = items.reduce((total, item) => total + item.amount, 0);
+        return { ...category, items, monthlyBudget: items.length ? sum : category.monthlyBudget };
+      }),
+    );
     await onChanged();
   }
 
   /** Lägger till en tom rad. Första gången blir kategorins nuvarande budget en egen rad, så att summan inte ändras. */
   async function addItem(category: Category) {
-    const items = [...(category.items ?? [])];
-    if (!items.length && category.monthlyBudget > 0) items.push({ id: newId(), name: 'Övrigt', amount: category.monthlyBudget });
-    items.push({ id: newId(), name: '', amount: 0 });
-    setFocusItem(items[items.length - 1].id);
+    const id = newId();
+    setFocusItem(id);
     setOpen(category.id, true);
-    await saveItems(category, items);
+    await updateItems(category.id, (items, latest) => {
+      const next = [...items];
+      if (!next.length && latest.monthlyBudget > 0) next.push({ id: newId(), name: 'Övrigt', amount: latest.monthlyBudget });
+      next.push({ id, name: '', amount: 0 });
+      return next;
+    });
   }
 
   const [focusItem, setFocusItem] = useState<string | null>(null);
@@ -59,9 +76,8 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
 
   /** Sparar ny ordning för kategorierna i en grupp. */
   async function reorderCategories(list: Category[]) {
-    for (const [index, category] of list.entries()) {
-      if (category.order !== index) await saveCategory({ ...category, order: index });
-    }
+    const moved = list.map((category, index) => ({ ...category, order: index }));
+    await saveCategories(budgetMonth(), moved);
     await onChanged();
   }
 
@@ -70,27 +86,23 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
     const month = budgetMonth();
     const paid = !isCategoryPaid(category);
     if (category.items?.length) {
-      await saveItems(category, category.items.map((item) => ({ ...item, paidMonth: paid ? month : undefined })));
+      await updateItems(category.id, (items) => items.map((item) => ({ ...item, paidMonth: paid ? month : undefined })));
     } else {
-      await saveCategory({ ...category, paidMonth: paid ? month : undefined });
-      await onChanged();
+      await patchCategory(category.id, { paidMonth: paid ? month : undefined });
     }
   }
 
   async function handleDelete(category: Category) {
-    if (!confirm(`Ta bort kategorin ${category.name}?`)) return;
-    if (await deleteCategory(category.id)) {
-      setEditing(null);
-      await onChanged();
-    } else {
-      alert(`${category.name} har transaktioner och kan inte tas bort.`);
-    }
+    if (!confirm(`Ta bort ${category.name} från budgeten för ${monthName(budgetMonth())}? Tidigare månader behåller den.`)) return;
+    await deleteCategory(budgetMonth(), category.id);
+    setEditing(null);
+    await onChanged();
   }
 
   return (
     <>
       <h2>Kategorier</h2>
-      <p className="hint">Månadsbudget per kategori. Tryck på en kategori för att visa raderna under den, på + för att lägga till en rad, och dra i ⠿ för att flytta en kategori eller rad.</p>
+      <p className="hint">Budget per kategori för vald månad. Tryck på en kategori för att visa raderna under den, på + för att lägga till en rad, och dra i ⠿ för att flytta en kategori eller rad.</p>
 
       {CATEGORY_TYPES.map(({ type, label }) => {
         const items = categories
@@ -163,7 +175,7 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
                     <SortableList
                       items={category.items}
                       listClass="items"
-                      onReorder={(items) => saveItems(category, items)}
+                      onReorder={(items) => updateItems(category.id, () => items)}
                       renderItem={(item, handle) => (
                         <ItemRow
                           key={item.id}
@@ -171,13 +183,12 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
                           handle={handle}
                           autoFocus={item.id === focusItem}
                           onChange={(changed) =>
-                            saveItems(category, category.items!.map((other) => (other.id === item.id ? changed : other)))
+                            updateItems(category.id, (items) => items.map((other) => (other.id === changed.id ? changed : other)))
                           }
-                          onDelete={() => saveItems(category, category.items!.filter((other) => other.id !== item.id))}
+                          onDelete={() => updateItems(category.id, (items) => items.filter((other) => other.id !== item.id))}
                           onTogglePaid={() =>
-                            saveItems(
-                              category,
-                              category.items!.map((other) =>
+                            updateItems(category.id, (items) =>
+                              items.map((other) =>
                                 other.id === item.id
                                   ? { ...other, paidMonth: isPaid(other) ? undefined : budgetMonth() }
                                   : other,
@@ -191,10 +202,7 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
                   {editing !== category.id && expanded.has(category.id) && !category.items?.length && (
                     <AmountField
                       category={category}
-                      onSave={async (monthlyBudget) => {
-                        await saveCategory({ ...category, monthlyBudget });
-                        await onChanged();
-                      }}
+                      onSave={(monthlyBudget) => patchCategory(category.id, { monthlyBudget })}
                     />
                   )}
                   {editing !== category.id && expanded.has(category.id) && (

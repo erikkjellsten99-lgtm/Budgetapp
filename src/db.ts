@@ -1,10 +1,10 @@
-import type { Asset, Category, Debt, MonthlyIncome, SavingsGoal, Transaction, Wish } from './types';
+import type { Asset, Category, Debt, MonthBudget, MonthlyIncome, SavingsGoal, Transaction, Wish } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 
 /** Listorna med appens data. Det är dessa som synkas mellan telefonerna. */
-export const DATA_STORES = ['categories', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes'] as const;
+export const DATA_STORES = ['categories', 'budgets', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes'] as const;
 export type DataStore = (typeof DATA_STORES)[number];
 type StoreName = DataStore | 'outbox' | 'meta';
 
@@ -21,9 +21,9 @@ export interface OutboxEntry {
   ts: number;
 }
 
-/** Nyckeln för en post: inkomster nycklas på månad, allt annat på id. */
+/** Nyckeln för en post: inkomster och månadsbudgetar nycklas på månad, allt annat på id. */
 function keyOf(store: DataStore, record: Record<string, unknown>): string {
-  return String(store === 'income' ? record.month : record.id);
+  return String(store === 'income' || store === 'budgets' ? record.month : record.id);
 }
 
 /** 5 000 kr var till eget sparande. */
@@ -208,6 +208,12 @@ function openDb(): Promise<IDBDatabase> {
       if (event.oldVersion < 9) {
         db.createObjectStore('wishes', { keyPath: 'id' });
       }
+
+      if (event.oldVersion < 10) {
+        // Budget per månad. Den gamla listan 'categories' ligger kvar som utgångsläge
+        // för månader före den första egna månadsbudgeten.
+        db.createObjectStore('budgets', { keyPath: 'month' });
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -359,22 +365,64 @@ export async function setMeta(key: string, value: unknown): Promise<void> {
   await write('meta', (store) => (value === undefined ? store.delete(key) : store.put({ key, value })));
 }
 
-// Kategorier
+// Budget per månad
 
-export function getCategories(): Promise<Category[]> {
-  return read('categories', (store) => store.getAll());
+/** Budgeten som gäller en månad, och varifrån den kommer. */
+export interface BudgetForMonth {
+  categories: Category[];
+  /**
+   * Månaden budgeten är sparad på. Samma som den valda månaden när månaden har en egen budget,
+   * en tidigare månad när den ärvs, eller null när den kommer från tiden före budget per månad.
+   */
+  from: string | null;
 }
 
-export function saveCategory(category: Category): Promise<void> {
-  return putRecord('categories', category);
+/**
+ * Budgeten för en månad ("2026-12"). Har månaden ingen egen budget används närmaste
+ * tidigare månad som har en, så att du slipper fylla i samma sak varje månad.
+ */
+export async function getBudget(month: string): Promise<BudgetForMonth> {
+  const earlier = (await read('budgets', (store) => store.getAll(IDBKeyRange.upperBound(month)))) as MonthBudget[];
+  const latest = earlier.at(-1);
+  if (latest) return { categories: latest.categories, from: latest.month };
+  return { categories: await read('categories', (store) => store.getAll()), from: null };
 }
 
-/** Tar bort kategorin och svarar true, eller låter bli och svarar false om den har transaktioner. */
-export async function deleteCategory(id: string): Promise<boolean> {
-  const count = await read('transactions', (store) => store.index('categoryId').count(id));
-  if (count > 0) return false;
-  await removeRecord('categories', id);
-  return true;
+// Ändringar körs en i taget, så att snabba ändringar (t.ex. medan du skriver ett belopp)
+// alltid bygger på den senast sparade budgeten och inte skriver över varandra.
+let budgetQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Ändrar budgeten för en månad. Första ändringen ger månaden en egen kopia,
+ * så att andra månader inte påverkas.
+ */
+export function updateBudget(month: string, change: (categories: Category[]) => Category[]): Promise<void> {
+  const next = budgetQueue.then(async () => {
+    const { categories } = await getBudget(month);
+    await putRecord('budgets', { month, categories: change(categories) } satisfies MonthBudget);
+  });
+  budgetQueue = next.catch(() => undefined);
+  return next;
+}
+
+/** Sparar en kategori (ny eller ändrad) i månadens budget. */
+export function saveCategory(month: string, category: Category): Promise<void> {
+  return updateBudget(month, (categories) =>
+    categories.some((other) => other.id === category.id)
+      ? categories.map((other) => (other.id === category.id ? category : other))
+      : [...categories, category],
+  );
+}
+
+/** Sparar flera ändrade kategorier i månadens budget på en gång, t.ex. en ny ordning. */
+export function saveCategories(month: string, changed: Category[]): Promise<void> {
+  const byId = new Map(changed.map((category) => [category.id, category]));
+  return updateBudget(month, (categories) => categories.map((category) => byId.get(category.id) ?? category));
+}
+
+/** Tar bort en kategori ur månadens budget. Andra månader behåller den. */
+export function deleteCategory(month: string, id: string): Promise<void> {
+  return updateBudget(month, (categories) => categories.filter((category) => category.id !== id));
 }
 
 // Transaktioner

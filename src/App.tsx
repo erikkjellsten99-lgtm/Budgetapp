@@ -5,7 +5,7 @@ import Account from './Account';
 import {
   budgetMonth,
   currentMonth,
-  getCategories,
+  getBudget,
   getIncome,
   getWishes,
   monthName,
@@ -60,13 +60,17 @@ export default function App() {
   }
 
   const [categories, setCategories] = useState<Category[]>([]);
+  // Månaden budgeten är sparad på (se getBudget). Visar om vald månad har en egen budget.
+  const [budgetFrom, setBudgetFrom] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [income, setIncome] = useState<MonthlyIncome>({ month: budgetMonth(), csn: 0, other: 0 });
   const [selectedMonth, setSelectedMonth] = useState(budgetMonth);
   const [wishes, setWishes] = useState<Wish[]>([]);
 
   async function reload() {
-    setCategories(await getCategories());
+    const budget = await getBudget(budgetMonth());
+    setCategories(budget.categories);
+    setBudgetFrom(budget.from);
     setWishes(await getWishes());
     setIncome(await getIncome(budgetMonth()));
   }
@@ -101,7 +105,6 @@ export default function App() {
   const goalNow = goal ? goalCurrent(goal, assets) : 0;
   const goalPercent = goal && goal.target > 0 ? Math.min(100, Math.round((goalNow / goal.target) * 100)) : 0;
   const month = monthName(selectedMonth);
-  const isThisMonth = selectedMonth === currentMonth();
 
   return (
     <div className="app-shell">
@@ -140,26 +143,7 @@ export default function App() {
         {/* Alla vyer ligger kvar i bakgrunden, så att summorna (t.ex. tillgångar) alltid är uppdaterade. */}
         <div hidden={view !== 'overview'}>
           <div className="view-intro">
-            <div className="month-picker" role="group" aria-label="Budgetmånad">
-              <button type="button" className="month-step" onClick={() => changeMonth(-1)} aria-label="Föregående månad">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M14.5 6l-6 6 6 6" />
-                </svg>
-              </button>
-              <p className="eyebrow month-name" aria-live="polite">
-                {month.toUpperCase()}
-              </p>
-              <button type="button" className="month-step" onClick={() => changeMonth(1)} aria-label="Nästa månad">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M9.5 6l6 6-6 6" />
-                </svg>
-              </button>
-              {!isThisMonth && (
-                <button type="button" className="month-today" onClick={() => changeMonth(0)}>
-                  Denna månad
-                </button>
-              )}
-            </div>
+            <MonthPicker month={selectedMonth} onChange={changeMonth} />
             <h2>Översikt</h2>
           </div>
           <section className={leftForSavings < 0 ? 'card balance-hero negative' : 'card balance-hero'}>
@@ -217,8 +201,14 @@ export default function App() {
           <Goal assets={assets} onChange={setGoal} />
         </div>
         <div hidden={view !== 'budget'}>
+          <div className="view-intro">
+            <MonthPicker month={selectedMonth} onChange={changeMonth} />
+            <h2>Inkomster & utgifter</h2>
+          </div>
+          <BudgetSource month={selectedMonth} from={budgetFrom} />
           <Income income={income} onChanged={reload} />
           <Categories
+            key={selectedMonth}
             categories={categories}
             onChanged={reload}
             income={totalIncome}
@@ -237,5 +227,47 @@ export default function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+/** Bläddra mellan månader: ‹ DECEMBER 2026 ›. steps = 0 går tillbaka till innevarande månad. */
+function MonthPicker({ month, onChange }: { month: string; onChange: (steps: number) => void }) {
+  return (
+    <div className="month-picker" role="group" aria-label="Budgetmånad">
+      <button type="button" className="month-step" onClick={() => onChange(-1)} aria-label="Föregående månad">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M14.5 6l-6 6 6 6" />
+        </svg>
+      </button>
+      <p className="eyebrow month-name" aria-live="polite">
+        {monthName(month).toUpperCase()}
+      </p>
+      <button type="button" className="month-step" onClick={() => onChange(1)} aria-label="Nästa månad">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9.5 6l6 6-6 6" />
+        </svg>
+      </button>
+      {month !== currentMonth() && (
+        <button type="button" className="month-today" onClick={() => onChange(0)}>
+          Denna månad
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Visar om månaden har en egen budget eller utgår från en tidigare månad. */
+function BudgetSource({ month, from }: { month: string; from: string | null }) {
+  const name = monthName(month);
+  const own = from === month;
+  return (
+    <p className={own ? 'budget-source own' : 'budget-source'}>
+      <strong>{own ? `Egen budget för ${name}` : from ? `Samma som ${monthName(from)}` : 'Samma som tidigare månader'}</strong>
+      <span>
+        {own
+          ? 'Tidigare månader påverkas inte av ändringar här. Senare månader utan egna ändringar följer med.'
+          : `Ändrar du något får ${name} en egen budget, och ${from ? monthName(from) : 'tidigare månader'} påverkas inte.`}
+      </span>
+    </p>
   );
 }
