@@ -409,49 +409,164 @@ function CsnPlan({ first }: { first: string }) {
   );
 }
 
-/** Sparandet och lånet över tid. */
+/** Avrundat steg för y-axeln, så att det blir 3–4 linjer med jämna belopp. */
+function niceStep(max: number): number {
+  const steps = [10000, 25000, 50000, 100000, 200000, 250000, 500000, 1000000, 2000000, 5000000];
+  return steps.find((s) => max / s <= 4) ?? 10000000;
+}
+
+/** "250 000" som "250 tkr", "1 500 000" som "1,5 mkr". */
+function axisKr(v: number): string {
+  if (v === 0) return '0';
+  if (v >= 1000000) return `${String(Math.round(v / 100000) / 10).replace('.', ',')} mkr`;
+  return `${Math.round(v / 1000)} tkr`;
+}
+
+/** Sparandet och lånet över tid. Tryck eller dra över grafen för att se en månad. */
 function Chart({ result, goal }: { result: ForecastResult; goal: number }) {
   const months = result.months;
+  const [active, setActive] = useState<number | null>(null);
   if (months.length < 2) return null;
+
   const W = 340;
-  const H = 170;
-  const pad = { l: 8, r: 8, t: 14, b: 22 };
-  const values = months.flatMap((m) => [m.savings, m.loanLeft]);
-  const max = Math.max(...values, goal > 0 && goal < Math.max(...values) * 1.6 ? goal : 0, 1);
-  const min = Math.min(0, ...values);
+  const H = 210;
+  const pad = { l: 46, r: 14, t: 16, b: 26 };
+  const hasLoan = months.some((m) => m.loanLeft > 0);
+  const top = Math.max(...months.map((m) => Math.max(m.savings, m.loanLeft)), 1);
+  const showGoal = goal > 0 && goal <= top * 1.5;
+  const step = niceStep(Math.max(top, showGoal ? goal : 0));
+  const max = Math.ceil(Math.max(top, showGoal ? goal : 0) / step) * step;
+  const min = Math.min(0, ...months.map((m) => m.savings));
   const x = (i: number) => pad.l + (i / (months.length - 1)) * (W - pad.l - pad.r);
   const y = (v: number) => pad.t + (1 - (v - min) / (max - min)) * (H - pad.t - pad.b);
-  const path = (get: (m: (typeof months)[number]) => number) =>
+  const line = (get: (m: (typeof months)[number]) => number) =>
     months.map((m, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(get(m)).toFixed(1)}`).join('');
-  const hasLoan = months.some((m) => m.loanLeft > 0);
+  const area = `${line((m) => m.savings)}L${x(months.length - 1).toFixed(1)},${y(0).toFixed(1)}L${x(0).toFixed(1)},${y(0).toFixed(1)}Z`;
+  const ticks: number[] = [];
+  for (let v = 0; v <= max; v += step) ticks.push(v);
   const lastI = months.length - 1;
-  const yearTicks = months.map((m, i) => ({ m, i })).filter(({ m }) => m.month.endsWith('-01'));
+  const paidI = result.loanPaidIn ? months.findIndex((m) => m.month === result.loanPaidIn) : -1;
+  // Årtal vid januari, men inte så nära startmånaden att texterna krockar.
+  const years = months.map((m, i) => ({ m, i })).filter(({ m, i }) => m.month.endsWith('-01') && x(i) - pad.l > 48);
+
+  function pick(clientX: number, svg: SVGSVGElement) {
+    const box = svg.getBoundingClientRect();
+    const px = ((clientX - box.left) / box.width) * W;
+    const i = Math.round(((px - pad.l) / (W - pad.l - pad.r)) * (months.length - 1));
+    setActive(Math.max(0, Math.min(lastI, i)));
+  }
+
+  const shown = active ?? null;
+  const tipLeft = shown !== null ? Math.min(Math.max((x(shown) / W) * 100, 18), 82) : 0;
 
   return (
     <figure className="card forecast-chart">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Sparande och lån över tid">
-        <line x1={pad.l} x2={W - pad.r} y1={y(0)} y2={y(0)} className="axis" />
-        {goal > 0 && goal <= max && (
-          <>
-            <line x1={pad.l} x2={W - pad.r} y1={y(goal)} y2={y(goal)} className="goal-line" />
-            <text x={W - pad.r} y={y(goal) - 4} textAnchor="end" className="lbl">
-              Mål {kr(goal)}
-            </text>
-          </>
-        )}
-        {yearTicks.map(({ m, i }) => (
-          <text key={m.month} x={x(i)} y={H - 6} textAnchor="middle" className="lbl">
-            {m.month.slice(0, 4)}
-          </text>
-        ))}
-        {hasLoan && <path d={path((m) => m.loanLeft)} className="loan-line" />}
-        <path d={path((m) => m.savings)} className="save-line" />
-        <circle cx={x(lastI)} cy={y(months[lastI].savings)} r="3.5" className="save-dot" />
-      </svg>
-      <figcaption>
+      <figcaption className="chart-legend">
         <span className="key save">Sparat</span>
         {hasLoan && <span className="key loan">Kvar på lånet</span>}
+        {showGoal && <span className="key target">Mål</span>}
       </figcaption>
+      <div className="chart-box">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          role="img"
+          aria-label={`Sparat ${kr(months[lastI].savings)} i ${monthName(months[lastI].month)}.${
+            result.loanPaidIn ? ` Lånet betalt ${monthName(result.loanPaidIn)}.` : ''
+          } Använd piltangenterna för att se varje månad.`}
+          tabIndex={0}
+          onPointerDown={(e) => pick(e.clientX, e.currentTarget)}
+          onPointerMove={(e) => (e.pointerType === 'mouse' || e.buttons) && pick(e.clientX, e.currentTarget)}
+          onPointerLeave={(e) => e.pointerType === 'mouse' && setActive(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight') setActive(Math.min(lastI, (active ?? -1) + 1));
+            else if (e.key === 'ArrowLeft') setActive(Math.max(0, (active ?? lastI + 1) - 1));
+            else if (e.key === 'Escape') setActive(null);
+            else return;
+            e.preventDefault();
+          }}
+          onBlur={() => setActive(null)}
+        >
+          <defs>
+            <linearGradient id="save-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" className="save-stop-top" />
+              <stop offset="100%" className="save-stop-bottom" />
+            </linearGradient>
+          </defs>
+          {ticks.map((v) => (
+            <g key={v}>
+              <line x1={pad.l} x2={W - pad.r} y1={y(v)} y2={y(v)} className={v === 0 ? 'axis' : 'grid'} />
+              <text x={pad.l - 6} y={y(v) + 3} textAnchor="end" className="lbl">
+                {axisKr(v)}
+              </text>
+            </g>
+          ))}
+          {showGoal && (
+            <g>
+              <line x1={pad.l} x2={W - pad.r} y1={y(goal)} y2={y(goal)} className="goal-line" />
+              <text x={pad.l + 4} y={y(goal) - 4} className="lbl">
+                Mål {kr(goal)}
+              </text>
+            </g>
+          )}
+          <text x={pad.l} y={H - 8} className="lbl">
+            {shortMonth(months[0].month)}
+          </text>
+          {years.map(({ m, i }) => (
+            <g key={m.month}>
+              <line x1={x(i)} x2={x(i)} y1={y(0)} y2={y(0) + 4} className="axis" />
+              <text x={x(i)} y={H - 8} textAnchor="middle" className="lbl">
+                {m.month.slice(0, 4)}
+              </text>
+            </g>
+          ))}
+          <path d={area} fill="url(#save-fill)" />
+          {hasLoan && <path d={line((m) => m.loanLeft)} className="loan-line" />}
+          <path d={line((m) => m.savings)} className="save-line" />
+          {paidI >= 0 && shown === null && (
+            <g>
+              <circle cx={x(paidI)} cy={y(0)} r="4" className="loan-dot" />
+              <text x={x(paidI) + 7} y={y(0) - 7} className="lbl strong">
+                Lånet betalt
+              </text>
+            </g>
+          )}
+          {shown === null && (
+            <g>
+              <circle cx={x(lastI)} cy={y(months[lastI].savings)} r="4" className="save-dot" />
+              <text x={x(lastI) - 7} y={y(months[lastI].savings) - 9} textAnchor="end" className="lbl strong">
+                {kr(months[lastI].savings)}
+              </text>
+            </g>
+          )}
+          {shown !== null && (
+            <g>
+              <line x1={x(shown)} x2={x(shown)} y1={pad.t} y2={y(0)} className="crosshair" />
+              {hasLoan && <circle cx={x(shown)} cy={y(months[shown].loanLeft)} r="4" className="loan-dot" />}
+              <circle cx={x(shown)} cy={y(months[shown].savings)} r="4" className="save-dot" />
+            </g>
+          )}
+        </svg>
+        {shown !== null && (
+          <div className="chart-tip" style={{ left: `${tipLeft}%` }} role="status">
+            <span className="tip-month">{monthName(months[shown].month)}</span>
+            <span className="tip-row save">
+              <b>{kr(months[shown].savings)}</b> sparat
+            </span>
+            {hasLoan && (
+              <span className="tip-row loan">
+                {months[shown].loanLeft > 0 ? (
+                  <>
+                    <b>{kr(months[shown].loanLeft)}</b> kvar på lånet
+                  </>
+                ) : (
+                  <b>Lånet betalt</b>
+                )}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      <p className="chart-hint">Tryck eller dra över grafen för att se en månad.</p>
     </figure>
   );
 }
