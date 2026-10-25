@@ -11,8 +11,13 @@ export interface Loan {
   annualRate: number;
   /** Vad lånet kostar per månad (ränta + amortering). Ingår i budgetens kostnader. */
   monthlyPayment: number;
-  /** Ordinarie amortering per månad. */
+  /** Ordinarie amortering per månad. Används bara när fees saknas (gammalt läge). */
   amortization: number;
+  /**
+   * Fasta avgifter som ingår i månadskostnaden (aviavgift, låneskydd). När den finns räknas lånet
+   * som ett annuitetslån: amortering = månadskostnad − avgifter − månadens ränta.
+   */
+  fees?: number;
   /** Budgetkategorin som betalar lånet. Kostnaden frigörs när lånet är betalt. */
   categoryName: string;
   /** Månaden saldot gäller, t.ex. "2026-11". */
@@ -38,6 +43,8 @@ export interface MonthResult extends MonthInput {
   freed: number;
   extraToLoan: number;
   interest: number;
+  /** Ordinarie amortering denna månad. */
+  amortized: number;
   /** Kvar på lånet efter månaden. */
   loanLeft: number;
   /** Till sparande denna månad (planerat + det som blir över). Kan vara negativt. */
@@ -76,10 +83,13 @@ export function forecast(inputs: MonthInput[], startSavings: number, loan: Loan 
     const left = input.income - input.costs - input.plannedSavings + freed;
     let interest = 0;
     let extra = 0;
+    let amortized = 0;
     if (loan && active && balance > 0) {
       interest = (balance * loan.annualRate) / 100 / 12;
-      const regular = Math.min(balance, loan.amortization);
+      const planned = loan.fees !== undefined ? loan.monthlyPayment - loan.fees - interest : loan.amortization;
+      const regular = Math.min(balance, Math.max(0, planned));
       balance -= regular;
+      amortized = regular;
       if (loan.payExtra && left > 0) extra = Math.min(left, balance);
       balance -= extra;
       if (balance <= 0.5) {
@@ -91,7 +101,7 @@ export function forecast(inputs: MonthInput[], startSavings: number, loan: Loan 
     savings += toSavings;
     if (goalTarget > 0 && !goalReachedIn && savings >= goalTarget) goalReachedIn = input.month;
     if (savings < lowest.savings) lowest = { savings, month: input.month };
-    months.push({ ...input, left, freed, extraToLoan: extra, interest, loanLeft: balance, toSavings, savings });
+    months.push({ ...input, left, freed, extraToLoan: extra, interest, amortized, loanLeft: balance, toSavings, savings });
   }
   return { months, loanPaidIn, goalReachedIn, lowest };
 }
