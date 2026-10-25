@@ -367,25 +367,86 @@ function LoanCard({ loan }: { loan: Loan }) {
           <p>
             {kr(loan.monthlyPayment)} i månaden: nästa månad ungefär {kr(nextInterest)} ränta och{' '}
             {kr(nextAmortization)} amortering{loan.fees ? `, plus ${kr(loan.fees)} i avgifter och försäkring` : ''}. Ränta{' '}
-            {String(loan.annualRate).replace('.', ',')} %.
+            {String(loan.annualRate).replace('.', ',')}{'\u00a0'}%.
           </p>
-          <label className="switch">
-            <input
-              type="checkbox"
-              checked={loan.payExtra}
-              onChange={(e) => saveLoan({ ...loan, payExtra: e.target.checked })}
-            />
-            <span>
-              <b>Lägg det som blir över på lånet</b>
-              Tills det är betalt, sedan går allt till sparande.
-            </span>
-          </label>
+          <ExtraChoice loan={loan} />
           <button type="button" className="link-button" onClick={() => setEditing(true)}>
             Ändra lånet
           </button>
         </div>
       )}
     </section>
+  );
+}
+
+type ExtraMode = 'none' | 'all' | 'amount';
+
+/** Hur mycket extra som läggs på lånet varje månad: inget, allt som blir över, eller ett eget belopp. */
+function ExtraChoice({ loan }: { loan: Loan }) {
+  const mode: ExtraMode = !loan.payExtra ? 'none' : loan.extraAmount !== undefined ? 'amount' : 'all';
+  const [amount, setAmount] = useState(toInputKr(loan.extraAmount ?? 10000));
+  const value = parseKr(amount);
+  const valid = Number.isFinite(value) && value > 0;
+
+  function choose(next: ExtraMode) {
+    if (next === 'none') saveLoan({ ...loan, payExtra: false });
+    if (next === 'all') saveLoan({ ...loan, payExtra: true, extraAmount: undefined });
+    if (next === 'amount') saveLoan({ ...loan, payExtra: true, extraAmount: valid ? value : 10000 });
+  }
+
+  const options: { id: ExtraMode; label: string }[] = [
+    { id: 'none', label: 'Inget extra' },
+    { id: 'all', label: 'Allt över' },
+    { id: 'amount', label: 'Eget belopp' },
+  ];
+
+  return (
+    <div className="extra-choice">
+      <span className="extra-title" id="extra-label">
+        Extra på lånet varje månad
+      </span>
+      <div className="segmented-row" role="radiogroup" aria-labelledby="extra-label">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={mode === o.id}
+            className={mode === o.id ? 'seg active' : 'seg'}
+            onClick={() => choose(o.id)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      {mode === 'amount' && (
+        <form
+          className="extra-amount"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valid) saveLoan({ ...loan, payExtra: true, extraAmount: value });
+          }}
+        >
+          <label>
+            Belopp per månad (kr)
+            <input
+              value={amount}
+              inputMode="decimal"
+              enterKeyHint="done"
+              onChange={(e) => setAmount(e.target.value)}
+              onBlur={() => valid && value !== loan.extraAmount && saveLoan({ ...loan, payExtra: true, extraAmount: value })}
+            />
+          </label>
+          {!valid && <p className="error">Skriv ett belopp, till exempel 10000.</p>}
+        </form>
+      )}
+      <p className="hint small">
+        {mode === 'none' && 'Lånet betalas bara med den vanliga månadskostnaden. Allt som blir över går till sparande.'}
+        {mode === 'all' && 'Allt som blir över går till lånet tills det är betalt, sedan till sparande.'}
+        {mode === 'amount' &&
+          `${valid ? kr(value) : 'Beloppet'} går till lånet varje månad (eller det som blir över, om det är mindre). Resten går till sparande.`}
+      </p>
+    </div>
   );
 }
 

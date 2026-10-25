@@ -101,3 +101,16 @@ describe('annuitetslån med avgifter (LF Finans-avin)', () => {
     expect(f.loanPaidIn! > '2033-12').toBe(true);
   });
 });
+
+describe('eget belopp extra på lånet', () => {
+  it('10 000 kr på lånet och resten till sparande', () => {
+    const f = forecast(kalkyl().slice(0, 2), 52000, { ...loan, extraAmount: 10000 });
+    expect(f.months[0].extraToLoan).toBe(10000);
+    expect(f.months[0].toSavings).toBe(24099 - 10000);
+  });
+  it('lägger bara det som finns en månad med mindre över', () => {
+    const f = forecast([{ month: '2026-11', income: 30000, costs: 25000, plannedSavings: 0 }], 0, { ...loan, extraAmount: 10000 });
+    expect(f.months[0].extraToLoan).toBe(5000);
+    expect(f.months[0].toSavings).toBe(0);
+  });
+});
