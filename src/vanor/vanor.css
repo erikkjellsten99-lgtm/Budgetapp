@@ -1,0 +1,989 @@
+/* Vanor-fliken. Stilarna gäller bara inuti .vanor och använder budgetappens färger. */
+.vanor {
+  --surface: var(--card);
+  --sunk: #e8ede9;
+  --ink: var(--text);
+  --line: var(--border);
+  --done: var(--accent);
+  --done-ink: #ffffff;
+  --done-soft: var(--accent-soft);
+  --flame: var(--danger);
+  --warn: #8f5d12;
+  --warn-soft: #f6ead3;
+  --scrim: rgb(10 14 12 / 0.45);
+  --display: inherit;
+  --body: inherit;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .vanor {
+    --sunk: #141b17;
+    --done-ink: #101512;
+    --warn: #e3a84b;
+    --warn-soft: #3a2f1a;
+    --scrim: rgb(0 0 0 / 0.6);
+  }
+}
+
+.vanor .headline {
+  margin: 0;
+}
+
+/* Budgetappen har en egen .info-ruta – inte i vanekorten. */
+.vanor .habit .info {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+}
+
+/* Budgetappen ger alla knappar ram och bakgrund – här styr klasserna själva. */
+.vanor button {
+  min-height: 0;
+}
+
+.vanor h3 {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.vanor .import-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 16px;
+  background: var(--done-soft);
+  border: 0;
+  border-radius: 16px;
+  color: var(--ink);
+  text-align: left;
+}
+
+.vanor .import-open span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.vanor .import-box,
+.vanor .start-pack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.vanor .start-pack .primary {
+  align-self: flex-start;
+}
+
+.vanor .steps {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.vanor .steps li + li {
+  margin-top: 4px;
+}
+
+.vanor .field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 16px;
+  resize: vertical;
+}
+
+.vanor .field textarea:focus {
+  border-color: var(--done);
+  outline: none;
+}
+
+
+
+/* Vanelistan */
+.vanor .habits {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vanor .habit {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 14px 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.vanor .habit.is-done {
+  background: var(--done-soft);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.vanor .habit .info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.vanor .habit .name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.vanor .habit .sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.vanor .habit .plan {
+  margin-top: -2px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.vanor .habit .sub:empty {
+  display: none;
+}
+
+.vanor .habit.is-done .pill:not(.ok):not(.fire) {
+  background: var(--surface);
+}
+
+/* Stor rund bockknapp */
+.vanor .check {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.vanor .check:active {
+  transform: scale(0.92);
+}
+
+.vanor .check svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: var(--done-ink);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.15s, transform 0.2s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.vanor .check.on {
+  background: var(--done);
+  border-color: var(--done);
+}
+
+.vanor .check.on svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (hover: hover) {
+  .vanor .check:hover {
+    border-color: var(--done);
+  }
+}
+
+
+/* Rubrik med dagens ring */
+.vanor .top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.vanor .top .head {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.vanor .icon-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin: -6px -6px 0 0;
+  align-self: flex-start;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.vanor .icon-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vanor .icon-btn:active {
+  background: var(--sunk);
+}
+
+.vanor .ring {
+  position: relative;
+  flex: none;
+  width: 76px;
+  height: 76px;
+}
+
+.vanor .ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.vanor .ring circle {
+  fill: none;
+  stroke-width: 4.5;
+}
+
+.vanor .ring .track {
+  stroke: var(--line);
+}
+
+.vanor .ring .arc {
+  stroke: var(--done);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.vanor .ring .lbl {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.vanor .ring .lbl b {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.vanor .ring .lbl span {
+  margin-top: 3px;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+/* Sektioner */
+.vanor .section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vanor .section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.vanor .section-title .count {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.vanor .date-line {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.vanor .all-done {
+  margin: 0;
+  padding: 18px 16px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.vanor .habit .sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.vanor .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--sunk);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vanor .pill.ok {
+  background: var(--done);
+  color: var(--done-ink);
+}
+
+.vanor .pill.warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.vanor .pill.bad {
+  background: transparent;
+  border: 1px solid var(--flame);
+  color: var(--flame);
+}
+
+.vanor .pill.fire {
+  padding-left: 0;
+  background: transparent;
+  color: var(--flame);
+}
+
+.vanor .pill.fire::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-right: 4px solid transparent;
+  border-bottom: 7px solid currentColor;
+  border-left: 4px solid transparent;
+}
+
+.vanor .dots {
+  display: flex;
+  gap: 4px;
+}
+
+.vanor .dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.vanor .dots i.f {
+  background: var(--done);
+}
+
+.vanor .habit.is-done .dots i:not(.f) {
+  background: var(--surface);
+}
+
+
+/* Bara minimiversionen gjord: halvfylld bock */
+.vanor .check.on.min {
+  background: var(--done-soft);
+  border-color: var(--done);
+}
+
+.vanor .check.on.min svg {
+  stroke: var(--done);
+}
+
+.vanor .check.pop {
+  animation: vanor-pop 0.32s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes vanor-pop {
+  0% {
+    transform: scale(0.85);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Vanekortet: namn, plan, veckan som sju rutor */
+.vanor .habit {
+  align-items: flex-start;
+  padding: 16px 14px 16px 16px;
+}
+
+.vanor .habit .check {
+  margin-top: 2px;
+}
+
+.vanor .habit .info {
+  gap: 6px;
+}
+
+.vanor .habit .meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.vanor .habit .streak {
+  margin-left: 8px;
+  color: var(--flame);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.vanor .habit .streak::before {
+  content: '';
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: 1px;
+  border-right: 4px solid transparent;
+  border-bottom: 7px solid currentColor;
+  border-left: 4px solid transparent;
+}
+
+.vanor .progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.vanor .progress .count {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.vanor .week {
+  display: grid;
+  grid-template-columns: repeat(7, 24px);
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vanor .day {
+  display: grid;
+  place-items: center;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--sunk);
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.vanor .day.done {
+  background: var(--done);
+  color: var(--done-ink);
+}
+
+.vanor .day.min {
+  background: var(--done-soft);
+  box-shadow: inset 0 0 0 1.5px var(--done);
+  color: var(--done);
+}
+
+.vanor .day.today {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+  color: var(--ink);
+}
+
+.vanor .day.future {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  opacity: 0.7;
+}
+
+.vanor .day.paused {
+  background: repeating-linear-gradient(135deg, var(--sunk) 0 3px, var(--warn-soft) 3px 6px);
+  color: var(--warn);
+}
+
+.vanor .habit .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.vanor .min-btn {
+  min-height: 32px;
+  margin: 0;
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.vanor .min-btn:active {
+  background: var(--done-soft);
+}
+
+/* Klara vanor: lugnare och tätare, så att det som är kvar syns mest */
+.vanor .habit.is-done {
+  padding-block: 12px;
+}
+
+.vanor .habit.is-done .name {
+  font-size: 1rem;
+}
+
+.vanor .habit.is-done .day.today {
+  box-shadow: none;
+}
+
+/* Efter-vana som väntar på passet */
+.vanor .habit.is-waiting {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.vanor .habit.is-waiting .check {
+  background: transparent;
+  border-style: dashed;
+}
+
+/* Pausad dag */
+.vanor .pause-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 16px;
+  background: var(--warn-soft);
+  border-radius: 16px;
+  color: var(--ink);
+}
+
+.vanor .pause-banner p {
+  flex: 1;
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.vanor .pause-banner b {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.vanor .text-btn {
+  min-height: 44px;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: var(--done);
+  font-weight: 650;
+}
+
+.vanor .text-btn:active {
+  background: var(--sunk);
+}
+
+.vanor .quiet {
+  align-self: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Inställningar: ark som glider upp nerifrån */
+.vanor .sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--scrim);
+  animation: vanor-fade 0.2s ease-out;
+}
+
+.vanor .sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 20px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px)
+    max(16px, env(safe-area-inset-left, 0px));
+  background: var(--bg);
+  border-radius: 22px 22px 0 0;
+  animation: vanor-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.vanor .sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vanor .sheet h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.vanor .sheet h3 {
+  margin-bottom: 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.vanor .sheet .hint {
+  margin: -4px 0 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Hantera vanor */
+.vanor .footer-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.vanor .all-done p {
+  margin: 0 0 12px;
+}
+
+.vanor .manage-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.vanor .manage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 8px 6px 8px 16px;
+}
+
+.vanor .manage-row + .manage-row {
+  border-top: 1px solid var(--line);
+}
+
+.vanor .manage-row.is-editing {
+  display: block;
+  padding: 16px;
+  background: var(--sunk);
+}
+
+.vanor .manage-row.is-removed b {
+  color: var(--muted);
+}
+
+.vanor .manage-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vanor .manage-info b {
+  overflow-wrap: anywhere;
+}
+
+.vanor .manage-info span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.vanor .habit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.vanor .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.vanor .field b {
+  color: var(--ink);
+}
+
+.vanor .field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px; /* under 16px zoomar iPhone in */
+  font-weight: 500;
+}
+
+.vanor .field input:focus {
+  border-color: var(--done);
+  outline: none;
+}
+
+.vanor .field input[aria-invalid='true'] {
+  border-color: var(--flame);
+}
+
+.vanor .field-error {
+  margin: -8px 0 0;
+  color: var(--flame);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.vanor .field-ok {
+  margin: 0;
+  color: var(--done);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.vanor .goal-picker {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  background: var(--sunk);
+  border-radius: 12px;
+}
+
+.vanor .manage-row.is-editing .goal-picker {
+  background: var(--bg);
+}
+
+.vanor .goal-picker button {
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.vanor .goal-picker button:last-child {
+  font-family: var(--body);
+  font-weight: 600;
+}
+
+.vanor .goal-picker button[aria-checked='true'] {
+  background: var(--done);
+  color: var(--done-ink);
+}
+
+.vanor .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.vanor .form-actions .danger-text {
+  margin-left: auto;
+  color: var(--flame);
+}
+
+.vanor .confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--flame);
+  border-radius: 12px;
+}
+
+.vanor .confirm p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.vanor .danger {
+  min-height: 48px;
+  padding: 10px 18px;
+  background: var(--flame);
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.vanor .primary:disabled, .vanor .danger:disabled {
+  opacity: 0.5;
+}
+
+.vanor .chips-hint {
+  margin: 14px 0 8px !important;
+}
+
+.vanor .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vanor .chip {
+  min-height: 40px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.vanor .chip span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.vanor .chip[aria-pressed='true'] {
+  background: var(--done);
+  border-color: var(--done);
+  color: var(--done-ink);
+}
+
+.vanor .field-help {
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.vanor .chip:active {
+  background: var(--done-soft);
+}
+
+.vanor .primary {
+  min-height: 48px;
+  padding: 10px 18px;
+  background: var(--done);
+  border: 0;
+  border-radius: 12px;
+  color: var(--done-ink);
+  font-weight: 700;
+}
+
+@keyframes vanor-rise {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+@keyframes vanor-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .vanor h1 {
+    font-size: 1.85rem;
+  }
+
+  .vanor .ring {
+    width: 68px;
+    height: 68px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vanor *, .vanor *::before, .vanor *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.vanor .nowrap {
+  white-space: nowrap;
+}

@@ -35,6 +35,15 @@ Första gången behöver GitHub Pages slås på: **Settings → Pages → Build 
 - **iPhone (Safari):** Dela-knappen → Lägg till på hemskärmen.
 - **Android (Chrome):** menyn ⋮ → Installera app.
 
+## Vanor
+
+Fliken **Vanor** är vanetrackern (tidigare en egen app). Koden ligger i `src/vanor/`:
+
+- `dates.ts`, `habits.ts`: datum och vanelogik (veckomål, streaks, pausdagar) med tester. Kör `npm test`.
+- `store.ts`: en egen databas i telefonen (`vanor`), skild från budgeten.
+- `sync.ts`: synk till tabellen `personal_records` i Supabase. Radsäkerheten gör att varje konto bara ser sina egna vanor, så du och Cassandra har var sin lista.
+- `transfer.ts`: flyttkod från den gamla vanetrackern (Mina vanor → Flytta från gamla vanetrackern).
+
 ## Bra att veta
 
 - Datan finns bara i den webbläsare och på den enhet där du använder appen. Den synkas inte mellan enheter.
