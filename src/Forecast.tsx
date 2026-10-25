@@ -65,6 +65,8 @@ async function loadData(first: string, count: number): Promise<Data> {
 
 /** Prognos: månad för månad framåt, med billån och sparande. Siffrorna kommer från budgeten. */
 export default function Forecast() {
+  // Prognosen börjar med nästa månad. Den betalas med pengarna som kommer den 23–25:e den här
+  // månaden, och det som blir över sätts in direkt – alltså redan i slutet av den här månaden.
   const first = shiftMonth(currentMonth(), 1);
   const [horizon, setHorizon] = useState(24);
   const [data, setData] = useState<Data | null>(null);
@@ -93,35 +95,37 @@ export default function Forecast() {
   return (
     <section className="forecast" aria-labelledby="forecast-title">
       <div className="view-intro">
-        <p className="eyebrow">FRÅN {monthName(first).toUpperCase()}</p>
+        <p className="eyebrow">FRÅN {monthName(first).toUpperCase()}S BUDGET</p>
         <h2 id="forecast-title">Prognos</h2>
       </div>
       <p className="forecast-lead">
-        Räknat på budgeten för varje månad och {kr(data.startSavings)} på sparkontona idag. Utan avkastning.
+        Varje månad betalas med pengarna som kommer den 23–25:e månaden innan, och det som blir över sätts in
+        direkt. Sparat för {monthName(first)} finns alltså på kontot i slutet av {monthName(currentMonth())}.
+        Start: {kr(data.startSavings)} på sparkontona idag. Utan avkastning.
       </p>
 
       <div className="forecast-facts">
         {data.loan && (
           <div className="card fact">
             <span>{data.loan.name} betalt</span>
-            <strong>{result.loanPaidIn ? monthName(result.loanPaidIn) : 'Inte inom perioden'}</strong>
+            <strong>{result.loanPaidIn ? `Slutet av ${monthName(shiftMonth(result.loanPaidIn, -1))}` : 'Inte inom perioden'}</strong>
           </div>
         )}
         <div className="card fact">
-          <span>Sparat {last ? monthName(last.month) : ''}</span>
+          <span>Sparat i slutet av {last ? monthName(shiftMonth(last.month, -1)) : ''}</span>
           <strong>{last ? kr(last.savings) : '–'}</strong>
         </div>
         {data.goalTarget > 0 && (
           <div className="card fact">
             <span>{kr(data.goalTarget)} sparat totalt</span>
-            <strong>{result.goalReachedIn ? monthName(result.goalReachedIn) : 'Inte inom perioden'}</strong>
+            <strong>{result.goalReachedIn ? `Slutet av ${monthName(shiftMonth(result.goalReachedIn, -1))}` : 'Inte inom perioden'}</strong>
           </div>
         )}
       </div>
 
       {result.lowest.savings < data.startSavings && (
         <p className="forecast-note">
-          Lägst blir sparandet {kr(result.lowest.savings)} i {monthName(result.lowest.month)}.
+          Lägst blir sparandet {kr(result.lowest.savings)}, med {monthName(result.lowest.month)}s budget.
         </p>
       )}
 
@@ -148,7 +152,10 @@ export default function Forecast() {
 
       <section className="card forecast-table">
         <h3>Månad för månad</h3>
-        <p className="hint">Tryck på en månad för att se detaljer eller ändra inkomsten.</p>
+        <p className="hint">
+          Raderna är budgetmånader. Sparat = på kontot när månadens pengar har kommit, alltså i slutet av månaden
+          innan. Tryck på en månad för detaljer eller för att ändra inkomsten.
+        </p>
         <div className="table-head" aria-hidden="true">
           <span>Månad</span>
           <span>Över</span>
@@ -475,7 +482,7 @@ function ExtraChoice({ loan }: { loan: Loan }) {
 function CsnTag({ month, csn }: { month: string; csn: number }) {
   const payouts = csnPayouts(month, csn);
   if (!payouts) return null;
-  return <small className="csn-tag">{payouts.length ? `CSN ${payouts.map((p) => p.day).join(' + ')}` : 'Inget CSN'}</small>;
+  return <small className="csn-tag">{payouts.length ? `CSN från ${payouts.map((p) => p.day).join(' + ')}` : 'Inget CSN'}</small>;
 }
 
 /** Lägger in CSN-utbetalningarna från csn.se på rätt månader, med ett tryck. */
@@ -495,9 +502,9 @@ function CsnPlan({ first }: { first: string }) {
       <h3>CSN framåt</h3>
       <div className="category-form">
         <p className="hint">
-          Lägg in utbetalningarna från csn.se i den månad pengarna kommer: 18 280 kr den 25/11, inget i december,
-          13 653 kr den 11/1 + 18 404 kr den 25/1, 18 404 kr i februari–april och 9 202 kr den 25/5. Inget CSN
-          från juni. Lönerna ändras inte.
+          Lägg in utbetalningarna från csn.se på månaden de betalar: 25/11 → december, 11/1 → januari (inget
+          kommer 25/12), 25/1 → februari, 25/2 → mars, 25/3 → april, 23/4 → maj, 25/5 (9 202 kr) → juni och inget
+          från juli. Lönerna ändras inte.
         </p>
         <button type="button" className="primary" disabled={busy} onClick={apply}>
           Lägg in CSN-planen
@@ -646,7 +653,9 @@ function Chart({ result, goal }: { result: ForecastResult; goal: number }) {
         </svg>
         {shown !== null && (
           <div className="chart-tip" style={{ left: `${tipLeft}%` }} role="status">
-            <span className="tip-month">{monthName(months[shown].month)}</span>
+            <span className="tip-month">
+              {monthName(months[shown].month)}s budget
+            </span>
             <span className="tip-row save">
               <b>{kr(months[shown].savings)}</b> sparat
             </span>
