@@ -1,7 +1,7 @@
 {
-  "name": "Budget",
-  "short_name": "Budget",
-  "description": "Personlig budget som sparas lokalt på enheten.",
+  "name": "Groundwork",
+  "short_name": "Groundwork",
+  "description": "Budget, sparande och vanor – för Erik och Cassandra.",
   "lang": "sv",
   "start_url": ".",
   "scope": ".",

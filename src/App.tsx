@@ -106,7 +106,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <h1>Budget</h1>
+        <h1>Groundwork</h1>
         <nav className="app-nav" aria-label="Huvudmeny">
           {VIEWS.map((item) => (
             <button

@@ -1,4 +1,6 @@
-# Budget
+# Groundwork
+
+Budget, sparande och vanor i en app (tidigare "Budget").
 
 En personlig budgetapp på svenska. Den körs helt i webbläsaren och kan installeras på mobilen som en app (PWA). All data sparas lokalt i webbläsarens databas (IndexedDB). Det finns ingen server, ingen inloggning och ingen bankkoppling.
 
