@@ -35,8 +35,10 @@ export interface MonthInput {
   month: string;
   /** Inkomster totalt. */
   income: number;
-  /** Fasta + rörliga kostnader i budgeten (lånets månadskostnad ingår). */
+  /** Fasta + rörliga kostnader i budgeten (lånets månadskostnad ingår) + det som är bockat på önskelistan. */
   costs: number;
+  /** Varav önskelistan (det som är bockat den månaden). */
+  wishes?: number;
   /** Planerat sparande i budgeten (kategorier av typen sparande). */
   plannedSavings: number;
 }

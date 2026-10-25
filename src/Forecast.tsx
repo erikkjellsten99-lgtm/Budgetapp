@@ -7,6 +7,7 @@ import {
   getIncome,
   getIncomeRecords,
   getLoans,
+  getWishes,
   monthName,
   onDataChange,
   saveIncome,
@@ -44,15 +45,23 @@ const kr = (amount: number) => formatKr(Math.round(amount));
 
 async function loadData(first: string, count: number): Promise<Data> {
   const months = Array.from({ length: count }, (_, i) => shiftMonth(first, i));
-  const [records, assets, goals, loans] = await Promise.all([getIncomeRecords(), getAssets(), getGoals(), getLoans()]);
+  const [records, assets, goals, loans, wishList] = await Promise.all([
+    getIncomeRecords(),
+    getAssets(),
+    getGoals(),
+    getLoans(),
+    getWishes(),
+  ]);
   const inputs: MonthInput[] = [];
   const incomes: MonthlyIncome[] = [];
   for (const month of months) {
     const [{ categories }, income] = await Promise.all([getBudget(month), getIncome(month)]);
     const sum = (type: string) =>
       categories.filter((c) => (type === 'savings' ? c.type === 'savings' : c.type !== 'savings')).reduce((s, c) => s + c.monthlyBudget, 0);
+    // Samma som översikten: det som är bockat på önskelistan en månad räknas som kostnad den månaden.
+    const wishes = wishList.filter((w) => w.paidMonth === month).reduce((s, w) => s + w.amount, 0);
     incomes.push(income);
-    inputs.push({ month, income: income.csn + income.other, costs: sum('costs'), plannedSavings: sum('savings') });
+    inputs.push({ month, income: income.csn + income.other, costs: sum('costs') + wishes, wishes, plannedSavings: sum('savings') });
   }
   const goal = goals[0];
   return {
@@ -279,6 +288,12 @@ function MonthDetails({
           <dt>Kostnader</dt>
           <dd>− {kr(month.costs)}</dd>
         </div>
+        {!!month.wishes && (
+          <div className="sub">
+            <dt>varav önskelistan</dt>
+            <dd>{kr(month.wishes)}</dd>
+          </div>
+        )}
         {month.returnEarned > 0 && (
           <div>
             <dt>Avkastning på sparandet</dt>
