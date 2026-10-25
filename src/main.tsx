@@ -4,6 +4,7 @@ import App from './App';
 import './styles.css';
 import { startSync } from './sync';
 import { startAutoUpdate } from './update';
+import { startHabitSync } from './vanor/sync';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -12,6 +13,7 @@ createRoot(document.getElementById('root')!).render(
 );
 
 startSync();
+startHabitSync();
 startAutoUpdate();
 
 // Offline-stöd. Bara i den byggda appen, så att inget cachas medan du utvecklar.
