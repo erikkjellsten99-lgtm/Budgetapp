@@ -116,15 +116,11 @@ describe('eget belopp extra på lånet', () => {
 });
 
 describe('CSN-planen', () => {
-  it('pengarna den 25:e betalar nästa månad; januari betalas med 11/1', () => {
-    const csn = (m: string) => planCsn(CSN_PLAN.find((p) => p.month === m)!);
-    expect(csn('2026-12')).toBe(18280);
-    expect(csn('2027-01')).toBe(13653);
-    expect(csn('2027-02')).toBe(18404);
-    expect(csn('2027-06')).toBe(9202);
-    expect(csn('2027-07')).toBe(0);
-    expect(csnPayouts('2027-01', 13653)!.map((p) => p.day)).toEqual(['11/1']);
-    expect(csnPayouts('2027-01', 32057)).toBeNull();
+  it('följer utbetalningsdagarna på csn.se: inget i december, två gånger i januari', () => {
+    expect(planCsn(CSN_PLAN.find((p) => p.month === '2026-12')!)).toBe(0);
+    expect(planCsn(CSN_PLAN.find((p) => p.month === '2027-01')!)).toBe(13653 + 18404);
+    expect(csnPayouts('2027-01', 32057)!.map((p) => p.day)).toEqual(['11/1', '25/1']);
+    expect(csnPayouts('2027-01', 13653)).toBeNull();
   });
 });
 
