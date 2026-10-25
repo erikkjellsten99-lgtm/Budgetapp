@@ -262,7 +262,7 @@ function MonthDetails({
             />
           </label>
           <label>
-            RZ Zampart (kr)
+            Löner (kr)
             <input
               value={other}
               inputMode="decimal"
@@ -407,7 +407,7 @@ function CsnPlan({ first }: { first: string }) {
       <div className="category-form">
         <p className="hint">
           Lägg in utbetalningarna från csn.se: 18 280 kr i december, 13 653 kr i januari (kommer 11/1), 18 404 kr
-          februari–maj, 9 202 kr i juni och inget CSN från juli. RZ Zampart ändras inte.
+          februari–maj, 9 202 kr i juni och inget CSN från juli. Lönerna ändras inte.
         </p>
         <button type="button" className="primary" disabled={busy} onClick={apply}>
           Lägg in CSN-planen

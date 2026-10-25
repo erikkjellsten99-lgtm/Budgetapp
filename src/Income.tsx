@@ -8,7 +8,7 @@ interface IncomeProps {
   onChanged: () => Promise<void>;
 }
 
-/** Månadens inkomst: CSN och RZ Zampart. */
+/** Månadens inkomst: CSN och löner. */
 export default function Income({ income, onChanged }: IncomeProps) {
   const [editing, setEditing] = useState(false);
   const [csn, setCsn] = useState('');
@@ -45,7 +45,7 @@ export default function Income({ income, onChanged }: IncomeProps) {
             <input value={csn} onChange={(event) => setCsn(event.target.value)} inputMode="decimal" placeholder="0" />
           </label>
           <label>
-            RZ Zampart (kr)
+            Löner (kr)
             <input value={other} onChange={(event) => setOther(event.target.value)} inputMode="decimal" placeholder="0" />
           </label>
           {!valid && <p className="error">Skriv belopp, till exempel 18156 eller 49,90.</p>}
@@ -68,7 +68,7 @@ export default function Income({ income, onChanged }: IncomeProps) {
           </li>
           <li>
             <button className="row" onClick={startEditing}>
-              <span>RZ Zampart</span>
+              <span>Löner</span>
               <span>{formatKr(income.other)}</span>
             </button>
           </li>
