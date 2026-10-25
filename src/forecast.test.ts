@@ -127,3 +127,18 @@ describe('CSN-planen', () => {
     expect(csnPayouts('2027-01', 32057)).toBeNull();
   });
 });
+
+describe('avkastning', () => {
+  const flat = Array.from({ length: 12 }, (_, i) => ({ month: `2027-${String(i + 1).padStart(2, '0')}`, income: 0, costs: 0, plannedSavings: 0 }));
+  it('7 % per år ger 7 % på ett år, ränta på ränta', () => {
+    const f = forecast(flat, 100000, null, 0, 7);
+    expect(f.months.at(-1)!.savings).toBeCloseTo(107000, 0);
+  });
+  it('utan avkastning växer inget', () => {
+    expect(forecast(flat, 100000, null).months.at(-1)!.savings).toBe(100000);
+  });
+  it('ger ingen avkastning på ett negativt saldo', () => {
+    const f = forecast([{ month: '2027-01', income: 0, costs: 1000, plannedSavings: 0 }], -500, null, 0, 7);
+    expect(f.months[0].returnEarned).toBe(0);
+  });
+});
