@@ -1907,3 +1907,48 @@ main > div > h2 + .hint {
 .now-hint {
   margin: 0.2rem 0 0 !important;
 }
+
+.return-choice {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.6rem;
+}
+
+.return-choice .segmented-row {
+  margin: 0;
+}
+
+.return-body {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0 0.4rem 0.3rem;
+}
+
+.return-body .hint {
+  margin: 0;
+}
+
+.fact small {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.forecast-chart .flat-line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 3;
+}
+
+.chart-legend .key.flat::before {
+  border-top: 1.5px dotted var(--muted);
+}
+
+.chart-tip .tip-row.flat::before {
+  border-top: 1.5px dotted var(--muted);
+}
+
+.return-choice .segmented-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}

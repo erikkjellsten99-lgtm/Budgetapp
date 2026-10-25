@@ -54,6 +54,8 @@ export interface MonthResult extends MonthInput {
   loanLeft: number;
   /** Till sparande denna månad (planerat + det som blir över). Kan vara negativt. */
   toSavings: number;
+  /** Avkastning på sparandet denna månad (0 utan avkastning). */
+  returnEarned: number;
   /** Sparande totalt efter månaden. */
   savings: number;
 }
@@ -73,7 +75,15 @@ export interface Forecast {
  * i budgeten). Med payExtra går allt som blir över (eller extraAmount kr) till lånet tills det är betalt, resten till sparande.
  * När lånet är betalt läggs dess månadskostnad till det som blir över.
  */
-export function forecast(inputs: MonthInput[], startSavings: number, loan: Loan | null, goalTarget = 0): Forecast {
+export function forecast(
+  inputs: MonthInput[],
+  startSavings: number,
+  loan: Loan | null,
+  goalTarget = 0,
+  /** Förväntad avkastning per år i procent, t.ex. 7. Räknas som ränta på ränta varje månad. */
+  annualReturn = 0,
+): Forecast {
+  const monthlyReturn = annualReturn ? Math.pow(1 + annualReturn / 100, 1 / 12) - 1 : 0;
   let balance = loan ? Math.max(0, loan.balance) : 0;
   let savings = startSavings;
   let loanPaidIn: string | null = loan && balance === 0 ? (inputs[0]?.month ?? null) : null;
@@ -103,10 +113,12 @@ export function forecast(inputs: MonthInput[], startSavings: number, loan: Loan 
       }
     }
     const toSavings = input.plannedSavings + left - extra;
-    savings += toSavings;
+    // Avkastning på det som redan låg sparat under månaden (inte på ett negativt saldo).
+    const returnEarned = savings > 0 ? savings * monthlyReturn : 0;
+    savings += returnEarned + toSavings;
     if (goalTarget > 0 && !goalReachedIn && savings >= goalTarget) goalReachedIn = input.month;
     if (savings < lowest.savings) lowest = { savings, month: input.month };
-    months.push({ ...input, left, freed, extraToLoan: extra, interest, amortized, loanLeft: balance, toSavings, savings });
+    months.push({ ...input, left, freed, extraToLoan: extra, interest, amortized, loanLeft: balance, toSavings, returnEarned, savings });
   }
   return { months, loanPaidIn, goalReachedIn, lowest };
 }

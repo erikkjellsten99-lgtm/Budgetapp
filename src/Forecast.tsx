@@ -10,12 +10,13 @@ import {
   monthName,
   onDataChange,
   saveIncome,
+  saveGoal,
   saveLoan,
   shiftMonth,
 } from './db';
 import { CSN_PLAN, csnPayouts, forecast, planCsn, type Forecast as ForecastResult, type Loan, type MonthInput, type MonthResult } from './forecast';
 import { formatKr, parseKr, toInputKr } from './money';
-import type { MonthlyIncome } from './types';
+import type { MonthlyIncome, SavingsGoal } from './types';
 
 const HORIZONS = [
   { months: 12, label: '1 år' },
@@ -30,6 +31,7 @@ interface Data {
   ownIncome: Set<string>;
   startSavings: number;
   goalTarget: number;
+  goal: SavingsGoal | null;
   loan: Loan | null;
 }
 
@@ -59,6 +61,7 @@ async function loadData(first: string, count: number): Promise<Data> {
     ownIncome: new Set(records.map((r) => r.month)),
     startSavings: assets.filter((a) => !a.spending).reduce((s, a) => s + a.amount, 0),
     goalTarget: goal?.target ?? 0,
+    goal: goal ?? null,
     loan: loans[0] ?? null,
   };
 }
@@ -74,6 +77,7 @@ export default function Forecast() {
   const [horizon, setHorizon] = useState(24);
   const [data, setData] = useState<Data | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  const [withReturn, setWithReturn] = useState(loadWithReturn);
 
   useEffect(() => {
     let alive = true;
@@ -88,7 +92,11 @@ export default function Forecast() {
 
   if (!data) return null;
   const [nowInput, ...futureInputs] = data.inputs;
-  const result = forecast(futureInputs, data.startSavings, data.loan, data.goalTarget);
+  const rate = data.goal?.annualReturn ?? 7;
+  const result = forecast(futureInputs, data.startSavings, data.loan, data.goalTarget, withReturn ? rate : 0);
+  // Samma prognos utan avkastning, för jämförelse.
+  const flat = withReturn ? forecast(futureInputs, data.startSavings, data.loan, data.goalTarget) : null;
+  const earned = result.months.reduce((sum, m) => sum + m.returnEarned, 0);
   const nowRow: MonthResult = {
     ...nowInput,
     left: nowInput.income - nowInput.costs - nowInput.plannedSavings,
@@ -98,6 +106,7 @@ export default function Forecast() {
     amortized: 0,
     loanLeft: data.loan?.balance ?? 0,
     toSavings: 0,
+    returnEarned: 0,
     savings: data.startSavings,
   };
   const rows = [nowRow, ...result.months];
@@ -112,13 +121,14 @@ export default function Forecast() {
   return (
     <section className="forecast" aria-labelledby="forecast-title">
       <div className="view-intro">
-        <p className="eyebrow">FRÅN {monthName(first).toUpperCase()}S BUDGET</p>
+        <p className="eyebrow">BUDGET FRÅN {monthName(first).toUpperCase()}</p>
         <h2 id="forecast-title">Prognos</h2>
       </div>
       <p className="forecast-lead">
         Varje månad betalas med pengarna som kommer den 23–25:e månaden innan, och det som blir över sätts in
         direkt. Sparat för {monthName(first)} finns alltså på kontot i slutet av {monthName(currentMonth())}.
-        Start: {kr(data.startSavings)} på sparkontona idag. Utan avkastning.
+        Start: {kr(data.startSavings)} på sparkontona idag.{' '}
+        {withReturn ? `Med ${String(rate).replace('.', ',')}\u00a0% förväntad avkastning per år.` : 'Utan avkastning.'}
       </p>
 
       <div className="forecast-facts">
@@ -131,6 +141,11 @@ export default function Forecast() {
         <div className="card fact">
           <span>Sparat i slutet av {last ? monthName(shiftMonth(last.month, -1)) : ''}</span>
           <strong>{last ? kr(last.savings) : '–'}</strong>
+          {withReturn && flat && last && (
+            <small>
+              varav {kr(earned)} avkastning · {kr(flat.months.at(-1)!.savings)} utan
+            </small>
+          )}
         </div>
         {data.goalTarget > 0 && (
           <div className="card fact">
@@ -142,9 +157,19 @@ export default function Forecast() {
 
       {result.lowest.savings < data.startSavings && (
         <p className="forecast-note">
-          Lägst blir sparandet {kr(result.lowest.savings)}, med {monthName(result.lowest.month)}s budget.
+          Lägst blir sparandet {kr(result.lowest.savings)}, med budgeten för {monthName(result.lowest.month)}.
         </p>
       )}
+
+      <ReturnChoice
+        on={withReturn}
+        rate={rate}
+        onToggle={(on) => {
+          setWithReturn(on);
+          saveWithReturn(on);
+        }}
+        onRate={(r) => data.goal && saveGoal({ ...data.goal, annualReturn: r })}
+      />
 
       <div className="segmented-row" role="radiogroup" aria-label="Hur långt fram">
         {HORIZONS.map((h) => (
@@ -161,7 +186,7 @@ export default function Forecast() {
         ))}
       </div>
 
-      <Chart result={withNow} goal={data.goalTarget} />
+      <Chart result={withNow} goal={data.goalTarget} flat={flat ? [nowRow, ...flat.months] : null} />
 
       {data.loan && <LoanCard loan={data.loan} />}
 
@@ -263,6 +288,12 @@ function MonthDetails({
           <dt>Kostnader</dt>
           <dd>− {kr(month.costs)}</dd>
         </div>
+        {month.returnEarned > 0 && (
+          <div>
+            <dt>Avkastning på sparandet</dt>
+            <dd>+ {kr(month.returnEarned)}</dd>
+          </div>
+        )}
         {month.plannedSavings > 0 && (
           <div>
             <dt>Planerat sparande</dt>
@@ -539,6 +570,73 @@ function CsnPlan({ first }: { first: string }) {
   );
 }
 
+const RETURN_KEY = 'prognos-avkastning';
+
+function loadWithReturn(): boolean {
+  try {
+    return localStorage.getItem(RETURN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveWithReturn(on: boolean) {
+  try {
+    localStorage.setItem(RETURN_KEY, on ? '1' : '0');
+  } catch {
+    // Lagring avstängd: valet gäller tills appen stängs.
+  }
+}
+
+/** Utan eller med förväntad avkastning på sparandet (aktier, fonder). */
+function ReturnChoice({
+  on,
+  rate,
+  onToggle,
+  onRate,
+}: {
+  on: boolean;
+  rate: number;
+  onToggle: (on: boolean) => void;
+  onRate: (rate: number) => void;
+}) {
+  const [text, setText] = useState(String(rate).replace('.', ','));
+  const value = parseKr(text);
+  const valid = Number.isFinite(value) && value >= 0 && value <= 30;
+  return (
+    <section className="card return-choice">
+      <div className="segmented-row" role="radiogroup" aria-label="Avkastning">
+        <button type="button" role="radio" aria-checked={!on} className={!on ? 'seg active' : 'seg'} onClick={() => onToggle(false)}>
+          Utan avkastning
+        </button>
+        <button type="button" role="radio" aria-checked={on} className={on ? 'seg active' : 'seg'} onClick={() => onToggle(true)}>
+          Med avkastning
+        </button>
+      </div>
+      {on && (
+        <div className="return-body">
+          <label>
+            Förväntad avkastning per år (%)
+            <input
+              value={text}
+              inputMode="decimal"
+              enterKeyHint="done"
+              onChange={(e) => setText(e.target.value)}
+              onBlur={() => valid && value !== rate && onRate(value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
+            />
+          </label>
+          {!valid && <p className="error">Skriv en procent mellan 0 och 30, till exempel 7.</p>}
+          <p className="hint small">
+            Räknas på allt sparande, ränta på ränta varje månad, före skatt. Aktier går upp och ned – det här är ett
+            snitt över tid, inte en garanti. Samma procent används för sparmålet nedan.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** Avrundat steg för y-axeln, så att det blir 3–4 linjer med jämna belopp. */
 function niceStep(max: number): number {
   const steps = [10000, 25000, 50000, 100000, 200000, 250000, 500000, 1000000, 2000000, 5000000];
@@ -553,7 +651,7 @@ function axisKr(v: number): string {
 }
 
 /** Sparandet och lånet över tid. Tryck eller dra över grafen för att se en månad. */
-function Chart({ result, goal }: { result: ForecastResult; goal: number }) {
+function Chart({ result, goal, flat }: { result: ForecastResult; goal: number; flat: MonthResult[] | null }) {
   const months = result.months;
   const [active, setActive] = useState<number | null>(null);
   if (months.length < 2) return null;
@@ -594,6 +692,7 @@ function Chart({ result, goal }: { result: ForecastResult; goal: number }) {
       <figcaption className="chart-legend">
         <span className="key save">Sparat</span>
         {hasLoan && <span className="key loan">Kvar på lånet</span>}
+        {flat && <span className="key flat">Utan avkastning</span>}
         {showGoal && <span className="key target">Mål</span>}
       </figcaption>
       <div className="chart-box">
@@ -650,6 +749,12 @@ function Chart({ result, goal }: { result: ForecastResult; goal: number }) {
             </g>
           ))}
           <path d={area} fill="url(#save-fill)" />
+          {flat && (
+            <path
+              d={flat.map((m, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(m.savings).toFixed(1)}`).join('')}
+              className="flat-line"
+            />
+          )}
           {hasLoan && <path d={line((m) => m.loanLeft)} className="loan-line" />}
           <path d={line((m) => m.savings)} className="save-line" />
           {paidI >= 0 && shown === null && (
@@ -679,11 +784,16 @@ function Chart({ result, goal }: { result: ForecastResult; goal: number }) {
         {shown !== null && (
           <div className="chart-tip" style={{ left: `${tipLeft}%` }} role="status">
             <span className="tip-month">
-              {monthName(months[shown].month)}s budget
+              Budget {monthName(months[shown].month)}
             </span>
             <span className="tip-row save">
               <b>{kr(months[shown].savings)}</b> sparat
             </span>
+            {flat && (
+              <span className="tip-row flat">
+                <b>{kr(flat[shown].savings)}</b> utan avkastning
+              </span>
+            )}
             {hasLoan && (
               <span className="tip-row loan">
                 {months[shown].loanLeft > 0 ? (
