@@ -297,15 +297,18 @@ function LoanCard({ loan }: { loan: Loan }) {
     balance: toInputKr(loan.balance),
     rate: String(loan.annualRate).replace('.', ','),
     payment: toInputKr(loan.monthlyPayment),
-    amortization: toInputKr(loan.amortization),
+    fees: toInputKr(loan.fees ?? 0),
   });
   const values = {
     balance: parseKr(form.balance),
     rate: parseKr(form.rate),
     payment: parseKr(form.payment),
-    amortization: parseKr(form.amortization),
+    fees: parseKr(form.fees),
   };
   const valid = Object.values(values).every((n) => Number.isFinite(n) && n >= 0) && values.rate < 50;
+  const nextInterest = (loan.balance * loan.annualRate) / 100 / 12;
+  const nextAmortization =
+    loan.fees !== undefined ? Math.max(0, loan.monthlyPayment - loan.fees - nextInterest) : loan.amortization;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -315,7 +318,7 @@ function LoanCard({ loan }: { loan: Loan }) {
       balance: values.balance,
       annualRate: values.rate,
       monthlyPayment: values.payment,
-      amortization: values.amortization,
+      fees: values.fees,
       startMonth: shiftMonth(currentMonth(), 1),
     });
     setEditing(false);
@@ -343,9 +346,12 @@ function LoanCard({ loan }: { loan: Loan }) {
             {field('balance', 'Kvar att betala (kr)')}
             {field('rate', 'Ränta per år (%)')}
             {field('payment', 'Kostar per månad (kr)')}
-            {field('amortization', 'Varav amortering (kr)')}
+            {field('fees', 'Varav avgifter och försäkring (kr)')}
           </div>
-          <p className="hint small">Kvar att betala gäller från {monthName(shiftMonth(currentMonth(), 1))}.</p>
+          <p className="hint small">
+            Kvar att betala när {monthName(currentMonth())} är betald. Resten av månadskostnaden är ränta och
+            amortering: ju mindre skuld, desto mer går till amortering.
+          </p>
           {!valid && <p className="error">Skriv belopp, till exempel 100000 eller 10,5.</p>}
           <div className="actions">
             <button type="submit" className="primary" disabled={!valid}>
@@ -359,7 +365,9 @@ function LoanCard({ loan }: { loan: Loan }) {
       ) : (
         <div className="loan-body">
           <p>
-            {kr(loan.monthlyPayment)} i månaden, varav {kr(loan.amortization)} amortering. Ränta {String(loan.annualRate).replace('.', ',')} %.
+            {kr(loan.monthlyPayment)} i månaden: nästa månad ungefär {kr(nextInterest)} ränta och{' '}
+            {kr(nextAmortization)} amortering{loan.fees ? `, plus ${kr(loan.fees)} i avgifter och försäkring` : ''}. Ränta{' '}
+            {String(loan.annualRate).replace('.', ',')} %.
           </p>
           <label className="switch">
             <input

@@ -77,3 +77,27 @@ describe('prognos', () => {
     expect(f.months[0].extraToLoan).toBe(0);
   });
 });
+
+describe('annuitetslån med avgifter (LF Finans-avin)', () => {
+  // Avi 2026-09-10: 97 446,12 kr, 8,45 %, 1 586 kr = amortering + ränta + 40 kr avgift + 103 kr låneskydd.
+  const lf: Loan = { ...loan, balance: 96689.63, annualRate: 8.45, amortization: 0, fees: 143, startMonth: '2026-10', payExtra: false };
+  const month = (m: string) => ({ month: m, income: 0, costs: 0, plannedSavings: 0 });
+
+  it('stämmer med avin: oktober ger ca 681 kr ränta och 762 kr amortering', () => {
+    const f = forecast([month('2026-10')], 0, lf);
+    expect(f.months[0].interest).toBeCloseTo(680.86, 1);
+    expect(f.months[0].amortized).toBeCloseTo(762.14, 1);
+    expect(f.months[0].loanLeft).toBeCloseTo(95927.49, 1);
+  });
+
+  it('amorteringen ökar när räntan minskar', () => {
+    const f = forecast([month('2026-10'), month('2026-11'), month('2026-12')], 0, lf);
+    expect(f.months[2].amortized).toBeGreaterThan(f.months[0].amortized);
+  });
+
+  it('utan extra betalning tar det över sju år', () => {
+    const months = Array.from({ length: 120 }, (_, i) => month(`${2026 + Math.floor((9 + i) / 12)}-${String(((9 + i) % 12) + 1).padStart(2, '0')}`));
+    const f = forecast(months, 0, lf);
+    expect(f.loanPaidIn! > '2033-12').toBe(true);
+  });
+});

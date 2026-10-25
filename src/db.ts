@@ -2,7 +2,7 @@ import type { Loan } from './forecast';
 import type { Asset, Category, Debt, MonthBudget, MonthlyIncome, SavingsGoal, Transaction, Wish } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 11;
+const DB_VERSION = 12;
 
 /** Listorna med appens data. Det är dessa som synkas mellan telefonerna. */
 export const DATA_STORES = ['categories', 'budgets', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes', 'loans'] as const;
@@ -54,14 +54,19 @@ const MY_ACCOUNTS = [SPENDING_ACCOUNT, 'Erik spar', 'Cassandra spar'];
 
 const MY_INCOME = { csn: 18156, other: 29852 };
 
-/** Billånet 2026-10-25: 100 000 kr kvar, 1 586 kr/mån varav 750 kr amortering (≈ 10 % ränta). */
+/**
+ * Billånet hos LF Finans. Kapitalskuld 96 689,63 kr den 25 oktober 2026 före oktoberbetalningen,
+ * så 95 927 kr kvar från november (oktober: 680,86 kr ränta + 762,14 kr amortering).
+ * 1 586 kr/mån = amortering + ränta 8,45 % + 40 kr aviavgift + 103 kr låneskydd.
+ */
 const MY_CAR_LOAN: Loan = {
   id: 'billan',
   name: 'Billån',
-  balance: 100000,
-  annualRate: 10,
+  balance: 95927,
+  annualRate: 8.45,
   monthlyPayment: 1586,
-  amortization: 750,
+  amortization: 0,
+  fees: 143,
   categoryName: 'Billån',
   startMonth: '2026-11',
   payExtra: true,
@@ -234,6 +239,17 @@ function openDb(): Promise<IDBDatabase> {
         // så att båda telefonerna skapar samma post och synken inte ger dubbletter.
         const loans = db.createObjectStore('loans', { keyPath: 'id' });
         loans.put(MY_CAR_LOAN);
+      }
+
+      if (event.oldVersion < 12) {
+        // Riktiga siffror från LF Finans (avi 2026-09-10 och kapitalskuld 2026-10-25), om billånet
+        // inte redan har ändrats i appen: annuitetslån, 8,45 %, 1 586 kr varav 143 kr avgifter.
+        const loans = tx.objectStore('loans');
+        const current = loans.get('billan');
+        current.onsuccess = () => {
+          const old = current.result as Loan | undefined;
+          if (!old || (old.balance === 100000 && old.annualRate === 10)) loans.put({ ...MY_CAR_LOAN, payExtra: old?.payExtra ?? true });
+        };
       }
     };
     request.onsuccess = () => resolve(request.result);
