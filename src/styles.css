@@ -1857,3 +1857,27 @@ main > div > h2 + .hint {
   font-size: 0.82rem;
   font-weight: 500;
 }
+
+.extra-choice {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.extra-choice .extra-title {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.extra-choice .segmented-row {
+  margin: 0;
+}
+
+.extra-choice .hint {
+  margin: 0;
+}
+
+.extra-amount {
+  display: grid;
+  gap: 0.4rem;
+}

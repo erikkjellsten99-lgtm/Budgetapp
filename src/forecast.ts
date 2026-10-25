@@ -24,6 +24,11 @@ export interface Loan {
   startMonth: string;
   /** Lägg det som blir över varje månad på lånet tills det är betalt. */
   payExtra: boolean;
+  /**
+   * Fast belopp extra per månad (kr) när payExtra är på. Saknas = allt som blir över.
+   * Är det mindre över en månad läggs bara det som finns.
+   */
+  extraAmount?: number;
 }
 
 export interface MonthInput {
@@ -65,7 +70,7 @@ export interface Forecast {
 
 /**
  * Räknar fram prognosen. Lånets ordinarie amortering dras varje månad (kostnaden ligger redan
- * i budgeten). Med payExtra går allt som blir över till lånet tills det är betalt, därefter till sparande.
+ * i budgeten). Med payExtra går allt som blir över (eller extraAmount kr) till lånet tills det är betalt, resten till sparande.
  * När lånet är betalt läggs dess månadskostnad till det som blir över.
  */
 export function forecast(inputs: MonthInput[], startSavings: number, loan: Loan | null, goalTarget = 0): Forecast {
@@ -90,7 +95,7 @@ export function forecast(inputs: MonthInput[], startSavings: number, loan: Loan 
       const regular = Math.min(balance, Math.max(0, planned));
       balance -= regular;
       amortized = regular;
-      if (loan.payExtra && left > 0) extra = Math.min(left, balance);
+      if (loan.payExtra && left > 0) extra = Math.min(left, balance, loan.extraAmount ?? Infinity);
       balance -= extra;
       if (balance <= 0.5) {
         balance = 0;
