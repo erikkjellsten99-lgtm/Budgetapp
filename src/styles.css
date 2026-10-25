@@ -1450,3 +1450,291 @@ main > div > h2 + .hint {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Prognos */
+.forecast {
+  margin-bottom: 1.6rem;
+}
+
+.forecast-lead,
+.forecast-note {
+  margin: -0.4rem 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.forecast-note {
+  margin-top: 0;
+}
+
+.forecast-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.forecast-facts .fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+}
+
+.fact span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.fact strong {
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.fact strong::first-letter {
+  text-transform: uppercase;
+}
+
+.segmented-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 0.85rem;
+  padding: 4px;
+  background: var(--border);
+  border-radius: calc(var(--radius-control) + 4px);
+}
+
+.segmented-row .seg {
+  min-height: 2.5rem;
+  padding: 0.3rem;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.segmented-row .seg.active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.forecast-chart {
+  padding: 0.8rem 0.6rem 0.6rem;
+}
+
+.forecast-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.forecast-chart .axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.forecast-chart .goal-line {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.forecast-chart .lbl {
+  fill: var(--muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-chart .save-line,
+.forecast-chart .loan-line {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.forecast-chart .save-line {
+  stroke: var(--chart-main);
+}
+
+.forecast-chart .loan-line {
+  stroke: var(--danger);
+  stroke-dasharray: 5 4;
+}
+
+.forecast-chart .save-dot {
+  fill: var(--chart-main);
+}
+
+.forecast-chart figcaption {
+  display: flex;
+  gap: 1rem;
+  padding: 0.3rem 0.4rem 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.forecast-chart .key::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-top: 2.5px solid var(--chart-main);
+}
+
+.forecast-chart .key.loan::before {
+  border-top: 2.5px dashed var(--danger);
+}
+
+.loan-body {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0 1rem 0.9rem;
+}
+
+.loan-body p {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.switch input {
+  flex: none;
+  width: 1.4rem;
+  min-height: 1.4rem;
+  height: 1.4rem;
+  margin: 0.1rem 0 0;
+  accent-color: var(--accent);
+}
+
+.switch b {
+  display: block;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.loan-body .link-button {
+  justify-self: start;
+}
+
+.two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.forecast-table .hint {
+  margin: -0.4rem 1rem 0.4rem;
+}
+
+.forecast-table .table-head,
+.month-row {
+  display: grid;
+  grid-template-columns: 4.6rem repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-table .table-head {
+  padding: 0.3rem 1rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.forecast-table .table-head span:not(:first-child),
+.month-row span:not(:first-child) {
+  text-align: right;
+}
+
+.forecast-table ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.forecast-table li + li {
+  border-top: 1px solid var(--border);
+}
+
+.month-row {
+  min-height: 2.9rem;
+  font-size: 0.88rem;
+}
+
+.month-row > span:last-child {
+  font-weight: 650;
+}
+
+.month-row .m {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.month-row .negative {
+  color: var(--danger);
+}
+
+.month-row.open {
+  background: var(--accent-soft);
+}
+
+.month-details {
+  padding: 0.4rem 1rem 0.2rem;
+  background: var(--bg);
+}
+
+.month-details dl {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.4rem 0 0.6rem;
+}
+
+.month-details dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.88rem;
+}
+
+.month-details dt {
+  color: var(--muted);
+}
+
+.month-details dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.category-form.compact {
+  padding: 0.4rem 0 0.8rem;
+}
+
+.category-form.compact .hint {
+  margin: 0;
+}
+
+.saved {
+  align-self: center;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.csn-plan .hint {
+  margin: 0;
+}

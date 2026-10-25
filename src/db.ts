@@ -1,10 +1,11 @@
+import type { Loan } from './forecast';
 import type { Asset, Category, Debt, MonthBudget, MonthlyIncome, SavingsGoal, Transaction, Wish } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 10;
+const DB_VERSION = 11;
 
 /** Listorna med appens data. Det är dessa som synkas mellan telefonerna. */
-export const DATA_STORES = ['categories', 'budgets', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes'] as const;
+export const DATA_STORES = ['categories', 'budgets', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes', 'loans'] as const;
 export type DataStore = (typeof DATA_STORES)[number];
 type StoreName = DataStore | 'outbox' | 'meta';
 
@@ -52,6 +53,19 @@ const SPENDING_ACCOUNT = 'Hushållskonto';
 const MY_ACCOUNTS = [SPENDING_ACCOUNT, 'Erik spar', 'Cassandra spar'];
 
 const MY_INCOME = { csn: 18156, other: 29852 };
+
+/** Billånet 2026-10-25: 100 000 kr kvar, 1 586 kr/mån varav 750 kr amortering (≈ 10 % ränta). */
+const MY_CAR_LOAN: Loan = {
+  id: 'billan',
+  name: 'Billån',
+  balance: 100000,
+  annualRate: 10,
+  monthlyPayment: 1586,
+  amortization: 750,
+  categoryName: 'Billån',
+  startMonth: '2026-11',
+  payExtra: true,
+};
 
 /** Det gemensamma sparmålet. Räknar konton med "gemensam" i namnet, t.ex. Avanza (gemensamt). */
 const MY_GOAL = { name: 'Gemensamt sparmål', target: 300000, monthlyDeposit: 0, annualReturn: 7 };
@@ -213,6 +227,13 @@ function openDb(): Promise<IDBDatabase> {
         // Budget per månad. Den gamla listan 'categories' ligger kvar som utgångsläge
         // för månader före den första egna månadsbudgeten.
         db.createObjectStore('budgets', { keyPath: 'month' });
+      }
+
+      if (event.oldVersion < 11) {
+        // Lån med avbetalningsplan, för prognosen. Billånet läggs in med ett fast id,
+        // så att båda telefonerna skapar samma post och synken inte ger dubbletter.
+        const loans = db.createObjectStore('loans', { keyPath: 'id' });
+        loans.put(MY_CAR_LOAN);
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -393,12 +414,18 @@ export async function getBudget(month: string): Promise<BudgetForMonth> {
 let budgetQueue: Promise<unknown> = Promise.resolve();
 
 /**
- * Ändrar budgeten för en månad. Första ändringen ger månaden en egen kopia,
- * så att andra månader inte påverkas.
+ * Ändrar budgeten för en månad, och bara den månaden. Första ändringen ger månaden en egen kopia.
+ * En ny månad som aldrig ändrats utgår från närmaste tidigare månad.
  */
 export function updateBudget(month: string, change: (categories: Category[]) => Category[]): Promise<void> {
   const next = budgetQueue.then(async () => {
     const { categories } = await getBudget(month);
+    // Nästa månad ska inte följa med: utgår den från den här månaden får den först en egen
+    // kopia av budgeten som den var. Då gäller ändringen bara den här månaden.
+    const following = shiftMonth(month, 1);
+    if ((await getBudget(following)).from !== following) {
+      await putRecord('budgets', { month: following, categories } satisfies MonthBudget);
+    }
     await putRecord('budgets', { month, categories: change(categories) } satisfies MonthBudget);
   });
   budgetQueue = next.catch(() => undefined);
@@ -454,8 +481,26 @@ export async function getIncome(month: string): Promise<MonthlyIncome> {
   return { month, csn: latest?.csn ?? 0, other: latest?.other ?? 0 };
 }
 
-export function saveIncome(income: MonthlyIncome): Promise<void> {
-  return putRecord('income', income);
+/** Alla ifyllda inkomstmånader (utan ärvda), t.ex. för prognosen. */
+export function getIncomeRecords(): Promise<MonthlyIncome[]> {
+  return read('income', (store) => store.getAll());
+}
+
+/**
+ * Sparar inkomsten för en månad, och bara den månaden: utgår nästa månad från den här
+ * får den först en egen post med beloppen som de var. Med alsoLater: true följer
+ * senare månader utan egna belopp med (används av CSN-planen).
+ */
+export async function saveIncome(income: MonthlyIncome, alsoLater = false): Promise<void> {
+  if (!alsoLater) {
+    const following = shiftMonth(income.month, 1);
+    const records = await getIncomeRecords();
+    if (!records.some((r) => r.month === following)) {
+      const before = await getIncome(following);
+      await putRecord('income', before);
+    }
+  }
+  await putRecord('income', income);
 }
 
 // Skulder
@@ -501,6 +546,16 @@ export function deleteWish(id: string): Promise<void> {
 }
 
 // Sparmål
+
+// Lån
+
+export function getLoans(): Promise<Loan[]> {
+  return read('loans', (store) => store.getAll());
+}
+
+export function saveLoan(loan: Loan): Promise<void> {
+  return putRecord('loans', loan);
+}
 
 export function getGoals(): Promise<SavingsGoal[]> {
   return read('goals', (store) => store.getAll());
