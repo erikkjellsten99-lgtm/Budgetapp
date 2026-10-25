@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { forecast, type Loan, type MonthInput } from './forecast';
+import { CSN_PLAN, csnPayouts, forecast, planCsn, type Loan, type MonthInput } from './forecast';
 
 const loan: Loan = {
   id: 'billan',
@@ -112,5 +112,14 @@ describe('eget belopp extra på lånet', () => {
     const f = forecast([{ month: '2026-11', income: 30000, costs: 25000, plannedSavings: 0 }], 0, { ...loan, extraAmount: 10000 });
     expect(f.months[0].extraToLoan).toBe(5000);
     expect(f.months[0].toSavings).toBe(0);
+  });
+});
+
+describe('CSN-planen', () => {
+  it('följer utbetalningsdagarna på csn.se: inget i december, två gånger i januari', () => {
+    expect(planCsn(CSN_PLAN.find((p) => p.month === '2026-12')!)).toBe(0);
+    expect(planCsn(CSN_PLAN.find((p) => p.month === '2027-01')!)).toBe(13653 + 18404);
+    expect(csnPayouts('2027-01', 32057)!.map((p) => p.day)).toEqual(['11/1', '25/1']);
+    expect(csnPayouts('2027-01', 13653)).toBeNull();
   });
 });

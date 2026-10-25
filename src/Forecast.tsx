@@ -13,7 +13,7 @@ import {
   saveLoan,
   shiftMonth,
 } from './db';
-import { CSN_PLAN, forecast, type Forecast as ForecastResult, type Loan, type MonthInput } from './forecast';
+import { CSN_PLAN, csnPayouts, forecast, planCsn, type Forecast as ForecastResult, type Loan, type MonthInput } from './forecast';
 import { formatKr, parseKr, toInputKr } from './money';
 import type { MonthlyIncome } from './types';
 
@@ -84,7 +84,11 @@ export default function Forecast() {
   if (!data) return null;
   const result = forecast(data.inputs, data.startSavings, data.loan, data.goalTarget);
   const last = result.months.at(-1);
-  const csnMissing = CSN_PLAN.some((p) => p.month >= first && !data.ownIncome.has(p.month));
+  // Visa CSN-kortet om någon månad i planen inte stämmer med det som ligger i appen.
+  const csnMissing = CSN_PLAN.some((p) => {
+    const i = data.inputs.findIndex((m) => m.month === p.month);
+    return i >= 0 && data.incomes[i].csn !== planCsn(p);
+  });
 
   return (
     <section className="forecast" aria-labelledby="forecast-title">
@@ -160,7 +164,10 @@ export default function Forecast() {
                 aria-expanded={open === m.month}
                 onClick={() => setOpen(open === m.month ? null : m.month)}
               >
-                <span className="m">{shortMonth(m.month)}</span>
+                <span className="m">
+                  {shortMonth(m.month)}
+                  <CsnTag month={m.month} csn={data.incomes[i].csn} />
+                </span>
                 <span className={m.left < 0 ? 'negative' : undefined}>{kr(m.left)}</span>
                 {data.loan && <span>{m.loanLeft > 0 ? kr(m.loanLeft) : 'Betalt'}</span>}
                 <span>{kr(m.savings)}</span>
@@ -205,6 +212,20 @@ function MonthDetails({
         <div>
           <dt>Inkomster</dt>
           <dd>{kr(month.income)}</dd>
+        </div>
+        <div className="sub">
+          <dt>
+            CSN
+            {(() => {
+              const p = csnPayouts(month.month, income.csn);
+              return p && p.length ? ` (${p.map((x) => `${kr(x.amount)} den ${x.day}`).join(' + ')})` : '';
+            })()}
+          </dt>
+          <dd>{kr(income.csn)}</dd>
+        </div>
+        <div className="sub">
+          <dt>Löner</dt>
+          <dd>{kr(income.other)}</dd>
         </div>
         <div>
           <dt>Kostnader</dt>
@@ -450,6 +471,13 @@ function ExtraChoice({ loan }: { loan: Loan }) {
   );
 }
 
+/** Liten text under månaden: när CSN kommer, t.ex. "CSN 11/1 + 25/1" eller "Inget CSN". */
+function CsnTag({ month, csn }: { month: string; csn: number }) {
+  const payouts = csnPayouts(month, csn);
+  if (!payouts) return null;
+  return <small className="csn-tag">{payouts.length ? `CSN ${payouts.map((p) => p.day).join(' + ')}` : 'Inget CSN'}</small>;
+}
+
 /** Lägger in CSN-utbetalningarna från csn.se på rätt månader, med ett tryck. */
 function CsnPlan({ first }: { first: string }) {
   const [busy, setBusy] = useState(false);
@@ -458,7 +486,7 @@ function CsnPlan({ first }: { first: string }) {
     for (const p of CSN_PLAN) {
       if (p.month < first) continue;
       const income = await getIncome(p.month);
-      await saveIncome({ month: p.month, csn: p.csn, other: income.other }, true);
+      await saveIncome({ month: p.month, csn: planCsn(p), other: income.other }, true);
     }
     setBusy(false);
   }
@@ -467,8 +495,9 @@ function CsnPlan({ first }: { first: string }) {
       <h3>CSN framåt</h3>
       <div className="category-form">
         <p className="hint">
-          Lägg in utbetalningarna från csn.se: 18 280 kr i december, 13 653 kr i januari (kommer 11/1), 18 404 kr
-          februari–maj, 9 202 kr i juni och inget CSN från juli. RZ Zampart ändras inte.
+          Lägg in utbetalningarna från csn.se i den månad pengarna kommer: 18 280 kr den 25/11, inget i december,
+          13 653 kr den 11/1 + 18 404 kr den 25/1, 18 404 kr i februari–april och 9 202 kr den 25/5. Inget CSN
+          från juni. Lönerna ändras inte.
         </p>
         <button type="button" className="primary" disabled={busy} onClick={apply}>
           Lägg in CSN-planen
