@@ -111,17 +111,31 @@ export function forecast(inputs: MonthInput[], startSavings: number, loan: Loan 
   return { months, loanPaidIn, goalReachedIn, lowest };
 }
 
+/** En CSN-utbetalning: dag ("11/1") och belopp. */
+export interface CsnPayout {
+  day: string;
+  amount: number;
+}
+
 /**
- * CSN-utbetalningarna 2026–2027 från csn.se, flyttade till månaden de används
- * (utbetalningen den 25:e räknas till nästa månad, 11/1 till januari).
+ * CSN-utbetalningarna 2026–2027 från csn.se, i den månad pengarna kommer.
+ * Inget kommer i december: vårterminens första pengar kommer 11/1 och sedan 25/1.
  */
-export const CSN_PLAN: { month: string; csn: number }[] = [
-  { month: '2026-12', csn: 18280 },
-  { month: '2027-01', csn: 13653 },
-  { month: '2027-02', csn: 18404 },
-  { month: '2027-03', csn: 18404 },
-  { month: '2027-04', csn: 18404 },
-  { month: '2027-05', csn: 18404 },
-  { month: '2027-06', csn: 9202 },
-  { month: '2027-07', csn: 0 },
+export const CSN_PLAN: { month: string; payouts: CsnPayout[] }[] = [
+  { month: '2026-11', payouts: [{ day: '25/11', amount: 18280 }] },
+  { month: '2026-12', payouts: [] },
+  { month: '2027-01', payouts: [{ day: '11/1', amount: 13653 }, { day: '25/1', amount: 18404 }] },
+  { month: '2027-02', payouts: [{ day: '25/2', amount: 18404 }] },
+  { month: '2027-03', payouts: [{ day: '25/3', amount: 18404 }] },
+  { month: '2027-04', payouts: [{ day: '23/4', amount: 18404 }] },
+  { month: '2027-05', payouts: [{ day: '25/5', amount: 9202 }] },
+  { month: '2027-06', payouts: [] },
 ];
+
+export const planCsn = (p: { payouts: CsnPayout[] }) => p.payouts.reduce((s, x) => s + x.amount, 0);
+
+/** Utbetalningarna en månad enligt CSN-planen, om beloppet i appen stämmer med planen. */
+export function csnPayouts(month: string, csn: number): CsnPayout[] | null {
+  const p = CSN_PLAN.find((x) => x.month === month);
+  return p && planCsn(p) === csn ? p.payouts : null;
+}

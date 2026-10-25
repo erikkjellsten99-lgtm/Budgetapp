@@ -1881,3 +1881,21 @@ main > div > h2 + .hint {
   display: grid;
   gap: 0.4rem;
 }
+
+.month-row .m {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.csn-tag {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.month-details dl div.sub {
+  padding-left: 0.8rem;
+  font-size: 0.82rem;
+}
