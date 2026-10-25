@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest';
+import { forecast, type Loan, type MonthInput } from './forecast';
+
+const loan: Loan = {
+  id: 'billan',
+  name: 'Billån',
+  balance: 100000,
+  annualRate: 10.03,
+  monthlyPayment: 1586,
+  amortization: 750,
+  categoryName: 'Billån',
+  startMonth: '2026-11',
+  payExtra: true,
+};
+
+/** Samma siffror som i hushållskalkylen (2026-10-24). */
+function kalkyl(): MonthInput[] {
+  const rows: [string, number, number][] = [
+    ['2026-11', 18280, 29822],
+    ['2026-12', 18280, 31970],
+    ['2027-01', 13653, 31970],
+    ['2027-02', 18404, 31970],
+    ['2027-03', 18404, 31970],
+    ['2027-04', 18404, 31970],
+    ['2027-05', 18404, 31970],
+    ['2027-06', 9202, 31970],
+    ['2027-07', 0, 31970],
+    ['2027-08', 0, 31970],
+  ];
+  return rows.map(([month, csn, other]) => ({
+    month,
+    income: csn + other,
+    costs: 24003 + (month >= '2026-12' ? 11000 : 0),
+    plannedSavings: 0,
+  }));
+}
+
+describe('prognos', () => {
+  it('stämmer med hushållskalkylen: lånet betalt i april, ~74 400 kr sparat i augusti', () => {
+    const f = forecast(kalkyl(), 52000, loan, 300000);
+    expect(f.loanPaidIn).toBe('2027-04');
+    expect(f.months[0].left).toBe(24099);
+    expect(f.months[0].loanLeft).toBeCloseTo(75151, 0);
+    expect(f.months.at(-1)!.savings).toBeCloseTo(74397, -1);
+    expect(f.lowest.savings).toBeLessThanOrEqual(52000);
+  });
+
+  it('frigör lånets kostnad när det är betalt', () => {
+    const f = forecast(kalkyl(), 52000, loan);
+    const may = f.months.find((m) => m.month === '2027-05')!;
+    expect(may.freed).toBe(1586);
+    expect(may.toSavings).toBe(15371 + 1586);
+  });
+
+  it('utan extra betalning amorteras bara 750 kr i månaden', () => {
+    const f = forecast(kalkyl(), 52000, { ...loan, payExtra: false });
+    expect(f.loanPaidIn).toBeNull();
+    expect(f.months.at(-1)!.loanLeft).toBe(100000 - 750 * 10);
+  });
+
+  it('en minusmånad tas från sparandet', () => {
+    const f = forecast([{ month: '2027-07', income: 10000, costs: 15000, plannedSavings: 0 }], 20000, null);
+    expect(f.months[0].savings).toBe(15000);
+    expect(f.lowest).toEqual({ savings: 15000, month: '2027-07' });
+  });
+
+  it('planerat sparande räknas till sparandet och sparmålet', () => {
+    const inputs = Array.from({ length: 3 }, (_, i) => ({ month: `2027-0${i + 1}`, income: 30000, costs: 20000, plannedSavings: 5000 }));
+    const f = forecast(inputs, 0, null, 20000);
+    expect(f.months.map((m) => m.savings)).toEqual([10000, 20000, 30000]);
+    expect(f.goalReachedIn).toBe('2027-02');
+  });
+
+  it('lånet börjar inte räknas före sin startmånad', () => {
+    const f = forecast([{ month: '2026-10', income: 1000, costs: 0, plannedSavings: 0 }], 0, loan);
+    expect(f.months[0].loanLeft).toBe(100000);
+    expect(f.months[0].extraToLoan).toBe(0);
+  });
+});
