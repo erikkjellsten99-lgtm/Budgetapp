@@ -46,6 +46,15 @@ Fliken **Vanor** är vanetrackern (tidigare en egen app). Koden ligger i `src/va
 - `sync.ts`: synk till tabellen `personal_records` i Supabase. Radsäkerheten gör att varje konto bara ser sina egna vanor, så du och Cassandra har var sin lista.
 - `transfer.ts`: flyttkod från den gamla vanetrackern (Mina vanor → Flytta från gamla vanetrackern).
 
+## Träning
+
+Fliken **Träning** loggar gympass (övningar, kg × reps) och löppass (distans, tid). Koden ligger i `src/traning/`:
+
+- `training.ts`: logik med tester – tempo, 5 km-tid, tyngsta set, rekord, förra passets vikter.
+- `Traning.tsx`, `WorkoutSheet.tsx`: fliken och arket för ett pass. Ett nytt gympass sparas som utkast medan du tränar.
+- Passen ligger i samma databas som vanorna (`vanor`, store `workouts`, version 2) och synkas privat på samma sätt.
+- Loggar du ett pass bockas vanan Gym eller Löpning av den dagen, om du har den.
+
 ## Bra att veta
 
 - Datan finns bara i den webbläsare och på den enhet där du använder appen. Den synkas inte mellan enheter.
