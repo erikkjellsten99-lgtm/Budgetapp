@@ -9,9 +9,10 @@ import { todayKey, type DateKey } from './dates';
 import { sameName, type Habit, type Log } from './habits';
 
 const DB_NAME = 'vanor';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
-export const HABIT_STORES = ['habits', 'checks', 'pauses'] as const;
+/** Allt som synkas privat till kontot. Träningspassen (workouts) ligger här sedan version 2. */
+export const HABIT_STORES = ['habits', 'checks', 'pauses', 'workouts'] as const;
 export type HabitStore = (typeof HABIT_STORES)[number];
 
 /** En bockning: vanan var klar den dagen. `min` = bara minimiversionen gjordes. */
@@ -61,8 +62,16 @@ function openDb(): Promise<IDBDatabase> {
         db.createObjectStore('outbox', { keyPath: 'key' });
         db.createObjectStore('meta', { keyPath: 'key' });
       }
+      if (event.oldVersion < 2) {
+        db.createObjectStore('workouts', { keyPath: 'id' });
+      }
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      // En nyare version av appen i en annan flik vill uppgradera: släpp databasen.
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     request.onerror = () => reject(request.error);
   });
   return dbPromise;
@@ -157,6 +166,14 @@ export async function toggleCheck(habitId: string, date: DateKey, min = false) {
   else await change([{ store: 'checks', record: min ? { key, date, habitId, min: true } : { key, date, habitId } }]);
 }
 
+/** Bocka av vanan för dagen om den inte redan är bockad (t.ex. Gym när ett gympass loggas). */
+export async function ensureCheck(habitId: string, date: DateKey) {
+  const db = await openDb();
+  const key = checkKey(date, habitId);
+  const existing = await request(db.transaction('checks').objectStore('checks').get(key));
+  if (!existing) await change([{ store: 'checks', record: { key, date, habitId } }]);
+}
+
 /** Pausa dagen (sjuk/skadad) – eller ta bort pausen. */
 export async function togglePause(date: DateKey) {
   const db = await openDb();
@@ -248,6 +265,20 @@ export async function importHabits(data: { habits: Habit[]; checks: Omit<Check, 
   for (const p of data.pauses) if (!pausedDays.has(p.date)) puts.push({ store: 'pauses', record: { date: p.date } });
   await change(puts);
   return { habits: puts.filter((p) => p.store === 'habits').length, checks: puts.filter((p) => p.store === 'checks').length };
+}
+
+// Träningspass (se ../traning/training.ts)
+
+export function loadWorkouts<T>(): Promise<T[]> {
+  return getAll<T>('workouts');
+}
+
+export function saveWorkoutRecord(workout: { id: string }) {
+  return change([{ store: 'workouts', record: workout }]);
+}
+
+export function deleteWorkoutRecord(id: string) {
+  return change([], [{ store: 'workouts', id }]);
 }
 
 // För synken
