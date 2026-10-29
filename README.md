@@ -50,6 +50,8 @@ Fliken **Vanor** är vanetrackern (tidigare en egen app). Koden ligger i `src/va
 
 Överst i Vanor finns ett kort med växeln **Vecka | Månad**. **Vecka** är solen som stiger mot veckans mål. **Månad** är ett solsystem: varje vecka i månaden är en planet som växer med veckans procent, och varje bock blir en stjärna. Tidigare månader sparas som små solsystem. Månadens veckor är de ISO-veckor vars torsdag ligger i månaden (`monthScore` i `progress.ts`). Bilden ritas i `Galaxy.tsx`.
 
+**Din galax (3D):** knappen "Öppna din galax" i månadsvyn öppnar en spiralgalax i helskärm (`GalaxyView.tsx`, three.js, laddas först när den öppnas). Varje månad sedan första vanan är ett solsystem längs armen, med den första närmast kärnan. Varje bock är en stjärna. Galaxen börjar aldrig om. Dra för att snurra, nyp för att zooma och tryck på en månad för att se den.
+
 ### Påminnelser
 
 Under Mina vanor → **Påminnelser** slår du på notiser för telefonen (på iPhone måste appen ligga på hemskärmen). Varje vana kan få en tid (Ändra → Påminnelse), och det finns en kvällspåminnelse om något måste göras för att hinna veckomålet.
