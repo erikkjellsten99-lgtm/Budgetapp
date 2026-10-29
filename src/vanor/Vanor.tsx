@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import DaysSheet from './DaysSheet'
 import ProgressCard from './ProgressCard'
+import TaskSheet from './TaskSheet'
+import { doneToday, dueTasks, upcomingTasks, whenText, type Task } from './tasks'
 import HabitSheet from './HabitSheet'
 import { addDays, isoWeek, longDate, todayKey, weekStart, type DateKey } from './dates'
 import { daySummary, habitPlan, isDaily, isDone, todayInfo, type Habit, type TodayInfo } from './habits'
-import { loadHabitData, minimumKeys, onHabitChange, toggleCheck, togglePause, toLog, type HabitData } from './store'
+import { loadHabitData, minimumKeys, onHabitChange, saveTaskRecord, toggleCheck, togglePause, toLog, type HabitData } from './store'
 import { dayQuote } from './quotes'
 import '@fontsource/bricolage-grotesque/700.css'
 import '@fontsource/bricolage-grotesque/800.css'
@@ -58,6 +60,9 @@ export default function Vanor() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [popped, setPopped] = useState<string | null>(null)
   const [daysFor, setDaysFor] = useState<string | null>(null)
+  // Att göra-arket: null = stängt, 'new' = ny sak, annars saken som ändras.
+  const [taskSheet, setTaskSheet] = useState<Task | 'new' | null>(null)
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false)
   if (!data) return null
   const { checks, pauses } = data
   const habits = data.habits.filter((h) => !h.archived)
@@ -100,11 +105,20 @@ export default function Vanor() {
   const must = open.filter((r) => r.info.must)
   const flexible = open.filter((r) => !r.info.must).sort((a, b) => b.info.urgency - a.info.urgency)
   const closed = rows.filter((r) => !(r.info.due && !r.info.done))
-  const summary = daySummary(rows.map((r) => r.info))
+  const habitSummary = daySummary(rows.map((r) => r.info))
+  // Att göra-saker räknas som måsten idag (och försenade), precis som dagliga vanor.
+  const tasksDue = dueTasks(data.tasks, today)
+  const tasksDone = doneToday(data.tasks, today)
+  const upcoming = upcomingTasks(data.tasks, today)
+  const summary = {
+    total: habitSummary.total + tasksDue.length + tasksDone.length,
+    done: habitSummary.done + tasksDone.length,
+    flexible: habitSummary.flexible,
+  }
 
-  const headline = !habits.length
+  const headline = !habits.length && !summary.total
     ? 'Vanor'
-    : pausedToday && !open.length
+    : pausedToday && !open.length && !tasksDue.length
       ? 'Vilodag'
       : summary.done < summary.total
         ? `${summary.total - summary.done} kvar idag`
@@ -157,7 +171,7 @@ export default function Vanor() {
           log={log}
           paused={paused}
           today={today}
-          mustToday={must.map((r) => r.habit.name)}
+          mustToday={[...tasksDue.map((t) => t.title), ...must.map((r) => r.habit.name)]}
         />}
 
       {pausedToday && (
@@ -182,11 +196,21 @@ export default function Vanor() {
       ) : (
         <>
           <section className="section" aria-labelledby="todo-title">
-            <h2 className="section-title" id="todo-title">
-              Prioritera idag <span className="count">{must.length}</span>
-            </h2>
-            {must.length ? (
-              <ul className="habits">{must.map(row)}</ul>
+            <div className="section-head">
+              <h2 className="section-title" id="todo-title">
+                Prioritera idag <span className="count">{must.length + tasksDue.length}</span>
+              </h2>
+              <button type="button" className="text-btn add-task" onClick={() => setTaskSheet('new')}>
+                + Att göra
+              </button>
+            </div>
+            {must.length || tasksDue.length ? (
+              <ul className="habits">
+                {tasksDue.map((t) => (
+                  <TaskRow key={t.id} task={t} today={today} onOpen={() => setTaskSheet(t)} />
+                ))}
+                {must.map(row)}
+              </ul>
             ) : (
               <p className="all-done">
                 {pausedToday
@@ -208,12 +232,35 @@ export default function Vanor() {
             </section>
           )}
 
-          {closed.length > 0 && (
+          {upcoming.length > 0 && (
+            <section className="section" aria-labelledby="upcoming-title">
+              <h2 className="section-title" id="upcoming-title">
+                Kommande <span className="count">{upcoming.length}</span>
+              </h2>
+              <ul className="habits">
+                {(showAllUpcoming ? upcoming : upcoming.slice(0, 4)).map((t) => (
+                  <TaskRow key={t.id} task={t} today={today} onOpen={() => setTaskSheet(t)} />
+                ))}
+              </ul>
+              {upcoming.length > 4 && (
+                <button type="button" className="text-btn" onClick={() => setShowAllUpcoming(!showAllUpcoming)}>
+                  {showAllUpcoming ? 'Visa färre' : `Visa alla ${upcoming.length}`}
+                </button>
+              )}
+            </section>
+          )}
+
+          {closed.length + tasksDone.length > 0 && (
             <section className="section" aria-labelledby="rest-title">
               <h2 className="section-title" id="rest-title">
-                Klart eller inte idag <span className="count">{closed.length}</span>
+                Klart eller inte idag <span className="count">{closed.length + tasksDone.length}</span>
               </h2>
-              <ul className="habits">{closed.map(row)}</ul>
+              <ul className="habits">
+                {tasksDone.map((t) => (
+                  <TaskRow key={t.id} task={t} today={today} onOpen={() => setTaskSheet(t)} />
+                ))}
+                {closed.map(row)}
+              </ul>
             </section>
           )}
 
@@ -242,6 +289,7 @@ export default function Vanor() {
           onClose={() => setDaysFor(null)}
         />
       )}
+      {taskSheet && <TaskSheet task={taskSheet === 'new' ? undefined : taskSheet} onClose={() => setTaskSheet(null)} />}
       {settingsOpen && <HabitSheet habits={data.habits} onClose={() => setSettingsOpen(false)} />}
     </div>
   )
@@ -366,6 +414,35 @@ function HabitRow({ habit, info, plan, week, waiting, min, pop, onCheck, onDays,
         aria-pressed={info.done}
         onClick={() => onCheck(habit)}
         onAnimationEnd={onPopEnd}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M3 8.5l3.2 3L13 4.5" />
+        </svg>
+      </button>
+    </li>
+  )
+}
+
+/** En att göra-sak i listan: tryck på texten för att ändra, på cirkeln för att bocka av. */
+function TaskRow({ task, today, onOpen }: { task: Task; today: DateKey; onOpen: () => void }) {
+  const done = !!task.doneOn
+  const late = !done && task.date < today
+  const toggle = () => {
+    const { doneOn: _was, ...rest } = task
+    saveTaskRecord(done ? rest : { ...rest, doneOn: today })
+  }
+  return (
+    <li className={['habit', 'task-row', done && 'is-done', late && 'is-late'].filter(Boolean).join(' ')}>
+      <button type="button" className="info task-open" onClick={onOpen} aria-label={`Ändra ${task.title}`}>
+        <span className="name">{task.title}</span>
+        <span className="meta">{done ? 'Klart' : whenText(task, today)}</span>
+      </button>
+      <button
+        type="button"
+        className={done ? 'check on' : 'check'}
+        aria-label={(done ? 'Ångra ' : 'Bocka av ') + task.title}
+        aria-pressed={done}
+        onClick={toggle}
       >
         <svg viewBox="0 0 16 16" aria-hidden="true">
           <path d="M3 8.5l3.2 3L13 4.5" />

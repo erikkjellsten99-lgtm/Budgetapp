@@ -5,6 +5,7 @@
 // - Påminnelse för en vana: vid vald tid, om den inte är bockad idag, dagen inte är pausad
 //   och veckomålet inte redan är nått. Efter-vanor bara om en kopplad vana är bockad idag.
 // - Kvällspåminnelse: vid vald tid, om det finns vanor som måste göras idag för att hinna veckomålet.
+// - Att göra-saker med tid: vid tiden den dagen, om de inte är bockade (även pausade dagar).
 // Samma påminnelse skickas högst en gång per dag (tabellen push_sent).
 
 import webpush from 'npm:web-push@3.6.7';
@@ -35,6 +36,15 @@ interface Habit {
   archived?: boolean;
   minimum?: string;
   remind?: string;
+  /** 0 = måndag … 6 = söndag. Saknas = alla dagar. */
+  remindDays?: number[];
+}
+interface Task {
+  id: string;
+  title: string;
+  date: string;
+  time?: string;
+  doneOn?: string;
 }
 interface Sub {
   endpoint: string;
@@ -126,7 +136,7 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
   const users = [...new Set(subs.map((s) => s.user_id))];
   // Bara bockningar från de senaste 8 dagarna behövs (veckan hittills), så att svaret håller sig litet.
   const since = addDays(new Date().toISOString().slice(0, 10), -8);
-  const [habitRows, checkRows] = await Promise.all([
+  const [habitRows, checkRows, taskRows] = await Promise.all([
     admin
       .from('personal_records')
       .select('user_id, store, data')
@@ -142,10 +152,20 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
       .eq('deleted', false)
       .gte('data->>date', since)
       .limit(5000),
+    // Att göra: bara det som inte är bockat (äldre försenade saker behövs för kvällens lista).
+    admin
+      .from('personal_records')
+      .select('user_id, store, data')
+      .in('user_id', users)
+      .eq('store', 'tasks')
+      .eq('deleted', false)
+      .is('data->>doneOn', null)
+      .limit(5000),
   ]);
   if (habitRows.error) throw habitRows.error;
   if (checkRows.error) throw checkRows.error;
-  const rows = [...(habitRows.data ?? []), ...(checkRows.data ?? [])];
+  if (taskRows.error) throw taskRows.error;
+  const rows = [...(habitRows.data ?? []), ...(checkRows.data ?? []), ...(taskRows.data ?? [])];
 
   let sent = 0;
   for (const sub of subs as Sub[]) {
@@ -154,7 +174,9 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
     const habits = mine.filter((r) => r.store === 'habits').map((r) => r.data as Habit).filter((h) => !h.archived);
     const checks = mine.filter((r) => r.store === 'checks').map((r) => r.data as { date: string; habitId: string });
     const paused = new Set(mine.filter((r) => r.store === 'pauses').map((r) => (r.data as { date: string }).date));
-    if (paused.has(date)) continue;
+    const pausedToday = paused.has(date);
+    const tasks = mine.filter((r) => r.store === 'tasks').map((r) => r.data as Task).filter((t) => !t.doneOn);
+    const tasksDue = tasks.filter((t) => t.date <= date);
 
     const monday = addDays(date, -weekday(date));
     const doneToday = new Set(checks.filter((c) => c.date === date).map((c) => c.habitId));
@@ -166,8 +188,16 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
     const open = (h: Habit) => !doneToday.has(h.id) && weekCount(h.id) < Math.min(7, h.goal) && relevant(h);
 
     const outgoing: { key: string; payload: object }[] = [];
+    for (const t of tasks) {
+      if (t.date !== date || !isDue(t.time, minutes)) continue;
+      outgoing.push({
+        key: `task:${t.id}`,
+        payload: { title: t.title, body: `Att göra idag ${t.time}.`, tag: `task-${t.id}`, url: APP_URL },
+      });
+    }
     for (const h of habits) {
-      if (!isDue(h.remind, minutes) || !open(h)) continue;
+      if (pausedToday || !isDue(h.remind, minutes) || !open(h)) continue;
+      if (h.remindDays?.length && !h.remindDays.includes(weekday(date))) continue;
       outgoing.push({
         key: `habit:${h.id}`,
         payload: {
@@ -181,13 +211,16 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
 
     if (isDue(sub.evening, minutes)) {
       const daysLeft = 7 - weekday(date);
-      const must = habits.filter((h) => open(h) && (h.goal >= 7 || h.goal - weekCount(h.id) >= daysLeft));
-      if (must.length) {
+      const must = pausedToday
+        ? []
+        : habits.filter((h) => open(h) && (h.goal >= 7 || h.goal - weekCount(h.id) >= daysLeft));
+      const names = [...tasksDue.map((t) => t.title), ...must.map((h) => h.name)];
+      if (names.length) {
         outgoing.push({
           key: 'evening',
           payload: {
-            title: must.length === 1 ? '1 vana kvar idag' : `${must.length} vanor kvar idag`,
-            body: `${nameList(must.map((h) => h.name))} – annars hinns veckomålet inte.`,
+            title: names.length === 1 ? '1 sak kvar idag' : `${names.length} saker kvar idag`,
+            body: must.length ? `${nameList(names)} – annars hinns veckomålet inte.` : `${nameList(names)}.`,
             tag: 'evening',
             url: APP_URL,
           },

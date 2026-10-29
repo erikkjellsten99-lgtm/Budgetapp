@@ -7,12 +7,16 @@
 
 import { todayKey, type DateKey } from './dates';
 import { sameName, type Habit, type Log } from './habits';
+import type { Task } from './tasks';
 
 const DB_NAME = 'vanor';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
-/** Allt som synkas privat till kontot. Träningspassen (workouts) ligger här sedan version 2. */
-export const HABIT_STORES = ['habits', 'checks', 'pauses', 'workouts'] as const;
+/**
+ * Allt som synkas privat till kontot. Träningspassen (workouts) ligger här sedan version 2,
+ * att göra-sakerna (tasks) sedan version 3.
+ */
+export const HABIT_STORES = ['habits', 'checks', 'pauses', 'workouts', 'tasks'] as const;
 export type HabitStore = (typeof HABIT_STORES)[number];
 
 /** En bockning: vanan var klar den dagen. `min` = bara minimiversionen gjordes. */
@@ -32,6 +36,7 @@ export interface HabitData {
   habits: Habit[];
   checks: Check[];
   pauses: Pause[];
+  tasks: Task[];
 }
 
 export interface OutboxEntry {
@@ -64,6 +69,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (event.oldVersion < 2) {
         db.createObjectStore('workouts', { keyPath: 'id' });
+      }
+      if (event.oldVersion < 3) {
+        db.createObjectStore('tasks', { keyPath: 'id' });
       }
     };
     request.onsuccess = () => {
@@ -129,13 +137,14 @@ async function change(puts: { store: HabitStore; record: object }[], deletes: { 
 }
 
 export async function loadHabitData(): Promise<HabitData> {
-  const [habits, checks, pauses] = await Promise.all([
+  const [habits, checks, pauses, tasks] = await Promise.all([
     getAll<Habit>('habits'),
     getAll<Check>('checks'),
     getAll<Pause>('pauses'),
+    getAll<Task>('tasks'),
   ]);
   habits.sort((a, b) => a.order - b.order);
-  return { habits, checks, pauses };
+  return { habits, checks, pauses, tasks };
 }
 
 export function toLog(checks: Check[]): Log {
@@ -197,7 +206,20 @@ const nextOrder = (habits: Habit[]) => habits.reduce((max, h) => Math.max(max, h
  */
 const cleanTime = (time: string) => (/^\d\d:\d\d$/.test(time) ? time : undefined);
 
-export async function addHabit(name: string, goal: number, minimum = '', after: string[] = [], remind = ''): Promise<string> {
+/** Veckodagar 0–6 utan dubbletter, i ordning. Alla eller inga = undefined (alla dagar). */
+function cleanDays(days?: number[]): number[] | undefined {
+  const unique = [...new Set((days ?? []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b);
+  return unique.length === 0 || unique.length === 7 ? undefined : unique;
+}
+
+export async function addHabit(
+  name: string,
+  goal: number,
+  minimum = '',
+  after: string[] = [],
+  remind = '',
+  remindDays?: number[],
+): Promise<string> {
   const all = await getAll<Habit>('habits');
   const text = clean(name);
   const min = clean(minimum) || undefined;
@@ -206,8 +228,14 @@ export async function addHabit(name: string, goal: number, minimum = '', after: 
     ? { ...old, archived: false, order: nextOrder(all), goal: clampGoal(goal), minimum: min, after }
     : { id: newId(), name: text, goal: clampGoal(goal), created: todayKey(), after, order: nextOrder(all), archived: false };
   if (!old && min) habit.minimum = min;
-  if (cleanTime(remind)) habit.remind = cleanTime(remind);
-  else delete habit.remind;
+  if (cleanTime(remind)) {
+    habit.remind = cleanTime(remind);
+    if (cleanDays(remindDays)) habit.remindDays = cleanDays(remindDays);
+    else delete habit.remindDays;
+  } else {
+    delete habit.remind;
+    delete habit.remindDays;
+  }
   await change([{ store: 'habits', record: habit }]);
   return habit.id;
 }
@@ -221,7 +249,7 @@ async function updateRecord(id: string, update: (h: Habit) => Habit) {
 /** Ändra namn, mål, minimiversion, påminnelse och vilka vanor den görs efter. */
 export function updateHabit(
   id: string,
-  changes: { name: string; goal: number; minimum: string; after: string[]; remind?: string },
+  changes: { name: string; goal: number; minimum: string; after: string[]; remind?: string; remindDays?: number[] },
 ) {
   return updateRecord(id, (h) => ({
     ...h,
@@ -230,6 +258,12 @@ export function updateHabit(
     minimum: clean(changes.minimum) || undefined,
     after: changes.after.filter((a) => a !== id),
     remind: changes.remind === undefined ? h.remind : cleanTime(changes.remind),
+    remindDays:
+      changes.remind === undefined
+        ? h.remindDays
+        : cleanTime(changes.remind)
+          ? cleanDays(changes.remindDays)
+          : undefined,
   }));
 }
 
@@ -294,6 +328,20 @@ export function saveWorkoutRecord(workout: { id: string }) {
 
 export function deleteWorkoutRecord(id: string) {
   return change([], [{ store: 'workouts', id }]);
+}
+
+// Att göra (se ./tasks.ts)
+
+export function loadTasks<T>(): Promise<T[]> {
+  return getAll<T>('tasks');
+}
+
+export function saveTaskRecord(task: Task) {
+  return change([{ store: 'tasks', record: task }]);
+}
+
+export function deleteTaskRecord(id: string) {
+  return change([], [{ store: 'tasks', id }]);
 }
 
 // För synken
