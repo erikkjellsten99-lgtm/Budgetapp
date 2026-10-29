@@ -7,7 +7,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
-import { galaxyMonths, monthName, monthOfWeek, type GalaxyMonth } from './progress'
+import { galaxyMonths, monthName, monthOfWeek, monthPlanets, type MonthPlanet } from './progress'
 
 interface Props {
   habits: Habit[]
@@ -72,10 +72,21 @@ function ringTexture(): THREE.Texture {
   return texture
 }
 
+/** Planetfärger, en per vana i den ordning vanorna ligger. */
+const PLANET_COLORS = ['#7fb2ff', '#ff9a6b', '#8ee0b0', '#e7a8ff', '#ffd36b', '#6be0e6', '#ff7f9e', '#c9d1e8']
+const planetColor = (i: number) => PLANET_COLORS[i % PLANET_COLORS.length]
+
+/** Avstånd där ett solsystems planeter börjar synas, och där man räknas som "inne i" det. */
+const DETAIL_FROM = 5
+const INSIDE = 2.2
+
 export default function GalaxyView({ habits, log, paused, today, onClose }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const months = useMemo(() => galaxyMonths(habits, log, paused, today), [habits, log, paused, today])
-  const [selected, setSelected] = useState<GalaxyMonth | null>(null)
+  const [selected, setSelected] = useState<number | null>(null)
+  const panelShown = useRef(false)
+  panelShown.current = selected !== null
+  const planets = useMemo(() => months.map((m) => monthPlanets(habits, log, today, m.month)), [months, habits, log, today])
   const flyToRef = useRef<((index: number | null) => void) | null>(null)
   const totalStars = months.reduce((s, m) => s + m.checks, 0)
 
@@ -116,7 +127,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
     controls.dampingFactor = 0.08
-    controls.minDistance = 1.2
+    controls.minDistance = 0.6
     controls.maxDistance = home.length() * 1.6
     controls.autoRotate = true
     controls.autoRotateSpeed = 0.35
@@ -215,12 +226,8 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     }
     const earnedGeo = new THREE.BufferGeometry()
     earnedGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(earned), 3))
-    scene.add(
-      new THREE.Points(
-        earnedGeo,
-        new THREE.PointsMaterial({ size: 0.14, color: '#fff6e6', map: glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
-      ),
-    )
+    const earnedMaterial = new THREE.PointsMaterial({ size: 0.14, color: '#fff6e6', map: glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })
+    scene.add(new THREE.Points(earnedGeo, earnedMaterial))
 
     const rings: THREE.Sprite[] = []
     // Ett solsystem per månad, ljusare ju bättre månaden gick.
@@ -240,6 +247,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       sprite.position.set(p.x, 0.05, p.z)
       sprite.scale.setScalar(0.55 + 1.25 * share)
       sprite.userData.index = i
+      sprite.userData.scale = 0.55 + 1.25 * share
       scene.add(sprite)
       // Ring runt solsystemet så det syns mot stjärnorna i armen.
       const ring = new THREE.Sprite(
@@ -253,6 +261,39 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     })
     const current = systems[systems.length - 1]
     const currentRing = rings[rings.length - 1]
+
+    // Närbild: varje solsystem har en planet per vana som kretsar runt solen. Syns först när man zoomar nära.
+    const planetGeo = new THREE.SphereGeometry(1, 24, 16)
+    const details = systems.map((sun, i) => {
+      const group = new THREE.Group()
+      group.position.copy(sun.position)
+      group.visible = false
+      const core = new THREE.Mesh(new THREE.SphereGeometry(0.03, 24, 16), new THREE.MeshBasicMaterial({ color: '#ffe9b8', transparent: true }))
+      group.add(core)
+      const list = planets[i]
+      const bodies = list.map((planet, k) => {
+        const radius = 0.11 + (k * 0.22) / Math.max(1, list.length - 1)
+        const orbit = new THREE.LineLoop(
+          new THREE.BufferGeometry().setFromPoints(
+            Array.from({ length: 96 }, (_, a) => new THREE.Vector3(Math.cos((a / 96) * Math.PI * 2) * radius, 0, Math.sin((a / 96) * Math.PI * 2) * radius)),
+          ),
+          new THREE.LineBasicMaterial({ color: '#aab4d8', transparent: true, opacity: 0.18, depthWrite: false }),
+        )
+        group.add(orbit)
+        const mesh = new THREE.Mesh(
+          planetGeo,
+          new THREE.MeshStandardMaterial({ color: planetColor(k), roughness: 0.75, metalness: 0, emissive: planetColor(k), emissiveIntensity: 0.08, transparent: true }),
+        )
+        mesh.scale.setScalar(0.009 + 0.016 * planet.share)
+        group.add(mesh)
+        return { mesh, orbit, radius, phase: (hash(planet.id + months[i].month) % 628) / 100, speed: 0.22 / Math.sqrt(radius) }
+      })
+      scene.add(group)
+      return { group, bodies, core }
+    })
+    scene.add(new THREE.AmbientLight('#8090c0', 0.35))
+    const sunLight = new THREE.PointLight('#ffe7c2', 3, 0, 0)
+    scene.add(sunLight)
 
     // Bakgrundsstjärnor långt bort
     const farCount = 1500
@@ -269,7 +310,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     let flight: { from: THREE.Vector3; to: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3; start: number } | null = null
     flyToRef.current = (index) => {
       const target = index === null ? new THREE.Vector3() : systems[index].position.clone()
-      const dest = index === null ? home.clone() : target.clone().add(new THREE.Vector3(0, 4.5, 7))
+      const dest = index === null ? home.clone() : target.clone().add(new THREE.Vector3(0, 0.75, 1.2))
       flight = { from: camera.position.clone(), to: dest, fromT: controls.target.clone(), toT: target, start: performance.now() }
       controls.autoRotate = index === null
     }
@@ -294,10 +335,49 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         if (projected.z < 1 && d < 0.18 && (!best || d < best.d)) best = { i: s.userData.index, d }
       }
       if (best) {
-        setSelected(months[best.i])
+        setSelected(best.i)
         flyToRef.current?.(best.i)
       }
     }
+
+    // Zooma in = dras mot det solsystem du zoomar mot (där fingrarna/musen är, annars mitten av skärmen).
+    const zoomPoint = new THREE.Vector2(0, 0)
+    const touches = new Map<number, { x: number; y: number }>()
+    const toNdc = (x: number, y: number) => {
+      const rect = renderer.domElement.getBoundingClientRect()
+      zoomPoint.set(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1)
+    }
+    const onWheel = (e: WheelEvent) => toNdc(e.clientX, e.clientY)
+    const onTouchDown = (e: PointerEvent) => touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const onTouchMove = (e: PointerEvent) => {
+      if (!touches.has(e.pointerId)) return
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (touches.size === 2) {
+        const [a, b] = [...touches.values()]
+        toNdc((a.x + b.x) / 2, (a.y + b.y) / 2)
+      }
+    }
+    const onTouchUp = (e: PointerEvent) => touches.delete(e.pointerId)
+    renderer.domElement.addEventListener('wheel', onWheel, { passive: true })
+    renderer.domElement.addEventListener('pointerdown', onTouchDown)
+    renderer.domElement.addEventListener('pointermove', onTouchMove)
+    window.addEventListener('pointerup', onTouchUp)
+    window.addEventListener('pointercancel', onTouchUp)
+
+    const nearestToZoom = () => {
+      let best: { i: number; d: number } | null = null
+      for (const sun of systems) {
+        const projected = sun.position.clone().project(camera)
+        if (projected.z >= 1) continue
+        const d = Math.hypot(projected.x - zoomPoint.x, projected.y - zoomPoint.y)
+        if (!best || d < best.d) best = { i: sun.userData.index, d }
+      }
+      return best?.i ?? null
+    }
+    let lastDistance = camera.position.distanceTo(controls.target)
+    let insideIndex: number | null = null
+    let viewShift = 0
+    const offset = new THREE.Vector3()
     renderer.domElement.addEventListener('pointerdown', onDown)
     renderer.domElement.addEventListener('pointerup', onUp)
 
@@ -321,12 +401,59 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         if (k >= 1) flight = null
       }
       // Den pågående månaden pulserar svagt – den byggs fortfarande.
+      // Inzoomning drar kameran mot solsystemet – ju närmare, desto mer centrerat.
+      const distance = camera.position.distanceTo(controls.target)
+      if (!flight && distance < lastDistance - 1e-4) {
+        const i = nearestToZoom()
+        if (i !== null) {
+          const pull = Math.min(1, ((lastDistance - distance) / distance) * 1.6)
+          offset.subVectors(systems[i].position, controls.target).multiplyScalar(pull)
+          controls.target.add(offset)
+          camera.position.add(offset)
+        }
+      }
+      lastDistance = camera.position.distanceTo(controls.target)
+
+      // Närmaste solsystem: planeterna tonas in, solen lyser upp dem, och månaden visas när man är inne i det.
+      let near: { i: number; d: number } | null = null
+      systems.forEach((sun, i) => {
+        const d = camera.position.distanceTo(sun.position)
+        if (!near || d < near.d) near = { i, d }
+        const fade = THREE.MathUtils.clamp((DETAIL_FROM - d) / (DETAIL_FROM - INSIDE), 0, 1)
+        const detail = details[i]
+        detail.group.visible = fade > 0
+        if (fade > 0) {
+          ;(detail.core.material as THREE.MeshBasicMaterial).opacity = fade
+          for (const b of detail.bodies) {
+            const a = b.phase + (now / 1000) * b.speed
+            b.mesh.position.set(Math.cos(a) * b.radius, 0, Math.sin(a) * b.radius)
+            ;(b.mesh.material as THREE.MeshStandardMaterial).opacity = fade
+            ;(b.orbit.material as THREE.LineBasicMaterial).opacity = 0.2 * fade
+          }
+        }
+        sun.scale.setScalar(sun.userData.scale * (1 - 0.75 * fade))
+        rings[i].material.opacity = 0.85 * (1 - fade)
+      })
+      const maxFade = THREE.MathUtils.clamp((DETAIL_FROM - (near as { d: number } | null ?? { d: 99 }).d) / (DETAIL_FROM - INSIDE), 0, 1)
+      const closest = near as { i: number; d: number } | null
+      if (closest) sunLight.position.copy(systems[closest.i].position)
+      const inside = closest && closest.d < INSIDE && controls.target.distanceTo(systems[closest.i].position) < 0.3 ? closest.i : null
+      if (inside !== insideIndex) {
+        insideIndex = inside
+        if (!flight) setSelected(inside)
+      }
+
       const beat = 0.5 + 0.5 * Math.sin(now / 600)
       if (current) current.material.opacity = 0.55 + 0.25 * beat
-      if (currentRing) currentRing.scale.setScalar(0.85 + 0.3 * beat)
+      if (currentRing && currentRing.material.opacity > 0.01) currentRing.scale.setScalar(0.85 + 0.3 * beat)
       dust.rotation.y += 0.00015
       const closeness = camera.position.distanceTo(controls.target) / home.length()
-      for (const m of fadeWhenClose) m.opacity = Math.min(1, 0.22 + closeness * 1.1)
+      // Inne i ett solsystem tonas galaxens stjärnor ner så att solen och planeterna syns.
+      for (const m of fadeWhenClose) m.opacity = Math.min(1, 0.22 + closeness * 1.1) * (1 - 0.92 * maxFade)
+      earnedMaterial.opacity = 1 - 0.85 * maxFade
+      // Panelen täcker nedre delen – flytta bilden uppåt när en månad visas.
+      viewShift += ((panelShown.current ? 0.16 : 0) - viewShift) * 0.08
+      camera.setViewOffset(mount.clientWidth, mount.clientHeight, 0, mount.clientHeight * viewShift, mount.clientWidth, mount.clientHeight)
       controls.update()
       renderer.render(scene, camera)
     }
@@ -337,6 +464,11 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       window.removeEventListener('resize', onResize)
       renderer.domElement.removeEventListener('pointerdown', onDown)
       renderer.domElement.removeEventListener('pointerup', onUp)
+      renderer.domElement.removeEventListener('wheel', onWheel)
+      renderer.domElement.removeEventListener('pointerdown', onTouchDown)
+      renderer.domElement.removeEventListener('pointermove', onTouchMove)
+      window.removeEventListener('pointerup', onTouchUp)
+      window.removeEventListener('pointercancel', onTouchUp)
       controls.dispose()
       scene.traverse((o) => {
         const obj = o as THREE.Mesh
@@ -349,10 +481,13 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [months, log])
+  }, [months, log, planets])
+
+  const selectedMonth = selected === null ? null : months[selected]
+  const selectedPlanets: MonthPlanet[] = selected === null ? [] : planets[selected]
 
   const open = (i: number) => {
-    setSelected(months[i])
+    setSelected(i)
     flyToRef.current?.(i)
   }
 
@@ -376,15 +511,30 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         </button>
       </header>
 
-      {selected ? (
+      {selectedMonth ? (
         <section className="gv-panel" aria-live="polite">
-          <span className="gv-label">{monthName(selected.month, today)}</span>
-          <b className="gv-big">{selected.pct}&nbsp;%</b>
+          <span className="gv-label">{monthName(selectedMonth.month, today)}</span>
+          <b className="gv-big">{selectedMonth.pct}&nbsp;%</b>
           <p>
-            {selected.current ? 'Byggs fortfarande. ' : ''}
-            {selected.weeks.length} veckor · {selected.checks} {selected.checks === 1 ? 'stjärna' : 'stjärnor'}
-            {selected.bestWeek?.pct != null && ` · bästa veckan v.\u00a0${isoWeek(selected.bestWeek.monday)} (${selected.bestWeek.pct}\u00a0%)`}
+            {selectedMonth.current ? 'Byggs fortfarande. ' : ''}
+            {selectedMonth.weeks.length} veckor · {selectedMonth.checks} {selectedMonth.checks === 1 ? 'stjärna' : 'stjärnor'}
+            {selectedMonth.bestWeek?.pct != null &&
+              ` · bästa veckan v.\u00a0${isoWeek(selectedMonth.bestWeek.monday)} (${selectedMonth.bestWeek.pct}\u00a0%)`}
           </p>
+          {selectedPlanets.length > 0 && (
+            <span className="gv-label gv-planets-title">Planeterna är dina vanor · bockar</span>
+          )}
+          {selectedPlanets.length > 0 && (
+            <ul className="gv-planets">
+              {selectedPlanets.map((planet, k) => (
+                <li key={planet.id}>
+                  <i style={{ background: planetColor(k) }} aria-hidden="true" />
+                  {planet.name}
+                  <span>{planet.checks}</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <button type="button" className="gv-back" onClick={back}>
             Tillbaka till hela galaxen
           </button>
