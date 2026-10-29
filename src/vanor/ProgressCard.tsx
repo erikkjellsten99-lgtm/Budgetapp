@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { isoWeek, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { change, habitTrends, weekElapsed, weeklyScores } from './progress'
@@ -53,27 +53,28 @@ export default function ProgressCard({ habits, log, paused, today }: Props) {
         : `Du ligger ${behind} ${behind === 1 ? 'gång' : 'gånger'} efter. Varje bock flyttar solen.`
 
   return (
-    <section className="week-sun" aria-labelledby="sun-title">
-      <SunScene share={pct / 100} pace={elapsedShare} done={left === 0 && !paused_} />
-
-      <div className="ws-stats">
-        <div className="ws-now">
+    <section className="week-sun" aria-labelledby="sun-title" style={{ '--warm': Math.min(1, pct / 100) } as CSSProperties}>
+      <div className="ws-hero">
+        <div className="ws-text">
           <span className="ws-label" id="sun-title">
             Vecka {isoWeek(today)}
           </span>
-          <b className="ws-big">{paused_ ? '–' : `${pct} %`}</b>
+          <b className="ws-big">{paused_ ? '–' : `${pct}\u00a0%`}</b>
           <span className="ws-sub">av veckomålen</span>
         </div>
+        <SunScene share={pct / 100} pace={elapsedShare} done={left === 0 && !paused_} />
+      </div>
+
+      <div className="ws-foot">
+        <p className={behind === 0 || paused_ ? 'ws-msg ok' : 'ws-msg'}>{message}</p>
         {last && (
           <div className="ws-last">
-            <span className="ws-label">Förra veckan</span>
+            <span>Förra veckan</span>
             <b>{last.pct}&nbsp;%</b>
             {before && <Change value={change(last.pct, before.pct)} unit="" />}
           </div>
         )}
       </div>
-
-      <p className={behind === 0 || paused_ ? 'ws-msg ok' : 'ws-msg'}>{message}</p>
 
       <button type="button" className="text-btn ws-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
         {open ? 'Dölj utveckling' : 'Visa utveckling'}
@@ -132,57 +133,53 @@ export default function ProgressCard({ habits, log, paused, today }: Props) {
   )
 }
 
-/** Himmel, horisont och sol. share = 0–1 av veckomålen, pace = 0–1 av veckan som gått. */
+/**
+ * Solen till höger i kortet. Den stiger rakt upp från horisonten: 0 % = precis vid horisonten,
+ * 100 % = högst upp. Den streckade linjen är var du borde vara nu för att hinna veckans mål.
+ */
 function SunScene({ share, pace, done }: { share: number; pace: number; done: boolean }) {
-  const W = 320
-  const H = 118
+  const W = 140
+  const H = 132
+  const horizon = H - 22
+  const topY = 30
+  const height = (p: number) => horizon - Math.min(1, Math.max(0, p)) * (horizon - topY)
+  const s = Math.min(1, Math.max(0, share))
+  const y = height(s)
+  const paceY = height(pace)
   const cx = W / 2
-  const horizon = 100
-  const r = 82
-  // Från vänster horisont (0 %) upp till högst upp (100 %), en kvarts båge.
-  const point = (p: number) => {
-    const angle = Math.PI - (Math.PI / 2) * Math.min(1, Math.max(0, p))
-    return { x: cx + r * Math.cos(angle), y: horizon - r * Math.sin(angle) }
-  }
-  const s = Math.min(1, share)
-  const sun = point(s)
-  const mark = point(pace)
-  const start = point(0)
-  const top = point(1)
-  const warm = 0.25 + 0.75 * s
-  const rays = Array.from({ length: 10 }, (_, i) => (i * Math.PI * 2) / 10)
 
   return (
     <svg className="ws-scene" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
       <defs>
-        <radialGradient id="ws-glow" gradientUnits="userSpaceOnUse" cx={sun.x} cy={sun.y} r="150">
-          <stop offset="0" className="ws-glow-in" stopOpacity={warm} />
-          <stop offset="1" className="ws-glow-out" stopOpacity="0" />
+        <radialGradient id="ws-disc" cx="0.4" cy="0.35" r="0.75">
+          <stop offset="0" className="ws-disc-a" />
+          <stop offset="1" className="ws-disc-b" />
         </radialGradient>
+        <radialGradient id="ws-halo">
+          <stop offset="0" className="ws-halo-a" />
+          <stop offset="1" className="ws-halo-b" />
+        </radialGradient>
+        <clipPath id="ws-above">
+          <rect x="0" y="0" width={W} height={horizon} />
+        </clipPath>
       </defs>
-      <rect className="ws-sky" x="0" y="0" width={W} height={horizon} />
-      <rect x="0" y="0" width={W} height={horizon} fill="url(#ws-glow)" />
-      {/* Hela bågen streckad, och vägen solen redan gått */}
-      <path className="ws-arc" d={`M ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${cx + r} ${horizon}`} />
-      {s > 0.01 && <path className="ws-path" d={`M ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${sun.x} ${sun.y}`} />}
-      <circle className="ws-top" cx={top.x} cy={top.y} r="2.5" />
-      {/* Var du borde vara nu */}
-      <circle className="ws-mark" cx={mark.x} cy={mark.y} r="4.5" />
-      <g className={done ? 'ws-sun full' : 'ws-sun'} transform={`translate(${sun.x} ${sun.y})`}>
-        {rays.map((a) => (
-          <line
-            key={a}
-            x1={Math.cos(a) * 17}
-            y1={Math.sin(a) * 17}
-            x2={Math.cos(a) * (20 + 6 * s)}
-            y2={Math.sin(a) * (20 + 6 * s)}
-            opacity={0.35 + 0.65 * s}
-          />
-        ))}
-        <circle r="13" />
+
+      {/* Mål nu */}
+      <line className="ws-pace" x1="8" x2={W - 8} y1={paceY} y2={paceY} />
+      <text className="ws-pace-label" x={W - 8} y={paceY - 5} textAnchor="end">
+        i fas
+      </text>
+
+      <g clipPath="url(#ws-above)">
+        <g className={done ? 'ws-sun full' : 'ws-sun'} style={{ transform: `translate(${cx}px, ${y}px)` }}>
+          <circle className="ws-halo" r={30 + 14 * s} fill="url(#ws-halo)" opacity={0.45 + 0.55 * s} />
+          <circle r="15" fill="url(#ws-disc)" />
+        </g>
       </g>
-      <rect className="ws-ground" x="0" y={horizon} width={W} height={H - horizon} />
+
       <line className="ws-horizon" x1="0" x2={W} y1={horizon} y2={horizon} />
+      <line className="ws-horizon soft" x1="22" x2={W - 22} y1={horizon + 7} y2={horizon + 7} />
+      <line className="ws-horizon soft" x1="44" x2={W - 44} y1={horizon + 13} y2={horizon + 13} />
     </svg>
   )
 }
