@@ -166,6 +166,8 @@ export default function Vanor() {
         </button>
       </header>
 
+      <DayQuote today={today} />
+
       {habits.length > 0 && <ProgressCard
           habits={habits}
           log={log}
@@ -263,8 +265,6 @@ export default function Vanor() {
               </ul>
             </section>
           )}
-
-          <DayQuote today={today} />
 
           <div className="footer-actions">
             <button type="button" className="text-btn" onClick={() => setSettingsOpen(true)}>
