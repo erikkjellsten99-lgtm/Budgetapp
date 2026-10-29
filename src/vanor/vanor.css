@@ -2748,3 +2748,27 @@
   color: #1a1408;
   font-weight: 700;
 }
+
+.vanor .gx-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 7px;
+  border-radius: 50%;
+  vertical-align: 0;
+}
+
+.vanor .gx-orbit.picked {
+  stroke: #ffd28a;
+  opacity: 0.5;
+}
+
+/* Bara planeterna tar emot tryck – solens sken, stjärnor och kometer ligger annars i vägen */
+.vanor .galaxy * {
+  pointer-events: none;
+}
+
+.vanor .galaxy .gx-pick,
+.vanor .galaxy .gx-pick * {
+  pointer-events: auto;
+}

@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
+import { planetColor, planetKind, type PlanetKind } from './planets'
 import { galaxyMonths, monthName, monthOfWeek, monthPlanets, type MonthPlanet } from './progress'
 
 interface Props {
@@ -102,8 +103,6 @@ function noise2(seed: number) {
   }
 }
 
-type PlanetKind = 'ocean' | 'rock' | 'gas' | 'ring' | 'ice'
-const PLANET_KINDS: PlanetKind[] = ['ocean', 'rock', 'gas', 'ring', 'ice']
 
 /**
  * Ytan för en planet som gråskala (färgen kommer från vanans färg, så att den matchar listan i panelen):
@@ -227,9 +226,6 @@ function ringBandTexture(): THREE.Texture {
   return texture
 }
 
-/** Planetfärger, en per vana i den ordning vanorna ligger. */
-const PLANET_COLORS = ['#7fb2ff', '#ff9a6b', '#8ee0b0', '#e7a8ff', '#ffd36b', '#6be0e6', '#ff7f9e', '#c9d1e8']
-const planetColor = (i: number) => PLANET_COLORS[i % PLANET_COLORS.length]
 
 /** Antal punkter i en komets svans. */
 const TRAIL = 28
@@ -373,7 +369,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     // En yta per vana (samma vana ser likadan ut i alla månader)
     const surfaces = new Map<number, THREE.Texture>()
     const surfaceFor = (k: number) => {
-      if (!surfaces.has(k)) surfaces.set(k, planetTexture(PLANET_KINDS[k % PLANET_KINDS.length], 100 + k))
+      if (!surfaces.has(k)) surfaces.set(k, planetTexture(planetKind(k), 100 + k))
       return surfaces.get(k)!
     }
     const rand = seeded(20261029)
@@ -532,7 +528,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
           new THREE.LineBasicMaterial({ color: '#aab4d8', transparent: true, opacity: 0.18, depthWrite: false }),
         )
         group.add(orbit)
-        const kind = PLANET_KINDS[k % PLANET_KINDS.length]
+        const kind = planetKind(k)
         const mesh = new THREE.Mesh(
           planetGeo,
           new THREE.MeshStandardMaterial({
