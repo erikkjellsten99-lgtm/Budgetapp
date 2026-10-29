@@ -1085,9 +1085,52 @@
 
 .vanor .ws-scene {
   flex: none;
-  width: 140px;
+  width: 168px;
   height: 132px;
-  margin-right: 6px;
+  margin-right: 4px;
+}
+
+.vanor .ws-goal {
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.35;
+}
+
+.vanor .ws-goal-label,
+.vanor .ws-mid-label {
+  fill: var(--muted);
+  font-family: var(--mono);
+  font-size: 9.5px;
+}
+
+.vanor .ws-goal-label {
+  font-weight: 600;
+}
+
+.vanor .ws-mid {
+  stroke: var(--muted);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.vanor .ws-rail {
+  stroke: var(--line);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.vanor .ws-rail-fill {
+  stroke: var(--sun-b);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.vanor .ws-rail-dot {
+  fill: var(--surface);
+  stroke: var(--sun-b);
+  stroke-width: 2;
 }
 
 .vanor .ws-disc-a {
