@@ -232,3 +232,30 @@ export function galaxyMonths(habits: Habit[], log: Log, paused: Paused, today: D
     })
     .filter((m) => m.current || m.weeks.some((w) => w.goal > 0))
 }
+
+export interface MonthPlanet {
+  id: string
+  name: string
+  /** Bockar för vanan under månaden. */
+  checks: number
+  /** Andel av vanans mål under månadens veckor hittills (0–1). Styr planetens storlek. */
+  share: number
+}
+
+/** Planeterna i en månads solsystem: en per vana som fanns under månaden. */
+export function monthPlanets(habits: Habit[], log: Log, today: DateKey, month: string): MonthPlanet[] {
+  const mondays = monthMondays(month).filter((m) => m <= today)
+  if (!mondays.length) return []
+  const days = mondays.flatMap((m) => Array.from({ length: 7 }, (_, i) => addDays(m, i))).filter((d) => d <= today)
+  const last = addDays(mondays[mondays.length - 1], 6)
+  return [...habits]
+    .sort((a, b) => a.order - b.order)
+    .filter((h) => h.created <= (last < today ? last : today))
+    .map((h) => {
+      const checks = days.filter((d) => d >= h.created && log[d]?.includes(h.id)).length
+      const weeks = mondays.filter((m) => addDays(m, 6) >= h.created).length
+      return { id: h.id, name: h.name, checks, share: Math.min(1, checks / Math.max(1, h.goal * weeks)), archived: h.archived }
+    })
+    .filter((p) => !p.archived || p.checks > 0)
+    .map(({ archived: _archived, ...p }) => p)
+}

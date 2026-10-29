@@ -2306,6 +2306,42 @@
   font-size: 0.9rem;
 }
 
+.galaxy-view .gv-planets-title {
+  margin-top: 10px;
+  font-size: 0.68rem;
+}
+
+.galaxy-view .gv-planets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #cdd4f0;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.galaxy-view .gv-planets li {
+  display: flex;
+  border: 0;
+  gap: 6px;
+  align-items: center;
+}
+
+.galaxy-view .gv-planets i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.galaxy-view .gv-planets span {
+  color: #8d97bd;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
 .galaxy-view .gv-back {
   align-self: flex-start;
   min-height: 40px;

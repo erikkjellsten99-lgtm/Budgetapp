@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Habit, Log } from './habits'
-import { change, galaxyMonths, habitTrends, monthForecast, monthMondays, monthName, monthOfWeek, monthScore, previousMonth, weeklyScores } from './progress'
+import { change, galaxyMonths, habitTrends, monthForecast, monthMondays, monthPlanets, monthName, monthOfWeek, monthScore, previousMonth, weeklyScores } from './progress'
 
 const make = (id: string, goal: number, created = '2026-09-01'): Habit => ({
   id,
@@ -130,4 +130,16 @@ it('galaxen har alla månader sedan första vanan och börjar aldrig om', () => 
   expect(months.map((m) => m.month)).toEqual(['2026-08', '2026-09', '2026-10'])
   expect(months.at(-1)!.current).toBe(true)
   expect(months[1].checks).toBe(1)
+})
+
+it('solsystemet har en planet per vana, större ju mer av målet som klarats', () => {
+  const gym = { ...make('gym', 2, '2026-09-01'), order: 0 }
+  const gammal = { ...make('gammal', 3, '2026-09-01'), order: 1, archived: true }
+  const ny = { ...make('ny', 7, '2026-11-01'), order: 2 }
+  // Oktober = v.40–44 (28/9–1/11). Idag 29/10 → alla fem veckor räknas, gym-målet 10.
+  const log = logOf([['2026-10-05', ['gym']], ['2026-10-06', ['gym']], ['2026-10-20', ['gym']], ['2026-10-29', ['gym']]])
+  const planets = monthPlanets([ny, gammal, gym], log, TODAY, '2026-10')
+  expect(planets.map((p) => p.id)).toEqual(['gym']) // arkiverad utan bockar och framtida vana syns inte
+  expect(planets[0].checks).toBe(4)
+  expect(planets[0].share).toBeCloseTo(0.4)
 })
