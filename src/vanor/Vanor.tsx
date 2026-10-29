@@ -140,6 +140,8 @@ export default function Vanor() {
         </button>
       </header>
 
+      {habits.length > 0 && <ProgressCard habits={habits} log={log} paused={paused} today={today} />}
+
       <DayQuote today={today} />
 
       {pausedToday && (
@@ -182,8 +184,6 @@ export default function Vanor() {
               <ul className="habits">{closed.map(row)}</ul>
             </section>
           )}
-
-          <ProgressCard habits={habits} log={log} paused={paused} today={today} />
 
           <div className="footer-actions">
             <button type="button" className="text-btn" onClick={() => setSettingsOpen(true)}>
