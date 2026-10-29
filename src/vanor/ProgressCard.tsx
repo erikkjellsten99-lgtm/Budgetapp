@@ -1,16 +1,21 @@
 import { useState, type CSSProperties } from 'react'
 import { isoWeek, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
-import { change, habitTrends, weekElapsed, weeklyScores } from './progress'
+import { change, habitTrends, weeklyScores } from './progress'
 
 interface Props {
   habits: Habit[]
   log: Log
   paused: Paused
   today: DateKey
+  /** Det som måste göras idag och inte är gjort än (namn), för beskedet under solen. */
+  mustToday: string[]
 }
 
 /** "+12" / "−5" / "±0". */
+const nameList = (names: string[]) =>
+  names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} och ${names[names.length - 1]}`
+
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '±0')
 
 function Change({ value, unit = '%-enheter' }: { value: number | null; unit?: string }) {
@@ -26,10 +31,10 @@ function Change({ value, unit = '%-enheter' }: { value: number | null; unit?: st
 
 /**
  * Veckans sol: överst i Vanor. Solen stiger från horisonten (0 %) till högst upp (100 % av veckomålen).
- * Den lilla ringen på bågen visar var du borde vara nu för att hinna – är solen förbi den är du i fas.
+ * Under står vad som är viktigt idag, i samma anda som listan (Prioritera idag / Kan vänta).
  * Tryck för att se staplarna vecka för vecka och procent per vana.
  */
-export default function ProgressCard({ habits, log, paused, today }: Props) {
+export default function ProgressCard({ habits, log, paused, today, mustToday }: Props) {
   const [open, setOpen] = useState(false)
   const weeks = weeklyScores(habits, log, paused, today)
   const current = weeks[weeks.length - 1]
@@ -37,20 +42,20 @@ export default function ProgressCard({ habits, log, paused, today }: Props) {
   const last = full[full.length - 1]
   const before = full[full.length - 2]
   const trends = habitTrends(habits, log, paused, today)
-  const elapsedShare = weekElapsed(today)
   const pct = current.pct ?? 0
-  const shouldHave = Math.ceil(current.goal * elapsedShare)
-  const behind = Math.max(0, shouldHave - current.done)
   const left = Math.max(0, current.goal - current.done)
   const paused_ = current.pct === null
+  // Förra veckan visas bara om vanorna fanns större delen av den – annars blir jämförelsen missvisande (t.ex. 0 %).
+  const fullGoal = habits.reduce((sum, h) => sum + Math.min(7, h.goal), 0)
+  const showLast = !!last && last.goal >= fullGoal * 0.6
 
   const message = paused_
     ? 'Pausad vecka. Solen väntar tills du är tillbaka.'
     : left === 0
       ? 'Veckan är i hamn. Allt du gör nu är bonus.'
-      : behind === 0
-        ? `Du är i fas. ${left} ${left === 1 ? 'gång' : 'gånger'} kvar till fullt.`
-        : `${behind} ${behind === 1 ? 'gång' : 'gånger'} efter jämn takt. Börja med det under Prioritera idag.`
+      : mustToday.length
+        ? `Idag: ${nameList(mustToday)}. Resten kan vänta.`
+        : `Inget måste idag. ${left} ${left === 1 ? 'gång' : 'gånger'} kvar på veckan, och du har tid.`
 
   return (
     <section className="week-sun" aria-labelledby="sun-title" style={{ '--warm': Math.min(1, pct / 100) } as CSSProperties}>
@@ -62,12 +67,12 @@ export default function ProgressCard({ habits, log, paused, today }: Props) {
           <b className="ws-big">{paused_ ? '–' : `${pct}\u00a0%`}</b>
           <span className="ws-sub">av veckomålen</span>
         </div>
-        <SunScene share={pct / 100} pace={elapsedShare} done={left === 0 && !paused_} />
+        <SunScene share={pct / 100} done={left === 0 && !paused_} />
       </div>
 
       <div className="ws-foot">
-        <p className={behind === 0 || paused_ ? 'ws-msg ok' : 'ws-msg'}>{message}</p>
-        {last && (
+        <p className="ws-msg">{message}</p>
+        {showLast && last && (
           <div className="ws-last">
             <span>Förra veckan</span>
             <b>{last.pct}&nbsp;%</b>
@@ -133,11 +138,8 @@ export default function ProgressCard({ habits, log, paused, today }: Props) {
   )
 }
 
-/**
- * Solen till höger i kortet. Den stiger rakt upp från horisonten: 0 % = precis vid horisonten,
- * 100 % = högst upp. Den streckade linjen är var du borde vara nu för att hinna veckans mål.
- */
-function SunScene({ share, pace, done }: { share: number; pace: number; done: boolean }) {
+/** Solen till höger i kortet. Den stiger rakt upp från horisonten: 0 % = vid horisonten, 100 % = högst upp. */
+function SunScene({ share, done }: { share: number; done: boolean }) {
   const W = 140
   const H = 132
   const horizon = H - 22
@@ -145,7 +147,6 @@ function SunScene({ share, pace, done }: { share: number; pace: number; done: bo
   const height = (p: number) => horizon - Math.min(1, Math.max(0, p)) * (horizon - topY)
   const s = Math.min(1, Math.max(0, share))
   const y = height(s)
-  const paceY = height(pace)
   const cx = W / 2
 
   return (
@@ -163,12 +164,6 @@ function SunScene({ share, pace, done }: { share: number; pace: number; done: bo
           <rect x="0" y="0" width={W} height={horizon} />
         </clipPath>
       </defs>
-
-      {/* Mål nu */}
-      <line className="ws-pace" x1="8" x2={W - 8} y1={paceY} y2={paceY} />
-      <text className="ws-pace-label" x={W - 8} y={paceY - 5} textAnchor="end">
-        i fas
-      </text>
 
       <g clipPath="url(#ws-above)">
         <g className={done ? 'ws-sun full' : 'ws-sun'} style={{ transform: `translate(${cx}px, ${y}px)` }}>

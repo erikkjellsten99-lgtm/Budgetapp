@@ -30,7 +30,7 @@ export default function HealthTab() {
   }
 
   return (
-    <>
+    <div className="health-tab">
       <div className="segmented-row two" role="tablist" aria-label="Vanor eller träning">
         {(
           [
@@ -57,6 +57,6 @@ export default function HealthTab() {
       <div hidden={part !== 'traning'}>
         <Traning />
       </div>
-    </>
+    </div>
   );
 }

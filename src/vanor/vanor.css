@@ -1142,40 +1142,20 @@
   opacity: 0.1;
 }
 
-.vanor .ws-pace {
-  stroke: var(--ink);
-  stroke-width: 1;
-  stroke-dasharray: 2 4;
-  opacity: 0.35;
-}
-
-.vanor .ws-pace-label {
-  fill: var(--muted);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .vanor .ws-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px 4px 20px;
-  border-top: 1px solid var(--line);
+  padding: 14px 16px 2px 20px;
 }
 
 .vanor .ws-msg {
   margin: 0;
-  color: var(--warn);
-  font-size: 0.9rem;
-  font-weight: 650;
-  line-height: 1.35;
-}
-
-.vanor .ws-msg.ok {
-  color: var(--done);
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .vanor .ws-last {

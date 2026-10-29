@@ -152,7 +152,13 @@ export default function Vanor() {
         </button>
       </header>
 
-      {habits.length > 0 && <ProgressCard habits={habits} log={log} paused={paused} today={today} />}
+      {habits.length > 0 && <ProgressCard
+          habits={habits}
+          log={log}
+          paused={paused}
+          today={today}
+          mustToday={must.map((r) => r.habit.name)}
+        />}
 
       {pausedToday && (
         <div className="pause-banner" role="status">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Habit, Log } from './habits'
-import { change, habitTrends, weekElapsed, weeklyScores } from './progress'
+import { change, habitTrends, weeklyScores } from './progress'
 
 const make = (id: string, goal: number, created = '2026-09-01'): Habit => ({
   id,
@@ -68,9 +68,4 @@ describe('habitTrends', () => {
     expect(t.pct).toBeNull()
     expect(t.weeks).toBe(0)
   })
-})
-
-it('andel av veckan som gått', () => {
-  expect(weekElapsed('2026-10-26')).toBeCloseTo(1 / 7)
-  expect(weekElapsed('2026-11-01')).toBe(1)
 })
