@@ -1,7 +1,7 @@
 // Utveckling i procent: hur stor del av veckomålen som klarats, vecka för vecka och per vana.
 // Rena funktioner med tester bredvid (progress.test.ts).
 
-import { addDays, weekStart, type DateKey } from './dates'
+import { addDays, weekday, weekStart, type DateKey } from './dates'
 import { weekCount, weekGoal, type Habit, type Log, type Paused } from './habits'
 
 export interface WeekScore {
@@ -161,4 +161,50 @@ export function monthScore(habits: Habit[], log: Log, paused: Paused, today: Dat
     return { monday, done: d, goal: g, pct: g > 0 && state !== 'future' ? Math.round((d / g) * 100) : null, state }
   })
   return { month, weeks, pct: goal > 0 ? Math.round((done / goal) * 100) : 0, checks }
+}
+
+export interface MonthForecast {
+  /** Var månaden landar med samma takt som hittills (0–100), eller null om det är för tidigt att säga. */
+  projected: number | null
+  /** Nästa jämna mål över prognosen, t.ex. 80 eller 90 (högst 100). */
+  target: number
+  /** Ungefär hur många bockar per vecka som behövs resten av månaden för att nå target. */
+  perWeekNeeded: number | null
+  /** Bockar per vecka hittills (räknat mot målen, högst målet per vana). */
+  perWeekNow: number
+}
+
+/**
+ * Prognos för månaden: takten hittills (gjort / mål för den tid som gått) antas hålla resten av månaden.
+ * Innan en hel veckas data finns är det för tidigt att säga.
+ */
+export function monthForecast(score: MonthScore, today: DateKey): MonthForecast {
+  const currentWeek = score.weeks.find((w) => w.state === 'current')
+  const elapsedInCurrent = currentWeek ? (weekday(today) + 1) / 7 : 0
+  let done = 0
+  let goalSoFar = 0
+  let total = 0
+  let weeksElapsed = 0
+  for (const w of score.weeks) {
+    total += w.goal
+    if (w.state === 'past') {
+      done += w.done
+      goalSoFar += w.goal
+      if (w.goal > 0) weeksElapsed += 1
+    } else if (w.state === 'current') {
+      done += w.done
+      goalSoFar += w.goal * elapsedInCurrent
+      if (w.goal > 0) weeksElapsed += elapsedInCurrent
+    }
+  }
+  const perWeekNow = weeksElapsed > 0 ? done / weeksElapsed : 0
+  if (weeksElapsed < 1 || goalSoFar <= 0 || total <= 0) {
+    return { projected: null, target: 100, perWeekNeeded: null, perWeekNow: Math.round(perWeekNow) }
+  }
+  const projected = Math.min(100, Math.round((done / goalSoFar) * 100))
+  const target = Math.min(100, Math.floor(projected / 10) * 10 + 10)
+  const weeksLeft = score.weeks.filter((w) => w.goal > 0).length - weeksElapsed
+  const needed = (target / 100) * total - done
+  const perWeekNeeded = weeksLeft > 0.3 && needed > 0 ? Math.ceil(needed / weeksLeft) : null
+  return { projected, target, perWeekNeeded, perWeekNow: Math.round(perWeekNow) }
 }
