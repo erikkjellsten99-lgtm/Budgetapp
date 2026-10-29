@@ -3,6 +3,7 @@ import HabitSheet from './HabitSheet'
 import { addDays, isoWeek, longDate, todayKey, weekStart, type DateKey } from './dates'
 import { daySummary, habitPlan, isDaily, isDone, todayInfo, type Habit, type TodayInfo } from './habits'
 import { loadHabitData, minimumKeys, onHabitChange, toggleCheck, togglePause, toLog, type HabitData } from './store'
+import { dayQuote } from './quotes'
 import './vanor.css'
 
 /** Dagens datum som byter vid midnatt, även om appen står öppen. */
@@ -134,6 +135,8 @@ export default function Vanor() {
           </svg>
         </button>
       </header>
+
+      <DayQuote today={today} />
 
       {pausedToday && (
         <div className="pause-banner" role="status">
@@ -317,5 +320,31 @@ function HabitRow({ habit, info, plan, week, waiting, min, pop, onCheck, onPopEn
         </svg>
       </button>
     </li>
+  )
+}
+
+/** Dagens citat. Tryck för att bläddra till ett annat; nästa dag börjar det om. */
+function DayQuote({ today }: { today: DateKey }) {
+  const [shift, setShift] = useState({ day: today, offset: 0 })
+  const offset = shift.day === today ? shift.offset : 0
+  const quote = dayQuote(today, offset)
+  return (
+    <button
+      type="button"
+      className="day-quote"
+      aria-label={`Dagens citat: ${quote.text}${quote.by ? `, ${quote.by}` : ''}. Tryck för ett annat.`}
+      onClick={() => setShift({ day: today, offset: offset + 1 })}
+    >
+      <span className="quote-mark" aria-hidden="true">
+        ”
+      </span>
+      <span className="quote-text" key={`${today}-${offset}`}>
+        {quote.text}
+        {quote.by && <small>{quote.by}</small>}
+      </span>
+      <svg className="quote-next" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4.5h-4.5" />
+      </svg>
+    </button>
   )
 }

@@ -987,3 +987,61 @@
 .vanor .nowrap {
   white-space: nowrap;
 }
+
+/* Dagens citat */
+.vanor .day-quote {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 44px 16px 16px;
+  background: var(--done-soft);
+  border: 0;
+  border-radius: 16px;
+  color: var(--ink);
+  text-align: left;
+}
+
+.vanor .day-quote:active {
+  opacity: 0.85;
+}
+
+.vanor .quote-mark {
+  flex: none;
+  margin-top: -6px;
+  color: var(--done);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.vanor .quote-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.98rem;
+  font-weight: 550;
+  line-height: 1.45;
+  animation: vanor-fade 0.3s ease-out;
+}
+
+.vanor .quote-text small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.vanor .quote-next {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.7;
+}
