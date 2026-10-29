@@ -9,6 +9,18 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Groundwork</title>
+    <script>
+      // Utseende valt i appen (src/theme.ts) – sätts direkt så att sidan inte blinkar ljust.
+      try {
+        var t = localStorage.getItem('groundwork-tema');
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.dataset.theme = t;
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
+            m.content = t === 'dark' ? '#111713' : '#f4f5ef';
+          });
+        }
+      } catch (e) {}
+    </script>
     <meta name="apple-mobile-web-app-title" content="Groundwork" />
   </head>
   <body>

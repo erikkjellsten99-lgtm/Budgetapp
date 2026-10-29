@@ -64,6 +64,10 @@ Under Mina vanor → **Påminnelser** slår du på notiser för telefonen (på i
 
 Tryck **+ Att göra** vid Prioritera idag. En sak har titel, dag och valfri tid. Den visas i Prioritera idag på sin dag, och ligger kvar som försenad tills den är bockad. Framtida saker visas under Kommande. Med en tid kommer en notis, via samma påminnelser som vanorna. Logiken finns i `src/vanor/tasks.ts`, och sakerna sparas i databasen `vanor` (store `tasks`, version 3) och synkas privat.
 
+## Utseende
+
+Under Konto (personikonen) och i Mina vanor finns **Utseende: Automatiskt, Ljust, Mörkt**. Automatiskt följer telefonens inställning. Valet sparas på telefonen (`src/theme.ts`) och sätts som `data-theme` på `<html>`. Varje `@media (prefers-color-scheme: dark)` i CSS:en har en kopia för `:root[data-theme='dark']`, och gäller inte när Ljust är valt. Lägger du till mörka stilar: gör likadant.
+
 ## Bra att veta
 
 - Datan finns bara i den webbläsare och på den enhet där du använder appen. Den synkas inte mellan enheter.

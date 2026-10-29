@@ -21,13 +21,22 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .vanor {
+  :root:not([data-theme='light']) .vanor {
     --sunk: #141b17;
     --done-ink: #101512;
     --warn: #e3a84b;
     --warn-soft: #3a2f1a;
     --scrim: rgb(0 0 0 / 0.6);
   }
+}
+
+/* Mörkt läge valt i appen (Konto → Utseende) */
+:root[data-theme='dark'] .vanor {
+  --sunk: #141b17;
+  --done-ink: #101512;
+  --warn: #e3a84b;
+  --warn-soft: #3a2f1a;
+  --scrim: rgb(0 0 0 / 0.6);
 }
 
 .vanor .headline {
@@ -1013,7 +1022,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .vanor {
+  :root:not([data-theme='light']) .vanor {
     --sky-top: #141c17;
     --sky-bottom: #1b231e;
     --warm-top: #1f1d15;
@@ -1022,6 +1031,17 @@
     --sun-b: #e39b33;
     --halo: #b8792a;
   }
+}
+
+/* Mörkt läge valt i appen (Konto → Utseende) */
+:root[data-theme='dark'] .vanor {
+  --sky-top: #141c17;
+  --sky-bottom: #1b231e;
+  --warm-top: #1f1d15;
+  --warm-bottom: #4a3518;
+  --sun-a: #ffe7a8;
+  --sun-b: #e39b33;
+  --halo: #b8792a;
 }
 
 .vanor .week-sun {
@@ -1561,11 +1581,18 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .vanor {
+  :root:not([data-theme='light']) .vanor {
     --fill: #f0b14a;
     --fill-ink: #241703;
     --fill-soft: #3a2d17;
   }
+}
+
+/* Mörkt läge valt i appen (Konto → Utseende) */
+:root[data-theme='dark'] .vanor {
+  --fill: #f0b14a;
+  --fill-ink: #241703;
+  --fill-soft: #3a2d17;
 }
 
 .vanor .headline,
@@ -1772,9 +1799,14 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .vanor .habit .streak {
+  :root:not([data-theme='light']) .vanor .habit .streak {
     color: var(--fill);
   }
+}
+
+/* Mörkt läge valt i appen (Konto → Utseende) */
+:root[data-theme='dark'] .vanor .habit .streak {
+  color: var(--fill);
 }
 
 /* Dagens citat: en lugn rad under listan */
@@ -2098,9 +2130,14 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .vanor .gx-best {
+  :root:not([data-theme='light']) .vanor .gx-best {
     color: var(--fill);
   }
+}
+
+/* Mörkt läge valt i appen (Konto → Utseende) */
+:root[data-theme='dark'] .vanor .gx-best {
+  color: var(--fill);
 }
 
 .vanor .gx-archive li {
