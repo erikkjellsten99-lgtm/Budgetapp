@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import { isoWeek, type DateKey } from './dates'
+import { addDays, isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { change, habitTrends, weeklyScores } from './progress'
 
@@ -49,6 +49,19 @@ export default function ProgressCard({ habits, log, paused, today, mustToday }: 
   const fullGoal = habits.reduce((sum, h) => sum + Math.min(7, h.goal), 0)
   const showLast = !!last && last.goal >= fullGoal * 0.6
 
+  // Staplarna: alltid 8 veckor, så att rytmen är densamma. Veckor innan vanorna fanns (eller där de
+  // bara fanns en del av veckan) visas som tomma platser i stället för ett missvisande 0 %.
+  const BARS = 8
+  const thisMonday = weekStart(today)
+  const slots = Array.from({ length: BARS }, (_, i) => {
+    const monday = addDays(thisMonday, -7 * (BARS - 1 - i))
+    const w = weeks.find((x) => x.monday === monday)
+    const real = !!w && w.pct !== null && (w.current || w.goal >= fullGoal * 0.6)
+    return { monday, week: real ? w : null, current: i === BARS - 1 }
+  })
+  const counted = slots.filter((x) => x.week && !x.current).map((x) => x.week!.pct!)
+  const average = counted.length >= 2 ? Math.round(counted.reduce((a, b) => a + b, 0) / counted.length) : null
+
   const message = paused_
     ? 'Pausad vecka. Solen väntar tills du är tillbaka.'
     : left === 0
@@ -87,25 +100,34 @@ export default function ProgressCard({ habits, log, paused, today, mustToday }: 
 
       {open && (
         <div className="ws-more">
-          <ol className="pc-bars" aria-label="Procent av veckomålen per vecka">
-            {weeks.map((w) => (
-              <li
-                key={w.monday}
-                className={w.current ? 'current' : undefined}
-                aria-label={`Vecka ${isoWeek(w.monday)}: ${w.pct === null ? 'pausad' : `${w.pct} %`}${w.current ? ' hittills' : ''}`}
-              >
-                <span className="pc-val" aria-hidden="true">
-                  {w.pct === null ? '–' : w.pct}
-                </span>
-                <span className="pc-track" aria-hidden="true">
-                  {!!w.pct && <span className="pc-fill" style={{ height: `${w.pct}%` }} />}
-                </span>
-                <span className="pc-week" aria-hidden="true">
-                  {w.current ? 'nu' : `v${isoWeek(w.monday)}`}
-                </span>
-              </li>
-            ))}
-          </ol>
+          <div className="pc-chart">
+            <div className="pc-chart-head">
+              <span>Senaste 8 veckorna</span>
+              {average !== null && <span className="pc-avg">Snitt {average}&nbsp;%</span>}
+            </div>
+            <ol className="pc-bars" aria-label="Procent av veckomålen per vecka">
+              {slots.map(({ monday, week, current }) => (
+                <li
+                  key={monday}
+                  className={[current && 'current', !week && 'empty'].filter(Boolean).join(' ') || undefined}
+                  aria-label={`Vecka ${isoWeek(monday)}: ${week ? `${week.pct} %${current ? ' hittills' : ''}` : 'ingen data'}`}
+                >
+                  <span className="pc-val" aria-hidden="true">
+                    {week ? week.pct : ''}
+                  </span>
+                  <span className="pc-track" aria-hidden="true">
+                    {!!week?.pct && <span className="pc-fill" style={{ height: `${Math.max(week.pct, 4)}%` }} />}
+                  </span>
+                  <span className="pc-week" aria-hidden="true">
+                    {current ? 'nu' : isoWeek(monday)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            {counted.length === 0 && (
+              <p className="pc-chart-note">Staplarna fylls på vecka för vecka. Den första hela veckan syns på måndag.</p>
+            )}
+          </div>
           {before && last && (
             <p className="ws-note">
               Förra veckan <Change value={change(last.pct, before.pct)} /> mot v. {isoWeek(before.monday)}

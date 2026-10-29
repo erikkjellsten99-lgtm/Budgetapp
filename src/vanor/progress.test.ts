@@ -69,3 +69,10 @@ describe('habitTrends', () => {
     expect(t.weeks).toBe(0)
   })
 })
+
+it('räknar inte en vecka där vanan bara fanns en dag', () => {
+  // Skapad söndag 25/10: förra veckan hade bara 1 dag, så den räknas inte som 100 %.
+  const [t] = habitTrends([make('d', 7, '2026-10-25')], logOf([['2026-10-25', ['d']]]), NONE, TODAY)
+  expect(t.weeks).toBe(0)
+  expect(t.pct).toBeNull()
+})

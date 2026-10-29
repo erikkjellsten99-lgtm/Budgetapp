@@ -67,7 +67,8 @@ export function habitTrends(habits: Habit[], log: Log, paused: Paused, today: Da
       let weeks = 0
       for (let i = from; i < from + span; i++) {
         const w = habitWeek(habit, log, paused, addDays(lastMonday, -7 * i))
-        if (w.goal === 0) continue
+        // Veckor där vanan bara fanns (eller gick att göra) en liten del räknas inte – annars kan 1 av 1 bli 100 %.
+        if (w.goal === 0 || w.goal < Math.min(7, habit.goal) * 0.6) continue
         done += w.done
         goal += w.goal
         weeks++
