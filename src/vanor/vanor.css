@@ -1901,3 +1901,164 @@
   min-height: 52px;
   border-radius: 14px;
 }
+
+/* Vecka | Månad överst i kortet */
+.vanor .ws-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin: 10px 10px 0;
+  padding: 3px;
+  background: var(--sunk);
+  border-radius: 10px;
+}
+
+.vanor .ws-switch button {
+  min-height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.vanor .ws-switch button.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.vanor .week-sun > .ws-hero {
+  margin-top: 10px;
+}
+
+/* Månaden: ett rymdfoto som fyller hela rutan, med texten ovanpå till vänster */
+.vanor .ws-hero.space {
+  position: relative;
+  min-height: 168px;
+  background: #04060d;
+  overflow: hidden;
+}
+
+.vanor .ws-hero.space::before {
+  display: none;
+}
+
+.vanor .ws-hero.space .galaxy {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Mörk ton bakom texten så att den alltid går att läsa */
+.vanor .ws-hero.space::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(3 5 12 / 0.75) 0%, rgb(3 5 12 / 0.35) 38%, rgb(3 5 12 / 0) 60%);
+  pointer-events: none;
+}
+
+.vanor .ws-hero.space .ws-text {
+  position: relative;
+  z-index: 1;
+}
+
+.vanor .ws-hero.space .ws-label,
+.vanor .ws-hero.space .ws-sub {
+  color: #b7c0e0;
+}
+
+.vanor .ws-hero.space .ws-big {
+  color: #f4f6ff;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.5);
+}
+
+.vanor .gx-orbit {
+  fill: none;
+  stroke: #9fb0e8;
+  stroke-width: 0.5;
+  opacity: 0.16;
+}
+
+.vanor .gx-orbit.future {
+  stroke-dasharray: 1.5 3;
+  opacity: 0.14;
+}
+
+.vanor .gx-slot {
+  fill: none;
+  stroke: #9fb0e8;
+  stroke-width: 0.6;
+  opacity: 0.45;
+}
+
+.vanor .gx-current {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 0.6;
+  stroke-dasharray: 1.5 2;
+  opacity: 0.5;
+}
+
+.vanor .gx-ring-back {
+  fill: none;
+  stroke: #e9d6a6;
+  stroke-width: 1.1;
+  opacity: 0.45;
+}
+
+.vanor .gx-ring-front {
+  fill: none;
+  stroke: #f3e3b8;
+  stroke-width: 1.2;
+  opacity: 0.8;
+}
+
+/* Tidigare månader */
+.vanor .gx-archive {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 16px 14px 20px;
+}
+
+.vanor .gx-archive-title {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.vanor .gx-archive ol {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0 0 2px;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.vanor .gx-archive li {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-top: 0;
+}
+
+.vanor .galaxy.small {
+  display: block;
+  width: 120px;
+  height: 72px;
+  border-radius: 10px;
+}
+
+.vanor .gx-archive li span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+}

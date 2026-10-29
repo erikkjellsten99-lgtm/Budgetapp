@@ -46,6 +46,10 @@ Fliken **Vanor** är vanetrackern (tidigare en egen app). Koden ligger i `src/va
 - `sync.ts`: synk till tabellen `personal_records` i Supabase. Radsäkerheten gör att varje konto bara ser sina egna vanor, så du och Cassandra har var sin lista.
 - `transfer.ts`: flyttkod från den gamla vanetrackern (Mina vanor → Flytta från gamla vanetrackern).
 
+### Solen och galaxen
+
+Överst i Vanor finns ett kort med växeln **Vecka | Månad**. **Vecka** är solen som stiger mot veckans mål. **Månad** är ett solsystem: varje vecka i månaden är en planet som växer med veckans procent, och varje bock blir en stjärna. Tidigare månader sparas som små solsystem. Månadens veckor är de ISO-veckor vars torsdag ligger i månaden (`monthScore` i `progress.ts`). Bilden ritas i `Galaxy.tsx`.
+
 ### Påminnelser
 
 Under Mina vanor → **Påminnelser** slår du på notiser för telefonen (på iPhone måste appen ligga på hemskärmen). Varje vana kan få en tid (Ändra → Påminnelse), och det finns en kvällspåminnelse om något måste göras för att hinna veckomålet.

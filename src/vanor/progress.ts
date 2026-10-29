@@ -85,3 +85,80 @@ export function habitTrends(habits: Habit[], log: Log, paused: Paused, today: Da
 export function change(now: number | null, before: number | null): number | null {
   return now === null || before === null ? null : now - before
 }
+
+// Månaden (galaxen): månadens veckor är de ISO-veckor vars torsdag ligger i månaden,
+// så att varje vecka hör till exakt en månad. Varje vecka blir en planet.
+
+export interface MonthWeek {
+  monday: DateKey
+  /** Procent av veckomålet (0–100), null om veckan inte hade något mål. */
+  pct: number | null
+  done: number
+  goal: number
+  state: 'past' | 'current' | 'future'
+}
+
+export interface MonthScore {
+  /** "2026-10" */
+  month: string
+  weeks: MonthWeek[]
+  /** Gjort hittills av hela månadens mål, 0–100. Når 100 först när alla veckor är klara. */
+  pct: number
+  /** Antal bockningar i månadens veckor (blir stjärnor). */
+  checks: number
+}
+
+const MONTH_NAMES = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december']
+
+/** "oktober" (med år om det inte är samma år som today). */
+export function monthName(month: string, today?: DateKey): string {
+  const [y, m] = month.split('-').map(Number)
+  const name = MONTH_NAMES[m - 1]
+  return today && today.slice(0, 4) !== String(y) ? `${name} ${y}` : name
+}
+
+/** Månaden en vecka hör till: torsdagens månad. */
+export const monthOfWeek = (monday: DateKey) => addDays(monday, 3).slice(0, 7)
+
+/** Måndagarna i en månads veckor. */
+export function monthMondays(month: string): DateKey[] {
+  const first = weekStart(`${month}-01`)
+  const out: DateKey[] = []
+  for (let monday = first; ; monday = addDays(monday, 7)) {
+    const m = monthOfWeek(monday)
+    if (m > month) break
+    if (m === month) out.push(monday)
+  }
+  return out
+}
+
+/** Föregående månad, "2026-10" → "2026-09". */
+export function previousMonth(month: string): string {
+  const [y, m] = month.split('-').map(Number)
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
+}
+
+/** Hur långt månadens galax har kommit. Kommande veckor räknas med sitt mål, så 100 % kräver hela månaden. */
+export function monthScore(habits: Habit[], log: Log, paused: Paused, today: DateKey, month = monthOfWeek(weekStart(today))): MonthScore {
+  const thisMonday = weekStart(today)
+  let done = 0
+  let goal = 0
+  let checks = 0
+  const weeks: MonthWeek[] = monthMondays(month).map((monday) => {
+    const state = monday < thisMonday ? 'past' : monday === thisMonday ? 'current' : 'future'
+    let d = 0
+    let g = 0
+    for (const h of habits) {
+      const w = habitWeek(h, log, state === 'future' ? new Set() : paused, monday)
+      g += w.goal
+      if (state !== 'future') {
+        d += w.done
+        checks += weekCount(log, h.id, monday)
+      }
+    }
+    done += d
+    goal += g
+    return { monday, done: d, goal: g, pct: g > 0 && state !== 'future' ? Math.round((d / g) * 100) : null, state }
+  })
+  return { month, weeks, pct: goal > 0 ? Math.round((done / goal) * 100) : 0, checks }
+}
