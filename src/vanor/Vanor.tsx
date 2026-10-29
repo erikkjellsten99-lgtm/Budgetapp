@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import DaysSheet from './DaysSheet'
+import ProgressCard from './ProgressCard'
 import HabitSheet from './HabitSheet'
 import { addDays, isoWeek, longDate, todayKey, weekStart, type DateKey } from './dates'
 import { daySummary, habitPlan, isDaily, isDone, todayInfo, type Habit, type TodayInfo } from './habits'
@@ -181,6 +182,8 @@ export default function Vanor() {
               <ul className="habits">{closed.map(row)}</ul>
             </section>
           )}
+
+          <ProgressCard habits={habits} log={log} paused={paused} today={today} />
 
           <div className="footer-actions">
             <button type="button" className="text-btn" onClick={() => setSettingsOpen(true)}>
