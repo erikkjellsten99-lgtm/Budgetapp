@@ -2562,7 +2562,9 @@
 
 .vanor .ws-scene.sunrise .ws-goal {
   stroke: #e9edff;
-  opacity: 0.45;
+  stroke-width: 0.75;
+  stroke-dasharray: 2 4;
+  opacity: 0.4;
 }
 
 .vanor .ws-scene.sunrise .ws-goal-label,
@@ -2575,7 +2577,12 @@
 }
 
 .vanor .ws-scene.sunrise .ws-rail {
-  stroke: rgb(255 255 255 / 0.16);
+  stroke: rgb(255 255 255 / 0.14);
+  stroke-width: 3;
+}
+
+.vanor .ws-scene.sunrise .ws-rail-fill {
+  stroke-width: 3;
 }
 
 .vanor .ws-scene.sunrise .ws-rail-fill {
