@@ -240,10 +240,31 @@ export interface MonthPlanet {
   checks: number
   /** Andel av vanans mål under månadens veckor hittills (0–1). Styr planetens storlek. */
   share: number
+  /** Veckor där målet klarades, av de veckor som är avgjorda (slut, eller redan klarade). */
+  weeksMet: number
+  weeksTotal: number
+  /** Kometer: varje 7 dagar i rad under månaden. */
+  comets: number
+}
+
+/** Antal hela 7-dagarsserier (dagar i rad) bland `days`. Pausade dagar bryter inte serien men räknas inte. */
+export function sevenDayRuns(log: Log, habitId: string, days: DateKey[], paused: Paused): number {
+  let run = 0
+  let runs = 0
+  for (const day of days) {
+    if (log[day]?.includes(habitId)) {
+      run++
+      if (run === 7) {
+        runs++
+        run = 0
+      }
+    } else if (!paused.has(day)) run = 0
+  }
+  return runs
 }
 
 /** Planeterna i en månads solsystem: en per vana som fanns under månaden. */
-export function monthPlanets(habits: Habit[], log: Log, today: DateKey, month: string): MonthPlanet[] {
+export function monthPlanets(habits: Habit[], log: Log, paused: Paused, today: DateKey, month: string): MonthPlanet[] {
   const mondays = monthMondays(month).filter((m) => m <= today)
   if (!mondays.length) return []
   const days = mondays.flatMap((m) => Array.from({ length: 7 }, (_, i) => addDays(m, i))).filter((d) => d <= today)
@@ -254,8 +275,43 @@ export function monthPlanets(habits: Habit[], log: Log, today: DateKey, month: s
     .map((h) => {
       const checks = days.filter((d) => d >= h.created && log[d]?.includes(h.id)).length
       const weeks = mondays.filter((m) => addDays(m, 6) >= h.created).length
-      return { id: h.id, name: h.name, checks, share: Math.min(1, checks / Math.max(1, h.goal * weeks)), archived: h.archived }
+      let weeksMet = 0
+      let weeksTotal = 0
+      for (const monday of mondays) {
+        const w = habitWeek(h, log, paused, monday)
+        if (w.goal === 0) continue
+        const met = w.done >= w.goal
+        if (met || addDays(monday, 6) < today) {
+          weeksTotal++
+          if (met) weeksMet++
+        }
+      }
+      return {
+        id: h.id,
+        name: h.name,
+        checks,
+        share: Math.min(1, checks / Math.max(1, h.goal * weeks)),
+        weeksMet,
+        weeksTotal,
+        comets: sevenDayRuns(log, h.id, days, paused),
+        archived: h.archived,
+      }
     })
     .filter((p) => !p.archived || p.checks > 0)
     .map(({ archived: _archived, ...p }) => p)
+}
+
+export interface WeekHabit {
+  id: string
+  name: string
+  done: number
+  goal: number
+}
+
+/** Varje vanas del av en vecka (för att se vilka vanor som klarades och vilka som drog ner). */
+export function weekHabits(habits: Habit[], log: Log, paused: Paused, monday: DateKey): WeekHabit[] {
+  return [...habits]
+    .sort((a, b) => a.order - b.order)
+    .map((h) => ({ id: h.id, name: h.name, ...habitWeek(h, log, paused, monday) }))
+    .filter((h) => h.goal > 0)
 }

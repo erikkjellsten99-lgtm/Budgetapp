@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Habit, Log } from './habits'
-import { change, galaxyMonths, habitTrends, monthForecast, monthMondays, monthPlanets, monthName, monthOfWeek, monthScore, previousMonth, weeklyScores } from './progress'
+import { change, galaxyMonths, habitTrends, monthForecast, monthMondays, monthPlanets, monthName, sevenDayRuns, weekHabits, monthOfWeek, monthScore, previousMonth, weeklyScores } from './progress'
 
 const make = (id: string, goal: number, created = '2026-09-01'): Habit => ({
   id,
@@ -138,8 +138,28 @@ it('solsystemet har en planet per vana, större ju mer av målet som klarats', (
   const ny = { ...make('ny', 7, '2026-11-01'), order: 2 }
   // Oktober = v.40–44 (28/9–1/11). Idag 29/10 → alla fem veckor räknas, gym-målet 10.
   const log = logOf([['2026-10-05', ['gym']], ['2026-10-06', ['gym']], ['2026-10-20', ['gym']], ['2026-10-29', ['gym']]])
-  const planets = monthPlanets([ny, gammal, gym], log, TODAY, '2026-10')
+  const planets = monthPlanets([ny, gammal, gym], log, NONE, TODAY, '2026-10')
   expect(planets.map((p) => p.id)).toEqual(['gym']) // arkiverad utan bockar och framtida vana syns inte
   expect(planets[0].checks).toBe(4)
   expect(planets[0].share).toBeCloseTo(0.4)
+  // v.40 (2 av 2) och v.44 (pågår men bara 1 av 2) → 1 klarad av 4 avgjorda veckor.
+  expect(planets[0].weeksMet).toBe(1)
+  expect(planets[0].weeksTotal).toBe(4)
+})
+
+it('en komet för varje 7 dagar i rad – en pausdag bryter inte serien', () => {
+  const days = Array.from({ length: 16 }, (_, i) => `2026-10-${String(i + 1).padStart(2, '0')}`)
+  const log = Object.fromEntries(days.filter((d) => d !== '2026-10-04').map((d) => [d, ['h']]))
+  expect(sevenDayRuns(log, 'h', days, NONE)).toBe(1) // 5–16 okt = 12 dagar i rad
+  expect(sevenDayRuns(log, 'h', days, new Set(['2026-10-04']))).toBe(2) // pausad 4 okt → 15 dagar
+})
+
+it('veckans vanor visar gjort och mål per vana', () => {
+  const gym = { ...make('gym', 2), order: 1 }
+  const med = { ...make('med', 7), order: 0 }
+  const log = logOf([['2026-10-19', ['gym', 'med']], ['2026-10-20', ['gym']], ['2026-10-21', ['gym']]])
+  expect(weekHabits([gym, med], log, NONE, '2026-10-19')).toEqual([
+    { id: 'med', name: 'med', done: 1, goal: 7 },
+    { id: 'gym', name: 'gym', done: 2, goal: 2 },
+  ])
 })

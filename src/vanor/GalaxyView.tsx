@@ -76,6 +76,17 @@ function ringTexture(): THREE.Texture {
 const PLANET_COLORS = ['#7fb2ff', '#ff9a6b', '#8ee0b0', '#e7a8ff', '#ffd36b', '#6be0e6', '#ff7f9e', '#c9d1e8']
 const planetColor = (i: number) => PLANET_COLORS[i % PLANET_COLORS.length]
 
+/** Antal punkter i en komets svans. */
+const TRAIL = 28
+
+/** Plats på en komets lutande ellipsbana vid vinkeln `a` (solen i ena brännpunkten). */
+function cometPoint(c: { a: number; b: number; tilt: number }, angle: number, out: THREE.Vector3) {
+  const focus = Math.sqrt(c.a * c.a - c.b * c.b)
+  const x = Math.cos(angle) * c.a - focus
+  const z = Math.sin(angle) * c.b
+  return out.set(x * Math.cos(c.tilt) - z * Math.sin(c.tilt), Math.sin(angle) * 0.05, x * Math.sin(c.tilt) + z * Math.cos(c.tilt))
+}
+
 /** Avstånd där ett solsystems planeter börjar synas, och där man räknas som "inne i" det. */
 const DETAIL_FROM = 5
 const INSIDE = 2.2
@@ -86,7 +97,12 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
   const [selected, setSelected] = useState<number | null>(null)
   const panelShown = useRef(false)
   panelShown.current = selected !== null
-  const planets = useMemo(() => months.map((m) => monthPlanets(habits, log, today, m.month)), [months, habits, log, today])
+  // Vald planet (vana) i det solsystem man är i.
+  const [planetSel, setPlanetSel] = useState<number | null>(null)
+  const planetSelRef = useRef<number | null>(null)
+  planetSelRef.current = planetSel
+  useEffect(() => setPlanetSel(null), [selected])
+  const planets = useMemo(() => months.map((m) => monthPlanets(habits, log, paused, today, m.month)), [months, habits, log, paused, today])
   const flyToRef = useRef<((index: number | null) => void) | null>(null)
   const totalStars = months.reduce((s, m) => s + m.checks, 0)
 
@@ -284,12 +300,43 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
           planetGeo,
           new THREE.MeshStandardMaterial({ color: planetColor(k), roughness: 0.75, metalness: 0, emissive: planetColor(k), emissiveIntensity: 0.08, transparent: true }),
         )
-        mesh.scale.setScalar(0.009 + 0.016 * planet.share)
+        const size = 0.009 + 0.016 * planet.share
+        mesh.scale.setScalar(size)
         group.add(mesh)
-        return { mesh, orbit, radius, phase: (hash(planet.id + months[i].month) % 628) / 100, speed: 0.22 / Math.sqrt(radius) }
+        // Perfekt månad för vanan (målet klarat varje vecka): planeten får ett eget sken.
+        let halo: THREE.Sprite | null = null
+        if (planet.weeksTotal > 0 && planet.weeksMet === planet.weeksTotal) {
+          halo = new THREE.Sprite(
+            new THREE.SpriteMaterial({ map: glow, color: planetColor(k), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.9 }),
+          )
+          halo.scale.setScalar(size * 9)
+          group.add(halo)
+        }
+        return { mesh, halo, size, orbit, radius, phase: (hash(planet.id + months[i].month) % 628) / 100, speed: 0.22 / Math.sqrt(radius) }
+      })
+      // Kometer: en för varje 7 dagar i rad på en vana (högst tre), på långsmala banor runt solen.
+      const cometCount = Math.min(3, list.reduce((n, pl) => n + pl.comets, 0))
+      const comets = Array.from({ length: cometCount }, (_, c) => {
+        const head = new THREE.Sprite(
+          new THREE.SpriteMaterial({ map: glow, color: '#d8ecff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+        )
+        head.scale.setScalar(0.05)
+        group.add(head)
+        const trail = new Float32Array(TRAIL * 3)
+        const colors = new Float32Array(TRAIL * 3)
+        for (let t = 0; t < TRAIL; t++) {
+          const k2 = 1 - t / TRAIL
+          colors.set([0.75 * k2, 0.88 * k2, 1 * k2], t * 3)
+        }
+        const geo = new THREE.BufferGeometry()
+        geo.setAttribute('position', new THREE.BufferAttribute(trail, 3))
+        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+        const tail = new THREE.Line(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))
+        group.add(tail)
+        return { head, tail, a: 0.42 + 0.07 * c, b: 0.16 + 0.03 * c, tilt: 0.5 + c * 1.9, speed: 0.35 - c * 0.06, phase: c * 2.1 }
       })
       scene.add(group)
-      return { group, bodies, core }
+      return { group, bodies, core, comets }
     })
     scene.add(new THREE.AmbientLight('#8090c0', 0.35))
     const sunLight = new THREE.PointLight('#ffe7c2', 3, 0, 0)
@@ -310,7 +357,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     let flight: { from: THREE.Vector3; to: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3; start: number } | null = null
     flyToRef.current = (index) => {
       const target = index === null ? new THREE.Vector3() : systems[index].position.clone()
-      const dest = index === null ? home.clone() : target.clone().add(new THREE.Vector3(0, 0.75, 1.2))
+      const dest = index === null ? home.clone() : target.clone().add(new THREE.Vector3(0, 0.95, 1.4))
       flight = { from: camera.position.clone(), to: dest, fromT: controls.target.clone(), toT: target, start: performance.now() }
       controls.autoRotate = index === null
     }
@@ -327,6 +374,19 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       const rect = renderer.domElement.getBoundingClientRect()
       pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1)
       ray.setFromCamera(pointer, camera)
+      // Inne i ett solsystem: tryck på en planet för att se den vanan.
+      if (insideIndex !== null) {
+        const detail = details[insideIndex]
+        let hitPlanet: { k: number; d: number } | null = null
+        detail.bodies.forEach((b, k) => {
+          const projected = b.mesh.getWorldPosition(tmp).project(camera)
+          const d = Math.hypot(projected.x - pointer.x, projected.y - pointer.y)
+          if (projected.z < 1 && d < 0.12 && (!hitPlanet || d < hitPlanet.d)) hitPlanet = { k, d }
+        })
+        const found = hitPlanet as { k: number; d: number } | null
+        setPlanetSel(found ? (planetSelRef.current === found.k ? null : found.k) : null)
+        if (found) return
+      }
       // Sprites är små i 3D – välj den månad som ligger närmast trycket på skärmen.
       let best: { i: number; d: number } | null = null
       for (const s of systems) {
@@ -334,7 +394,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         const d = Math.hypot(projected.x - pointer.x, projected.y - pointer.y)
         if (projected.z < 1 && d < 0.18 && (!best || d < best.d)) best = { i: s.userData.index, d }
       }
-      if (best) {
+      if (best && best.i !== insideIndex) {
         setSelected(best.i)
         flyToRef.current?.(best.i)
       }
@@ -377,6 +437,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     let lastDistance = camera.position.distanceTo(controls.target)
     let insideIndex: number | null = null
     let viewShift = 0
+    const tmp = new THREE.Vector3()
     const offset = new THREE.Vector3()
     renderer.domElement.addEventListener('pointerdown', onDown)
     renderer.domElement.addEventListener('pointerup', onUp)
@@ -424,11 +485,31 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         detail.group.visible = fade > 0
         if (fade > 0) {
           ;(detail.core.material as THREE.MeshBasicMaterial).opacity = fade
-          for (const b of detail.bodies) {
+          detail.bodies.forEach((b, k) => {
             const a = b.phase + (now / 1000) * b.speed
             b.mesh.position.set(Math.cos(a) * b.radius, 0, Math.sin(a) * b.radius)
-            ;(b.mesh.material as THREE.MeshStandardMaterial).opacity = fade
-            ;(b.orbit.material as THREE.LineBasicMaterial).opacity = 0.2 * fade
+            const picked = i === insideIndex && planetSelRef.current === k
+            const material = b.mesh.material as THREE.MeshStandardMaterial
+            material.opacity = fade
+            material.emissiveIntensity = picked ? 0.55 : 0.08
+            b.mesh.scale.setScalar(b.size * (picked ? 1.45 : 1))
+            if (b.halo) {
+              b.halo.position.copy(b.mesh.position)
+              b.halo.material.opacity = 0.75 * fade * (0.8 + 0.2 * Math.sin(now / 500 + k))
+            }
+            ;(b.orbit.material as THREE.LineBasicMaterial).opacity = (picked ? 0.55 : 0.2) * fade
+          })
+          for (const c of detail.comets) {
+            const angle = c.phase + (now / 1000) * c.speed
+            cometPoint(c, angle, c.head.position)
+            c.head.material.opacity = fade
+            const positions = c.tail.geometry.getAttribute('position') as THREE.BufferAttribute
+            for (let t = 0; t < TRAIL; t++) {
+              cometPoint(c, angle - t * 0.035, tmp)
+              positions.setXYZ(t, tmp.x, tmp.y, tmp.z)
+            }
+            positions.needsUpdate = true
+            ;(c.tail.material as THREE.LineBasicMaterial).opacity = fade
           }
         }
         sun.scale.setScalar(sun.userData.scale * (1 - 0.75 * fade))
@@ -452,7 +533,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       for (const m of fadeWhenClose) m.opacity = Math.min(1, 0.22 + closeness * 1.1) * (1 - 0.92 * maxFade)
       earnedMaterial.opacity = 1 - 0.85 * maxFade
       // Panelen täcker nedre delen – flytta bilden uppåt när en månad visas.
-      viewShift += ((panelShown.current ? 0.16 : 0) - viewShift) * 0.08
+      viewShift += ((panelShown.current ? 0.21 : 0) - viewShift) * 0.08
       camera.setViewOffset(mount.clientWidth, mount.clientHeight, 0, mount.clientHeight * viewShift, mount.clientWidth, mount.clientHeight)
       controls.update()
       renderer.render(scene, camera)
@@ -485,6 +566,8 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
 
   const selectedMonth = selected === null ? null : months[selected]
   const selectedPlanets: MonthPlanet[] = selected === null ? [] : planets[selected]
+  const chosenPlanet = planetSel === null ? null : (selectedPlanets[planetSel] ?? null)
+  const monthComets = selectedPlanets.reduce((n, p) => n + p.comets, 0)
 
   const open = (i: number) => {
     setSelected(i)
@@ -528,12 +611,30 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
             <ul className="gv-planets">
               {selectedPlanets.map((planet, k) => (
                 <li key={planet.id}>
-                  <i style={{ background: planetColor(k) }} aria-hidden="true" />
-                  {planet.name}
-                  <span>{planet.checks}</span>
+                  <button type="button" aria-pressed={planetSel === k} onClick={() => setPlanetSel(planetSel === k ? null : k)}>
+                    <i style={{ background: planetColor(k) }} aria-hidden="true" />
+                    {planet.name}
+                    <span>{planet.checks}</span>
+                  </button>
                 </li>
               ))}
             </ul>
+          )}
+          {chosenPlanet ? (
+            <p className="gv-planet-detail">
+              <b>{chosenPlanet.name}:</b>{' '}
+              {chosenPlanet.weeksTotal > 0
+                ? `målet klarat ${chosenPlanet.weeksMet} av ${chosenPlanet.weeksTotal} ${chosenPlanet.weeksTotal === 1 ? 'vecka' : 'veckor'}`
+                : 'veckans mål avgörs på söndag'}
+              {chosenPlanet.weeksTotal > 0 && chosenPlanet.weeksMet === chosenPlanet.weeksTotal && ' · perfekt, planeten lyser'}
+              {chosenPlanet.comets > 0 && ` · ☄ ${chosenPlanet.comets} ${chosenPlanet.comets === 1 ? 'komet' : 'kometer'} (7 dagar i rad)`}
+            </p>
+          ) : (
+            monthComets > 0 && (
+              <p className="gv-planet-detail">
+                ☄ {monthComets} {monthComets === 1 ? 'komet' : 'kometer'}: 7 dagar i rad på en vana. Tryck på en planet för att se vanan.
+              </p>
+            )
           )}
           <button type="button" className="gv-back" onClick={back}>
             Tillbaka till hela galaxen
