@@ -18,7 +18,7 @@ import { getSyncState, onSyncState, type SyncState } from './sync';
 import Goal, { goalCurrent, goalStatus, project } from './Goal';
 import Forecast from './Forecast';
 import Income from './Income';
-import HealthTab from './traning/HealthTab';
+import Vanor from './vanor/Vanor';
 import { formatKr } from './money';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
@@ -32,14 +32,14 @@ const VIEWS: { id: View; label: string; short: string; icon: string }[] = [
   { id: 'goal', label: 'Prognos & sparmål', short: 'Prognos', icon: 'M3 19l5.5-6 4 3.5L21 7M15 7h6v6' },
   { id: 'assets', label: 'Tillgångar', short: 'Konton', icon: 'M3 7.5h18v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5zM3 7.5l2-3.5h14l2 3.5M16 14h2' },
   { id: 'wishlist', label: 'Önskelista', short: 'Önskelista', icon: 'M12 20s-7.5-4.6-7.5-10.2A4.1 4.1 0 0 1 12 7.4a4.1 4.1 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z' },
-  { id: 'vanor', label: 'Vanor & träning', short: 'Vanor', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12.2l2.7 2.6L16.2 9.4' },
+  { id: 'vanor', label: 'Vanor', short: 'Vanor', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12.2l2.7 2.6L16.2 9.4' },
 ];
 
 /** Senast öppnade flik, så att appen öppnas där du var. */
 function savedView(): View {
   try {
     const saved = localStorage.getItem('view');
-    if (saved === 'traning') return 'vanor'; // Träning ligger nu under Vanor.
+    if (saved === 'traning') return 'vanor'; // Träning fanns en tid som egen flik.
     if (saved === 'account' || VIEWS.some((item) => item.id === saved)) return saved as View;
   } catch {
     // Lagring kan vara avstängd, då börjar appen på översikten.
@@ -197,7 +197,9 @@ export default function App() {
           )}
         </div>
         <div hidden={view !== 'vanor'}>
-          <HealthTab />
+          <div className="vanor-column">
+            <Vanor />
+          </div>
         </div>
         <div hidden={view !== 'goal'}>
           <Forecast />

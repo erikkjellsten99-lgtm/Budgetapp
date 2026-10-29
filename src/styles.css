@@ -1502,11 +1502,6 @@ main > div > h2 + .hint {
   border-radius: calc(var(--radius-control) + 4px);
 }
 
-.segmented-row.two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-bottom: 1.1rem;
-}
-
 .segmented-row .seg {
   min-height: 2.5rem;
   padding: 0.3rem;
@@ -1968,8 +1963,8 @@ main > div > h2 + .hint {
   }
 }
 
-/* Vanor & träning: en lagom bred spalt på datorn, så att listan inte dras ut över hela skärmen. */
-.health-tab {
+/* Vanor: en lagom bred spalt på datorn, så att listan inte dras ut över hela skärmen. */
+.vanor-column {
   max-width: 40rem;
   margin: 0 auto;
 }

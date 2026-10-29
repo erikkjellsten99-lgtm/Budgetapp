@@ -13,8 +13,8 @@ const DB_NAME = 'vanor';
 const DB_VERSION = 3;
 
 /**
- * Allt som synkas privat till kontot. Träningspassen (workouts) ligger här sedan version 2,
- * att göra-sakerna (tasks) sedan version 3.
+ * Allt som synkas privat till kontot. Träningspassen (workouts, version 2) används inte längre i appen,
+ * men ligger kvar så att inget som loggats försvinner. Att göra-sakerna (tasks) finns sedan version 3.
  */
 export const HABIT_STORES = ['habits', 'checks', 'pauses', 'workouts', 'tasks'] as const;
 export type HabitStore = (typeof HABIT_STORES)[number];
@@ -182,14 +182,6 @@ export async function setCheck(habitId: string, date: DateKey, state: 'none' | '
   else await change([{ store: 'checks', record: state === 'min' ? { key, date, habitId, min: true } : { key, date, habitId } }]);
 }
 
-/** Bocka av vanan för dagen om den inte redan är bockad (t.ex. Gym när ett gympass loggas). */
-export async function ensureCheck(habitId: string, date: DateKey) {
-  const db = await openDb();
-  const key = checkKey(date, habitId);
-  const existing = await request(db.transaction('checks').objectStore('checks').get(key));
-  if (!existing) await change([{ store: 'checks', record: { key, date, habitId } }]);
-}
-
 /** Pausa dagen (sjuk/skadad) – eller ta bort pausen. */
 export async function togglePause(date: DateKey) {
   const db = await openDb();
@@ -314,20 +306,6 @@ export async function importHabits(data: { habits: Habit[]; checks: Omit<Check, 
   for (const p of data.pauses) if (!pausedDays.has(p.date)) puts.push({ store: 'pauses', record: { date: p.date } });
   await change(puts);
   return { habits: puts.filter((p) => p.store === 'habits').length, checks: puts.filter((p) => p.store === 'checks').length };
-}
-
-// Träningspass (se ../traning/training.ts)
-
-export function loadWorkouts<T>(): Promise<T[]> {
-  return getAll<T>('workouts');
-}
-
-export function saveWorkoutRecord(workout: { id: string }) {
-  return change([{ store: 'workouts', record: workout }]);
-}
-
-export function deleteWorkoutRecord(id: string) {
-  return change([], [{ store: 'workouts', id }]);
 }
 
 // Att göra (se ./tasks.ts)
