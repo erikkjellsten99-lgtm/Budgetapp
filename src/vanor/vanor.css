@@ -2007,15 +2007,15 @@
 .vanor .gx-ring-back {
   fill: none;
   stroke: #e9d6a6;
-  stroke-width: 1.1;
-  opacity: 0.45;
+  stroke-width: 1.4;
+  opacity: 0.35;
 }
 
 .vanor .gx-ring-front {
   fill: none;
   stroke: #f3e3b8;
-  stroke-width: 1.2;
-  opacity: 0.8;
+  stroke-width: 1.4;
+  opacity: 0.75;
 }
 
 /* Tidigare månader */
