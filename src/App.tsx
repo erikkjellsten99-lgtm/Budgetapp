@@ -119,12 +119,12 @@ export default function App() {
               type="button"
               className={item.id === view ? 'nav-item active' : 'nav-item'}
               aria-current={item.id === view ? 'page' : undefined}
+              title={item.label}
               onClick={() => showView(item.id)}
             >
               <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d={item.icon} />
               </svg>
-              <span className="nav-label">{item.label}</span>
               <span className="nav-short-label">{item.short}</span>
             </button>
           ))}
