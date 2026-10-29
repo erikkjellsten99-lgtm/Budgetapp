@@ -50,7 +50,7 @@ export default function ProgressCard({ habits, log, paused, today }: Props) {
       ? 'Veckan är i hamn. Allt du gör nu är bonus.'
       : behind === 0
         ? `Du är i fas. ${left} ${left === 1 ? 'gång' : 'gånger'} kvar till fullt.`
-        : `Du ligger ${behind} ${behind === 1 ? 'gång' : 'gånger'} efter. Varje bock flyttar solen.`
+        : `${behind} ${behind === 1 ? 'gång' : 'gånger'} efter jämn takt. Börja med det under Prioritera idag.`
 
   return (
     <section className="week-sun" aria-labelledby="sun-title" style={{ '--warm': Math.min(1, pct / 100) } as CSSProperties}>

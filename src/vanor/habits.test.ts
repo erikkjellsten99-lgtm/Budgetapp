@@ -102,7 +102,18 @@ describe('todayInfo', () => {
   it('veckovana med gott om tid', () => {
     const info = todayInfo(habit(2), {}, TODAY)
     expect(info.due).toBe(true)
-    expect(info.pills[0]).toEqual({ kind: 'plain', text: '2 kvar, 5 dagar kvar av veckan' })
+    expect(info.must).toBe(false)
+    // Onsdag–söndag kvar, 2 gånger: kan vänta till lördag.
+    expect(info.pills[0]).toEqual({ kind: 'plain', text: '2 kvar på 5 dagar, kan vänta till lördag' })
+  })
+  it('kan vänta till i morgon när det bara finns en dag till godo', () => {
+    // 4 kvar på 5 dagar: senast i morgon (torsdag).
+    expect(todayInfo(habit(4), {}, TODAY).pills[0].text).toBe('4 kvar på 5 dagar, kan vänta till i morgon')
+  })
+  it('måste idag: dagliga vanor och veckovanor utan marginal', () => {
+    expect(todayInfo(habit(7), {}, TODAY).must).toBe(true)
+    expect(todayInfo(habit(5), {}, TODAY).must).toBe(true)
+    expect(todayInfo(habit(7), logOf([TODAY]), TODAY).must).toBe(false)
   })
   it('varnar "Måste bli idag" när det är på gränsen', () => {
     const info = todayInfo(habit(5), {}, TODAY)
@@ -126,15 +137,17 @@ describe('todayInfo', () => {
     const log: Log = { [TODAY]: ['gym'] }
     const info = todayInfo(stretch, log, TODAY)
     expect(info.due).toBe(true)
+    expect(info.must).toBe(true)
     expect(info.pills[0]).toEqual({ kind: 'warn', text: 'Efter dagens pass' })
   })
-  it('rubriken räknar bara det som ska göras idag', () => {
+  it('rubriken räknar det som måste göras idag, inte det som kan vänta', () => {
     const infos = [
       todayInfo(habit(2), logOf(['2026-10-12', '2026-10-13']), TODAY), // klart för veckan
       todayInfo(habit(7), logOf([TODAY]), TODAY), // bockad idag
       todayInfo({ ...habit(7), id: 'x' }, {}, TODAY), // kvar
+      todayInfo({ ...habit(2), id: 'y' }, {}, TODAY), // kan vänta, räknas inte
     ]
-    expect(daySummary(infos)).toEqual({ total: 2, done: 1 })
+    expect(daySummary(infos)).toEqual({ total: 2, done: 1, flexible: 1 })
   })
 })
 

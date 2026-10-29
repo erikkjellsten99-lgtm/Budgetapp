@@ -88,7 +88,10 @@ export default function Vanor() {
               ? 'today'
               : 'missed',
     }))
+  // Prioritera: det som måste göras idag först, sedan det som kan vänta (mest bråttom först).
   const open = rows.filter((r) => r.info.due && !r.info.done)
+  const must = open.filter((r) => r.info.must)
+  const flexible = open.filter((r) => !r.info.must).sort((a, b) => b.info.urgency - a.info.urgency)
   const closed = rows.filter((r) => !(r.info.due && !r.info.done))
   const summary = daySummary(rows.map((r) => r.info))
 
@@ -96,9 +99,11 @@ export default function Vanor() {
     ? 'Vanor'
     : pausedToday && !open.length
       ? 'Vilodag'
-      : summary.done === summary.total
-        ? 'Dagen är klar'
-        : `${summary.total - summary.done} kvar idag`
+      : summary.done < summary.total
+        ? `${summary.total - summary.done} kvar idag`
+        : summary.flexible
+          ? 'Inget måste idag'
+          : 'Dagen är klar'
 
   function check(habit: Habit, min = false) {
     setPopped(habit.id)
@@ -167,14 +172,30 @@ export default function Vanor() {
         <>
           <section className="section" aria-labelledby="todo-title">
             <h2 className="section-title" id="todo-title">
-              Att göra idag <span className="count">{open.length}</span>
+              Prioritera idag <span className="count">{must.length}</span>
             </h2>
-            {open.length ? (
-              <ul className="habits">{open.map(row)}</ul>
+            {must.length ? (
+              <ul className="habits">{must.map(row)}</ul>
             ) : (
-              <p className="all-done">{pausedToday ? 'Inga krav idag. Krya på dig.' : 'Allt för idag är gjort.'}</p>
+              <p className="all-done">
+                {pausedToday
+                  ? 'Inga krav idag. Krya på dig.'
+                  : flexible.length
+                    ? 'Inget måste göras idag för att hinna veckans mål. Ta något nedan om du har tid.'
+                    : 'Allt för idag är gjort.'}
+              </p>
             )}
           </section>
+
+          {flexible.length > 0 && (
+            <section className="section" aria-labelledby="flex-title">
+              <h2 className="section-title" id="flex-title">
+                Kan vänta <span className="count">{flexible.length}</span>
+              </h2>
+              <p className="section-hint">Det finns fler dagar kvar än gånger. Gör gärna idag, men det är inget måste.</p>
+              <ul className="habits">{flexible.map(row)}</ul>
+            </section>
+          )}
 
           {closed.length > 0 && (
             <section className="section" aria-labelledby="rest-title">

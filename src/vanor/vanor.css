@@ -1569,3 +1569,9 @@
 .vanor .push-msg {
   margin: 8px 0 0;
 }
+
+.vanor .section-hint {
+  margin: -4px 0 2px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
