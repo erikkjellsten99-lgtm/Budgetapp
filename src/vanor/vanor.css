@@ -2593,3 +2593,158 @@
   fill: #0b1022;
   stroke: #ffc46b;
 }
+
+/* Förklaringar: "Så funkar bilden" i månadsvyn och "Så funkar din galax" i 3D */
+.vanor .gx-how {
+  padding: 6px 20px 0;
+}
+
+.vanor .gx-how .text-btn {
+  margin-left: -8px;
+  font-size: 0.85rem;
+}
+
+.vanor .gx-how ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0 6px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.vanor .gx-how li {
+  border: 0;
+}
+
+.vanor .gx-how b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.galaxy-view .gv-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.galaxy-view .gv-help {
+  font-family: var(--display, system-ui);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.galaxy-view .gv-help[aria-expanded='true'] {
+  background: rgb(255 210 138 / 0.2);
+  border-color: rgb(255 210 138 / 0.5);
+  color: #ffd28a;
+}
+
+.galaxy-view .gv-guide {
+  position: absolute;
+  right: 16px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 440px;
+  max-height: calc(100% - 120px);
+  margin: 0 auto;
+  padding: 18px 20px;
+  overflow-y: auto;
+  background: rgb(10 14 30 / 0.95);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 18px;
+  backdrop-filter: blur(12px);
+  animation: vanor-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.galaxy-view .gv-guide h3 {
+  margin: 0;
+  padding: 0;
+  color: #fff;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.galaxy-view .gv-guide dl {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.galaxy-view .gv-guide dl > div {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 10px;
+}
+
+.galaxy-view .gv-guide dt {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.galaxy-view .gv-guide dd {
+  margin: 0;
+  color: #cdd4f0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.galaxy-view .gv-ico {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border-radius: 50%;
+}
+
+.galaxy-view .gv-ico.star {
+  background: radial-gradient(circle, #fffdf6 0 22%, rgb(255 228 176 / 0.5) 40%, transparent 70%);
+}
+
+.galaxy-view .gv-ico.ring {
+  border: 2px solid #ffd28a;
+}
+
+.galaxy-view .gv-ico.planet {
+  background: radial-gradient(circle at 35% 35%, #bcd6ff, #3a5aa8 60%, #0d1530);
+}
+
+.galaxy-view .gv-ico.comet {
+  width: 18px;
+  border-radius: 0;
+  background: linear-gradient(90deg, transparent, rgb(191 227 255 / 0.6) 60%, #fff 80%, transparent 82%);
+  height: 3px;
+  margin-top: 8px;
+}
+
+.galaxy-view .gv-guide-how {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+  color: #aab4d8;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.galaxy-view .gv-guide-ok {
+  align-self: stretch;
+  min-height: 46px;
+  background: #ffd28a;
+  border: 0;
+  border-radius: 12px;
+  color: #1a1408;
+  font-weight: 700;
+}

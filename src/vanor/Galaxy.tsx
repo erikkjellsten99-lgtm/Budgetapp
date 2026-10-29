@@ -441,6 +441,7 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
   const title = monthName(score.month, today)
   const [galaxyOpen, setGalaxyOpen] = useState(false)
   const [pickedMonday, setPickedMonday] = useState<DateKey | null>(null)
+  const [howOpen, setHowOpen] = useState(false)
   const picked = score.weeks.find((w) => w.monday === pickedMonday) ?? null
   const comets = cometsIn(habits, log, paused, today, score.month)
   const forecast = monthForecast(score, today)
@@ -474,13 +475,36 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
         {!picked && <span className="gx-tap-hint">Tryck på en planet för veckan</span>}
       </div>
       {picked && <WeekDetails week={picked} habits={habits} log={log} paused={paused} onClose={() => setPickedMonday(null)} />}
-      {!picked && (
-        <p className={comets > 0 ? 'gx-events' : 'gx-events quiet'}>
-          <span aria-hidden="true">☄</span>{' '}
-          {comets > 0
-            ? `${comets} ${comets === 1 ? 'komet' : 'kometer'} i ${title}: 7 dagar i rad på en vana.`
-            : '7 dagar i rad på en vana ger en komet. En perfekt vecka får planeten att lysa.'}
+      {!picked && comets > 0 && (
+        <p className="gx-events">
+          <span aria-hidden="true">☄</span> {comets} {comets === 1 ? 'komet' : 'kometer'} i {title}: 7 dagar i rad på en vana.
         </p>
+      )}
+      {!picked && (
+        <div className="gx-how">
+          <button type="button" className="text-btn" aria-expanded={howOpen} onClick={() => setHowOpen(!howOpen)}>
+            {howOpen ? 'Dölj förklaringen' : 'Så funkar bilden'}
+          </button>
+          {howOpen && (
+            <ul>
+              <li>
+                <b>Solen</b> är månaden. Procenten visar hur mycket av månadens mål du har klarat.
+              </li>
+              <li>
+                <b>Varje planet</b> är en vecka och växer med veckans procent. Tryck på en planet för att se veckan.
+              </li>
+              <li>
+                <b>Varje bock</b> blir en stjärna.
+              </li>
+              <li>
+                <b>En perfekt vecka</b> får planeten att lysa, och <b>7 dagar i rad</b> på en vana ger en komet.
+              </li>
+              <li>
+                <b>Varje månad</b> blir ett solsystem i din galax, som aldrig börjar om.
+              </li>
+            </ul>
+          )}
+        </div>
       )}
       {galaxyOpen && (
         <Suspense fallback={<div className="galaxy-view loading">Laddar galaxen …</div>}>

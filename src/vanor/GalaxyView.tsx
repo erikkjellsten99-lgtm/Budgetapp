@@ -246,10 +246,71 @@ function cometPoint(c: { a: number; b: number; tilt: number }, angle: number, ou
 const DETAIL_FROM = 5
 const INSIDE = 2.2
 
+const GUIDE_KEY = 'vanor-galax-guide'
+const guideSeen = () => {
+  try {
+    return localStorage.getItem(GUIDE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** "Så funkar din galax": visas första gången galaxen öppnas och sedan via ?-knappen. */
+function GalaxyGuide({ onClose }: { onClose: () => void }) {
+  return (
+    <section className="gv-guide" role="dialog" aria-labelledby="gv-guide-title">
+      <h3 id="gv-guide-title">Så funkar din galax</h3>
+      <dl>
+        <div>
+          <dt>
+            <i className="gv-ico star" aria-hidden="true" />
+            Stjärna
+          </dt>
+          <dd>Varje bock du gör blir en stjärna i armen, vid månaden den hör till.</dd>
+        </div>
+        <div>
+          <dt>
+            <i className="gv-ico ring" aria-hidden="true" />
+            Solsystem
+          </dt>
+          <dd>Varje månad blir ett solsystem längs spiralarmen. Den första ligger närmast kärnan. Ju bättre månad, desto starkare lyser den. Galaxen börjar aldrig om.</dd>
+        </div>
+        <div>
+          <dt>
+            <i className="gv-ico planet" aria-hidden="true" />
+            Planet
+          </dt>
+          <dd>Inne i ett solsystem är varje planet en vana. Den är större ju mer av målet du klarade den månaden, och lyser om du klarade målet varje vecka.</dd>
+        </div>
+        <div>
+          <dt>
+            <i className="gv-ico comet" aria-hidden="true" />
+            Komet
+          </dt>
+          <dd>7 dagar i rad på en vana ger en komet som flyger runt solen.</dd>
+        </div>
+      </dl>
+      <p className="gv-guide-how">Dra för att snurra. Nyp eller zooma mot en ring för att flyga in. Tryck på en planet för att se vanan.</p>
+      <button type="button" className="gv-guide-ok" onClick={onClose}>
+        Uppfattat
+      </button>
+    </section>
+  )
+}
+
 export default function GalaxyView({ habits, log, paused, today, onClose }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const months = useMemo(() => galaxyMonths(habits, log, paused, today), [habits, log, paused, today])
   const [selected, setSelected] = useState<number | null>(null)
+  const [guideOpen, setGuideOpen] = useState(() => !guideSeen())
+  const closeGuide = () => {
+    setGuideOpen(false)
+    try {
+      localStorage.setItem(GUIDE_KEY, '1')
+    } catch {
+      // Utan lagring visas guiden igen nästa gång – inget mer händer.
+    }
+  }
   const panelShown = useRef(false)
   panelShown.current = selected !== null
   // Vald planet (vana) i det solsystem man är i.
@@ -814,12 +875,25 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
             {months.length} {months.length === 1 ? 'månad' : 'månader'} · {totalStars} {totalStars === 1 ? 'stjärna' : 'stjärnor'}
           </p>
         </div>
-        <button type="button" className="gv-close" aria-label="Stäng galaxen" onClick={onClose}>
-          ×
-        </button>
+        <div className="gv-actions">
+          <button
+            type="button"
+            className="gv-close gv-help"
+            aria-label="Så funkar din galax"
+            aria-expanded={guideOpen}
+            onClick={() => (guideOpen ? closeGuide() : setGuideOpen(true))}
+          >
+            ?
+          </button>
+          <button type="button" className="gv-close" aria-label="Stäng galaxen" onClick={onClose}>
+            ×
+          </button>
+        </div>
       </header>
 
-      {selectedMonth ? (
+      {guideOpen ? (
+        <GalaxyGuide onClose={closeGuide} />
+      ) : selectedMonth ? (
         <section className="gv-panel" aria-live="polite">
           <span className="gv-label">{monthName(selectedMonth.month, today)}</span>
           <b className="gv-big">{selectedMonth.pct}&nbsp;%</b>
