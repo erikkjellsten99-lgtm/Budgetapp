@@ -72,6 +72,161 @@ function ringTexture(): THREE.Texture {
   return texture
 }
 
+/** Enkelt brus (värdebrus med frö) för planetytor och solens yta. */
+function noise2(seed: number) {
+  const rand = seeded(seed)
+  const size = 64
+  const grid = Array.from({ length: size * size }, () => rand())
+  const at = (x: number, y: number) => grid[(((y % size) + size) % size) * size + (((x % size) + size) % size)]
+  const smooth = (t: number) => t * t * (3 - 2 * t)
+  const one = (x: number, y: number) => {
+    const x0 = Math.floor(x)
+    const y0 = Math.floor(y)
+    const fx = smooth(x - x0)
+    const fy = smooth(y - y0)
+    const a = at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * fx
+    const b = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * fx
+    return a + (b - a) * fy
+  }
+  // Flera lager (fbm) ger naturligare mönster
+  return (x: number, y: number) => {
+    let v = 0
+    let amp = 0.5
+    let f = 1
+    for (let o = 0; o < 4; o++) {
+      v += one(x * f, y * f) * amp
+      amp /= 2
+      f *= 2
+    }
+    return v
+  }
+}
+
+type PlanetKind = 'ocean' | 'rock' | 'gas' | 'ring' | 'ice'
+const PLANET_KINDS: PlanetKind[] = ['ocean', 'rock', 'gas', 'ring', 'ice']
+
+/**
+ * Ytan för en planet som gråskala (färgen kommer från vanans färg, så att den matchar listan i panelen):
+ * band på gasjättar, kontinenter och moln på den jordlika, kratrar på den steniga.
+ */
+function planetTexture(kind: PlanetKind, seed: number): THREE.Texture {
+  const W = 256
+  const H = 128
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  const img = ctx.createImageData(W, H)
+  const n = noise2(seed)
+  const n2 = noise2(seed + 99)
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const u = (x / W) * 8
+      const v = (y / H) * 4
+      let g = 0.8
+      if (kind === 'gas' || kind === 'ring') {
+        // Band som slingrar sig lite, ljusare och mörkare
+        const warp = n(u * 0.6, v * 2) * 1.6
+        g = 0.62 + 0.3 * Math.sin(v * 7 + warp * 2) + 0.12 * (n2(u * 2, v * 6) - 0.5)
+      } else if (kind === 'ocean') {
+        const land = n(u * 0.7, v * 0.9)
+        const cloud = n2(u * 1.4 + v, v * 2.2)
+        g = land > 0.55 ? 0.55 + (land - 0.55) * 1.2 : 0.38 + land * 0.2
+        if (cloud > 0.58) g = Math.min(1, g + (cloud - 0.58) * 3.2)
+      } else if (kind === 'rock') {
+        g = 0.55 + (n(u * 1.2, v * 1.2) - 0.5) * 0.7 + (n2(u * 5, v * 5) - 0.5) * 0.25
+      } else {
+        g = 0.82 + 0.1 * Math.sin(v * 5 + n(u, v) * 2) + (n2(u * 3, v * 3) - 0.5) * 0.12
+      }
+      // Polerna lite ljusare på de flesta
+      const pole = Math.abs(y / H - 0.5) * 2
+      if (kind !== 'gas' && kind !== 'ring' && pole > 0.86) g = Math.min(1, g + (pole - 0.86) * 3)
+      const c = Math.max(0, Math.min(255, g * 255))
+      const i = (y * W + x) * 4
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = c
+      img.data[i + 3] = 255
+    }
+  }
+  ctx.putImageData(img, 0, 0)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = THREE.RepeatWrapping
+  return texture
+}
+
+/** Solens yta: granulering i gult och orange. */
+function sunTexture(): THREE.Texture {
+  const W = 256
+  const H = 128
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  const img = ctx.createImageData(W, H)
+  const n = noise2(7)
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const g = n((x / W) * 24, (y / H) * 12)
+      const i = (y * W + x) * 4
+      img.data[i] = 255
+      img.data[i + 1] = 190 + g * 60
+      img.data[i + 2] = 90 + g * 90
+      img.data[i + 3] = 255
+    }
+  }
+  ctx.putImageData(img, 0, 0)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+/** Solens strålar, som från en kameralins: tunna avsmalnande streck. */
+function raysTexture(): THREE.Texture {
+  const size = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.translate(size / 2, size / 2)
+  for (const [angle, len, width, alpha] of [
+    [0, 1, 2, 0.9],
+    [Math.PI / 2, 0.55, 1.6, 0.55],
+    [0.55, 0.4, 1, 0.4],
+    [Math.PI - 0.55, 0.4, 1, 0.4],
+  ]) {
+    ctx.save()
+    ctx.rotate(angle)
+    const g = ctx.createLinearGradient((-size / 2) * len, 0, (size / 2) * len, 0)
+    g.addColorStop(0, 'rgba(255,240,210,0)')
+    g.addColorStop(0.5, `rgba(255,248,230,${alpha})`)
+    g.addColorStop(1, 'rgba(255,240,210,0)')
+    ctx.fillStyle = g
+    ctx.fillRect((-size / 2) * len, -width / 2, size * len, width)
+    ctx.restore()
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+/** Saturnusringar: ljusa och mörka band, genomskinliga. */
+function ringBandTexture(): THREE.Texture {
+  const W = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = 1
+  const ctx = canvas.getContext('2d')!
+  const n = noise2(3)
+  for (let x = 0; x < W; x++) {
+    const t = x / W
+    const a = (0.25 + 0.6 * n(t * 30, 0.5)) * Math.sin(t * Math.PI) * (t > 0.62 && t < 0.67 ? 0.1 : 1)
+    ctx.fillStyle = `rgba(255,255,255,${a})`
+    ctx.fillRect(x, 0, 1, 1)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
 /** Planetfärger, en per vana i den ordning vanorna ligger. */
 const PLANET_COLORS = ['#7fb2ff', '#ff9a6b', '#8ee0b0', '#e7a8ff', '#ffd36b', '#6be0e6', '#ff7f9e', '#c9d1e8']
 const planetColor = (i: number) => PLANET_COLORS[i % PLANET_COLORS.length]
@@ -151,6 +306,15 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
 
     const glow = glowTexture()
     const ringTex = ringTexture()
+    const sunTex = sunTexture()
+    const raysTex = raysTexture()
+    const bandTex = ringBandTexture()
+    // En yta per vana (samma vana ser likadan ut i alla månader)
+    const surfaces = new Map<number, THREE.Texture>()
+    const surfaceFor = (k: number) => {
+      if (!surfaces.has(k)) surfaces.set(k, planetTexture(PLANET_KINDS[k % PLANET_KINDS.length], 100 + k))
+      return surfaces.get(k)!
+    }
     const rand = seeded(20261029)
 
     // Galaxens stjärnor: två spiralarmar som når så långt som dina månader – galaxen växer utåt med tiden.
@@ -202,12 +366,10 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     }
     const bulgeGeo = new THREE.BufferGeometry()
     bulgeGeo.setAttribute('position', new THREE.BufferAttribute(bulgePos, 3))
-    scene.add(
-      new THREE.Points(
-        bulgeGeo,
-        new THREE.PointsMaterial({ size: 0.12, color: '#ffdcae', map: glow, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }),
-      ),
-    )
+    const bulgeMaterial = new THREE.PointsMaterial({ size: 0.12, color: '#ffdcae', map: glow, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })
+    scene.add(new THREE.Points(bulgeGeo, bulgeMaterial))
+    // Inne i ett solsystem tonas galaxens sken ner så att rymden blir svart runt solen.
+    const fadeInside: { m: THREE.Material; base: number }[] = [{ m: bulgeMaterial, base: 0.55 }]
 
     // Rosa stjärnbildningsområden längs armarna, som i riktiga spiralgalaxer
     for (let i = 0; i < Math.min(40, 6 + n * 2); i++) {
@@ -218,6 +380,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       neb.position.set(p.x + gauss() * 0.5, 0, p.z + gauss() * 0.5)
       neb.scale.setScalar(1.2 + rand() * 1.6)
       scene.add(neb)
+      fadeInside.push({ m: neb.material, base: 0.16 })
     }
 
     // Kärnan
@@ -226,6 +389,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     )
     coreSprite.scale.setScalar(5 + Math.min(4, n * 0.15))
     scene.add(coreSprite)
+    fadeInside.push({ m: coreSprite.material, base: 0.9 })
 
     // Dina bockar: en ljus stjärna per bock, nära den månad den hör till.
     const monthIndex = new Map(months.map((m, i) => [m.month, i]))
@@ -279,13 +443,24 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     const currentRing = rings[rings.length - 1]
 
     // Närbild: varje solsystem har en planet per vana som kretsar runt solen. Syns först när man zoomar nära.
-    const planetGeo = new THREE.SphereGeometry(1, 24, 16)
+    const planetGeo = new THREE.SphereGeometry(1, 48, 32)
     const details = systems.map((sun, i) => {
       const group = new THREE.Group()
       group.position.copy(sun.position)
       group.visible = false
-      const core = new THREE.Mesh(new THREE.SphereGeometry(0.03, 24, 16), new THREE.MeshBasicMaterial({ color: '#ffe9b8', transparent: true }))
+      // Solen: yta med granulering, varm korona och tunna strålar
+      const core = new THREE.Mesh(new THREE.SphereGeometry(0.028, 32, 20), new THREE.MeshBasicMaterial({ map: sunTex, transparent: true }))
       group.add(core)
+      const corona = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: glow, color: '#ffc773', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+      )
+      corona.scale.setScalar(0.22)
+      group.add(corona)
+      const rays = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: raysTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+      )
+      rays.scale.setScalar(0.42)
+      group.add(rays)
       const list = planets[i]
       const bodies = list.map((planet, k) => {
         const radius = 0.11 + (k * 0.22) / Math.max(1, list.length - 1)
@@ -296,13 +471,48 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
           new THREE.LineBasicMaterial({ color: '#aab4d8', transparent: true, opacity: 0.18, depthWrite: false }),
         )
         group.add(orbit)
+        const kind = PLANET_KINDS[k % PLANET_KINDS.length]
         const mesh = new THREE.Mesh(
           planetGeo,
-          new THREE.MeshStandardMaterial({ color: planetColor(k), roughness: 0.75, metalness: 0, emissive: planetColor(k), emissiveIntensity: 0.08, transparent: true }),
+          new THREE.MeshStandardMaterial({
+            color: planetColor(k),
+            map: surfaceFor(k),
+            roughness: kind === 'ocean' ? 0.55 : 0.9,
+            metalness: 0,
+            emissive: planetColor(k),
+            emissiveIntensity: 0.02,
+            transparent: true,
+          }),
         )
+        mesh.rotation.z = 0.25 + (k % 3) * 0.12 // lutande axel
         const size = 0.009 + 0.016 * planet.share
         mesh.scale.setScalar(size)
         group.add(mesh)
+        // Ringar på ringplaneten
+        if (kind === 'ring') {
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(1.4, 2.4, 64, 1),
+            new THREE.MeshStandardMaterial({ color: planetColor(k), map: bandTex, alphaMap: bandTex, transparent: true, side: THREE.DoubleSide, depthWrite: false, roughness: 1 }),
+          )
+          // Ringens textur går från inner- till ytterkant
+          const uv = ring.geometry.getAttribute('uv') as THREE.BufferAttribute
+          const pos = ring.geometry.getAttribute('position') as THREE.BufferAttribute
+          for (let v = 0; v < uv.count; v++) {
+            const r = Math.hypot(pos.getX(v), pos.getY(v))
+            uv.setXY(v, (r - 1.4) / 1.0, 0.5)
+          }
+          ring.rotation.x = -Math.PI / 2
+          mesh.add(ring)
+        }
+        // Atmosfär på den jordlika: ett tunt blått sken runt kanten
+        if (kind === 'ocean') {
+          const atmo = new THREE.Mesh(
+            planetGeo,
+            new THREE.MeshBasicMaterial({ color: '#8fc2ff', transparent: true, opacity: 0.12, side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending }),
+          )
+          atmo.scale.setScalar(1.12)
+          mesh.add(atmo)
+        }
         // Perfekt månad för vanan (målet klarat varje vecka): planeten får ett eget sken.
         let halo: THREE.Sprite | null = null
         if (planet.weeksTotal > 0 && planet.weeksMet === planet.weeksTotal) {
@@ -336,10 +546,15 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         return { head, tail, a: 0.42 + 0.07 * c, b: 0.16 + 0.03 * c, tilt: 0.5 + c * 1.9, speed: 0.35 - c * 0.06, phase: c * 2.1 }
       })
       scene.add(group)
-      return { group, bodies, core, comets }
+      return { group, bodies, core, corona, rays, comets }
     })
-    scene.add(new THREE.AmbientLight('#8090c0', 0.35))
-    const sunLight = new THREE.PointLight('#ffe7c2', 3, 0, 0)
+    // Svagt omgivningsljus: planeternas nattsida blir nästan svart, som i rymden.
+    scene.add(new THREE.AmbientLight('#8090c0', 0.1))
+    // Svagt fyllnadsljus från kameran, så att planeterna mellan dig och solen inte blir helt svarta.
+    const fill = new THREE.DirectionalLight('#9fb4ff', 0.35)
+    camera.add(fill)
+    scene.add(camera)
+    const sunLight = new THREE.PointLight('#fff0d8', 3.6, 0, 0)
     scene.add(sunLight)
 
     // Bakgrundsstjärnor långt bort
@@ -485,19 +700,24 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         detail.group.visible = fade > 0
         if (fade > 0) {
           ;(detail.core.material as THREE.MeshBasicMaterial).opacity = fade
+          detail.core.rotation.y = now / 9000
+          detail.corona.material.opacity = 0.85 * fade
+          detail.rays.material.opacity = 0.7 * fade
+          detail.rays.material.rotation = Math.sin(now / 4000) * 0.04
           detail.bodies.forEach((b, k) => {
             const a = b.phase + (now / 1000) * b.speed
             b.mesh.position.set(Math.cos(a) * b.radius, 0, Math.sin(a) * b.radius)
             const picked = i === insideIndex && planetSelRef.current === k
             const material = b.mesh.material as THREE.MeshStandardMaterial
             material.opacity = fade
-            material.emissiveIntensity = picked ? 0.55 : 0.08
+            material.emissiveIntensity = picked ? 0.12 : 0.02
+            b.mesh.rotation.y = now / (2600 + k * 500)
             b.mesh.scale.setScalar(b.size * (picked ? 1.45 : 1))
             if (b.halo) {
               b.halo.position.copy(b.mesh.position)
               b.halo.material.opacity = 0.75 * fade * (0.8 + 0.2 * Math.sin(now / 500 + k))
             }
-            ;(b.orbit.material as THREE.LineBasicMaterial).opacity = (picked ? 0.55 : 0.2) * fade
+            ;(b.orbit.material as THREE.LineBasicMaterial).opacity = (picked ? 0.45 : 0.12) * fade
           })
           for (const c of detail.comets) {
             const angle = c.phase + (now / 1000) * c.speed
@@ -509,10 +729,10 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
               positions.setXYZ(t, tmp.x, tmp.y, tmp.z)
             }
             positions.needsUpdate = true
-            ;(c.tail.material as THREE.LineBasicMaterial).opacity = fade
+            ;(c.tail.material as THREE.LineBasicMaterial).opacity = 0.55 * fade
           }
         }
-        sun.scale.setScalar(sun.userData.scale * (1 - 0.75 * fade))
+        sun.scale.setScalar(sun.userData.scale * (1 - 0.88 * fade))
         rings[i].material.opacity = 0.85 * (1 - fade)
       })
       const maxFade = THREE.MathUtils.clamp((DETAIL_FROM - (near as { d: number } | null ?? { d: 99 }).d) / (DETAIL_FROM - INSIDE), 0, 1)
@@ -532,6 +752,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       // Inne i ett solsystem tonas galaxens stjärnor ner så att solen och planeterna syns.
       for (const m of fadeWhenClose) m.opacity = Math.min(1, 0.22 + closeness * 1.1) * (1 - 0.92 * maxFade)
       earnedMaterial.opacity = 1 - 0.85 * maxFade
+      for (const f of fadeInside) (f.m as THREE.SpriteMaterial).opacity = f.base * (1 - 0.92 * maxFade)
       // Panelen täcker nedre delen – flytta bilden uppåt när en månad visas.
       viewShift += ((panelShown.current ? 0.21 : 0) - viewShift) * 0.08
       camera.setViewOffset(mount.clientWidth, mount.clientHeight, 0, mount.clientHeight * viewShift, mount.clientWidth, mount.clientHeight)
@@ -559,6 +780,10 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       })
       glow.dispose()
       ringTex.dispose()
+      sunTex.dispose()
+      raysTex.dispose()
+      bandTex.dispose()
+      surfaces.forEach((t) => t.dispose())
       renderer.dispose()
       renderer.domElement.remove()
     }
