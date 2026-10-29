@@ -195,7 +195,9 @@ const nextOrder = (habits: Habit[]) => habits.reduce((max, h) => Math.max(max, h
  * Lägg till en vana sist i listan. Finns en borttagen vana med samma namn
  * tas den tillbaka i stället, så att historiken följer med.
  */
-export async function addHabit(name: string, goal: number, minimum = '', after: string[] = []): Promise<string> {
+const cleanTime = (time: string) => (/^\d\d:\d\d$/.test(time) ? time : undefined);
+
+export async function addHabit(name: string, goal: number, minimum = '', after: string[] = [], remind = ''): Promise<string> {
   const all = await getAll<Habit>('habits');
   const text = clean(name);
   const min = clean(minimum) || undefined;
@@ -204,6 +206,8 @@ export async function addHabit(name: string, goal: number, minimum = '', after: 
     ? { ...old, archived: false, order: nextOrder(all), goal: clampGoal(goal), minimum: min, after }
     : { id: newId(), name: text, goal: clampGoal(goal), created: todayKey(), after, order: nextOrder(all), archived: false };
   if (!old && min) habit.minimum = min;
+  if (cleanTime(remind)) habit.remind = cleanTime(remind);
+  else delete habit.remind;
   await change([{ store: 'habits', record: habit }]);
   return habit.id;
 }
@@ -214,14 +218,18 @@ async function updateRecord(id: string, update: (h: Habit) => Habit) {
   if (habit) await change([{ store: 'habits', record: update(habit) }]);
 }
 
-/** Ändra namn, mål, minimiversion och vilka vanor den görs efter. */
-export function updateHabit(id: string, changes: { name: string; goal: number; minimum: string; after: string[] }) {
+/** Ändra namn, mål, minimiversion, påminnelse och vilka vanor den görs efter. */
+export function updateHabit(
+  id: string,
+  changes: { name: string; goal: number; minimum: string; after: string[]; remind?: string },
+) {
   return updateRecord(id, (h) => ({
     ...h,
     name: clean(changes.name),
     goal: clampGoal(changes.goal),
     minimum: clean(changes.minimum) || undefined,
     after: changes.after.filter((a) => a !== id),
+    remind: changes.remind === undefined ? h.remind : cleanTime(changes.remind),
   }));
 }
 

@@ -52,3 +52,37 @@ self.addEventListener('fetch', (event) => {
     })(),
   );
 });
+
+// Påminnelser från Vanor (skickas av servern, se supabase/functions/reminders).
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Groundwork', {
+      body: data.body || '',
+      tag: data.tag,
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      lang: 'sv',
+      data: { url: data.url || './' },
+    }),
+  );
+});
+
+// Tryck på notisen: öppna appen (eller visa den om den redan är öppen).
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of windows) {
+        if ('focus' in client) return client.focus();
+      }
+      return self.clients.openWindow(event.notification.data?.url || './');
+    })(),
+  );
+});

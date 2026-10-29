@@ -46,6 +46,14 @@ Fliken **Vanor** är vanetrackern (tidigare en egen app). Koden ligger i `src/va
 - `sync.ts`: synk till tabellen `personal_records` i Supabase. Radsäkerheten gör att varje konto bara ser sina egna vanor, så du och Cassandra har var sin lista.
 - `transfer.ts`: flyttkod från den gamla vanetrackern (Mina vanor → Flytta från gamla vanetrackern).
 
+### Påminnelser
+
+Under Mina vanor → **Påminnelser** slår du på notiser för telefonen (på iPhone måste appen ligga på hemskärmen). Varje vana kan få en tid (Ändra → Påminnelse), och det finns en kvällspåminnelse om något måste göras för att hinna veckomålet.
+
+- `src/vanor/push.ts`, `PushSettings.tsx`: prenumerationen (web push) sparas i tabellen `push_subscriptions`.
+- `supabase/functions/reminders`: Supabase-funktionen som skickar. Den körs var 5:e minut av pg_cron (jobbet `vanor-paminnelser`). Nyckelparet skapar den själv i tabellen `push_keys`. `push_sent` ser till att samma påminnelse bara skickas en gång per dag.
+- `public/sw.js`: visar notisen och öppnar appen när du trycker på den.
+
 ## Träning
 
 Delen **Träning** (växeln överst i fliken Vanor) loggar gympass (övningar, kg × reps) och löppass (distans, tid). Koden ligger i `src/traning/`:

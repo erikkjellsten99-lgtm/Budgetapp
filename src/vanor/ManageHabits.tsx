@@ -29,6 +29,7 @@ export default function ManageHabits({ all }: { all: Habit[] }) {
                       {habitPlan(h, (id) => active.find((a) => a.id === id)?.name)}
                       {h.after.some((id) => active.some((a) => a.id === id)) ? ` · ${goalText(h.goal)}` : ''}
                       {h.minimum ? ` · minimum ${h.minimum}` : ''}
+                      {h.remind ? ` · påminnelse ${h.remind}` : ''}
                     </span>
                   </div>
                   <button type="button" className="text-btn" onClick={() => setEditing(h.id)}>
@@ -117,13 +118,29 @@ interface FieldsProps {
   name: string
   goal: number
   minimum: string
+  remind: string
   error: string | null
   setName: (v: string) => void
   setGoal: (v: number) => void
   setMinimum: (v: string) => void
+  setRemind: (v: string) => void
 }
 
-function HabitFields({ idPrefix, others, after, setAfter, name, goal, minimum, error, setName, setGoal, setMinimum }: FieldsProps) {
+function HabitFields({
+  idPrefix,
+  others,
+  after,
+  setAfter,
+  name,
+  goal,
+  minimum,
+  remind,
+  error,
+  setName,
+  setGoal,
+  setMinimum,
+  setRemind,
+}: FieldsProps) {
   return (
     <>
       <label className="field">
@@ -165,6 +182,26 @@ function HabitFields({ idPrefix, others, after, setAfter, name, goal, minimum, e
           onChange={(e) => setMinimum(e.target.value)}
         />
       </label>
+      <div className="field">
+        <label htmlFor={`${idPrefix}-remind`}>Påminnelse (valfri)</label>
+        <div className="remind-row">
+          <input
+            id={`${idPrefix}-remind`}
+            type="time"
+            value={remind}
+            step={300}
+            onChange={(e) => setRemind(e.target.value)}
+          />
+          {remind && (
+            <button type="button" className="text-btn" onClick={() => setRemind('')}>
+              Ingen
+            </button>
+          )}
+        </div>
+        <small className="field-help">
+          En notis vid den tiden om vanan inte är bockad. Slå på notiser under Påminnelser överst.
+        </small>
+      </div>
       {others.length > 0 && (
         <div className="field">
           <span id={`${idPrefix}-after`}>Görs efter (valfritt)</span>
@@ -196,6 +233,7 @@ function NewHabit({ active }: { active: Habit[] }) {
   const [name, setName] = useState('')
   const [goal, setGoal] = useState(3)
   const [minimum, setMinimum] = useState('')
+  const [remind, setRemind] = useState('')
   const [after, setAfter] = useState<string[]>([])
   const [tried, setTried] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -207,10 +245,11 @@ function NewHabit({ active }: { active: Habit[] }) {
     setTried(true)
     if (busy || nameError(name, active)) return
     setBusy(true)
-    await addHabit(name, goal, minimum, after)
+    await addHabit(name, goal, minimum, after, remind)
     setAdded(name.trim())
     setName('')
     setMinimum('')
+    setRemind('')
     setAfter([])
     setGoal(3)
     setTried(false)
@@ -227,6 +266,7 @@ function NewHabit({ active }: { active: Habit[] }) {
         name={name}
         goal={goal}
         minimum={minimum}
+        remind={remind}
         error={error}
         setName={(v) => {
           setName(v)
@@ -234,6 +274,7 @@ function NewHabit({ active }: { active: Habit[] }) {
         }}
         setGoal={setGoal}
         setMinimum={setMinimum}
+        setRemind={setRemind}
       />
       <button type="submit" className="primary" disabled={busy}>
         Lägg till
@@ -251,6 +292,7 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
   const [name, setName] = useState(habit.name)
   const [goal, setGoal] = useState(habit.goal)
   const [minimum, setMinimum] = useState(habit.minimum ?? '')
+  const [remind, setRemind] = useState(habit.remind ?? '')
   const [after, setAfter] = useState(habit.after.filter((id) => active.some((a) => a.id === id)))
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -260,7 +302,7 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
     e.preventDefault()
     if (busy || error) return
     setBusy(true)
-    await updateHabit(habit.id, { name, goal, minimum, after })
+    await updateHabit(habit.id, { name, goal, minimum, after, remind })
     onDone()
   }
 
@@ -281,10 +323,12 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
           name={name}
           goal={goal}
           minimum={minimum}
+          remind={remind}
           error={error}
           setName={setName}
           setGoal={setGoal}
           setMinimum={setMinimum}
+          setRemind={setRemind}
         />
         {confirm ? (
           <div className="confirm" role="alert">
