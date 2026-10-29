@@ -6,10 +6,13 @@
 //   och veckomålet inte redan är nått. Efter-vanor bara om en kopplad vana är bockad idag.
 // - Kvällspåminnelse: vid vald tid, om det finns vanor som måste göras idag för att hinna veckomålet.
 // - Att göra-saker med tid: vid tiden den dagen, om de inte är bockade (även pausade dagar).
+// - Rapport på söndagkvällen (en timme efter kvällspåminnelsen, annars 21:00): veckans procent och vad som drog ner.
+//   Är det månadens sista vecka blir det en månadsrapport (report.ts).
 // Samma påminnelse skickas högst en gång per dag (tabellen push_sent).
 
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4';
+import { addDays, sundayReport, weekday, type ReportHabit } from './report.ts';
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
@@ -93,14 +96,10 @@ const isDue = (hhmm: string | null | undefined, minutes: number) => {
   return diff >= 0 && diff < LATE_MINUTES;
 };
 
-function addDays(date: string, days: number): string {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-}
-/** 0 = måndag … 6 = söndag. */
-function weekday(date: string): number {
-  const [y, m, d] = date.split('-').map(Number);
-  return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+/** Rapporten kommer en timme efter kvällspåminnelsen (högst 23:00), eller 21:00 om den är avstängd. */
+function reportTime(evening: string | null): string {
+  const m = Math.min(23 * 60, (evening && /^\d\d:\d\d$/.test(evening) ? toMinutes(evening) : 20 * 60) + 60);
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
 const nameList = (names: string[]) =>
@@ -136,8 +135,8 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
   if (!subs?.length) return { subs: 0, sent: 0 };
 
   const users = [...new Set(subs.map((s) => s.user_id))];
-  // Bara bockningar från de senaste 8 dagarna behövs (veckan hittills), så att svaret håller sig litet.
-  const since = addDays(new Date().toISOString().slice(0, 10), -8);
+  // Bockningar från de senaste tio veckorna räcker (veckan hittills, och månaden plus förra månaden för rapporten).
+  const since = addDays(new Date().toISOString().slice(0, 10), -75);
   const [habitRows, checkRows, taskRows] = await Promise.all([
     admin
       .from('personal_records')
@@ -229,6 +228,11 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
           },
         });
       }
+    }
+
+    if (isDue(reportTime(sub.evening), minutes)) {
+      const report = sundayReport(habits as ReportHabit[], checks, paused, date);
+      if (report) outgoing.push({ key: report.key, payload: { title: report.title, body: report.body, tag: 'report', url: APP_URL } });
     }
 
     for (const o of outgoing) {
