@@ -160,16 +160,21 @@ export default function ProgressCard({ habits, log, paused, today, mustToday }: 
   )
 }
 
-/** Solen till höger i kortet. Den stiger rakt upp från horisonten: 0 % = vid horisonten, 100 % = högst upp. */
+/**
+ * Solen till höger i kortet. Den stiger rakt upp från horisonten (0 %) till den streckade mållinjen (100 %).
+ * Skenan längst till höger visar samma sak som en mätare.
+ */
 function SunScene({ share, done }: { share: number; done: boolean }) {
-  const W = 140
+  const W = 168
   const H = 132
   const horizon = H - 22
-  const topY = 30
+  const topY = 26
   const height = (p: number) => horizon - Math.min(1, Math.max(0, p)) * (horizon - topY)
   const s = Math.min(1, Math.max(0, share))
   const y = height(s)
-  const cx = W / 2
+  const cx = 66
+  // Skalan till höger: en tunn skena från horisonten (0 %) upp till mållinjen (100 %).
+  const rail = W - 14
 
   return (
     <svg className="ws-scene" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
@@ -187,6 +192,21 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
         </clipPath>
       </defs>
 
+      {/* Mållinjen: när solen når hit är veckans mål klart. */}
+      <line className="ws-goal" x1="8" x2={rail} y1={topY} y2={topY} />
+      <text className="ws-goal-label" x={rail - 6} y={topY - 6} textAnchor="end">
+        100 %
+      </text>
+      <line className="ws-mid" x1={rail - 5} x2={rail} y1={height(0.5)} y2={height(0.5)} />
+      <text className="ws-mid-label" x={rail - 8} y={height(0.5) + 3} textAnchor="end">
+        50
+      </text>
+
+      {/* Skenan och hur långt solen har kommit */}
+      <line className="ws-rail" x1={rail} x2={rail} y1={topY} y2={horizon} />
+      {s > 0 && <line className="ws-rail-fill" x1={rail} x2={rail} y1={y} y2={horizon} />}
+      {s > 0 && <circle className="ws-rail-dot" cx={rail} cy={y} r="3.5" />}
+
       <g clipPath="url(#ws-above)">
         <g className={done ? 'ws-sun full' : 'ws-sun'} style={{ transform: `translate(${cx}px, ${y}px)` }}>
           <circle className="ws-halo" r={30 + 14 * s} fill="url(#ws-halo)" opacity={0.45 + 0.55 * s} />
@@ -195,8 +215,8 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
       </g>
 
       <line className="ws-horizon" x1="0" x2={W} y1={horizon} y2={horizon} />
-      <line className="ws-horizon soft" x1="22" x2={W - 22} y1={horizon + 7} y2={horizon + 7} />
-      <line className="ws-horizon soft" x1="44" x2={W - 44} y1={horizon + 13} y2={horizon + 13} />
+      <line className="ws-horizon soft" x1="22" x2={W - 40} y1={horizon + 7} y2={horizon + 7} />
+      <line className="ws-horizon soft" x1="44" x2={W - 62} y1={horizon + 13} y2={horizon + 13} />
     </svg>
   )
 }
