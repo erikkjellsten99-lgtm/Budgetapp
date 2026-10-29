@@ -1901,3 +1901,135 @@
   min-height: 52px;
   border-radius: 14px;
 }
+
+/* Vecka | Månad överst i kortet */
+.vanor .ws-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin: 10px 10px 0;
+  padding: 3px;
+  background: var(--sunk);
+  border-radius: 10px;
+}
+
+.vanor .ws-switch button {
+  min-height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.vanor .ws-switch button.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.vanor .week-sun > .ws-hero {
+  margin-top: 10px;
+}
+
+/* Månaden: rymden är mörk i både ljust och mörkt läge */
+.vanor .ws-hero.space {
+  background: radial-gradient(120% 140% at 70% 50%, #1d2550 0%, #10162e 55%, #0a0e1f 100%);
+}
+
+.vanor .ws-hero.space::before {
+  display: none;
+}
+
+.vanor .ws-hero.space .ws-label,
+.vanor .ws-hero.space .ws-sub {
+  color: #aab4d8;
+}
+
+.vanor .ws-hero.space .ws-big {
+  color: #f1f3ff;
+}
+
+.vanor .galaxy {
+  flex: none;
+  width: 200px;
+  height: 132px;
+  margin-right: 2px;
+}
+
+.vanor .gx-star {
+  fill: #ffffff;
+}
+
+.vanor .gx-orbit {
+  fill: none;
+  stroke: #8a96c8;
+  stroke-width: 0.7;
+  opacity: 0.35;
+}
+
+.vanor .gx-week.future .gx-orbit {
+  stroke-dasharray: 2 3;
+  opacity: 0.25;
+}
+
+.vanor .gx-slot {
+  fill: none;
+  stroke: #8a96c8;
+  stroke-width: 0.8;
+  opacity: 0.6;
+}
+
+.vanor .gx-ring {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 0.8;
+  opacity: 0.55;
+}
+
+/* Tidigare månader */
+.vanor .gx-archive {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 16px 14px 20px;
+}
+
+.vanor .gx-archive-title {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.vanor .gx-archive ol {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0 0 2px;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.vanor .gx-archive li {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-top: 0;
+}
+
+.vanor .galaxy.small {
+  width: 96px;
+  height: 64px;
+  background: radial-gradient(120% 140% at 50% 50%, #1d2550 0%, #0e1328 70%);
+  border-radius: 10px;
+}
+
+.vanor .gx-archive li span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+}

@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import { addDays, isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
+import { MonthView } from './Galaxy'
 import { change, habitTrends, weeklyScores } from './progress'
 
 interface Props {
@@ -10,6 +11,17 @@ interface Props {
   today: DateKey
   /** Det som måste göras idag och inte är gjort än (namn), för beskedet under solen. */
   mustToday: string[]
+}
+
+type View = 'week' | 'month'
+const VIEW_KEY = 'vanor-sol-vy'
+
+function savedView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'month' ? 'month' : 'week'
+  } catch {
+    return 'week'
+  }
 }
 
 /** "+12" / "−5" / "±0". */
@@ -36,6 +48,15 @@ function Change({ value, unit = '%-enheter' }: { value: number | null; unit?: st
  */
 export default function ProgressCard({ habits, log, paused, today, mustToday }: Props) {
   const [open, setOpen] = useState(false)
+  const [view, setView] = useState<View>(savedView)
+  const chooseView = (next: View) => {
+    setView(next)
+    try {
+      localStorage.setItem(VIEW_KEY, next)
+    } catch {
+      // Valet sparas bara inte till nästa gång.
+    }
+  }
   const weeks = weeklyScores(habits, log, paused, today)
   const current = weeks[weeks.length - 1]
   const full = weeks.filter((w) => !w.current && w.pct !== null)
@@ -72,6 +93,30 @@ export default function ProgressCard({ habits, log, paused, today, mustToday }: 
 
   return (
     <section className="week-sun" aria-labelledby="sun-title" style={{ '--warm': Math.min(1, pct / 100) } as CSSProperties}>
+      <div className="ws-switch" role="tablist" aria-label="Vecka eller månad">
+        {(
+          [
+            ['week', 'Vecka'],
+            ['month', 'Månad'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={view === id}
+            className={view === id ? 'on' : undefined}
+            onClick={() => chooseView(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'month' ? (
+        <MonthView habits={habits} log={log} paused={paused} today={today} />
+      ) : (
+      <>
       <div className="ws-hero">
         <div className="ws-text">
           <span className="ws-label" id="sun-title">
@@ -155,6 +200,8 @@ export default function ProgressCard({ habits, log, paused, today, mustToday }: 
             ))}
           </ul>
         </div>
+      )}
+      </>
       )}
     </section>
   )

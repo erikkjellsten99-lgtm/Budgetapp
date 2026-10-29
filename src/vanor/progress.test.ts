@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Habit, Log } from './habits'
-import { change, habitTrends, weeklyScores } from './progress'
+import { change, habitTrends, monthMondays, monthName, monthOfWeek, monthScore, previousMonth, weeklyScores } from './progress'
 
 const make = (id: string, goal: number, created = '2026-09-01'): Habit => ({
   id,
@@ -75,4 +75,32 @@ it('räknar inte en vecka där vanan bara fanns en dag', () => {
   const [t] = habitTrends([make('d', 7, '2026-10-25')], logOf([['2026-10-25', ['d']]]), NONE, TODAY)
   expect(t.weeks).toBe(0)
   expect(t.pct).toBeNull()
+})
+
+describe('månaden (galaxen)', () => {
+  it('månadens veckor är de vars torsdag ligger i månaden', () => {
+    expect(monthMondays('2026-10')).toEqual(['2026-09-28', '2026-10-05', '2026-10-12', '2026-10-19', '2026-10-26'])
+    expect(monthMondays('2026-11')).toEqual(['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23'])
+    expect(monthOfWeek('2026-11-30')).toBe('2026-12')
+  })
+
+  it('räknar hela månadens mål, så 100 % kräver alla veckor', () => {
+    const h = make('h', 2)
+    const log = logOf([
+      ['2026-10-26', ['h']],
+      ['2026-10-27', ['h']],
+    ])
+    // 1 dag in i november: bara vecka 1 av 4 har gått, och den är klar.
+    const nov = monthScore([h], { ...log, '2026-11-02': ['h'], '2026-11-03': ['h'] }, NONE, '2026-11-04')
+    expect(nov.weeks.map((w) => w.state)).toEqual(['current', 'future', 'future', 'future'])
+    expect(nov.pct).toBe(25)
+    expect(nov.checks).toBe(2)
+    expect(nov.weeks[0].pct).toBe(100)
+  })
+
+  it('månadens namn och föregående månad', () => {
+    expect(monthName('2026-10', '2026-10-29')).toBe('oktober')
+    expect(monthName('2025-12', '2026-10-29')).toBe('december 2025')
+    expect(previousMonth('2026-01')).toBe('2025-12')
+  })
 })
