@@ -2540,3 +2540,49 @@
 .vanor .gx-events span {
   color: #8fc8ff;
 }
+
+/* Veckan: soluppgång sedd från rymden, samma bildspråk som månadens solsystem */
+.vanor .ws-hero.sunrise {
+  aspect-ratio: 360 / 150;
+  min-height: 140px;
+  max-height: 200px;
+}
+
+.vanor .ws-hero.sunrise .ws-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.vanor .ws-scene.sunrise .sr-fade {
+  transition: opacity 0.8s ease;
+}
+
+.vanor .ws-scene.sunrise .ws-goal {
+  stroke: #e9edff;
+  opacity: 0.45;
+}
+
+.vanor .ws-scene.sunrise .ws-goal-label,
+.vanor .ws-scene.sunrise .ws-mid-label {
+  fill: #c3cbec;
+}
+
+.vanor .ws-scene.sunrise .ws-mid {
+  stroke: #c3cbec;
+}
+
+.vanor .ws-scene.sunrise .ws-rail {
+  stroke: rgb(255 255 255 / 0.16);
+}
+
+.vanor .ws-scene.sunrise .ws-rail-fill {
+  stroke: #ffc46b;
+}
+
+.vanor .ws-scene.sunrise .ws-rail-dot {
+  fill: #0b1022;
+  stroke: #ffc46b;
+}
