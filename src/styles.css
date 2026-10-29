@@ -33,7 +33,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     color-scheme: dark;
     --bg: #101512;
     --card: #191f1b;
@@ -54,6 +54,29 @@
     --hero-muted: #c2d0c6;
     --shadow: 0 1px 2px rgb(0 0 0 / 16%), 0 8px 24px rgb(0 0 0 / 10%);
   }
+}
+
+/* Mörkt läge valt i appen (Konto → Utseende) */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #101512;
+  --card: #191f1b;
+  --card-raised: #202823;
+  --text: #f0f3f0;
+  --muted: #b0bbb3;
+  --border: #343e37;
+  --accent: #79c99a;
+  --accent-hover: #92d9ad;
+  --accent-soft: #24372b;
+  --danger: #ff9b90;
+  --danger-soft: #402724;
+  --chart-main: #79c99a;
+  --chart-ref: #a0ada4;
+  --focus: #9bdfb2;
+  --hero-bg: #202b24;
+  --hero-text: #f3f7f3;
+  --hero-muted: #c2d0c6;
+  --shadow: 0 1px 2px rgb(0 0 0 / 16%), 0 8px 24px rgb(0 0 0 / 10%);
 }
 
 * {
@@ -329,9 +352,14 @@ button.primary {
 }
 
 @media (prefers-color-scheme: dark) {
-  button.primary {
+  :root:not([data-theme='light']) button.primary {
     color: #102016;
   }
+}
+
+/* Mörkt läge valt i appen (Konto → Utseende) */
+:root[data-theme='dark'] button.primary {
+  color: #102016;
 }
 
 button.danger {
@@ -1525,10 +1553,16 @@ main > div > h2 + .hint {
 }
 
 @media (prefers-color-scheme: dark) {
-  .forecast-chart {
+  :root:not([data-theme='light']) .forecast-chart {
     --fc-save: #4aa673;
     --fc-loan: #9f7fd4;
   }
+}
+
+/* Mörkt läge valt i appen (Konto → Utseende) */
+:root[data-theme='dark'] .forecast-chart {
+  --fc-save: #4aa673;
+  --fc-loan: #9f7fd4;
 }
 
 .chart-legend {
@@ -1967,4 +2001,56 @@ main > div > h2 + .hint {
 .vanor-column {
   max-width: 40rem;
   margin: 0 auto;
+}
+
+/* Utseende: Automatiskt / Ljust / Mörkt */
+.theme-picker {
+  padding-bottom: 1rem;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin: 0 1rem;
+  padding: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.theme-options button {
+  min-height: 40px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.theme-options button.on {
+  background: var(--card-raised);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+.theme-note {
+  margin: 0.5rem 1rem 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.theme-in-sheet {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.theme-in-sheet .theme-picker h3,
+.theme-in-sheet .theme-options,
+.theme-in-sheet .theme-note {
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
 }

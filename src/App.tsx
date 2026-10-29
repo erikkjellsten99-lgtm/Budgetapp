@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import Account from './Account';
+import ThemePicker from './ThemePicker';
 import {
   budgetMonth,
   currentMonth,
@@ -229,6 +230,9 @@ export default function App() {
         </div>
         <div hidden={view !== 'account'}>
           <Account sync={sync} />
+          <div className="card">
+            <ThemePicker />
+          </div>
         </div>
       </main>
     </div>
