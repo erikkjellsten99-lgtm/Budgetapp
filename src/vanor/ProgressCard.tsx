@@ -117,7 +117,7 @@ export default function ProgressCard({ habits, log, paused, today, mustToday }: 
         <MonthView habits={habits} log={log} paused={paused} today={today} />
       ) : (
       <>
-      <div className="ws-hero">
+      <div className="ws-hero space sunrise">
         <div className="ws-text">
           <span className="ws-label" id="sun-title">
             Vecka {isoWeek(today)}
@@ -207,41 +207,177 @@ export default function ProgressCard({ habits, log, paused, today, mustToday }: 
   )
 }
 
+/** Slumptal med frö, så att stjärnorna ligger på samma ställe varje gång. */
+function seeded(seed: number) {
+  let t = seed >>> 0
+  return () => {
+    t += 0x6d2b79f5
+    let r = Math.imul(t ^ (t >>> 15), 1 | t)
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r)
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+const STARS = (() => {
+  const rand = seeded(44)
+  return Array.from({ length: 130 }, () => ({ x: rand() * 360, y: rand() * 112, r: 0.2 + rand() * 0.55, o: 0.25 + rand() * 0.65 }))
+})()
+
+/** Städernas ljus på planetens nattsida – svaga punkter som bleknar när solen går upp. */
+const CITIES = (() => {
+  const rand = seeded(1029)
+  return Array.from({ length: 70 }, () => {
+    const x = rand() * 360
+    // Fler ljus i kluster, som kuster och storstäder.
+    const cluster = rand() < 0.6
+    return { x: cluster ? 40 + (rand() - 0.5) * 60 + (rand() < 0.5 ? 0 : 230) : x, y: 117 + rand() * 30, r: 0.25 + rand() * 0.45, o: 0.3 + rand() * 0.6 }
+  })
+})()
+
+/** Solens strålar: tunna, avsmalnande streck som från en kameralins. */
+const RAYS = [
+  { angle: 0, len: 62, w: 1.1, o: 0.55 },
+  { angle: 90, len: 30, w: 0.9, o: 0.35 },
+  { angle: 32, len: 24, w: 0.6, o: 0.28 },
+  { angle: 148, len: 24, w: 0.6, o: 0.28 },
+]
+
 /**
- * Solen till höger i kortet. Den stiger rakt upp från horisonten (0 %) till den streckade mållinjen (100 %).
- * Skenan längst till höger visar samma sak som en mätare.
+ * Veckans soluppgång, sedd från rymden: solen stiger över en planets horisont mot den streckade mållinjen (100 %).
+ * Rymden är svart med stjärnor. Atmosfären lyser som ett tunt band längs horisonten – orange närmast, blått ovanför –
+ * och blir starkare ju närmare målet du kommer, medan stjärnorna och städernas ljus bleknar.
+ * Samma bildspråk som månadens solsystem och 3D-galaxen.
  */
 function SunScene({ share, done }: { share: number; done: boolean }) {
-  const W = 168
-  const H = 132
-  const horizon = H - 22
-  const topY = 26
-  const height = (p: number) => horizon - Math.min(1, Math.max(0, p)) * (horizon - topY)
+  const W = 360
+  const H = 150
+  const horizon = 112 // planetens horisont där solen står
+  const topY = 38 // mållinjen, 100 %
+  const height = (p: number) => horizon + 5 - Math.min(1, Math.max(0, p)) * (horizon + 5 - topY)
   const s = Math.min(1, Math.max(0, share))
   const y = height(s)
-  const cx = 66
-  // Skalan till höger: en tunn skena från horisonten (0 %) upp till mållinjen (100 %).
-  const rail = W - 14
+  const cx = 236
+  const rail = W - 16
+  const R = 900 // planetens radie – stor så att horisonten bara böjer sig lite
+  const planetY = horizon + R
+  const near = (x: number) => Math.max(0, 1 - Math.abs(x - cx) / 120) // 1 nära solen, 0 långt bort
 
   return (
-    <svg className="ws-scene" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+    <svg className="ws-scene sunrise" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <defs>
-        <radialGradient id="ws-disc" cx="0.4" cy="0.35" r="0.75">
-          <stop offset="0" className="ws-disc-a" />
-          <stop offset="1" className="ws-disc-b" />
+        <linearGradient id="sr-space" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#020309" />
+          <stop offset="0.75" stopColor="#050916" />
+          <stop offset="1" stopColor="#0a1124" />
+        </linearGradient>
+        {/* Ljuset som sprids i rymden nära horisonten när solen går upp */}
+        <radialGradient id="sr-scatter" cx={cx} cy={horizon} r="210" gradientTransform={`translate(${cx} ${horizon}) scale(1 0.45) translate(${-cx} ${-horizon})`} gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#ffcf8f" stopOpacity="0.55" />
+          <stop offset="0.25" stopColor="#e9875f" stopOpacity="0.22" />
+          <stop offset="0.6" stopColor="#3a4fa8" stopOpacity="0.14" />
+          <stop offset="1" stopColor="#1a2560" stopOpacity="0" />
         </radialGradient>
-        <radialGradient id="ws-halo">
-          <stop offset="0" className="ws-halo-a" />
-          <stop offset="1" className="ws-halo-b" />
+        <radialGradient id="sr-bloom">
+          <stop offset="0" stopColor="#fffaf0" stopOpacity="1" />
+          <stop offset="0.12" stopColor="#fff1cc" stopOpacity="0.85" />
+          <stop offset="0.35" stopColor="#ffc979" stopOpacity="0.28" />
+          <stop offset="1" stopColor="#ff9a4a" stopOpacity="0" />
         </radialGradient>
-        <clipPath id="ws-above">
-          <rect x="0" y="0" width={W} height={horizon} />
+        <linearGradient id="sr-ray" x1="0" x2="1">
+          <stop offset="0" stopColor="#fff3d6" stopOpacity="0" />
+          <stop offset="0.5" stopColor="#fff3d6" stopOpacity="1" />
+          <stop offset="1" stopColor="#fff3d6" stopOpacity="0" />
+        </linearGradient>
+        <radialGradient id="sr-ground" cx={cx} cy={horizon} r="300" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#1c1a2e" />
+          <stop offset="0.35" stopColor="#0a0e1d" />
+          <stop offset="1" stopColor="#03050b" />
+        </radialGradient>
+        {/* Atmosfärens band: varmt nära solen, blått längre bort */}
+        <linearGradient id="sr-limb-warm" x1="0" x2={W} y1="0" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#ff8a4a" stopOpacity="0" />
+          <stop offset={cx / W - 0.22} stopColor="#ff9a55" stopOpacity="0.35" />
+          <stop offset={cx / W} stopColor="#ffe2a8" stopOpacity="1" />
+          <stop offset={cx / W + 0.2} stopColor="#ff9a55" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#ff8a4a" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="sr-limb-blue" x1="0" x2={W} y1="0" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#3f6fe0" stopOpacity="0.25" />
+          <stop offset={cx / W} stopColor="#8fb8ff" stopOpacity="1" />
+          <stop offset="1" stopColor="#3f6fe0" stopOpacity="0.25" />
+        </linearGradient>
+        <filter id="sr-soft" x="-10%" y="-50%" width="120%" height="200%">
+          <feGaussianBlur stdDeviation="2.2" />
+        </filter>
+        <filter id="sr-softer" x="-10%" y="-100%" width="120%" height="300%">
+          <feGaussianBlur stdDeviation="5" />
+        </filter>
+        <filter id="sr-clouds" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.01 0.1" numOctaves="4" seed="7" />
+          <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 0.84  0 0 0 0 0.7  0 0 0 2.4 -1.15" />
+        </filter>
+        <clipPath id="sr-planet">
+          <circle cx={cx} cy={planetY} r={R} />
         </clipPath>
+        <radialGradient id="sr-lit" cx={cx} cy={horizon} r="150" gradientTransform={`translate(${cx} ${horizon}) scale(1 0.35) translate(${-cx} ${-horizon})`} gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#fff" />
+          <stop offset="1" stopColor="#000" />
+        </radialGradient>
+        <mask id="sr-lit-mask">
+          <rect width={W} height={H} fill="url(#sr-lit)" />
+        </mask>
       </defs>
 
+      {/* Rymden med stjärnor – stjärnorna bleknar när ljuset ökar */}
+      <rect width={W} height={H} fill="url(#sr-space)" />
+      <g className="sr-fade" opacity={1 - 0.7 * s}>
+        {STARS.map((st, i) => (
+          <circle key={i} cx={st.x} cy={st.y} r={st.r} fill="#dfe6ff" opacity={st.o * (1 - 0.8 * near(st.x) * s)} />
+        ))}
+      </g>
+      <rect className="sr-fade" width={W} height={H} fill="url(#sr-scatter)" opacity={0.3 + 0.7 * s} />
+
+      {/* Solen: bländande kärna, mjukt sken och tunna strålar */}
+      <g className={done ? 'ws-sun full' : 'ws-sun'} style={{ transform: `translate(${cx}px, ${y}px)` }}>
+        <circle className="ws-halo" r={30 + 16 * s} fill="url(#sr-bloom)" />
+        {RAYS.map((ray) => (
+          <rect
+            key={ray.angle}
+            x={-ray.len}
+            y={-ray.w / 2}
+            width={ray.len * 2}
+            height={ray.w}
+            fill="url(#sr-ray)"
+            opacity={ray.o * (0.5 + 0.5 * s)}
+            transform={`rotate(${ray.angle})`}
+          />
+        ))}
+        <circle r="6.5" fill="#fffdf6" />
+      </g>
+
+      {/* Planeten: nattsida med städernas ljus, moln som lyses upp närmast solen och en solreflex */}
+      <circle cx={cx} cy={planetY} r={R} fill="url(#sr-ground)" />
+      <g clipPath="url(#sr-planet)">
+        <g className="sr-fade" opacity={0.9 - 0.5 * s}>
+          {CITIES.map((c, i) => (
+            <circle key={i} cx={c.x} cy={c.y} r={c.r} fill="#ffd08a" opacity={c.o * (1 - near(c.x))} />
+          ))}
+        </g>
+        <g mask="url(#sr-lit-mask)">
+          <rect className="sr-fade" y={horizon - 4} width={W} height={H - horizon + 4} filter="url(#sr-clouds)" opacity={0.2 + 0.5 * s} />
+        </g>
+        <ellipse className="sr-fade" cx={cx} cy={horizon + 5} rx={26 + 20 * s} ry="2.6" fill="#ffd9a0" filter="url(#sr-soft)" opacity={0.15 + 0.45 * s} />
+      </g>
+
+      {/* Atmosfären längs horisonten: blått dis ytterst, orange band närmast, en skarp ljus kant */}
+      <circle className="sr-fade" cx={cx} cy={planetY} r={R + 8} fill="none" stroke="url(#sr-limb-blue)" strokeWidth="14" filter="url(#sr-softer)" opacity={0.4 + 0.45 * s} />
+      <circle className="sr-fade" cx={cx} cy={planetY} r={R + 2.5} fill="none" stroke="url(#sr-limb-warm)" strokeWidth="5" filter="url(#sr-soft)" opacity={0.5 + 0.5 * s} />
+      <circle cx={cx} cy={planetY} r={R + 0.5} fill="none" stroke="url(#sr-limb-warm)" strokeWidth="1.3" opacity={0.6 + 0.4 * s} />
+      <circle cx={cx} cy={planetY} r={R + 1.6} fill="none" stroke="url(#sr-limb-blue)" strokeWidth="0.6" opacity={0.35 + 0.3 * s} />
+
       {/* Mållinjen: när solen når hit är veckans mål klart. */}
-      <line className="ws-goal" x1="8" x2={rail} y1={topY} y2={topY} />
-      <text className="ws-goal-label" x={rail - 6} y={topY - 6} textAnchor="end">
+      <line className="ws-goal" x1="160" x2={rail} y1={topY} y2={topY} />
+      <text className="ws-goal-label" x={rail - 7} y={topY - 6} textAnchor="end">
         100 %
       </text>
       <line className="ws-mid" x1={rail - 5} x2={rail} y1={height(0.5)} y2={height(0.5)} />
@@ -250,20 +386,9 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
       </text>
 
       {/* Skenan och hur långt solen har kommit */}
-      <line className="ws-rail" x1={rail} x2={rail} y1={topY} y2={horizon} />
-      {s > 0 && <line className="ws-rail-fill" x1={rail} x2={rail} y1={y} y2={horizon} />}
-      {s > 0 && <circle className="ws-rail-dot" cx={rail} cy={y} r="3.5" />}
-
-      <g clipPath="url(#ws-above)">
-        <g className={done ? 'ws-sun full' : 'ws-sun'} style={{ transform: `translate(${cx}px, ${y}px)` }}>
-          <circle className="ws-halo" r={30 + 14 * s} fill="url(#ws-halo)" opacity={0.45 + 0.55 * s} />
-          <circle r="15" fill="url(#ws-disc)" />
-        </g>
-      </g>
-
-      <line className="ws-horizon" x1="0" x2={W} y1={horizon} y2={horizon} />
-      <line className="ws-horizon soft" x1="22" x2={W - 40} y1={horizon + 7} y2={horizon + 7} />
-      <line className="ws-horizon soft" x1="44" x2={W - 62} y1={horizon + 13} y2={horizon + 13} />
+      <line className="ws-rail" x1={rail} x2={rail} y1={topY} y2={horizon + 5} />
+      {s > 0 && <line className="ws-rail-fill" x1={rail} x2={rail} y1={y} y2={horizon + 5} />}
+      {s > 0 && <circle className="ws-rail-dot" cx={rail} cy={y} r="3" />}
     </svg>
   )
 }
