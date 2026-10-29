@@ -1114,81 +1114,197 @@
   color: var(--done);
 }
 
-/* Utveckling i procent */
-.vanor .pc-card {
+/* Veckans sol: utveckling överst i Vanor */
+.vanor {
+  --sun: #e9a23b;
+  --sun-glow: #f6c56b;
+  --sky: #eef4ef;
+  --ground: #dfe8e1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .vanor {
+    --sun: #f2b452;
+    --sun-glow: #c98a2e;
+    --sky: #17211b;
+    --ground: #222d26;
+  }
+}
+
+.vanor .week-sun {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 18px 18px 8px;
+  gap: 12px;
+  padding: 0 0 6px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 18px;
+  overflow: hidden;
 }
 
-.vanor .pc-head {
+.vanor .ws-scene {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.vanor .ws-sky {
+  fill: var(--sky);
+}
+
+.vanor .ws-glow-in {
+  stop-color: var(--sun-glow);
+}
+
+.vanor .ws-glow-out {
+  stop-color: var(--sky);
+}
+
+.vanor .ws-ground {
+  fill: var(--ground);
+}
+
+.vanor .ws-horizon {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.vanor .ws-arc {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 5;
+  opacity: 0.5;
+}
+
+.vanor .ws-path {
+  fill: none;
+  stroke: var(--sun);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+
+.vanor .ws-mark {
+  fill: var(--surface);
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+
+.vanor .ws-top {
+  fill: var(--muted);
+  opacity: 0.6;
+}
+
+.vanor .ws-sun circle {
+  fill: var(--sun);
+}
+
+.vanor .ws-sun line {
+  stroke: var(--sun);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.vanor .ws-sun {
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.vanor .ws-sun.full {
+  animation: ws-pulse 2.4s ease-in-out infinite;
+  transform-box: fill-box;
+}
+
+@keyframes ws-pulse {
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vanor .ws-sun,
+  .vanor .ws-sun.full {
+    animation: none;
+    transition: none;
+  }
+}
+
+.vanor .ws-stats {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
+  margin-top: -6px;
+  padding: 0 18px;
 }
 
-.vanor .pc-head > div:first-child {
+.vanor .ws-now,
+.vanor .ws-last {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.vanor .pc-label {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.vanor .pc-big {
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  font-size: 2.2rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-}
-
-.vanor .pc-sub {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.vanor .pc-now {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: flex-end;
   gap: 1px;
-  padding: 10px 12px;
-  background: var(--sunk);
-  border-radius: 12px;
+}
+
+.vanor .ws-last {
+  align-items: flex-end;
   text-align: right;
 }
 
-.vanor .pc-now span {
+.vanor .ws-label {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
-.vanor .pc-now b {
+.vanor .ws-big {
+  font-size: 2.2rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  font-size: 1.05rem;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
-.vanor .pc-now.ok {
+.vanor .ws-sub {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.vanor .ws-last b {
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vanor .ws-msg {
+  margin: 0 18px;
+  padding: 10px 12px;
+  background: var(--warn-soft);
+  border-radius: 12px;
+  color: var(--warn);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.vanor .ws-msg.ok {
   background: var(--done-soft);
+  color: var(--done);
 }
 
-.vanor .pc-now.ok b,
-.vanor .pc-now.ok span:last-child {
-  color: var(--done);
+.vanor .ws-toggle {
+  align-self: center;
+}
+
+.vanor .ws-more {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 18px 8px;
+}
+
+.vanor .ws-note {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
 }
 
 .vanor .trend {
