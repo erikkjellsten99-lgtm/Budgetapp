@@ -84,12 +84,3 @@ export function habitTrends(habits: Habit[], log: Log, paused: Paused, today: Da
 export function change(now: number | null, before: number | null): number | null {
   return now === null || before === null ? null : now - before
 }
-
-/**
- * Var du borde vara den pågående veckan om du ska nå målen: andel av veckan som gått.
- * Måndag kväll = 1/7, söndag = 7/7. Används för att visa "i fas" eller "efter".
- */
-export function weekElapsed(today: DateKey): number {
-  const days = Math.round((Date.parse(today) - Date.parse(weekStart(today))) / 86_400_000) + 1
-  return days / 7
-}

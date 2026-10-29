@@ -1967,3 +1967,9 @@ main > div > h2 + .hint {
     font-size: 0.88rem;
   }
 }
+
+/* Vanor & träning: en lagom bred spalt på datorn, så att listan inte dras ut över hela skärmen. */
+.health-tab {
+  max-width: 40rem;
+  margin: 0 auto;
+}
