@@ -31,6 +31,14 @@ const PLANETS = [
 
 const ORBIT_ANGLES = [215, 320, 150, 35, 255]
 
+/** Solens strålar, som från en kameralins (samma som i veckans soluppgång). */
+const SUN_RAYS = [
+  { angle: 0, len: 74, w: 1.1, o: 0.5 },
+  { angle: 90, len: 30, w: 0.9, o: 0.32 },
+  { angle: 32, len: 24, w: 0.6, o: 0.25 },
+  { angle: 148, len: 24, w: 0.6, o: 0.25 },
+]
+
 /** Enkel slumpgenerator med frö, så att stjärnorna ligger på samma ställe varje gång. */
 function seeded(seed: number) {
   let t = seed >>> 0
@@ -103,7 +111,7 @@ export function GalaxyScene({
     const x = cx + rx * Math.cos(angle)
     const y = cy + ry * Math.sin(angle)
     const behind = Math.sin(angle) < 0
-    const size = w.pct ? (2.2 + 6.8 * Math.min(1, w.pct / 100)) * (small ? 0.55 : 1) * (behind ? 0.88 : 1) : 0
+    const size = w.pct ? (2.8 + 8 * Math.min(1, w.pct / 100)) * (small ? 0.55 : 1) * (behind ? 0.88 : 1) : 0
     return { w, i, rx, ry, x, y, behind, size, type: PLANETS[i % PLANETS.length] }
   })
 
@@ -135,47 +143,71 @@ export function GalaxyScene({
       )
     }
     const perfect = (p.w.pct ?? 0) >= 100
-    // Ljuset kommer från solen: gradientens ljuspunkt förskjuts mot solen.
+    // Ljuset kommer från solen: belyst sida mot solen, skuggsida bort från den (som en riktig planet).
     const dx = cx - p.x
     const dy = cy - p.y
     const len = Math.hypot(dx, dy) || 1
-    const fx = 0.5 + (dx / len) * 0.32
-    const fy = 0.5 + (dy / len) * 0.32
+    const ux = dx / len
+    const uy = dy / len
+    const fx = 0.5 + ux * 0.3
+    const fy = 0.5 + uy * 0.3
     const gid = `gx-p${p.i}-${id}`
+    const r = p.size
+    const tilt = -12
+    const textured = !small && r > 3
     return (
-      <g key={p.w.monday} opacity={p.behind && !perfect ? 0.85 : 1} {...pickable(p)}>
+      <g key={p.w.monday} opacity={p.behind && !perfect ? 0.88 : 1} {...pickable(p)}>
         {hit(p)}
         {/* Perfekt vecka: planeten lyser upp med ett eget sken. */}
-        {perfect && <circle cx={p.x} cy={p.y} r={p.size * 3.2 + 4} fill={`url(#gx-perfect-${id})`} />}
+        {perfect && <circle cx={p.x} cy={p.y} r={r * 3.2 + 4} fill={`url(#gx-perfect-${id})`} />}
         <defs>
-          <radialGradient id={gid} cx={fx} cy={fy} fx={fx} fy={fy} r="0.85">
+          <radialGradient id={gid} cx={fx} cy={fy} fx={fx} fy={fy} r="0.9">
             <stop offset="0" stopColor={p.type.light} />
-            <stop offset="0.55" stopColor={p.type.light} stopOpacity="0.85" />
+            <stop offset="0.6" stopColor={p.type.light} stopOpacity="0.9" />
             <stop offset="1" stopColor={p.type.dark} />
           </radialGradient>
+          <linearGradient id={`${gid}-sh`} x1={0.5 + ux * 0.5} y1={0.5 + uy * 0.5} x2={0.5 - ux * 0.5} y2={0.5 - uy * 0.5}>
+            <stop offset="0" stopColor="#02030a" stopOpacity="0" />
+            <stop offset="0.48" stopColor="#02030a" stopOpacity="0" />
+            <stop offset="0.66" stopColor="#02030a" stopOpacity="0.72" />
+            <stop offset="1" stopColor="#02030a" stopOpacity="0.94" />
+          </linearGradient>
+          <linearGradient id={`${gid}-rim`} x1={0.5 + ux * 0.5} y1={0.5 + uy * 0.5} x2={0.5 - ux * 0.5} y2={0.5 - uy * 0.5}>
+            <stop offset="0" stopColor="#fffaf0" stopOpacity="0.85" />
+            <stop offset="0.45" stopColor="#fffaf0" stopOpacity="0" />
+          </linearGradient>
+          <clipPath id={`${gid}-clip`}>
+            <circle cx={p.x} cy={p.y} r={r} />
+          </clipPath>
         </defs>
-        {p.type.kind === 'ocean' && <circle cx={p.x} cy={p.y} r={p.size * 1.18} fill="#7fb6ff" opacity="0.18" />}
+        {p.type.kind === 'ocean' && <circle cx={p.x} cy={p.y} r={r * 1.22} fill={`url(#gx-atmo-${id})`} />}
         {p.type.kind === 'ring' && (
-          <ellipse cx={p.x} cy={p.y} rx={p.size * 2.1} ry={p.size * 0.55} className="gx-ring-back" transform={`rotate(-12 ${p.x} ${p.y})`} />
+          <ellipse cx={p.x} cy={p.y} rx={r * 2.15} ry={r * 0.5} className="gx-ring-back" transform={`rotate(${tilt} ${p.x} ${p.y})`} />
         )}
-        <circle cx={p.x} cy={p.y} r={p.size} fill={`url(#${gid})`} />
-        {p.type.kind === 'gas' && p.size > 3 && (
-          <g clipPath={`url(#${gid}-clip)`} opacity="0.35">
-            <clipPath id={`${gid}-clip`}>
-              <circle cx={p.x} cy={p.y} r={p.size} />
-            </clipPath>
-            <rect x={p.x - p.size} y={p.y - p.size * 0.35} width={p.size * 2} height={p.size * 0.18} fill="#8a6236" />
-            <rect x={p.x - p.size} y={p.y + p.size * 0.2} width={p.size * 2} height={p.size * 0.14} fill="#8a6236" />
+        <circle cx={p.x} cy={p.y} r={r} fill={`url(#${gid})`} />
+        {/* Yta: band på gasjättar, fläckar på steniga planeter, moln på den jordlika */}
+        {textured && (
+          <g clipPath={`url(#${gid}-clip)`}>
+            <rect
+              x={p.x - r}
+              y={p.y - r}
+              width={r * 2}
+              height={r * 2}
+              filter={`url(#gx-surf-${p.type.kind === 'gas' || p.type.kind === 'ring' ? 'band' : p.type.kind === 'ocean' ? 'cloud' : 'rock'}-${id})`}
+              opacity={p.type.kind === 'ocean' ? 0.55 : 0.4}
+              transform={p.type.kind === 'gas' || p.type.kind === 'ring' ? `rotate(${tilt} ${p.x} ${p.y})` : undefined}
+            />
           </g>
         )}
+        <circle cx={p.x} cy={p.y} r={r} fill={`url(#${gid}-sh)`} />
+        <circle cx={p.x} cy={p.y} r={r - 0.2} fill="none" stroke={`url(#${gid}-rim)`} strokeWidth={small ? 0.3 : 0.5} />
         {p.type.kind === 'ring' && (
           <path
             className="gx-ring-front"
-            d={`M ${p.x - p.size * 2.1} ${p.y} A ${p.size * 2.1} ${p.size * 0.55} 0 0 0 ${p.x + p.size * 2.1} ${p.y}`}
-            transform={`rotate(-12 ${p.x} ${p.y})`}
+            d={`M ${p.x - r * 2.15} ${p.y} A ${r * 2.15} ${r * 0.5} 0 0 0 ${p.x + r * 2.15} ${p.y}`}
+            transform={`rotate(${tilt} ${p.x} ${p.y})`}
           />
         )}
-        {perfect && <circle cx={p.x - p.size * 0.3} cy={p.y - p.size * 0.3} r={p.size * 0.35} fill="#fff" opacity="0.45" />}
         {p.w.state === 'current' && !small && picked !== p.w.monday && <circle className="gx-current" cx={p.x} cy={p.y} r={p.size + 4} />}
         {pickRing(p, p.size)}
       </g>
@@ -201,7 +233,7 @@ export function GalaxyScene({
           <feTurbulence type="fractalNoise" baseFrequency={small ? 0.035 : 0.013} numOctaves="4" seed={Number(score.month.slice(5))} />
           <feColorMatrix
             type="matrix"
-            values="0 0 0 0 0.42  0 0 0 0 0.36  0 0 0 0 0.78  0 0 0 1.6 -0.55"
+            values="0 0 0 0 0.5  0 0 0 0 0.48  0 0 0 0 0.72  0 0 0 1.5 -0.6"
           />
           <feGaussianBlur stdDeviation={small ? 0.6 : 1.2} />
         </filter>
@@ -231,6 +263,45 @@ export function GalaxyScene({
           <stop offset="0.5" stopColor="#ffe2a8" stopOpacity="0.35" />
           <stop offset="1" stopColor="#ffe2a8" stopOpacity="0" />
         </linearGradient>
+        {/* Planetytor: brus som blir band, moln eller fläckar */}
+        <filter id={`gx-surf-band-${id}`} x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.02 0.55" numOctaves="3" seed="3" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.22  0 0 0 0 0.12  0 0 0 2.6 -1.1" />
+        </filter>
+        <filter id={`gx-surf-cloud-${id}`} x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.35" numOctaves="3" seed="9" />
+          <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 3 -1.6" />
+        </filter>
+        <filter id={`gx-surf-rock-${id}`} x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.45" numOctaves="2" seed="5" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0.2  0 0 0 0 0.08  0 0 0 0 0.04  0 0 0 2.4 -1" />
+        </filter>
+        <radialGradient id={`gx-atmo-${id}`}>
+          <stop offset="0.78" stopColor="#8fc2ff" stopOpacity="0" />
+          <stop offset="0.86" stopColor="#8fc2ff" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#8fc2ff" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={`gx-star-warm-${id}`}>
+          <stop offset="0" stopColor="#fff4dc" stopOpacity="0.7" />
+          <stop offset="0.3" stopColor="#ffe2b0" stopOpacity="0.2" />
+          <stop offset="1" stopColor="#ffd59a" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={`gx-star-hot-${id}`}>
+          <stop offset="0" stopColor="#e6eeff" stopOpacity="0.7" />
+          <stop offset="0.3" stopColor="#b9ccff" stopOpacity="0.2" />
+          <stop offset="1" stopColor="#9ab4ff" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={`gx-bloom-${id}`}>
+          <stop offset="0" stopColor="#fffaf0" stopOpacity="1" />
+          <stop offset="0.12" stopColor="#fff1cc" stopOpacity="0.85" />
+          <stop offset="0.35" stopColor="#ffc979" stopOpacity="0.25" />
+          <stop offset="1" stopColor="#ff9a4a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={`gx-ray-${id}`} x1="0" x2="1">
+          <stop offset="0" stopColor="#fff3d6" stopOpacity="0" />
+          <stop offset="0.5" stopColor="#fff3d6" stopOpacity="1" />
+          <stop offset="1" stopColor="#fff3d6" stopOpacity="0" />
+        </linearGradient>
         <radialGradient id={`gx-perfect-${id}`}>
           <stop offset="0" stopColor="#fff4d0" stopOpacity="0.85" />
           <stop offset="0.4" stopColor="#ffd27a" stopOpacity="0.35" />
@@ -244,15 +315,15 @@ export function GalaxyScene({
 
       <rect width={W} height={H} fill={`url(#gx-bg-${id})`} />
       {/* Nebulosan växer fram med månadens procent. */}
-      <rect width={W} height={H} filter={`url(#gx-neb-${id})`} mask={`url(#gx-mask-${id})`} opacity={0.25 + 0.6 * progress} />
+      <rect width={W} height={H} filter={`url(#gx-neb-${id})`} mask={`url(#gx-mask-${id})`} opacity={0.18 + 0.45 * progress} />
 
       {field.map((s, i) => (
-        <circle key={`f${i}`} cx={s.x} cy={s.y} r={s.r} fill="#cfd8ff" opacity={s.o} />
+        <circle key={`f${i}`} cx={s.x} cy={s.y} r={s.r} fill={i % 7 === 0 ? '#ffe3c4' : i % 5 === 0 ? '#c4d6ff' : '#e6ebff'} opacity={s.o} />
       ))}
       {earned.map((s, i) => (
         <g key={`e${i}`} opacity={s.o}>
-          <circle cx={s.x} cy={s.y} r={s.r * 2.4} fill={s.hot ? '#bcd2ff' : '#fff1d6'} opacity="0.12" />
-          <circle cx={s.x} cy={s.y} r={s.r} fill={s.hot ? '#dfe9ff' : '#fffaf0'} />
+          <circle cx={s.x} cy={s.y} r={s.r * 3.2} fill={`url(#gx-star-${s.hot ? 'hot' : 'warm'}-${id})`} />
+          <circle cx={s.x} cy={s.y} r={s.r * 0.7} fill={s.hot ? '#eef3ff' : '#fffdf6'} />
         </g>
       ))}
 
@@ -266,7 +337,7 @@ export function GalaxyScene({
             </linearGradient>
           </defs>
           <path d={`M ${c.x} ${c.y} L ${c.tx} ${c.ty}`} stroke={`url(#gx-comet-${id}-${i})`} strokeWidth={small ? 1.2 : 2.4} strokeLinecap="round" />
-          <circle cx={c.x} cy={c.y} r={small ? 2.2 : 4.5} fill="#cfe6ff" opacity="0.25" />
+          <circle cx={c.x} cy={c.y} r={small ? 3 : 6} fill={`url(#gx-star-hot-${id})`} />
           <circle cx={c.x} cy={c.y} r={small ? 0.9 : 1.7} fill="#ffffff" />
         </g>
       ))}
@@ -276,9 +347,22 @@ export function GalaxyScene({
       ))}
       {planets.filter((p) => p.behind).map(planet)}
 
+      {/* Solen, samma som veckans soluppgång: mjukt sken, varm korona, tunna strålar och en bländande kärna */}
       <circle cx={cx} cy={cy} r={(small ? 20 : 58) * (0.7 + 0.3 * progress)} fill={`url(#gx-corona-${id})`} />
-      {!small && <rect x={cx - 70} y={cy - 0.6} width="140" height="1.2" fill={`url(#gx-flare-${id})`} />}
-      <circle cx={cx} cy={cy} r={small ? 4 : 9} fill={`url(#gx-sun-${id})`} />
+      <circle cx={cx} cy={cy} r={small ? 12 : 30} fill={`url(#gx-bloom-${id})`} />
+      {SUN_RAYS.map((ray) => (
+        <rect
+          key={ray.angle}
+          x={cx - ray.len * (small ? 0.4 : 1)}
+          y={cy - (ray.w * (small ? 0.6 : 1)) / 2}
+          width={ray.len * 2 * (small ? 0.4 : 1)}
+          height={ray.w * (small ? 0.6 : 1)}
+          fill={`url(#gx-ray-${id})`}
+          opacity={ray.o}
+          transform={`rotate(${ray.angle} ${cx} ${cy})`}
+        />
+      ))}
+      <circle cx={cx} cy={cy} r={small ? 2.6 : 6} fill="#fffdf6" />
 
       {planets.filter((p) => !p.behind).map(planet)}
       <rect width={W} height={H} fill={`url(#gx-vignette-${id})`} pointerEvents="none" />
