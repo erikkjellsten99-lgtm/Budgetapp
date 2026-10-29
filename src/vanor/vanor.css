@@ -1934,59 +1934,88 @@
   margin-top: 10px;
 }
 
-/* Månaden: rymden är mörk i både ljust och mörkt läge */
+/* Månaden: ett rymdfoto som fyller hela rutan, med texten ovanpå till vänster */
 .vanor .ws-hero.space {
-  background: radial-gradient(120% 140% at 70% 50%, #1d2550 0%, #10162e 55%, #0a0e1f 100%);
+  position: relative;
+  min-height: 168px;
+  background: #04060d;
+  overflow: hidden;
 }
 
 .vanor .ws-hero.space::before {
   display: none;
 }
 
+.vanor .ws-hero.space .galaxy {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Mörk ton bakom texten så att den alltid går att läsa */
+.vanor .ws-hero.space::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(3 5 12 / 0.75) 0%, rgb(3 5 12 / 0.35) 38%, rgb(3 5 12 / 0) 60%);
+  pointer-events: none;
+}
+
+.vanor .ws-hero.space .ws-text {
+  position: relative;
+  z-index: 1;
+}
+
 .vanor .ws-hero.space .ws-label,
 .vanor .ws-hero.space .ws-sub {
-  color: #aab4d8;
+  color: #b7c0e0;
 }
 
 .vanor .ws-hero.space .ws-big {
-  color: #f1f3ff;
-}
-
-.vanor .galaxy {
-  flex: none;
-  width: 200px;
-  height: 132px;
-  margin-right: 2px;
-}
-
-.vanor .gx-star {
-  fill: #ffffff;
+  color: #f4f6ff;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.5);
 }
 
 .vanor .gx-orbit {
   fill: none;
-  stroke: #8a96c8;
-  stroke-width: 0.7;
-  opacity: 0.35;
+  stroke: #9fb0e8;
+  stroke-width: 0.5;
+  opacity: 0.16;
 }
 
-.vanor .gx-week.future .gx-orbit {
-  stroke-dasharray: 2 3;
-  opacity: 0.25;
+.vanor .gx-orbit.future {
+  stroke-dasharray: 1.5 3;
+  opacity: 0.14;
 }
 
 .vanor .gx-slot {
   fill: none;
-  stroke: #8a96c8;
-  stroke-width: 0.8;
-  opacity: 0.6;
+  stroke: #9fb0e8;
+  stroke-width: 0.6;
+  opacity: 0.45;
 }
 
-.vanor .gx-ring {
+.vanor .gx-current {
   fill: none;
   stroke: #ffffff;
-  stroke-width: 0.8;
-  opacity: 0.55;
+  stroke-width: 0.6;
+  stroke-dasharray: 1.5 2;
+  opacity: 0.5;
+}
+
+.vanor .gx-ring-back {
+  fill: none;
+  stroke: #e9d6a6;
+  stroke-width: 1.1;
+  opacity: 0.45;
+}
+
+.vanor .gx-ring-front {
+  fill: none;
+  stroke: #f3e3b8;
+  stroke-width: 1.2;
+  opacity: 0.8;
 }
 
 /* Tidigare månader */
@@ -2022,9 +2051,9 @@
 }
 
 .vanor .galaxy.small {
-  width: 96px;
-  height: 64px;
-  background: radial-gradient(120% 140% at 50% 50%, #1d2550 0%, #0e1328 70%);
+  display: block;
+  width: 120px;
+  height: 72px;
   border-radius: 10px;
 }
 
