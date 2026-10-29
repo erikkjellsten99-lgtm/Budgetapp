@@ -18,6 +18,11 @@ export interface Habit {
   remind?: string
   /** Veckodagar för påminnelsen, 0 = måndag … 6 = söndag. Saknas = alla dagar. */
   remindDays?: number[]
+  /**
+   * Planerade dagar, t.ex. gym måndag och torsdag (0 = måndag … 6 = söndag). Då är veckomålet
+   * lika många dagar, vanan hamnar under Prioritera idag de dagarna och påminnelsen gäller dem.
+   */
+  days?: number[]
 }
 
 /** Loggen: datum → id:n för vanorna som är klara den dagen. */
@@ -174,7 +179,23 @@ export function todayInfo(habit: Habit, log: Log, today: DateKey, paused: Paused
     } else if (!pausedToday && !linked) {
       const tight = need >= daysLeft
       const over = need > daysLeft
-      if (tight) {
+      const planned = habit.days?.length ? habit.days : null
+      if (planned) {
+        // Planerade dagar: en planerad dag är ett måste. Annars bara om det inte går att vänta längre.
+        const plannedToday = planned.includes(weekday(today))
+        const next = usable.find((d) => d > today && planned.includes(weekday(d)))
+        if (plannedToday) {
+          must = true
+          urgency = 1
+          pills.push({ kind: 'plain', text: need > 1 ? `Planerat idag, ${need} kvar i veckan` : 'Planerat idag' })
+        } else if (tight) {
+          pills.push({ kind: 'plain', text: `Missat pass, ${need} kvar och ${daysLeft} ${daysLeft === 1 ? 'dag' : 'dagar'} kvar` })
+        } else if (next) {
+          pills.push({ kind: 'plain', text: `Nästa planerade: ${dayWord(next, today)}` })
+        } else {
+          pills.push({ kind: 'plain', text: `${need} kvar, ta igen när det passar` })
+        }
+      } else if (tight) {
         const left = daysLeft === 1 ? 'veckan slutar idag' : `${daysLeft} dagar kvar av veckan`
         pills.push({ kind: 'plain', text: `${need} kvar, ${left}` })
       } else {
@@ -229,7 +250,7 @@ export function remindDaysText(days?: number[]): string {
 /** Påminnelsen som kort text, t.ex. "mån, ons 17:00". Tom sträng om ingen påminnelse. */
 export function remindText(habit: Habit): string {
   if (!habit.remind) return ''
-  const days = remindDaysText(habit.remindDays)
+  const days = remindDaysText(habit.days?.length ? habit.days : habit.remindDays)
   return days === 'varje dag' ? habit.remind : `${days} ${habit.remind}`
 }
 
@@ -258,6 +279,6 @@ export const goalText = (goal: number) =>
  */
 export function habitPlan(habit: Habit, names: (id: string) => string | undefined): string {
   const after = habit.after.map(names).filter(Boolean) as string[]
-  if (!after.length) return goalText(habit.goal)
+  if (!after.length) return habit.days?.length ? remindDaysText(habit.days) : goalText(habit.goal)
   return `Efter ${after.join(' eller ')}`
 }
