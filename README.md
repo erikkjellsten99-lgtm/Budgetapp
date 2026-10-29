@@ -54,6 +54,10 @@ Under Mina vanor → **Påminnelser** slår du på notiser för telefonen (på i
 - `supabase/functions/reminders`: Supabase-funktionen som skickar. Den körs var 5:e minut av pg_cron (jobbet `vanor-paminnelser`). Nyckelparet skapar den själv i tabellen `push_keys`. `push_sent` ser till att samma påminnelse bara skickas en gång per dag.
 - `public/sw.js`: visar notisen och öppnar appen när du trycker på den.
 
+### Att göra
+
+Tryck **+ Att göra** vid Prioritera idag. En sak har titel, dag och valfri tid. Den visas i Prioritera idag på sin dag, och ligger kvar som försenad tills den är bockad. Framtida saker visas under Kommande. Med en tid kommer en notis, via samma påminnelser som vanorna. Logiken finns i `src/vanor/tasks.ts`, och sakerna sparas i databasen `vanor` (store `tasks`, version 3) och synkas privat.
+
 ## Träning
 
 Delen **Träning** (växeln överst i fliken Vanor) loggar gympass (övningar, kg × reps) och löppass (distans, tid). Koden ligger i `src/traning/`:

@@ -1747,3 +1747,76 @@
 .vanor .habits .week-edit {
   display: none;
 }
+
+/* Att göra */
+.vanor .section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vanor .add-task {
+  min-height: 40px;
+  margin-right: -12px;
+}
+
+.vanor .task-open {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  text-align: left;
+}
+
+.vanor .task-row .name {
+  overflow-wrap: anywhere;
+}
+
+.vanor .task-row.is-done .name {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+
+.vanor .task-row.is-late .meta {
+  color: var(--flame);
+  font-weight: 600;
+}
+
+.vanor .date-chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.vanor .date-chips button {
+  min-height: 44px;
+  padding: 0 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.vanor .date-chips button[aria-pressed='true'] {
+  background: var(--done);
+  border-color: var(--done);
+  color: var(--done-ink);
+}
+
+.vanor .task-sheet .field input[type='date'] {
+  margin-top: 6px;
+}
+
+.vanor .t-save-task {
+  min-height: 52px;
+  border-radius: 14px;
+}

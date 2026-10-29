@@ -7,12 +7,16 @@
 
 import { todayKey, type DateKey } from './dates';
 import { sameName, type Habit, type Log } from './habits';
+import type { Task } from './tasks';
 
 const DB_NAME = 'vanor';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
-/** Allt som synkas privat till kontot. Träningspassen (workouts) ligger här sedan version 2. */
-export const HABIT_STORES = ['habits', 'checks', 'pauses', 'workouts'] as const;
+/**
+ * Allt som synkas privat till kontot. Träningspassen (workouts) ligger här sedan version 2,
+ * att göra-sakerna (tasks) sedan version 3.
+ */
+export const HABIT_STORES = ['habits', 'checks', 'pauses', 'workouts', 'tasks'] as const;
 export type HabitStore = (typeof HABIT_STORES)[number];
 
 /** En bockning: vanan var klar den dagen. `min` = bara minimiversionen gjordes. */
@@ -32,6 +36,7 @@ export interface HabitData {
   habits: Habit[];
   checks: Check[];
   pauses: Pause[];
+  tasks: Task[];
 }
 
 export interface OutboxEntry {
@@ -64,6 +69,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (event.oldVersion < 2) {
         db.createObjectStore('workouts', { keyPath: 'id' });
+      }
+      if (event.oldVersion < 3) {
+        db.createObjectStore('tasks', { keyPath: 'id' });
       }
     };
     request.onsuccess = () => {
@@ -129,13 +137,14 @@ async function change(puts: { store: HabitStore; record: object }[], deletes: { 
 }
 
 export async function loadHabitData(): Promise<HabitData> {
-  const [habits, checks, pauses] = await Promise.all([
+  const [habits, checks, pauses, tasks] = await Promise.all([
     getAll<Habit>('habits'),
     getAll<Check>('checks'),
     getAll<Pause>('pauses'),
+    getAll<Task>('tasks'),
   ]);
   habits.sort((a, b) => a.order - b.order);
-  return { habits, checks, pauses };
+  return { habits, checks, pauses, tasks };
 }
 
 export function toLog(checks: Check[]): Log {
@@ -319,6 +328,20 @@ export function saveWorkoutRecord(workout: { id: string }) {
 
 export function deleteWorkoutRecord(id: string) {
   return change([], [{ store: 'workouts', id }]);
+}
+
+// Att göra (se ./tasks.ts)
+
+export function loadTasks<T>(): Promise<T[]> {
+  return getAll<T>('tasks');
+}
+
+export function saveTaskRecord(task: Task) {
+  return change([{ store: 'tasks', record: task }]);
+}
+
+export function deleteTaskRecord(id: string) {
+  return change([], [{ store: 'tasks', id }]);
 }
 
 // För synken
