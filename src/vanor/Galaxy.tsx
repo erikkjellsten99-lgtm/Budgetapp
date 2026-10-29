@@ -1,6 +1,6 @@
 import type { DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
-import { monthName, monthScore, previousMonth, type MonthScore } from './progress'
+import { monthForecast, monthName, monthScore, previousMonth, type MonthScore } from './progress'
 
 /**
  * Planettyper, en per vecka i månaden: färg i ljuset, färg i skuggan och om den har ringar eller band.
@@ -195,7 +195,6 @@ export function GalaxyScene({ score, small = false }: { score: MonthScore; small
 /** Månadsvyn i kortet: galaxen, procent och tidigare månader. */
 export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log: Log; paused: Paused; today: DateKey }) {
   const score = monthScore(habits, log, paused, today)
-  const currentIndex = score.weeks.findIndex((w) => w.state === 'current')
   const built = score.weeks.filter((w) => w.state === 'past' && (w.pct ?? 0) >= 80).length
   // Tidigare månader där vanorna fanns, nyast först (högst 6).
   const firstCreated = habits.reduce((min, h) => (h.created < min ? h.created : min), today)
@@ -205,6 +204,14 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
     if (s.weeks.some((w) => w.goal > 0)) archive.push(s)
   }
   const title = monthName(score.month, today)
+  const forecast = monthForecast(score, today)
+  // Förra månaden jämförs bara om vanorna fanns större delen av den (annars blir jämförelsen missvisande).
+  const last = archive[0]
+  const lastComparable =
+    !!last && last.month === previousMonth(score.month) && last.weeks.filter((w) => w.goal > 0).length >= last.weeks.length - 1
+  const best = archive.length >= 2 ? archive.reduce((a, b) => (b.pct > a.pct ? b : a)) : null
+  const headingForBest = best !== null && forecast.projected !== null && forecast.projected > best.pct
+  const diff = lastComparable && forecast.projected !== null ? forecast.projected - last.pct : null
 
   return (
     <>
@@ -218,28 +225,63 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
         </div>
         <GalaxyScene score={score} />
       </div>
-      <div className="ws-foot">
-        <p className="ws-msg">
-          {score.pct >= 100
-            ? 'Hela galaxen är byggd. Snyggt jobbat.'
-            : score.checks === 0
-              ? 'Varje bock blir en stjärna, och varje vecka en planet.'
-              : currentIndex >= 0
-                ? `Vecka ${currentIndex + 1} av ${score.weeks.length} bygger sin planet. ${score.checks} ${score.checks === 1 ? 'stjärna' : 'stjärnor'} hittills.`
-              : `${score.checks} stjärnor den här månaden.`}
-          {built > 0 && ` ${built} ${built === 1 ? 'planet' : 'planeter'} med minst 80 %.`}
-        </p>
+      <div className="ws-foot gx-foot">
+        <div className="gx-forecast">
+          {score.pct >= 100 ? (
+            <p className="ws-msg">Hela galaxen är byggd. Snyggt jobbat.</p>
+          ) : forecast.projected === null ? (
+            <>
+              <p className="ws-msg">För tidigt för en prognos. Den kommer efter första veckan.</p>
+              <p className="gx-sub">
+                {score.checks === 0
+                  ? 'Varje bock blir en stjärna, och varje vecka en planet.'
+                  : `${score.checks} ${score.checks === 1 ? 'stjärna' : 'stjärnor'} hittills.`}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="ws-msg">
+                Prognos: ungefär <b>{forecast.projected}&nbsp;%</b> i slutet av {title}.
+              </p>
+              <p className="gx-sub">
+                {forecast.perWeekNeeded !== null
+                  ? `För ${forecast.target} % behövs ungefär ${forecast.perWeekNeeded} bockar i veckan resten av månaden, mot ${forecast.perWeekNow} i veckan hittills.`
+                  : forecast.projected >= 100
+                    ? 'Du är på väg mot en hel galax.'
+                    : `${score.checks} stjärnor hittills.${built > 0 ? ` ${built} ${built === 1 ? 'planet' : 'planeter'} med minst 80 %.` : ''}`}
+              </p>
+              {headingForBest && <p className="gx-best">På väg mot din bästa månad hittills.</p>}
+            </>
+          )}
+        </div>
+        {lastComparable && last && (
+          <div className="ws-last">
+            <span>{monthName(last.month, today).replace(/^./, (c) => c.toUpperCase())}</span>
+            <b>{last.pct}&nbsp;%</b>
+            {diff !== null && (
+              <span className={diff > 0 ? 'trend up' : diff < 0 ? 'trend down' : 'trend flat'}>
+                <span aria-hidden="true">{diff > 0 ? '▲' : diff < 0 ? '▼' : '•'}</span>{' '}
+                {diff > 0 ? `+${diff}` : diff < 0 ? `−${Math.abs(diff)}` : '±0'}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       {archive.length > 0 && (
         <div className="gx-archive">
           <span className="gx-archive-title">Tidigare månader</span>
           <ol>
             {archive.map((s) => (
-              <li key={s.month} aria-label={`${monthName(s.month, today)}: ${s.pct} %`}>
+              <li
+                key={s.month}
+                className={best?.month === s.month ? 'best' : undefined}
+                aria-label={`${monthName(s.month, today)}: ${s.pct} %${best?.month === s.month ? ', bästa månaden' : ''}`}
+              >
                 <GalaxyScene score={s} small />
                 <span>
                   {monthName(s.month, today).slice(0, 3)} · {s.pct}&nbsp;%
                 </span>
+                {best?.month === s.month && <em className="gx-best-tag">Bäst</em>}
               </li>
             ))}
           </ol>

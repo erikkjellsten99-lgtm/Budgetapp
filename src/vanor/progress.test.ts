@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Habit, Log } from './habits'
-import { change, habitTrends, monthMondays, monthName, monthOfWeek, monthScore, previousMonth, weeklyScores } from './progress'
+import { change, habitTrends, monthForecast, monthMondays, monthName, monthOfWeek, monthScore, previousMonth, weeklyScores } from './progress'
 
 const make = (id: string, goal: number, created = '2026-09-01'): Habit => ({
   id,
@@ -102,5 +102,24 @@ describe('månaden (galaxen)', () => {
     expect(monthName('2026-10', '2026-10-29')).toBe('oktober')
     expect(monthName('2025-12', '2026-10-29')).toBe('december 2025')
     expect(previousMonth('2026-01')).toBe('2025-12')
+  })
+})
+
+describe('månadens prognos', () => {
+  const h = make('h', 2)
+  // November 2026: veckor 2/11, 9/11, 16/11, 23/11. Mål 2 per vecka = 8 för månaden.
+  it('för tidigt första veckan', () => {
+    const f = monthForecast(monthScore([h], { '2026-11-02': ['h'] }, NONE, '2026-11-04'), '2026-11-04')
+    expect(f.projected).toBeNull()
+  })
+  it('räknar med takten hittills och vad som behövs för nästa jämna mål', () => {
+    // Två hela veckor med 1 av 2 → 50 % takt. Vi är på måndag vecka 3 (1/7 av veckan).
+    const log = { '2026-11-02': ['h'], '2026-11-10': ['h'] }
+    const f = monthForecast(monthScore([h], log, NONE, '2026-11-16'), '2026-11-16')
+    expect(f.projected).toBe(47)
+    expect(f.target).toBe(50)
+    // 50 % av 8 = 4, gjort 2, kvar ca 1,86 veckor → 2 per vecka.
+    expect(f.perWeekNeeded).toBe(2)
+    expect(f.perWeekNow).toBe(1)
   })
 })
