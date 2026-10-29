@@ -58,15 +58,6 @@ Under Mina vanor → **Påminnelser** slår du på notiser för telefonen (på i
 
 Tryck **+ Att göra** vid Prioritera idag. En sak har titel, dag och valfri tid. Den visas i Prioritera idag på sin dag, och ligger kvar som försenad tills den är bockad. Framtida saker visas under Kommande. Med en tid kommer en notis, via samma påminnelser som vanorna. Logiken finns i `src/vanor/tasks.ts`, och sakerna sparas i databasen `vanor` (store `tasks`, version 3) och synkas privat.
 
-## Träning
-
-Delen **Träning** (växeln överst i fliken Vanor) loggar gympass (övningar, kg × reps) och löppass (distans, tid). Koden ligger i `src/traning/`:
-
-- `training.ts`: logik med tester – tempo, 5 km-tid, tyngsta set, rekord, förra passets vikter.
-- `Traning.tsx`, `WorkoutSheet.tsx`: fliken och arket för ett pass. Ett nytt gympass sparas som utkast medan du tränar.
-- Passen ligger i samma databas som vanorna (`vanor`, store `workouts`, version 2) och synkas privat på samma sätt.
-- Loggar du ett pass bockas vanan Gym eller Löpning av den dagen, om du har den.
-
 ## Bra att veta
 
 - Datan finns bara i den webbläsare och på den enhet där du använder appen. Den synkas inte mellan enheter.
