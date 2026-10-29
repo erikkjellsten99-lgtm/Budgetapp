@@ -38,6 +38,8 @@ interface Habit {
   remind?: string;
   /** 0 = måndag … 6 = söndag. Saknas = alla dagar. */
   remindDays?: number[];
+  /** Planerade dagar. Finns de gäller påminnelsen bara de dagarna. */
+  days?: number[];
 }
 interface Task {
   id: string;
@@ -197,7 +199,8 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
     }
     for (const h of habits) {
       if (pausedToday || !isDue(h.remind, minutes) || !open(h)) continue;
-      if (h.remindDays?.length && !h.remindDays.includes(weekday(date))) continue;
+      const remindOn = h.days?.length ? h.days : h.remindDays;
+      if (remindOn?.length && !remindOn.includes(weekday(date))) continue;
       outgoing.push({
         key: `habit:${h.id}`,
         payload: {

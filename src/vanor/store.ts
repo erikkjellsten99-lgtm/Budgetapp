@@ -211,6 +211,7 @@ export async function addHabit(
   after: string[] = [],
   remind = '',
   remindDays?: number[],
+  days?: number[],
 ): Promise<string> {
   const all = await getAll<Habit>('habits');
   const text = clean(name);
@@ -220,9 +221,15 @@ export async function addHabit(
     ? { ...old, archived: false, order: nextOrder(all), goal: clampGoal(goal), minimum: min, after }
     : { id: newId(), name: text, goal: clampGoal(goal), created: todayKey(), after, order: nextOrder(all), archived: false };
   if (!old && min) habit.minimum = min;
+  // Planerade dagar bestämmer veckomålet.
+  const planned = cleanDays(days);
+  if (planned) {
+    habit.days = planned;
+    habit.goal = planned.length;
+  } else delete habit.days;
   if (cleanTime(remind)) {
     habit.remind = cleanTime(remind);
-    if (cleanDays(remindDays)) habit.remindDays = cleanDays(remindDays);
+    if (!planned && cleanDays(remindDays)) habit.remindDays = cleanDays(remindDays);
     else delete habit.remindDays;
   } else {
     delete habit.remind;
@@ -241,22 +248,32 @@ async function updateRecord(id: string, update: (h: Habit) => Habit) {
 /** Ändra namn, mål, minimiversion, påminnelse och vilka vanor den görs efter. */
 export function updateHabit(
   id: string,
-  changes: { name: string; goal: number; minimum: string; after: string[]; remind?: string; remindDays?: number[] },
+  changes: {
+    name: string;
+    goal: number;
+    minimum: string;
+    after: string[];
+    remind?: string;
+    remindDays?: number[];
+    days?: number[];
+  },
 ) {
-  return updateRecord(id, (h) => ({
-    ...h,
-    name: clean(changes.name),
-    goal: clampGoal(changes.goal),
-    minimum: clean(changes.minimum) || undefined,
-    after: changes.after.filter((a) => a !== id),
-    remind: changes.remind === undefined ? h.remind : cleanTime(changes.remind),
-    remindDays:
-      changes.remind === undefined
-        ? h.remindDays
-        : cleanTime(changes.remind)
-          ? cleanDays(changes.remindDays)
-          : undefined,
-  }));
+  return updateRecord(id, (h) => {
+    const planned = cleanDays(changes.days);
+    const remind = changes.remind === undefined ? h.remind : cleanTime(changes.remind);
+    const next: Habit = {
+      ...h,
+      name: clean(changes.name),
+      goal: planned ? planned.length : clampGoal(changes.goal),
+      minimum: clean(changes.minimum) || undefined,
+      after: changes.after.filter((a) => a !== id),
+      remind,
+      days: planned,
+      // Med planerade dagar gäller påminnelsen de dagarna, annars de valda påminnelsedagarna.
+      remindDays: !remind || planned ? undefined : changes.remind === undefined ? h.remindDays : cleanDays(changes.remindDays),
+    };
+    return next;
+  });
 }
 
 /** Ta bort en vana från listan. Bockningarna sparas, så den kan läggas tillbaka. */

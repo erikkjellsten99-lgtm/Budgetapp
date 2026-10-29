@@ -221,3 +221,30 @@ describe('påminnelsens dagar', () => {
     expect(remindText(habit(4))).toBe('')
   })
 })
+
+describe('planerade dagar', () => {
+  // TODAY är onsdag 14/10.
+  const gym = (days: number[]): Habit => ({ ...habit(days.length), id: 'g', days })
+  it('en planerad dag är ett måste', () => {
+    const info = todayInfo(gym([0, 2]), {}, TODAY)
+    expect(info.must).toBe(true)
+    expect(info.pills[0].text).toBe('Planerat idag, 2 kvar i veckan')
+  })
+  it('andra dagar kan vänta och visar nästa planerade', () => {
+    const info = todayInfo(gym([3, 5]), {}, TODAY)
+    expect(info.must).toBe(false)
+    expect(info.due).toBe(true)
+    expect(info.pills[0].text).toBe('Nästa planerade: i morgon')
+  })
+  it('missade pass utan fler planerade dagar', () => {
+    expect(todayInfo(gym([0, 1]), {}, TODAY).pills[0].text).toBe('2 kvar, ta igen när det passar')
+  })
+  it('blir ett måste när det inte går att vänta längre', () => {
+    const info = todayInfo(gym([0, 1, 3, 4, 5]), {}, TODAY)
+    expect(info.must).toBe(true)
+  })
+  it('planen och påminnelsen visar dagarna', () => {
+    expect(habitPlan(gym([0, 2]), () => undefined)).toBe('mån, ons')
+    expect(remindText({ ...gym([0, 2]), remind: '17:00', remindDays: [6] })).toBe('mån, ons 17:00')
+  })
+})
