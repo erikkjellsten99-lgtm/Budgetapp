@@ -2324,8 +2324,31 @@
 }
 
 .galaxy-view .gv-planets li {
-  display: flex;
   border: 0;
+}
+
+.galaxy-view .gv-planets button {
+  display: flex;
+  min-height: 32px;
+  padding: 2px 8px 2px 6px;
+  margin-left: -6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: inherit;
+  font-size: inherit;
+}
+
+.galaxy-view .gv-planets button[aria-pressed='true'] {
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.2);
+}
+
+.galaxy-view .gv-planet-detail {
+  margin-top: 6px !important;
+}
+
+.galaxy-view .gv-planets button:where(*) {
   gap: 6px;
   align-items: center;
 }
@@ -2352,4 +2375,168 @@
   border-radius: 10px;
   color: #ffd28a;
   font-weight: 700;
+}
+
+/* Tryck på en planet i månadsvyn */
+.vanor .ws-hero.space .ws-text {
+  pointer-events: none;
+}
+
+.vanor .ws-hero.space .ws-text .gx-open {
+  pointer-events: auto;
+}
+
+.vanor .gx-pick {
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vanor .gx-hit {
+  fill: transparent;
+}
+
+.vanor .gx-picked {
+  fill: none;
+  stroke: #ffd28a;
+  stroke-width: 0.9;
+}
+
+.vanor .gx-pick:focus-visible .gx-hit {
+  stroke: #ffd28a;
+  stroke-width: 0.8;
+  stroke-dasharray: 2 2;
+}
+
+.vanor .gx-tap-hint {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 1;
+  color: rgb(205 212 240 / 0.7);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+
+.vanor .gx-week {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 20px 4px;
+  animation: vanor-rise 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.vanor .gx-week header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.vanor .gx-week header div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vanor .gx-week-label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.vanor .gx-week header b {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--display);
+  font-size: 1.5rem;
+}
+
+.vanor .gx-perfect-tag {
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--fill) 22%, transparent);
+  border-radius: 999px;
+  color: var(--fill);
+  font-family: var(--body);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.vanor .gx-week-close {
+  width: 40px;
+  height: 40px;
+  margin: -6px -10px 0 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 1.4rem;
+}
+
+.vanor .gx-week ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vanor .gx-week li {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5rem) 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 0;
+  font-size: 0.9rem;
+}
+
+.vanor .gx-week-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vanor .gx-week-bar {
+  height: 6px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+  border-radius: 999px;
+}
+
+.vanor .gx-week-bar i {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--fill) 65%, var(--muted));
+  border-radius: inherit;
+}
+
+.vanor .gx-week li.met .gx-week-bar i {
+  background: var(--fill);
+}
+
+.vanor .gx-week-num {
+  min-width: 3.2rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.vanor .gx-week li.met .gx-week-num {
+  color: var(--fill);
+}
+
+.vanor .gx-events {
+  margin: 0;
+  padding: 12px 20px 0;
+  font-size: 0.85rem;
+}
+
+.vanor .gx-events.quiet {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.vanor .gx-events span {
+  color: #8fc8ff;
 }

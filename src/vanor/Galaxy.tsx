@@ -1,7 +1,7 @@
-import { lazy, Suspense, useState, type ComponentType } from 'react'
-import type { DateKey } from './dates'
+import { lazy, Suspense, useState, type ComponentType, type KeyboardEvent } from 'react'
+import { addDays, isoWeek, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
-import { monthForecast, monthName, monthScore, previousMonth, type MonthScore } from './progress'
+import { monthForecast, monthName, monthPlanets, monthScore, previousMonth, weekHabits, type MonthScore, type MonthWeek } from './progress'
 
 /**
  * Planettyper, en per vecka i månaden: färg i ljuset, färg i skuggan och om den har ringar eller band.
@@ -47,7 +47,20 @@ function seeded(seed: number) {
  * under månaden, en sol med korona och klotformade planeter som är belysta från solen.
  * En bana per vecka – planeten växer med veckans procent. Varje bockning blir en ljus stjärna.
  */
-export function GalaxyScene({ score, small = false }: { score: MonthScore; small?: boolean }) {
+export function GalaxyScene({
+  score,
+  small = false,
+  comets = 0,
+  picked = null,
+  onPick,
+}: {
+  score: MonthScore
+  small?: boolean
+  /** Antal kometer (7 dagar i rad på en vana) under månaden. */
+  comets?: number
+  picked?: DateKey | null
+  onPick?: (week: MonthWeek) => void
+}) {
   const W = small ? 120 : 360
   const H = small ? 72 : 168
   const cx = W * (small ? 0.5 : 0.6)
@@ -71,6 +84,17 @@ export function GalaxyScene({ score, small = false }: { score: MonthScore; small
     return { x, y: Math.max(2, Math.min(H - 2, band)), r: (0.6 + rand() * 0.9) * (small ? 0.75 : 1), o: 0.55 + rand() * 0.45, hot: rand() < 0.18 }
   })
 
+  // Kometer flyger in uppifrån mot solen, med svansen bort från den. Högst tre syns.
+  const cometList = Array.from({ length: Math.min(3, comets) }, (_, i) => {
+    const x = W * (0.5 + 0.17 * i) + rand() * 20
+    const y = H * (0.14 + rand() * 0.22)
+    const dx = x - cx
+    const dy = y - cy
+    const len = Math.hypot(dx, dy) || 1
+    const tail = (small ? 14 : 34) + rand() * 12
+    return { x, y, tx: x + (dx / len) * tail, ty: y + (dy / len) * tail }
+  })
+
   const planets = score.weeks.map((w, i) => {
     const rx = (36 + i * 25) * k
     const ry = rx * 0.3
@@ -83,10 +107,34 @@ export function GalaxyScene({ score, small = false }: { score: MonthScore; small
     return { w, i, rx, ry, x, y, behind, size, type: PLANETS[i % PLANETS.length] }
   })
 
+  // Tryck på en planet (eller en tom bana) för att se veckan. Träffytan är större än planeten.
+  const pickable = (p: (typeof planets)[number]) =>
+    onPick && !small
+      ? {
+          role: 'button',
+          tabIndex: 0,
+          'aria-label': `Vecka ${isoWeek(p.w.monday)}${p.w.pct !== null ? `, ${p.w.pct} %` : ''}`,
+          'aria-pressed': picked === p.w.monday,
+          className: picked === p.w.monday ? 'gx-pick is-picked' : 'gx-pick',
+          onClick: () => onPick(p.w),
+          onKeyDown: (e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onPick(p.w)),
+        }
+      : {}
+  const hit = (p: (typeof planets)[number]) => onPick && !small && <circle className="gx-hit" cx={p.x} cy={p.y} r={14} />
+  const pickRing = (p: (typeof planets)[number], r: number) =>
+    picked === p.w.monday && <circle className="gx-picked" cx={p.x} cy={p.y} r={r + 4.5} />
+
   const planet = (p: (typeof planets)[number]) => {
     if (p.w.state === 'future' || !p.size) {
-      return <circle key={p.w.monday} className="gx-slot" cx={p.x} cy={p.y} r={1.4 * (small ? 0.7 : 1)} />
+      return (
+        <g key={p.w.monday} {...pickable(p)}>
+          {hit(p)}
+          <circle className="gx-slot" cx={p.x} cy={p.y} r={1.4 * (small ? 0.7 : 1)} />
+          {pickRing(p, 1.4)}
+        </g>
+      )
     }
+    const perfect = (p.w.pct ?? 0) >= 100
     // Ljuset kommer från solen: gradientens ljuspunkt förskjuts mot solen.
     const dx = cx - p.x
     const dy = cy - p.y
@@ -95,7 +143,10 @@ export function GalaxyScene({ score, small = false }: { score: MonthScore; small
     const fy = 0.5 + (dy / len) * 0.32
     const gid = `gx-p${p.i}-${id}`
     return (
-      <g key={p.w.monday} opacity={p.behind ? 0.85 : 1}>
+      <g key={p.w.monday} opacity={p.behind && !perfect ? 0.85 : 1} {...pickable(p)}>
+        {hit(p)}
+        {/* Perfekt vecka: planeten lyser upp med ett eget sken. */}
+        {perfect && <circle cx={p.x} cy={p.y} r={p.size * 3.2 + 4} fill={`url(#gx-perfect-${id})`} />}
         <defs>
           <radialGradient id={gid} cx={fx} cy={fy} fx={fx} fy={fy} r="0.85">
             <stop offset="0" stopColor={p.type.light} />
@@ -124,13 +175,21 @@ export function GalaxyScene({ score, small = false }: { score: MonthScore; small
             transform={`rotate(-12 ${p.x} ${p.y})`}
           />
         )}
-        {p.w.state === 'current' && !small && <circle className="gx-current" cx={p.x} cy={p.y} r={p.size + 4} />}
+        {perfect && <circle cx={p.x - p.size * 0.3} cy={p.y - p.size * 0.3} r={p.size * 0.35} fill="#fff" opacity="0.45" />}
+        {p.w.state === 'current' && !small && picked !== p.w.monday && <circle className="gx-current" cx={p.x} cy={p.y} r={p.size + 4} />}
+        {pickRing(p, p.size)}
       </g>
     )
   }
 
   return (
-    <svg className={small ? 'galaxy small' : 'galaxy'} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <svg
+      className={small ? 'galaxy small' : 'galaxy'}
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden={onPick && !small ? undefined : true}
+      aria-label={onPick && !small ? 'Månadens solsystem: en planet per vecka' : undefined}
+    >
       <defs>
         <radialGradient id={`gx-bg-${id}`} cx="0.62" cy="0.5" r="0.85">
           <stop offset="0" stopColor="#0d1326" />
@@ -172,6 +231,11 @@ export function GalaxyScene({ score, small = false }: { score: MonthScore; small
           <stop offset="0.5" stopColor="#ffe2a8" stopOpacity="0.35" />
           <stop offset="1" stopColor="#ffe2a8" stopOpacity="0" />
         </linearGradient>
+        <radialGradient id={`gx-perfect-${id}`}>
+          <stop offset="0" stopColor="#fff4d0" stopOpacity="0.85" />
+          <stop offset="0.4" stopColor="#ffd27a" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#ffb84a" stopOpacity="0" />
+        </radialGradient>
         <radialGradient id={`gx-vignette-${id}`} cx="0.6" cy="0.5" r="0.75">
           <stop offset="0.6" stopColor="#000" stopOpacity="0" />
           <stop offset="1" stopColor="#000" stopOpacity="0.55" />
@@ -192,6 +256,21 @@ export function GalaxyScene({ score, small = false }: { score: MonthScore; small
         </g>
       ))}
 
+      {cometList.map((c, i) => (
+        <g key={`c${i}`} className="gx-comet">
+          <defs>
+            <linearGradient id={`gx-comet-${id}-${i}`} gradientUnits="userSpaceOnUse" x1={c.x} y1={c.y} x2={c.tx} y2={c.ty}>
+              <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
+              <stop offset="0.3" stopColor="#bfe3ff" stopOpacity="0.5" />
+              <stop offset="1" stopColor="#8fb8ff" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d={`M ${c.x} ${c.y} L ${c.tx} ${c.ty}`} stroke={`url(#gx-comet-${id}-${i})`} strokeWidth={small ? 1.2 : 2.4} strokeLinecap="round" />
+          <circle cx={c.x} cy={c.y} r={small ? 2.2 : 4.5} fill="#cfe6ff" opacity="0.25" />
+          <circle cx={c.x} cy={c.y} r={small ? 0.9 : 1.7} fill="#ffffff" />
+        </g>
+      ))}
+
       {planets.map((p) => (
         <ellipse key={`o${p.i}`} className={p.w.state === 'future' ? 'gx-orbit future' : 'gx-orbit'} cx={cx} cy={cy} rx={p.rx} ry={p.ry} />
       ))}
@@ -202,8 +281,65 @@ export function GalaxyScene({ score, small = false }: { score: MonthScore; small
       <circle cx={cx} cy={cy} r={small ? 4 : 9} fill={`url(#gx-sun-${id})`} />
 
       {planets.filter((p) => !p.behind).map(planet)}
-      <rect width={W} height={H} fill={`url(#gx-vignette-${id})`} />
+      <rect width={W} height={H} fill={`url(#gx-vignette-${id})`} pointerEvents="none" />
     </svg>
+  )
+}
+
+const cometsIn = (habits: Habit[], log: Log, paused: Paused, today: DateKey, month: string) =>
+  monthPlanets(habits, log, paused, today, month).reduce((n, p) => n + p.comets, 0)
+
+/** Detaljer för en vecka i månaden: vilka vanor som klarades och vilka som drog ner. */
+function WeekDetails({ week, habits, log, paused, onClose }: { week: MonthWeek; habits: Habit[]; log: Log; paused: Paused; onClose: () => void }) {
+  const rows = weekHabits(habits, log, week.state === 'future' ? new Set() : paused, week.monday)
+  const short = rows.filter((r) => r.done < r.goal).sort((a, b) => b.goal - b.done - (a.goal - a.done))
+  const range = `${Number(week.monday.slice(8))}/${Number(week.monday.slice(5, 7))}–${Number(addDays(week.monday, 6).slice(8))}/${Number(addDays(week.monday, 6).slice(5, 7))}`
+  return (
+    <section className="gx-week" aria-live="polite">
+      <header>
+        <div>
+          <span className="gx-week-label">
+            Vecka {isoWeek(week.monday)} · {range}
+          </span>
+          <b>
+            {week.state === 'future' ? 'Har inte börjat' : `${week.pct ?? 0} %`}
+            {(week.pct ?? 0) >= 100 && <em className="gx-perfect-tag">Perfekt vecka</em>}
+          </b>
+        </div>
+        <button type="button" className="gx-week-close" aria-label="Stäng veckan" onClick={onClose}>
+          ×
+        </button>
+      </header>
+      {rows.length === 0 ? (
+        <p className="gx-sub">Inga vanor hade mål den här veckan.</p>
+      ) : (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.id} className={r.done >= r.goal ? 'met' : undefined}>
+              <span className="gx-week-name">{r.name}</span>
+              <span className="gx-week-bar" aria-hidden="true">
+                <i style={{ width: `${Math.round((r.done / r.goal) * 100)}%` }} />
+              </span>
+              <span className="gx-week-num">
+                {r.done}/{r.goal}
+                {r.done >= r.goal && <span aria-label=" klart"> ✓</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {week.state !== 'future' && short.length > 0 && (
+        <p className="gx-sub">
+          {week.state === 'current' ? 'Kvar i veckan: ' : 'Drog ner: '}
+          {short
+            .slice(0, 2)
+            .map((r) => `${r.name} (${r.done} av ${r.goal})`)
+            .join(', ')}
+          .
+        </p>
+      )}
+      {week.state === 'past' && short.length === 0 && rows.length > 0 && <p className="gx-sub">Alla vanor klarade. Planeten lyser extra.</p>}
+    </section>
   )
 }
 
@@ -220,6 +356,9 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
   }
   const title = monthName(score.month, today)
   const [galaxyOpen, setGalaxyOpen] = useState(false)
+  const [pickedMonday, setPickedMonday] = useState<DateKey | null>(null)
+  const picked = score.weeks.find((w) => w.monday === pickedMonday) ?? null
+  const comets = cometsIn(habits, log, paused, today, score.month)
   const forecast = monthForecast(score, today)
   // Förra månaden jämförs bara om vanorna fanns större delen av den (annars blir jämförelsen missvisande).
   const last = archive[0]
@@ -242,8 +381,23 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
             Öppna din galax <span aria-hidden="true">›</span>
           </button>
         </div>
-        <GalaxyScene score={score} />
+        <GalaxyScene
+          score={score}
+          comets={comets}
+          picked={picked?.monday ?? null}
+          onPick={(w) => setPickedMonday((cur) => (cur === w.monday ? null : w.monday))}
+        />
+        {!picked && <span className="gx-tap-hint">Tryck på en planet för veckan</span>}
       </div>
+      {picked && <WeekDetails week={picked} habits={habits} log={log} paused={paused} onClose={() => setPickedMonday(null)} />}
+      {!picked && (
+        <p className={comets > 0 ? 'gx-events' : 'gx-events quiet'}>
+          <span aria-hidden="true">☄</span>{' '}
+          {comets > 0
+            ? `${comets} ${comets === 1 ? 'komet' : 'kometer'} i ${title}: 7 dagar i rad på en vana.`
+            : '7 dagar i rad på en vana ger en komet. En perfekt vecka får planeten att lysa.'}
+        </p>
+      )}
       {galaxyOpen && (
         <Suspense fallback={<div className="galaxy-view loading">Laddar galaxen …</div>}>
           <GalaxyView habits={habits} log={log} paused={paused} today={today} onClose={() => setGalaxyOpen(false)} />
@@ -301,7 +455,7 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
                 className={best?.month === s.month ? 'best' : undefined}
                 aria-label={`${monthName(s.month, today)}: ${s.pct} %${best?.month === s.month ? ', bästa månaden' : ''}`}
               >
-                <GalaxyScene score={s} small />
+                <GalaxyScene score={s} small comets={cometsIn(habits, log, paused, today, s.month)} />
                 <span>
                   {monthName(s.month, today).slice(0, 3)} · {s.pct}&nbsp;%
                 </span>
