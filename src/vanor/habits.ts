@@ -109,8 +109,15 @@ export interface Pill {
 export interface TodayInfo {
   /** Bockad idag. */
   done: boolean
-  /** Ska göras idag (står under "Att göra idag" om den inte är bockad). */
+  /** Går att göra idag (står bland dagens vanor om den inte är bockad). */
   due: boolean
+  /**
+   * Måste göras idag: dagliga vanor, efter-vanor efter dagens pass, och veckovanor där
+   * det inte finns fler dagar kvar än gånger kvar. Annars kan den vänta.
+   */
+  must: boolean
+  /** Hur bråttom det är: gånger kvar / dagar kvar (0–1+). För att sortera det som kan vänta. */
+  urgency: number
   /** Klara dagar denna vecka. */
   count: number
   /** Veckomålet efter pausade dagar. */
@@ -119,6 +126,13 @@ export interface TodayInfo {
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+const WEEKDAY_NAMES = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag']
+
+/** "i morgon" eller veckodagens namn. */
+function dayWord(date: DateKey, today: DateKey): string {
+  return date === addDays(today, 1) ? 'i morgon' : WEEKDAY_NAMES[weekday(date)]
+}
 
 /** Hur en vana står till idag: om den ska göras, och vilka lappar som visas. */
 export function todayInfo(habit: Habit, log: Log, today: DateKey, paused: Paused = NO_PAUSE): TodayInfo {
@@ -129,6 +143,8 @@ export function todayInfo(habit: Habit, log: Log, today: DateKey, paused: Paused
   const pausedToday = paused.has(today)
   const pills: Pill[] = []
   let due = !pausedToday
+  let must = !pausedToday && !done
+  let urgency = 1
   // En "efter"-vana (t.ex. Stretching efter Gym) görs bara de dagar passet är gjort.
   const linked = habit.after.length > 0
   const trained = linked && habit.after.some((id) => isDone(log, id, today))
@@ -138,9 +154,12 @@ export function todayInfo(habit: Habit, log: Log, today: DateKey, paused: Paused
     if (days > 0) pills.push({ kind: 'fire', text: `${plural(days, 'dag', 'dagar')} i rad` })
   } else {
     // Dagar kvar i veckan som går att använda, idag inräknat (om idag inte är pausad).
-    let daysLeft = 0
-    for (let i = weekday(today); i < 7; i++) if (!paused.has(addDays(monday, i))) daysLeft++
+    const usable: DateKey[] = []
+    for (let i = weekday(today); i < 7; i++) if (!paused.has(addDays(monday, i))) usable.push(addDays(monday, i))
+    const daysLeft = usable.length
     const need = Math.max(0, goal - count)
+    urgency = daysLeft ? need / daysLeft : 1
+    must = must && need >= daysLeft && need > 0
     if (goal === 0) {
       // Veckan räknas inte (ny vana sent i veckan, eller pausad). Inget krav, men går att bocka.
       if (!done) due = false
@@ -153,8 +172,14 @@ export function todayInfo(habit: Habit, log: Log, today: DateKey, paused: Paused
     } else if (!pausedToday && !linked) {
       const tight = need >= daysLeft
       const over = need > daysLeft
-      const left = daysLeft === 1 ? 'veckan slutar idag' : `${daysLeft} dagar kvar av veckan`
-      pills.push({ kind: 'plain', text: `${need} kvar, ${left}` })
+      if (tight) {
+        const left = daysLeft === 1 ? 'veckan slutar idag' : `${daysLeft} dagar kvar av veckan`
+        pills.push({ kind: 'plain', text: `${need} kvar, ${left}` })
+      } else {
+        // Senaste dagen att börja för att ändå hinna: den need:e användbara dagen räknat bakifrån.
+        const latest = usable[usable.length - need]
+        pills.push({ kind: 'plain', text: `${need} kvar på ${daysLeft} dagar, kan vänta till ${dayWord(latest, today)}` })
+      }
       // Man kan bara bocka en gång per dag: fler kvar än dagar = målet nås inte.
       if (over) pills.push({ kind: 'bad', text: 'Veckomålet hinns inte' })
       else if (tight) pills.push({ kind: 'warn', text: 'Måste bli idag' })
@@ -165,18 +190,27 @@ export function todayInfo(habit: Habit, log: Log, today: DateKey, paused: Paused
 
   if (linked && !done) {
     due = trained && (isDaily(habit) || count < goal)
+    must = due
     if (due) pills.unshift({ kind: 'warn', text: 'Efter dagens pass' })
   }
 
   if (pausedToday && !done && !due) pills.unshift({ kind: 'plain', text: 'Pausad idag' })
 
-  return { done, due, count, goal, pills }
+  if (!due) must = false
+  return { done, due, must, urgency, count, goal, pills }
 }
 
-/** Sammanfattning för rubriken: hur många som ska göras idag och hur många som är klara. */
-export function daySummary(infos: TodayInfo[]): { total: number; done: number } {
-  const relevant = infos.filter((i) => i.due || i.done)
-  return { total: relevant.length, done: relevant.filter((i) => i.done).length }
+/**
+ * Sammanfattning för rubriken: det som måste göras idag plus det som redan är bockat.
+ * Vanor som kan vänta räknas inte förrän de är gjorda.
+ */
+export function daySummary(infos: TodayInfo[]): { total: number; done: number; flexible: number } {
+  const relevant = infos.filter((i) => i.must || i.done)
+  return {
+    total: relevant.length,
+    done: relevant.filter((i) => i.done).length,
+    flexible: infos.filter((i) => i.due && !i.must && !i.done).length,
+  }
 }
 
 export const NAME_MAX = 40
