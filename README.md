@@ -48,7 +48,7 @@ Fliken **Vanor** är vanetrackern (tidigare en egen app). Koden ligger i `src/va
 
 ## Träning
 
-Fliken **Träning** loggar gympass (övningar, kg × reps) och löppass (distans, tid). Koden ligger i `src/traning/`:
+Delen **Träning** (växeln överst i fliken Vanor) loggar gympass (övningar, kg × reps) och löppass (distans, tid). Koden ligger i `src/traning/`:
 
 - `training.ts`: logik med tester – tempo, 5 km-tid, tyngsta set, rekord, förra passets vikter.
 - `Traning.tsx`, `WorkoutSheet.tsx`: fliken och arket för ett pass. Ett nytt gympass sparas som utkast medan du tränar.
