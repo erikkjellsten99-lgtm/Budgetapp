@@ -1224,10 +1224,37 @@
   font-weight: 500;
 }
 
+.vanor .pc-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 14px 10px;
+  background: var(--bg);
+  border-radius: 14px;
+}
+
+.vanor .pc-chart-head {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.vanor .pc-avg {
+  font-family: var(--mono);
+}
+
+.vanor .pc-chart-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 .vanor .pc-bars {
   display: grid;
-  grid-auto-columns: 1fr;
-  grid-auto-flow: column;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -1238,27 +1265,39 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
   border-top: 0;
 }
 
 .vanor .pc-val {
+  min-height: 1em;
   font-family: var(--mono);
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.68rem;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.vanor .pc-bars li.current .pc-val {
   color: var(--ink);
+  font-weight: 600;
 }
 
 .vanor .pc-track {
   position: relative;
   display: block;
   width: 100%;
-  max-width: 34px;
-  height: 84px;
+  max-width: 22px;
+  height: 72px;
   background: var(--sunk);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
+}
+
+.vanor .pc-bars li.empty .pc-track {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  opacity: 0.7;
 }
 
 .vanor .pc-fill {
@@ -1267,22 +1306,20 @@
   bottom: 0;
   left: 0;
   background: var(--done);
-  border-radius: 8px 8px 0 0;
-  transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.vanor .pc-bars li.current .pc-fill {
-  background: repeating-linear-gradient(135deg, var(--done) 0 4px, var(--done-soft) 4px 7px);
+  border-radius: 6px;
+  transition: height 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .vanor .pc-week {
   color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-family: var(--mono);
+  font-size: 0.66rem;
 }
 
 .vanor .pc-bars li.current .pc-week {
   color: var(--ink);
+  font-family: var(--body);
+  font-weight: 700;
 }
 
 .vanor .pc-toggle {
@@ -1740,7 +1777,8 @@
 }
 
 .vanor .pc-bars li.current .pc-fill {
-  background: repeating-linear-gradient(135deg, var(--fill) 0 4px, var(--fill-soft) 4px 7px);
+  background: var(--fill);
+  opacity: 0.75;
 }
 
 /* Pennan behövs inte i den lätta listan – prickarna går att trycka på ändå. */
