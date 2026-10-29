@@ -56,6 +56,22 @@ function glowTexture(): THREE.Texture {
   return texture
 }
 
+/** Tunn ljusring som markerar var ett solsystem (en månad) ligger. */
+function ringTexture(): THREE.Texture {
+  const size = 128
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+  ctx.lineWidth = 5
+  ctx.beginPath()
+  ctx.arc(size / 2, size / 2, size / 2 - 6, 0, Math.PI * 2)
+  ctx.stroke()
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
 export default function GalaxyView({ habits, log, paused, today, onClose }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const months = useMemo(() => galaxyMonths(habits, log, paused, today), [habits, log, paused, today])
@@ -107,6 +123,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     controls.enablePan = false
 
     const glow = glowTexture()
+    const ringTex = ringTexture()
     const rand = seeded(20261029)
 
     // Galaxens stjärnor: två spiralarmar som når så långt som dina månader – galaxen växer utåt med tiden.
@@ -205,6 +222,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       ),
     )
 
+    const rings: THREE.Sprite[] = []
     // Ett solsystem per månad, ljusare ju bättre månaden gick.
     const systems: THREE.Sprite[] = months.map((m, i) => {
       const p = armPoint(i)
@@ -223,9 +241,18 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       sprite.scale.setScalar(0.55 + 1.25 * share)
       sprite.userData.index = i
       scene.add(sprite)
+      // Ring runt solsystemet så det syns mot stjärnorna i armen.
+      const ring = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: ringTex, color: '#ffd28a', transparent: true, depthWrite: false, opacity: 0.85 }),
+      )
+      ring.position.copy(sprite.position)
+      ring.scale.setScalar(0.9)
+      scene.add(ring)
+      rings.push(ring)
       return sprite
     })
     const current = systems[systems.length - 1]
+    const currentRing = rings[rings.length - 1]
 
     // Bakgrundsstjärnor långt bort
     const farCount = 1500
@@ -264,7 +291,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       for (const s of systems) {
         const projected = s.position.clone().project(camera)
         const d = Math.hypot(projected.x - pointer.x, projected.y - pointer.y)
-        if (projected.z < 1 && d < 0.12 && (!best || d < best.d)) best = { i: s.userData.index, d }
+        if (projected.z < 1 && d < 0.18 && (!best || d < best.d)) best = { i: s.userData.index, d }
       }
       if (best) {
         setSelected(months[best.i])
@@ -294,7 +321,9 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         if (k >= 1) flight = null
       }
       // Den pågående månaden pulserar svagt – den byggs fortfarande.
-      if (current) current.material.opacity = 0.55 + 0.25 * (0.5 + 0.5 * Math.sin(now / 600))
+      const beat = 0.5 + 0.5 * Math.sin(now / 600)
+      if (current) current.material.opacity = 0.55 + 0.25 * beat
+      if (currentRing) currentRing.scale.setScalar(0.85 + 0.3 * beat)
       dust.rotation.y += 0.00015
       const closeness = camera.position.distanceTo(controls.target) / home.length()
       for (const m of fadeWhenClose) m.opacity = Math.min(1, 0.22 + closeness * 1.1)
@@ -316,10 +345,16 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         mat?.dispose()
       })
       glow.dispose()
+      ringTex.dispose()
       renderer.dispose()
       renderer.domElement.remove()
     }
   }, [months, log])
+
+  const open = (i: number) => {
+    setSelected(months[i])
+    flyToRef.current?.(i)
+  }
 
   const back = () => {
     setSelected(null)
@@ -355,11 +390,23 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
           </button>
         </section>
       ) : (
-        <p className="gv-hint">
-          {months.length <= 1
-            ? 'Din första månad lyser nära kärnan. Varje ny månad läggs till längre ut i armen.'
-            : 'Dra för att snurra, nyp för att zooma, tryck på en ljuspunkt för att se månaden.'}
-        </p>
+        <div className="gv-bottom">
+          <p className="gv-hint">
+            {months.length <= 1
+              ? 'Ringen är ditt solsystem för den här månaden. Nästa månad läggs till längre ut i armen.'
+              : 'Ringarna är dina månader. Tryck på en, eller välj nedan.'}
+          </p>
+          <div className="gv-months" role="list" ref={(el) => {
+              if (el) el.scrollLeft = el.scrollWidth
+            }}>
+            {months.map((m, i) => (
+              <button key={m.month} type="button" role="listitem" className={m.current ? 'gv-month is-current' : 'gv-month'} onClick={() => open(i)}>
+                <span>{monthName(m.month, today)}</span>
+                <b>{m.pct}&nbsp;%</b>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>,
     document.body,
