@@ -6,6 +6,13 @@ import { addDays, isoWeek, longDate, todayKey, weekStart, type DateKey } from '.
 import { daySummary, habitPlan, isDaily, isDone, todayInfo, type Habit, type TodayInfo } from './habits'
 import { loadHabitData, minimumKeys, onHabitChange, toggleCheck, togglePause, toLog, type HabitData } from './store'
 import { dayQuote } from './quotes'
+import '@fontsource/bricolage-grotesque/700.css'
+import '@fontsource/bricolage-grotesque/800.css'
+import '@fontsource/figtree/400.css'
+import '@fontsource/figtree/500.css'
+import '@fontsource/figtree/600.css'
+import '@fontsource/figtree/700.css'
+import '@fontsource/jetbrains-mono/500.css'
 import './vanor.css'
 
 /** Dagens datum som byter vid midnatt, även om appen står öppen. */
@@ -134,8 +141,8 @@ export default function Vanor() {
             {longDate(today)}, <span className="nowrap">vecka {isoWeek(today)}</span>
           </p>
           <h2 className="headline">{headline}</h2>
+          {summary.total > 0 && <TodayBar done={summary.done} total={summary.total} />}
         </div>
-        {habits.length > 0 && <Ring done={summary.done} total={summary.total} />}
         <button type="button" className="icon-btn" aria-label="Hantera vanor" onClick={() => setSettingsOpen(true)}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
@@ -146,8 +153,6 @@ export default function Vanor() {
       </header>
 
       {habits.length > 0 && <ProgressCard habits={habits} log={log} paused={paused} today={today} />}
-
-      <DayQuote today={today} />
 
       {pausedToday && (
         <div className="pause-banner" role="status">
@@ -206,6 +211,8 @@ export default function Vanor() {
             </section>
           )}
 
+          <DayQuote today={today} />
+
           <div className="footer-actions">
             <button type="button" className="text-btn" onClick={() => setSettingsOpen(true)}>
               + Lägg till eller ta bort vanor
@@ -215,7 +222,7 @@ export default function Vanor() {
                 Sjuk eller skadad? Pausa dagen
               </button>
             )}
-            <p className="quiet backfill-tip">Glömt att bocka igår? Tryck på veckoraden under vanan.</p>
+            <p className="quiet backfill-tip">Glömt att bocka igår? Tryck på prickarna under vanan.</p>
           </div>
         </>
       )}
@@ -234,29 +241,18 @@ export default function Vanor() {
   )
 }
 
-function Ring({ done, total }: { done: number; total: number }) {
-  const r = 15
-  const share = total ? done / total : 0
+/** Dagens bockar som segment: ett per sak som ska göras idag. */
+function TodayBar({ done, total }: { done: number; total: number }) {
   return (
-    <div className="ring" role="img" aria-label={`${done} av ${total} klara idag`}>
-      <svg viewBox="0 0 36 36" aria-hidden="true">
-        <circle className="track" cx="18" cy="18" r={r} />
-        <circle
-          className="arc"
-          cx="18"
-          cy="18"
-          r={r}
-          pathLength={100}
-          strokeDasharray={`${(share * 100).toFixed(1)} 100`}
-          strokeOpacity={share > 0 ? 1 : 0}
-        />
-      </svg>
-      <div className="lbl" aria-hidden="true">
-        <b>
-          {done}/{total}
-        </b>
-        <span>klart</span>
-      </div>
+    <div className="today-bar" role="img" aria-label={`${done} av ${total} klara idag`}>
+      <span className="today-segs" aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => (
+          <i key={i} className={i < done ? 'on' : undefined} />
+        ))}
+      </span>
+      <span className="today-count" aria-hidden="true">
+        {done} av {total} klart
+      </span>
     </div>
   )
 }
@@ -329,25 +325,31 @@ function HabitRow({ habit, info, plan, week, waiting, min, pop, onCheck, onDays,
       <div className="info">
         <span className="name">{habit.name}</span>
         <span className="meta">
-          {[plan, ...notes.map((n) => n[0].toLowerCase() + n.slice(1))].join(', ')}
+          {/* Planen ("4 gånger i veckan") syns redan i räknaren – visa läget i stället när det finns. */}
+          {notes.length ? notes.join(', ') : plan}
           {streak && <span className="streak">{streak}</span>}
         </span>
         <span className="progress">
           <WeekStrip week={week} name={habit.name} onClick={onDays} />
           {count && <span className="count">{count}</span>}
+          {showMin && (
+            <button
+              type="button"
+              className="min-btn"
+              aria-label={`Bocka av bara minimum för ${habit.name}: ${habit.minimum}`}
+              onClick={() => onCheck(habit, true)}
+            >
+              Min {habit.minimum}
+            </button>
+          )}
         </span>
-        {(strong.length > 0 || showMin) && (
+        {strong.length > 0 && (
           <span className="actions">
             {strong.map((p) => (
               <span key={p.text} className={`pill ${p.kind}`}>
                 {p.text}
               </span>
             ))}
-            {showMin && (
-              <button type="button" className="min-btn" onClick={() => onCheck(habit, true)}>
-                Minimum {habit.minimum}
-              </button>
-            )}
           </span>
         )}
       </div>
@@ -379,16 +381,10 @@ function DayQuote({ today }: { today: DateKey }) {
       aria-label={`Dagens citat: ${quote.text}${quote.by ? `, ${quote.by}` : ''}. Tryck för ett annat.`}
       onClick={() => setShift({ day: today, offset: offset + 1 })}
     >
-      <span className="quote-mark" aria-hidden="true">
-        ”
-      </span>
       <span className="quote-text" key={`${today}-${offset}`}>
-        {quote.text}
+        ”{quote.text}”
         {quote.by && <small>{quote.by}</small>}
       </span>
-      <svg className="quote-next" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4.5h-4.5" />
-      </svg>
     </button>
   )
 }
