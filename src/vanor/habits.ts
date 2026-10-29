@@ -14,6 +14,8 @@ export interface Habit {
   archived: boolean
   /** Minsta godkända version, t.ex. "2 min". Räknas som klar en dålig dag. Tom = ingen. */
   minimum?: string
+  /** Tid för påminnelse, t.ex. "21:00". Tom = ingen. Skickas av servern (se push.ts). */
+  remind?: string
 }
 
 /** Loggen: datum → id:n för vanorna som är klara den dagen. */
