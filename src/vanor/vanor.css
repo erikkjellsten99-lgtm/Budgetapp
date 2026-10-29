@@ -1114,179 +1114,204 @@
   color: var(--done);
 }
 
-/* Veckans sol: utveckling överst i Vanor */
+/* Veckans sol: utveckling överst i Vanor. --warm (0–1) sätts från veckans procent. */
 .vanor {
-  --sun: #e9a23b;
-  --sun-glow: #f6c56b;
-  --sky: #eef4ef;
-  --ground: #dfe8e1;
+  --sky-top: #eef3ef;
+  --sky-bottom: #f5f1e8;
+  --warm-top: #fbeed6;
+  --warm-bottom: #f7d79c;
+  --sun-a: #fff3cf;
+  --sun-b: #efa43a;
+  --halo: #f8c870;
 }
 
 @media (prefers-color-scheme: dark) {
   .vanor {
-    --sun: #f2b452;
-    --sun-glow: #c98a2e;
-    --sky: #17211b;
-    --ground: #222d26;
+    --sky-top: #141c17;
+    --sky-bottom: #1b231e;
+    --warm-top: #1f1d15;
+    --warm-bottom: #4a3518;
+    --sun-a: #ffe7a8;
+    --sun-b: #e39b33;
+    --halo: #b8792a;
   }
 }
 
 .vanor .week-sun {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 0 0 6px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 18px;
   overflow: hidden;
 }
 
+.vanor .ws-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  min-height: 132px;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+}
+
+/* Himlen blir varmare ju närmare målet */
+.vanor .ws-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, var(--warm-top), var(--warm-bottom));
+  opacity: calc(var(--warm, 0) * 0.85);
+  transition: opacity 0.6s ease;
+}
+
+.vanor .ws-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 18px 0 18px 20px;
+}
+
+.vanor .ws-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vanor .ws-big {
+  font-size: 2.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.vanor .ws-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .vanor .ws-scene {
-  display: block;
-  width: 100%;
-  height: auto;
+  flex: none;
+  width: 140px;
+  height: 132px;
+  margin-right: 6px;
 }
 
-.vanor .ws-sky {
-  fill: var(--sky);
+.vanor .ws-disc-a {
+  stop-color: var(--sun-a);
 }
 
-.vanor .ws-glow-in {
-  stop-color: var(--sun-glow);
+.vanor .ws-disc-b {
+  stop-color: var(--sun-b);
 }
 
-.vanor .ws-glow-out {
-  stop-color: var(--sky);
+.vanor .ws-halo-a {
+  stop-color: var(--halo);
+  stop-opacity: 0.55;
 }
 
-.vanor .ws-ground {
-  fill: var(--ground);
-}
-
-.vanor .ws-horizon {
-  stroke: var(--line);
-  stroke-width: 1;
-}
-
-.vanor .ws-arc {
-  fill: none;
-  stroke: var(--muted);
-  stroke-width: 1.2;
-  stroke-dasharray: 3 5;
-  opacity: 0.5;
-}
-
-.vanor .ws-path {
-  fill: none;
-  stroke: var(--sun);
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  opacity: 0.8;
-}
-
-.vanor .ws-mark {
-  fill: var(--surface);
-  stroke: var(--ink);
-  stroke-width: 1.6;
-}
-
-.vanor .ws-top {
-  fill: var(--muted);
-  opacity: 0.6;
-}
-
-.vanor .ws-sun circle {
-  fill: var(--sun);
-}
-
-.vanor .ws-sun line {
-  stroke: var(--sun);
-  stroke-width: 2.4;
-  stroke-linecap: round;
+.vanor .ws-halo-b {
+  stop-color: var(--halo);
+  stop-opacity: 0;
 }
 
 .vanor .ws-sun {
-  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.vanor .ws-sun.full {
-  animation: ws-pulse 2.4s ease-in-out infinite;
+.vanor .ws-sun.full .ws-halo {
+  animation: ws-breathe 3.2s ease-in-out infinite;
   transform-box: fill-box;
+  transform-origin: center;
 }
 
-@keyframes ws-pulse {
+@keyframes ws-breathe {
   50% {
-    opacity: 0.85;
+    transform: scale(1.12);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .vanor .ws-sun,
-  .vanor .ws-sun.full {
+  .vanor .ws-sun.full .ws-halo {
     animation: none;
     transition: none;
   }
 }
 
-.vanor .ws-stats {
+.vanor .ws-horizon {
+  stroke: var(--ink);
+  stroke-width: 1;
+  opacity: 0.22;
+}
+
+.vanor .ws-horizon.soft {
+  opacity: 0.1;
+}
+
+.vanor .ws-pace {
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  opacity: 0.35;
+}
+
+.vanor .ws-pace-label {
+  fill: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.vanor .ws-foot {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: -6px;
-  padding: 0 18px;
+  padding: 14px 16px 4px 20px;
+  border-top: 1px solid var(--line);
 }
 
-.vanor .ws-now,
+.vanor .ws-msg {
+  margin: 0;
+  color: var(--warn);
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.vanor .ws-msg.ok {
+  color: var(--done);
+}
+
 .vanor .ws-last {
   display: flex;
+  flex: none;
   flex-direction: column;
-  gap: 1px;
-}
-
-.vanor .ws-last {
   align-items: flex-end;
   text-align: right;
 }
 
-.vanor .ws-label {
+.vanor .ws-last span:first-child {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
-.vanor .ws-big {
-  font-size: 2.2rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-}
-
-.vanor .ws-sub {
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
 .vanor .ws-last b {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-variant-numeric: tabular-nums;
 }
 
-.vanor .ws-msg {
-  margin: 0 18px;
-  padding: 10px 12px;
-  background: var(--warn-soft);
-  border-radius: 12px;
-  color: var(--warn);
-  font-size: 0.9rem;
-  font-weight: 650;
-}
-
-.vanor .ws-msg.ok {
-  background: var(--done-soft);
-  color: var(--done);
+.vanor .ws-last .trend {
+  font-size: 0.8rem;
 }
 
 .vanor .ws-toggle {
