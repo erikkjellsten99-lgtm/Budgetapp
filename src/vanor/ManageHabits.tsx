@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { SUGGESTIONS } from './defaults'
-import { NAME_MAX, goalText, habitPlan, nameError, sameName, type Habit } from './habits'
+import { NAME_MAX, goalText, habitPlan, nameError, remindText, sameName, type Habit } from './habits'
 import { addHabit, removeHabit, restoreHabit, updateHabit } from './store'
 
 /** Lägg till, ändra, ta bort och lägg tillbaka vanor. Visas i Inställningar. */
@@ -29,7 +29,7 @@ export default function ManageHabits({ all }: { all: Habit[] }) {
                       {habitPlan(h, (id) => active.find((a) => a.id === id)?.name)}
                       {h.after.some((id) => active.some((a) => a.id === id)) ? ` · ${goalText(h.goal)}` : ''}
                       {h.minimum ? ` · minimum ${h.minimum}` : ''}
-                      {h.remind ? ` · påminnelse ${h.remind}` : ''}
+                      {h.remind ? ` · påminnelse ${remindText(h)}` : ''}
                     </span>
                   </div>
                   <button type="button" className="text-btn" onClick={() => setEditing(h.id)}>
@@ -89,6 +89,10 @@ export default function ManageHabits({ all }: { all: Habit[] }) {
   )
 }
 
+const DAY_LETTERS = ['M', 'T', 'O', 'T', 'F', 'L', 'S']
+const DAY_NAMES = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag']
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
+
 /** Mål 1–7 dagar i veckan. */
 function GoalPicker({ value, onChange, id }: { value: number; onChange: (goal: number) => void; id: string }) {
   return (
@@ -119,11 +123,13 @@ interface FieldsProps {
   goal: number
   minimum: string
   remind: string
+  remindDays: number[]
   error: string | null
   setName: (v: string) => void
   setGoal: (v: number) => void
   setMinimum: (v: string) => void
   setRemind: (v: string) => void
+  setRemindDays: (v: number[]) => void
 }
 
 function HabitFields({
@@ -135,11 +141,13 @@ function HabitFields({
   goal,
   minimum,
   remind,
+  remindDays,
   error,
   setName,
   setGoal,
   setMinimum,
   setRemind,
+  setRemindDays,
 }: FieldsProps) {
   return (
     <>
@@ -198,8 +206,36 @@ function HabitFields({
             </button>
           )}
         </div>
+        {remind && (
+          <div className="remind-days" role="group" aria-label="Dagar för påminnelsen">
+            {DAY_LETTERS.map((letter, d) => {
+              const on = remindDays.includes(d)
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={on}
+                  aria-label={DAY_NAMES[d]}
+                  className={on ? 'on' : undefined}
+                  onClick={() =>
+                    setRemindDays(on ? remindDays.filter((x) => x !== d) : [...remindDays, d].sort((a, b) => a - b))
+                  }
+                >
+                  {letter}
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {remind && remindDays.length === 0 && (
+          <p className="field-error" role="alert">
+            Välj minst en dag, eller tryck Ingen för att ta bort påminnelsen.
+          </p>
+        )}
         <small className="field-help">
-          En notis vid den tiden om vanan inte är bockad. Slå på notiser under Påminnelser överst.
+          {remind
+            ? 'Tryck på dagarna för att välja när. Notisen kommer bara om vanan inte är bockad.'
+            : 'En notis vid den tiden om vanan inte är bockad. Slå på notiser under Påminnelser överst.'}
         </small>
       </div>
       {others.length > 0 && (
@@ -234,6 +270,7 @@ function NewHabit({ active }: { active: Habit[] }) {
   const [goal, setGoal] = useState(3)
   const [minimum, setMinimum] = useState('')
   const [remind, setRemind] = useState('')
+  const [remindDays, setRemindDays] = useState<number[]>(ALL_DAYS)
   const [after, setAfter] = useState<string[]>([])
   const [tried, setTried] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -243,13 +280,14 @@ function NewHabit({ active }: { active: Habit[] }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setTried(true)
-    if (busy || nameError(name, active)) return
+    if (busy || nameError(name, active) || (remind && !remindDays.length)) return
     setBusy(true)
-    await addHabit(name, goal, minimum, after, remind)
+    await addHabit(name, goal, minimum, after, remind, remindDays)
     setAdded(name.trim())
     setName('')
     setMinimum('')
     setRemind('')
+    setRemindDays(ALL_DAYS)
     setAfter([])
     setGoal(3)
     setTried(false)
@@ -267,6 +305,7 @@ function NewHabit({ active }: { active: Habit[] }) {
         goal={goal}
         minimum={minimum}
         remind={remind}
+        remindDays={remindDays}
         error={error}
         setName={(v) => {
           setName(v)
@@ -275,6 +314,7 @@ function NewHabit({ active }: { active: Habit[] }) {
         setGoal={setGoal}
         setMinimum={setMinimum}
         setRemind={setRemind}
+        setRemindDays={setRemindDays}
       />
       <button type="submit" className="primary" disabled={busy}>
         Lägg till
@@ -293,6 +333,7 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
   const [goal, setGoal] = useState(habit.goal)
   const [minimum, setMinimum] = useState(habit.minimum ?? '')
   const [remind, setRemind] = useState(habit.remind ?? '')
+  const [remindDays, setRemindDays] = useState<number[]>(habit.remindDays?.length ? habit.remindDays : ALL_DAYS)
   const [after, setAfter] = useState(habit.after.filter((id) => active.some((a) => a.id === id)))
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -300,9 +341,9 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    if (busy || error) return
+    if (busy || error || (remind && !remindDays.length)) return
     setBusy(true)
-    await updateHabit(habit.id, { name, goal, minimum, after, remind })
+    await updateHabit(habit.id, { name, goal, minimum, after, remind, remindDays })
     onDone()
   }
 
@@ -324,11 +365,13 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
           goal={goal}
           minimum={minimum}
           remind={remind}
+          remindDays={remindDays}
           error={error}
           setName={setName}
           setGoal={setGoal}
           setMinimum={setMinimum}
           setRemind={setRemind}
+          setRemindDays={setRemindDays}
         />
         {confirm ? (
           <div className="confirm" role="alert">
@@ -346,7 +389,7 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
           </div>
         ) : (
           <div className="form-actions">
-            <button type="submit" className="primary" disabled={busy || !!error}>
+            <button type="submit" className="primary" disabled={busy || !!error || (!!remind && !remindDays.length)}>
               Spara
             </button>
             <button type="button" className="text-btn" onClick={onDone}>

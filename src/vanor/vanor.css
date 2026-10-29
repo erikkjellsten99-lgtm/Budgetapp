@@ -1559,6 +1559,30 @@
   min-width: 120px;
 }
 
+/* Dagar för påminnelsen */
+.vanor .remind-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.vanor .remind-days button {
+  min-height: 42px;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.vanor .remind-days button.on {
+  background: var(--done);
+  border-color: var(--done);
+  color: var(--done-ink);
+}
+
 .vanor .push-actions {
   display: flex;
   flex-wrap: wrap;
