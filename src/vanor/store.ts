@@ -166,6 +166,13 @@ export async function toggleCheck(habitId: string, date: DateKey, min = false) {
   else await change([{ store: 'checks', record: min ? { key, date, habitId, min: true } : { key, date, habitId } }]);
 }
 
+/** Sätt en dag till klar, bara minimum eller inte gjord (för att bocka i efterhand). */
+export async function setCheck(habitId: string, date: DateKey, state: 'none' | 'done' | 'min') {
+  const key = checkKey(date, habitId);
+  if (state === 'none') await change([], [{ store: 'checks', id: key }]);
+  else await change([{ store: 'checks', record: state === 'min' ? { key, date, habitId, min: true } : { key, date, habitId } }]);
+}
+
 /** Bocka av vanan för dagen om den inte redan är bockad (t.ex. Gym när ett gympass loggas). */
 export async function ensureCheck(habitId: string, date: DateKey) {
   const db = await openDb();

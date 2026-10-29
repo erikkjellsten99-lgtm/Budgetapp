@@ -1045,3 +1045,71 @@
   stroke-linejoin: round;
   opacity: 0.7;
 }
+
+/* Bocka i efterhand: veckoraden är en knapp */
+.vanor .week-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -6px -6px -6px -6px;
+  padding: 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: inherit;
+}
+
+.vanor .week-btn:active {
+  background: var(--sunk);
+}
+
+.vanor .week-btn .week {
+  border-top: 0;
+}
+
+.vanor .week-edit {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.vanor .backfill-tip {
+  margin: 4px 0 0;
+  text-align: center;
+}
+
+.vanor .day-row {
+  min-height: 64px;
+  padding-right: 10px;
+}
+
+.vanor .day-choice {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.vanor .day-choice .choice {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 8px 12px;
+  background: var(--sunk);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.vanor .day-choice .choice.on {
+  background: var(--done);
+  color: var(--done-ink);
+}
+
+.vanor .day-choice .choice.on.min {
+  background: var(--done-soft);
+  border-color: var(--done);
+  color: var(--done);
+}

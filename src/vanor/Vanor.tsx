@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import DaysSheet from './DaysSheet'
 import HabitSheet from './HabitSheet'
 import { addDays, isoWeek, longDate, todayKey, weekStart, type DateKey } from './dates'
 import { daySummary, habitPlan, isDaily, isDone, todayInfo, type Habit, type TodayInfo } from './habits'
@@ -48,6 +49,7 @@ export default function Vanor() {
   const data = useHabitData()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [popped, setPopped] = useState<string | null>(null)
+  const [daysFor, setDaysFor] = useState<string | null>(null)
   if (!data) return null
   const { checks, pauses } = data
   const habits = data.habits.filter((h) => !h.archived)
@@ -113,6 +115,7 @@ export default function Vanor() {
       min={minimums.has(`${today}|${habit.id}`)}
       pop={popped === habit.id}
       onCheck={check}
+      onDays={() => setDaysFor(habit.id)}
       onPopEnd={() => setPopped(null)}
     />
   )
@@ -188,10 +191,20 @@ export default function Vanor() {
                 Sjuk eller skadad? Pausa dagen
               </button>
             )}
+            <p className="quiet backfill-tip">Glömt att bocka igår? Tryck på veckoraden under vanan.</p>
           </div>
         </>
       )}
 
+      {daysFor && habits.some((h) => h.id === daysFor) && (
+        <DaysSheet
+          habit={habits.find((h) => h.id === daysFor)!}
+          today={today}
+          paused={paused}
+          stateOf={(date) => (isDone(log, daysFor, date) ? (minimums.has(`${date}|${daysFor}`) ? 'min' : 'done') : 'none')}
+          onClose={() => setDaysFor(null)}
+        />
+      )}
       {settingsOpen && <HabitSheet habits={data.habits} onClose={() => setSettingsOpen(false)} />}
     </div>
   )
@@ -241,16 +254,21 @@ const STATE_TEXT: Record<DayState, string> = {
   paused: 'pausad',
 }
 
-/** Veckan som sju rutor, måndag–söndag. */
-function WeekStrip({ week }: { week: DayCell[] }) {
+/** Veckan som sju rutor, måndag–söndag. Tryck för att bocka dagar i efterhand. */
+function WeekStrip({ week, name, onClick }: { week: DayCell[]; name: string; onClick: () => void }) {
   return (
-    <ol className="week" aria-label="Den här veckan">
+    <button type="button" className="week-btn" aria-label={`${name} den här veckan: ${week.map((d, i) => `${DAY_NAMES[i]} ${STATE_TEXT[d.state]}`).join(', ')}. Tryck för att bocka i efterhand.`} onClick={onClick}>
+    <span className="week">
       {week.map((d, i) => (
-        <li key={d.date} className={`day ${d.state}`} aria-label={`${DAY_NAMES[i]}: ${STATE_TEXT[d.state]}`}>
+        <span key={d.date} className={`day ${d.state}`} title={`${DAY_NAMES[i]}: ${STATE_TEXT[d.state]}`}>
           <span aria-hidden="true">{DAY_LETTERS[i]}</span>
-        </li>
+        </span>
       ))}
-    </ol>
+    </span>
+      <svg className="week-edit" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M10.5 3.5l2 2L6 12H4v-2z" />
+      </svg>
+    </button>
   )
 }
 
@@ -266,10 +284,12 @@ interface RowProps {
   min: boolean
   pop: boolean
   onCheck: (habit: Habit, min?: boolean) => void
+  /** Öppna dagarna för att bocka i efterhand. */
+  onDays: () => void
   onPopEnd: () => void
 }
 
-function HabitRow({ habit, info, plan, week, waiting, min, pop, onCheck, onPopEnd }: RowProps) {
+function HabitRow({ habit, info, plan, week, waiting, min, pop, onCheck, onDays, onPopEnd }: RowProps) {
   // Starka lägen visas som lappar, resten som lugn text under namnet.
   const strong = info.pills.filter((p) => p.kind === 'warn' || p.kind === 'bad' || (p.kind === 'ok' && !info.done))
   const notes = info.pills.filter((p) => p.kind === 'plain').map((p) => p.text)
@@ -289,7 +309,7 @@ function HabitRow({ habit, info, plan, week, waiting, min, pop, onCheck, onPopEn
           {streak && <span className="streak">{streak}</span>}
         </span>
         <span className="progress">
-          <WeekStrip week={week} />
+          <WeekStrip week={week} name={habit.name} onClick={onDays} />
           {count && <span className="count">{count}</span>}
         </span>
         {(strong.length > 0 || showMin) && (
