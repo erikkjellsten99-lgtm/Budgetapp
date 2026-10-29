@@ -2119,3 +2119,155 @@
   font-style: normal;
   font-weight: 800;
 }
+
+/* Öppna 3D-galaxen från månadskortet */
+.vanor .gx-open {
+  align-self: flex-start;
+  min-height: 36px;
+  margin: 8px 0 0 -2px;
+  padding: 6px 12px;
+  background: rgb(255 255 255 / 0.1);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 999px;
+  color: #f1f3ff;
+  font-size: 0.82rem;
+  font-weight: 650;
+  backdrop-filter: blur(6px);
+}
+
+.vanor .gx-open:active {
+  background: rgb(255 255 255 / 0.18);
+}
+
+/* 3D-galaxen i helskärm (ligger utanför .vanor, därför egna stilar) */
+.galaxy-view {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #03050c;
+  color: #eef1ff;
+  font-family: 'Figtree', system-ui, sans-serif;
+  animation: vanor-fade 0.25s ease-out;
+}
+
+.galaxy-view.loading {
+  display: grid;
+  place-items: center;
+  color: #aab4d8;
+}
+
+.galaxy-view .gv-canvas {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+.galaxy-view .gv-canvas canvas {
+  display: block;
+}
+
+.galaxy-view .gv-top {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: max(16px, env(safe-area-inset-top)) 16px 24px 20px;
+  background: linear-gradient(180deg, rgb(3 5 12 / 0.85), rgb(3 5 12 / 0));
+  pointer-events: none;
+}
+
+.galaxy-view .gv-top h2 {
+  margin: 0;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.galaxy-view .gv-top p {
+  margin: 2px 0 0;
+  color: #aab4d8;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.8rem;
+}
+
+.galaxy-view .gv-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: rgb(255 255 255 / 0.1);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  pointer-events: auto;
+}
+
+.galaxy-view .gv-hint,
+.galaxy-view .gv-panel {
+  position: absolute;
+  right: 16px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 16px;
+  margin: 0;
+}
+
+.galaxy-view .gv-hint {
+  color: #aab4d8;
+  font-size: 0.88rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.galaxy-view .gv-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 16px 18px;
+  background: rgb(10 14 30 / 0.94);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 18px;
+  backdrop-filter: blur(12px);
+  animation: vanor-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.galaxy-view .gv-label {
+  color: #aab4d8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.galaxy-view .gv-big {
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.galaxy-view .gv-panel p {
+  margin: 0;
+  color: #cdd4f0;
+  font-size: 0.9rem;
+}
+
+.galaxy-view .gv-back {
+  align-self: flex-start;
+  min-height: 40px;
+  margin: 8px 0 0 -10px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: #ffd28a;
+  font-weight: 700;
+}

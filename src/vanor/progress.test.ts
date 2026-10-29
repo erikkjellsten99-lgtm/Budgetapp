@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Habit, Log } from './habits'
-import { change, habitTrends, monthForecast, monthMondays, monthName, monthOfWeek, monthScore, previousMonth, weeklyScores } from './progress'
+import { change, galaxyMonths, habitTrends, monthForecast, monthMondays, monthName, monthOfWeek, monthScore, previousMonth, weeklyScores } from './progress'
 
 const make = (id: string, goal: number, created = '2026-09-01'): Habit => ({
   id,
@@ -122,4 +122,12 @@ describe('månadens prognos', () => {
     expect(f.perWeekNeeded).toBe(2)
     expect(f.perWeekNow).toBe(1)
   })
+})
+
+it('galaxen har alla månader sedan första vanan och börjar aldrig om', () => {
+  const h = make('h', 2, '2026-08-10')
+  const months = galaxyMonths([h], { '2026-09-01': ['h'] }, NONE, '2026-10-29')
+  expect(months.map((m) => m.month)).toEqual(['2026-08', '2026-09', '2026-10'])
+  expect(months.at(-1)!.current).toBe(true)
+  expect(months[1].checks).toBe(1)
 })

@@ -208,3 +208,27 @@ export function monthForecast(score: MonthScore, today: DateKey): MonthForecast 
   const perWeekNeeded = weeksLeft > 0.3 && needed > 0 ? Math.ceil(needed / weeksLeft) : null
   return { projected, target, perWeekNeeded, perWeekNow: Math.round(perWeekNow) }
 }
+
+export interface GalaxyMonth extends MonthScore {
+  /** Den pågående månaden (byggs fortfarande). */
+  current: boolean
+  /** Bästa veckan i månaden, för detaljerna. */
+  bestWeek: MonthWeek | null
+}
+
+/** Alla månader sedan första vanan, äldst först. Galaxen börjar aldrig om – varje månad blir ett solsystem. */
+export function galaxyMonths(habits: Habit[], log: Log, paused: Paused, today: DateKey): GalaxyMonth[] {
+  if (!habits.length) return []
+  const current = monthOfWeek(weekStart(today))
+  const first = monthOfWeek(weekStart(habits.reduce((min, h) => (h.created < min ? h.created : min), today)))
+  const months: string[] = []
+  for (let m = current; m >= first && months.length < 600; m = previousMonth(m)) months.unshift(m)
+  return months
+    .map((month) => {
+      const score = monthScore(habits, log, paused, today, month)
+      const scored = score.weeks.filter((w) => w.pct !== null)
+      const bestWeek = scored.length ? scored.reduce((a, b) => ((b.pct ?? 0) > (a.pct ?? 0) ? b : a)) : null
+      return { ...score, current: month === current, bestWeek }
+    })
+    .filter((m) => m.current || m.weeks.some((w) => w.goal > 0))
+}

@@ -1,3 +1,4 @@
+import { lazy, Suspense, useState, type ComponentType } from 'react'
 import type { DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { monthForecast, monthName, monthScore, previousMonth, type MonthScore } from './progress'
@@ -6,6 +7,20 @@ import { monthForecast, monthName, monthScore, previousMonth, type MonthScore } 
  * Planettyper, en per vecka i månaden: färg i ljuset, färg i skuggan och om den har ringar eller band.
  * Inspirerade av riktiga planeter, så att bilden känns som rymden och inte som en tecknad bild.
  */
+// 3D-galaxen laddas först när den öppnas, så att resten av appen förblir snabb.
+type GalaxyProps = { habits: Habit[]; log: Log; paused: Paused; today: DateKey; onClose: () => void }
+
+const GalaxyView = lazy<ComponentType<GalaxyProps>>(() =>
+  import('./GalaxyView').catch(() => ({
+    // Utan internet första gången (filen är inte sparad än) visas ett besked i stället för att appen kraschar.
+    default: ({ onClose }: { onClose: () => void }) => (
+      <div className="galaxy-view loading" role="dialog" aria-modal="true" onClick={onClose}>
+        Galaxen behöver internet första gången den öppnas. Tryck för att stänga.
+      </div>
+    ),
+  })),
+)
+
 const PLANETS = [
   { light: '#d9a27a', dark: '#4a2414', kind: 'rock' }, // Mars-lik
   { light: '#8fc3ff', dark: '#0d2a5c', kind: 'ocean' }, // jordlik
@@ -204,6 +219,7 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
     if (s.weeks.some((w) => w.goal > 0)) archive.push(s)
   }
   const title = monthName(score.month, today)
+  const [galaxyOpen, setGalaxyOpen] = useState(false)
   const forecast = monthForecast(score, today)
   // Förra månaden jämförs bara om vanorna fanns större delen av den (annars blir jämförelsen missvisande).
   const last = archive[0]
@@ -222,9 +238,17 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
           </span>
           <b className="ws-big">{score.pct}&nbsp;%</b>
           <span className="ws-sub">av månadens mål</span>
+          <button type="button" className="gx-open" onClick={() => setGalaxyOpen(true)}>
+            Öppna din galax <span aria-hidden="true">›</span>
+          </button>
         </div>
         <GalaxyScene score={score} />
       </div>
+      {galaxyOpen && (
+        <Suspense fallback={<div className="galaxy-view loading">Laddar galaxen …</div>}>
+          <GalaxyView habits={habits} log={log} paused={paused} today={today} onClose={() => setGalaxyOpen(false)} />
+        </Suspense>
+      )}
       <div className="ws-foot gx-foot">
         <div className="gx-forecast">
           {score.pct >= 100 ? (
