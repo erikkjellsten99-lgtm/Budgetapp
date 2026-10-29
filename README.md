@@ -54,7 +54,7 @@ Fliken **Vanor** är vanetrackern (tidigare en egen app). Koden ligger i `src/va
 
 ### Påminnelser
 
-Under Mina vanor → **Påminnelser** slår du på notiser för telefonen (på iPhone måste appen ligga på hemskärmen). Varje vana kan få en tid (Ändra → Påminnelse), och det finns en kvällspåminnelse om något måste göras för att hinna veckomålet.
+Under Mina vanor → **Påminnelser** slår du på notiser för telefonen (på iPhone måste appen ligga på hemskärmen). Varje vana kan få en tid (Ändra → Påminnelse), och det finns en kvällspåminnelse om något måste göras för att hinna veckomålet. På söndagkvällen (en timme efter kvällspåminnelsen) kommer en veckorapport, och månadens sista söndag en månadsrapport (`supabase/functions/reminders/report.ts`, testad i `report.test.ts`).
 
 - `src/vanor/push.ts`, `PushSettings.tsx`: prenumerationen (web push) sparas i tabellen `push_subscriptions`.
 - `supabase/functions/reminders`: Supabase-funktionen som skickar. Den körs var 5:e minut av pg_cron (jobbet `vanor-paminnelser`). Nyckelparet skapar den själv i tabellen `push_keys`. `push_sent` ser till att samma påminnelse bara skickas en gång per dag.

@@ -7,6 +7,13 @@ const DEFAULT_EVENING = '20:00'
 
 type Status = 'loading' | 'off' | 'on'
 
+/** Samma tid som servern (supabase/functions/reminders): en timme efter kvällspåminnelsen, annars 21:00. */
+function reportAt(evening: string | null): string {
+  const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
+  const m = Math.min(23 * 60, (evening ? toMin(evening) : 20 * 60) + 60)
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+
 /** Påminnelser: slå på notiser på den här telefonen, kvällspåminnelse och testnotis. */
 export default function PushSettings({ habits }: { habits: Habit[] }) {
   const support = pushSupport()
@@ -110,7 +117,7 @@ export default function PushSettings({ habits }: { habits: Habit[] }) {
           {status === 'off' ? (
             <>
               <p className="push-lead">
-                Få en notis vid tiden du valt för en vana, och en på kvällen om något måste göras för att hinna veckomålet.
+                Få en notis vid tiden du valt för en vana, en på kvällen om något måste göras för att hinna veckomålet, och en rapport på söndagkvällen.
               </p>
               {!loggedIn && <p className="push-note">Du behöver vara inloggad (personikonen uppe till höger).</p>}
               <button type="button" className="primary" disabled={busy} onClick={turnOn}>
@@ -145,6 +152,10 @@ export default function PushSettings({ habits }: { habits: Habit[] }) {
                   />
                 )}
               </div>
+              <p className="push-note">
+                Söndag kväll kl. {reportAt(evening)} kommer veckans rapport: procent och vad som drog ner. När månaden är slut
+                blir det en månadsrapport.
+              </p>
               <p className="push-note">
                 {withTime.length
                   ? `Påminnelse per vana: ${withTime.map((h) => `${h.name} ${remindText(h)}`).join(', ')}.`
