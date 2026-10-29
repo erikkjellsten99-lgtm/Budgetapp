@@ -35,6 +35,8 @@ interface Habit {
   archived?: boolean;
   minimum?: string;
   remind?: string;
+  /** 0 = måndag … 6 = söndag. Saknas = alla dagar. */
+  remindDays?: number[];
 }
 interface Sub {
   endpoint: string;
@@ -168,6 +170,7 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
     const outgoing: { key: string; payload: object }[] = [];
     for (const h of habits) {
       if (!isDue(h.remind, minutes) || !open(h)) continue;
+      if (h.remindDays?.length && !h.remindDays.includes(weekday(date))) continue;
       outgoing.push({
         key: `habit:${h.id}`,
         payload: {

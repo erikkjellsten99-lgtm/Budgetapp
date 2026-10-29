@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { daySummary, dayStreak, habitPlan, nameError, todayInfo, weekCount, weekGoal, weekStreak, type Habit, type Log } from './habits'
+import { daySummary, dayStreak, habitPlan, nameError, remindDaysText, remindText, todayInfo, weekCount, weekGoal, weekStreak, type Habit, type Log } from './habits'
 
 const habit = (goal: number): Habit => ({
   id: 'h',
@@ -204,5 +204,20 @@ describe('vecka som inte räknas', () => {
     expect(info.goal).toBe(0)
     expect(info.due).toBe(false)
     expect(info.pills.map((p) => p.text)).toEqual(['Ny vana, räknas från nästa vecka'])
+  })
+})
+
+describe('påminnelsens dagar', () => {
+  it('skriver dagarna kort', () => {
+    expect(remindDaysText(undefined)).toBe('varje dag')
+    expect(remindDaysText([0, 1, 2, 3, 4, 5, 6])).toBe('varje dag')
+    expect(remindDaysText([4, 0, 1, 2, 3])).toBe('vardagar')
+    expect(remindDaysText([5, 6])).toBe('helger')
+    expect(remindDaysText([0, 2])).toBe('mån, ons')
+  })
+  it('visar tid och dagar', () => {
+    expect(remindText({ ...habit(4), remind: '17:00', remindDays: [0, 1] })).toBe('mån, tis 17:00')
+    expect(remindText({ ...habit(4), remind: '17:00' })).toBe('17:00')
+    expect(remindText(habit(4))).toBe('')
   })
 })

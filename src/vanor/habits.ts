@@ -16,6 +16,8 @@ export interface Habit {
   minimum?: string
   /** Tid för påminnelse, t.ex. "21:00". Tom = ingen. Skickas av servern (se push.ts). */
   remind?: string
+  /** Veckodagar för påminnelsen, 0 = måndag … 6 = söndag. Saknas = alla dagar. */
+  remindDays?: number[]
 }
 
 /** Loggen: datum → id:n för vanorna som är klara den dagen. */
@@ -211,6 +213,24 @@ export function daySummary(infos: TodayInfo[]): { total: number; done: number; f
     done: relevant.filter((i) => i.done).length,
     flexible: infos.filter((i) => i.due && !i.must && !i.done).length,
   }
+}
+
+const SHORT_DAYS = ['mån', 'tis', 'ons', 'tors', 'fre', 'lör', 'sön']
+
+/** Dagarna för en påminnelse som text: "varje dag", "vardagar" eller "mån, ons, fre". */
+export function remindDaysText(days?: number[]): string {
+  if (!days || days.length === 0 || days.length === 7) return 'varje dag'
+  const sorted = [...days].sort((a, b) => a - b)
+  if (sorted.join() === '0,1,2,3,4') return 'vardagar'
+  if (sorted.join() === '5,6') return 'helger'
+  return sorted.map((d) => SHORT_DAYS[d]).join(', ')
+}
+
+/** Påminnelsen som kort text, t.ex. "mån, ons 17:00". Tom sträng om ingen påminnelse. */
+export function remindText(habit: Habit): string {
+  if (!habit.remind) return ''
+  const days = remindDaysText(habit.remindDays)
+  return days === 'varje dag' ? habit.remind : `${days} ${habit.remind}`
 }
 
 export const NAME_MAX = 40

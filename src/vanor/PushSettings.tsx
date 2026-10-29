@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getSyncState } from '../sync'
-import type { Habit } from './habits'
+import { remindText, type Habit } from './habits'
 import { PushError, currentSubscription, disablePush, enablePush, loadEvening, pushSupport, saveEvening, sendTest } from './push'
 
 const DEFAULT_EVENING = '20:00'
@@ -147,7 +147,7 @@ export default function PushSettings({ habits }: { habits: Habit[] }) {
               </div>
               <p className="push-note">
                 {withTime.length
-                  ? `Påminnelse per vana: ${withTime.map((h) => `${h.name} ${h.remind}`).join(', ')}.`
+                  ? `Påminnelse per vana: ${withTime.map((h) => `${h.name} ${remindText(h)}`).join(', ')}.`
                   : 'Vill du ha en påminnelse för en viss vana? Tryck Ändra på vanan nedan och välj en tid.'}
               </p>
               <div className="push-actions">
