@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react'
 import { addDays, isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { MonthView } from './Galaxy'
+import type { Task } from './tasks'
 import { change, habitTrends, weeklyScores } from './progress'
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
   log: Log
   paused: Paused
   today: DateKey
+  /** Att göra-saker: de avklarade blir satelliter i galaxen. */
+  tasks: Task[]
   /** Det som måste göras idag och inte är gjort än (namn), för beskedet under solen. */
   mustToday: string[]
 }
@@ -46,7 +49,7 @@ function Change({ value, unit = '%-enheter' }: { value: number | null; unit?: st
  * Under står vad som är viktigt idag, i samma anda som listan (Prioritera idag / Kan vänta).
  * Tryck för att se staplarna vecka för vecka och procent per vana.
  */
-export default function ProgressCard({ habits, log, paused, today, mustToday }: Props) {
+export default function ProgressCard({ habits, log, paused, today, tasks, mustToday }: Props) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<View>(savedView)
   const chooseView = (next: View) => {
@@ -114,7 +117,7 @@ export default function ProgressCard({ habits, log, paused, today, mustToday }: 
       </div>
 
       {view === 'month' ? (
-        <MonthView habits={habits} log={log} paused={paused} today={today} />
+        <MonthView habits={habits} log={log} paused={paused} today={today} tasks={tasks} />
       ) : (
       <>
       <div className="ws-hero space sunrise">
