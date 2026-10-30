@@ -6,7 +6,7 @@
 // Lägg i stället till nästa version med ett nytt steg.
 
 import { todayKey, type DateKey } from './dates';
-import { sameName, type Habit, type Log } from './habits';
+import { sameName, type Habit, type Log, type Ramp } from './habits';
 import type { Task } from './tasks';
 
 const DB_NAME = 'vanor';
@@ -246,6 +246,15 @@ async function updateRecord(id: string, update: (h: Habit) => Habit) {
 }
 
 /** Ändra namn, mål, minimiversion, påminnelse och vilka vanor den görs efter. */
+/** En gradvis ökning med rimliga värden, eller undefined om den är tom eller trasig. */
+function cleanRamp(r: Ramp | null): Ramp | undefined {
+  if (!r) return undefined;
+  const whole = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Math.round(n)));
+  if (![r.from, r.step, r.max].every(Number.isFinite)) return undefined;
+  const from = whole(r.from, 1, 600);
+  return { start: r.start, from, step: whole(r.step, 1, 60), max: Math.max(from, whole(r.max, 1, 600)), unit: r.unit.trim() || 'min' };
+}
+
 export function updateHabit(
   id: string,
   changes: {
@@ -256,6 +265,8 @@ export function updateHabit(
     remind?: string;
     remindDays?: number[];
     days?: number[];
+    /** Gradvis ökning. null = ta bort, undefined = lämna som den är. */
+    ramp?: Ramp | null;
   },
 ) {
   return updateRecord(id, (h) => {
@@ -269,6 +280,7 @@ export function updateHabit(
       after: changes.after.filter((a) => a !== id),
       remind,
       days: planned,
+      ramp: changes.ramp === undefined ? h.ramp : cleanRamp(changes.ramp),
       // Med planerade dagar gäller påminnelsen de dagarna, annars de valda påminnelsedagarna.
       remindDays: !remind || planned ? undefined : changes.remind === undefined ? h.remindDays : cleanDays(changes.remindDays),
     };

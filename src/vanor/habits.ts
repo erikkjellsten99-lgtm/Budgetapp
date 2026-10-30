@@ -23,6 +23,38 @@ export interface Habit {
    * lika många dagar, vanan hamnar under Prioritera idag de dagarna och påminnelsen gäller dem.
    */
   days?: number[]
+  /**
+   * Ökar gradvis, t.ex. meditation: 3 min första dagen och en minut längre för varje dag du gör den,
+   * upp till ett tak. En missad dag står tiden still. Se rampToday.
+   */
+  ramp?: Ramp
+}
+
+export interface Ramp {
+  /** Dagen ökningen startade (räknas som första dagen). */
+  start: DateKey
+  /** Längden första dagen. */
+  from: number
+  /** Ökning för varje dag vanan är gjord. */
+  step: number
+  /** Taket, där den slutar öka. */
+  max: number
+  /** Enhet, t.ex. "min". */
+  unit: string
+}
+
+/**
+ * Dagens längd för en vana som ökar gradvis: startlängden plus en ökning för varje gjord dag
+ * före idag (från startdagen), högst taket. Null om vanan inte ökar.
+ */
+export function rampToday(habit: Habit, log: Log, today: DateKey): number | null {
+  const r = habit.ramp
+  if (!r) return null
+  let done = 0
+  for (let d = r.start, steps = 0; d < today && steps < MAX_STEPS; d = addDays(d, 1), steps++) {
+    if (isDone(log, habit.id, d)) done++
+  }
+  return Math.min(r.max, r.from + r.step * done)
 }
 
 /** Loggen: datum → id:n för vanorna som är klara den dagen. */

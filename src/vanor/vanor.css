@@ -2921,3 +2921,42 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.75rem;
 }
+
+/* Vana som ökar gradvis: "Idag 4 min" under namnet */
+.vanor .habit .ramp {
+  margin-right: 6px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.vanor .habit .ramp::after {
+  content: '·';
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.vanor .ramp-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.vanor .ramp-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.vanor .ramp-row input {
+  width: 100%;
+  min-height: 44px;
+  font-variant-numeric: tabular-nums;
+}
+
+.vanor .ramp-row small {
+  font-size: 0.72rem;
+}

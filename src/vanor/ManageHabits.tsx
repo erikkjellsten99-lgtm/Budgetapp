@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { SUGGESTIONS } from './defaults'
 import { NAME_MAX, goalText, habitPlan, nameError, remindText, sameName, type Habit } from './habits'
 import { addHabit, removeHabit, restoreHabit, updateHabit } from './store'
+import { todayKey } from './dates'
 
 /** Lägg till, ändra, ta bort och lägg tillbaka vanor. Visas i Inställningar. */
 export default function ManageHabits({ all }: { all: Habit[] }) {
@@ -375,6 +376,64 @@ function NewHabit({ active }: { active: Habit[] }) {
   )
 }
 
+const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+const shortDay = (d: string) => `${Number(d.slice(8))} ${MONTHS_SHORT[Number(d.slice(5, 7)) - 1]}`
+
+/** "Öka gradvis": t.ex. meditation 3 min som blir en minut längre för varje dag du gör den, upp till 30. */
+function RampField({ idPrefix, on, setOn, from, setFrom, step, setStep, max, setMax, start }: {
+  idPrefix: string
+  on: boolean
+  setOn: (v: boolean) => void
+  from: string
+  setFrom: (v: string) => void
+  step: string
+  setStep: (v: string) => void
+  max: string
+  setMax: (v: string) => void
+  start?: string
+}) {
+  const num = (v: string) => Number(v.replace(',', '.'))
+  const valid = num(from) >= 1 && num(step) >= 1 && num(max) >= num(from)
+  const days = valid ? Math.ceil((num(max) - num(from)) / num(step)) + 1 : 0
+  return (
+    <div className="field">
+      <label className="push-toggle">
+        <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
+        <span>
+          <b>Öka gradvis</b>
+          <small>Blir lite längre för varje dag du gör den. En missad dag står den still.</small>
+        </span>
+      </label>
+      {on && (
+        <>
+          <div className="ramp-row">
+            <label>
+              <span>Börja på</span>
+              <input id={`${idPrefix}-ramp-from`} type="number" inputMode="numeric" min={1} value={from} onChange={(e) => setFrom(e.target.value)} />
+              <small>min</small>
+            </label>
+            <label>
+              <span>Öka med</span>
+              <input type="number" inputMode="numeric" min={1} value={step} onChange={(e) => setStep(e.target.value)} />
+              <small>min/dag</small>
+            </label>
+            <label>
+              <span>Upp till</span>
+              <input type="number" inputMode="numeric" min={1} value={max} onChange={(e) => setMax(e.target.value)} />
+              <small>min</small>
+            </label>
+          </div>
+          <small className="field-help">
+            {!valid
+              ? 'Fyll i hela minuter, och ett tak som är minst lika stort som starten.'
+              : `${start ? `Startade ${start}. ` : ''}Når ${num(max)} min efter ${days} dagar du gjort den.`}
+          </small>
+        </>
+      )}
+    </div>
+  )
+}
+
 function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; onDone: () => void }) {
   const [name, setName] = useState(habit.name)
   const [goal, setGoal] = useState(habit.goal)
@@ -383,15 +442,24 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
   const [remindDays, setRemindDays] = useState<number[]>(habit.remindDays?.length ? habit.remindDays : ALL_DAYS)
   const [days, setDays] = useState<number[]>(habit.days ?? [])
   const [after, setAfter] = useState(habit.after.filter((id) => active.some((a) => a.id === id)))
+  const [rampOn, setRampOn] = useState(!!habit.ramp)
+  const [rampFrom, setRampFrom] = useState(String(habit.ramp?.from ?? 5))
+  const [rampStep, setRampStep] = useState(String(habit.ramp?.step ?? 1))
+  const [rampMax, setRampMax] = useState(String(habit.ramp?.max ?? 20))
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const error = nameError(name, active, habit.id)
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    if (busy || error || (remind && !days.length && !remindDays.length)) return
+    const from = Number(rampFrom)
+    const rampBad = rampOn && !(from >= 1 && Number(rampStep) >= 1 && Number(rampMax) >= from)
+    if (busy || error || rampBad || (remind && !days.length && !remindDays.length)) return
     setBusy(true)
-    await updateHabit(habit.id, { name, goal, minimum, after, remind, remindDays, days })
+    // Ändras startlängden börjar ökningen om från idag, annars fortsätter den där den är.
+    const start = habit.ramp && habit.ramp.from === from ? habit.ramp.start : todayKey()
+    const ramp = rampOn ? { start, from, step: Number(rampStep), max: Number(rampMax), unit: 'min' } : null
+    await updateHabit(habit.id, { name, goal, minimum, after, remind, remindDays, days, ramp })
     onDone()
   }
 
@@ -422,6 +490,18 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
           setRemind={setRemind}
           setRemindDays={setRemindDays}
           setDays={setDays}
+        />
+        <RampField
+          idPrefix={`edit-${habit.id}`}
+          on={rampOn}
+          setOn={setRampOn}
+          from={rampFrom}
+          setFrom={setRampFrom}
+          step={rampStep}
+          setStep={setRampStep}
+          max={rampMax}
+          setMax={setRampMax}
+          start={habit.ramp ? shortDay(habit.ramp.start) : undefined}
         />
         {confirm ? (
           <div className="confirm" role="alert">
