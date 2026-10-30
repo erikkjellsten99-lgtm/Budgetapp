@@ -1,46 +1,48 @@
-// Dagens citat i Vanor. Samma citat hela dagen, nytt vid midnatt.
-// Översatta till svenska. Bara citat där källan är känd (verk och kapitel inom parentes),
-// plus några egna rader utan namn. Vanliga felattribueringar är medvetet utelämnade.
+// Dagens citat i Vanor, på engelska. Samma citat hela dagen, nytt vid midnatt.
+// Bara riktiga citat där källan är känd (verk och kapitel inom parentes), i vanliga engelska översättningar.
+// Inga egna peppande rader och inga vanliga felattribueringar (t.ex. "We first make our habits…").
 
 import type { DateKey } from './dates';
 
 export interface Quote {
   text: string;
-  /** Vem som sa det. Saknas = egen rad för appen. */
-  by?: string;
+  /** Vem som sa det, med källa. */
+  by: string;
 }
 
 export const QUOTES: Quote[] = [
-  { text: 'Vi är det vi upprepade gånger gör. Förträfflighet är alltså inte en handling, utan en vana.', by: 'Will Durant, om Aristoteles' },
-  { text: 'Vi blir rättvisa genom att handla rättvist, och modiga genom att handla modigt.', by: 'Aristoteles (Nikomachiska etiken II.1)' },
-  { text: 'En svala gör ingen sommar, och inte heller en enda dag.', by: 'Aristoteles (Nikomachiska etiken I.7)' },
-  { text: 'Det är inte för att saker är svåra som vi inte vågar. Det är för att vi inte vågar som de är svåra.', by: 'Seneca (Brev 104)' },
-  { text: 'Vi lider oftare i inbillningen än i verkligheten.', by: 'Seneca (Brev 13)' },
-  { text: 'Medan vi skjuter upp livet, rusar det förbi.', by: 'Seneca (Brev 1)' },
-  { text: 'Ingen vind är gynnsam för den som inte vet vilken hamn den styr mot.', by: 'Seneca (Brev 71)' },
-  { text: 'Det är inte så att vi har kort tid, utan att vi slösar bort mycket av den.', by: 'Seneca (Om livets korthet)' },
-  { text: 'Så länge du lever, fortsätt att lära dig hur man lever.', by: 'Seneca (Brev 76)' },
-  { text: 'Det som står i vägen för handling blir handlingen. Det som står i vägen blir vägen.', by: 'Marcus Aurelius (Självbetraktelser 5.20)' },
-  { text: 'Slösa inte mer tid på att diskutera hur en god människa ska vara. Var en.', by: 'Marcus Aurelius (Självbetraktelser 10.16)' },
-  { text: 'Mycket lite behövs för ett lyckligt liv. Allt finns inom dig, i ditt sätt att tänka.', by: 'Marcus Aurelius (Självbetraktelser 7.67)' },
-  { text: 'Det är inte händelserna som oroar oss, utan våra föreställningar om dem.', by: 'Epiktetos (Handbok 5)' },
-  { text: 'Ingenting stort blir till på en gång.', by: 'Epiktetos (Samtal 1.15)' },
-  { text: 'Säg först till dig själv vad du vill vara. Gör sedan det du måste göra.', by: 'Epiktetos (Samtal 3.23)' },
-  { text: 'En resa på tusen mil börjar med ett första steg.', by: 'Laozi (Tao te ching 64)' },
-  { text: 'Ta itu med det svåra medan det ännu är lätt.', by: 'Laozi (Tao te ching 63)' },
-  { text: 'Den som besegrar andra är stark. Den som besegrar sig själv är mäktig.', by: 'Laozi (Tao te ching 33)' },
-  { text: 'Droppen urholkar stenen.', by: 'Ovidius' },
-  { text: 'Ett uns förebyggande är värt ett pund bot.', by: 'Benjamin Franklin' },
-  { text: 'Ingen kliver ner i samma flod två gånger.', by: 'Herakleitos' },
-  { text: 'Minimiversionen räknas. Två minuter idag slår noll minuter.' },
-  { text: 'Du behöver ingen perfekt dag. Bara en dag till.' },
-  { text: 'Missa aldrig två gånger i rad. En gång är en olycka, två gånger är början på en ny vana.' },
-  { text: 'Motivation kommer efter att du börjat, inte före.' },
-  { text: 'Små steg varje dag blir långa sträckor på ett år.' },
-  { text: 'Det du gör de flesta dagar betyder mer än det du gör ibland.' },
-  { text: 'Vila är också en del av planen.' },
-  { text: 'Var snäll mot dig själv en dålig dag, och ärlig mot dig själv en bra.' },
-  { text: 'Gör det lätt att börja. Resten följer med.' },
+  { text: 'We are what we repeatedly do. Excellence, then, is not an act, but a habit.', by: 'Will Durant, on Aristotle' },
+  { text: 'We become just by doing just acts, temperate by doing temperate acts, brave by doing brave acts.', by: 'Aristotle (Nicomachean Ethics II.1)' },
+  { text: 'One swallow does not make a summer, nor does one day.', by: 'Aristotle (Nicomachean Ethics I.7)' },
+  { text: 'Every habit and faculty is maintained and increased by the corresponding actions.', by: 'Epictetus (Discourses 2.18)' },
+  { text: 'If you wish to be a writer, write.', by: 'Epictetus (Discourses 2.18)' },
+  { text: 'No great thing is created suddenly.', by: 'Epictetus (Discourses 1.15)' },
+  { text: 'First say to yourself what you would be; and then do what you have to do.', by: 'Epictetus (Discourses 3.23)' },
+  { text: 'Men are disturbed not by things, but by the views which they take of things.', by: 'Epictetus (Enchiridion 5)' },
+  { text: 'The impediment to action advances action. What stands in the way becomes the way.', by: 'Marcus Aurelius (Meditations 5.20)' },
+  { text: 'Waste no more time arguing about what a good man should be. Be one.', by: 'Marcus Aurelius (Meditations 10.16)' },
+  { text: 'Such as are your habitual thoughts, such also will be the character of your mind.', by: 'Marcus Aurelius (Meditations 5.16)' },
+  { text: 'Very little is needed to make a happy life; it is all within yourself, in your way of thinking.', by: 'Marcus Aurelius (Meditations 7.67)' },
+  { text: 'We suffer more often in imagination than in reality.', by: 'Seneca (Letters 13)' },
+  { text: 'While we are postponing, life speeds by.', by: 'Seneca (Letters 1)' },
+  { text: 'If a man knows not to which port he sails, no wind is favorable.', by: 'Seneca (Letters 71)' },
+  { text: 'It is not that we have a short time to live, but that we waste a lot of it.', by: 'Seneca (On the Shortness of Life)' },
+  { text: 'It is not because things are difficult that we do not dare; it is because we do not dare that they are difficult.', by: 'Seneca (Letters 104)' },
+  { text: 'As long as you live, keep learning how to live.', by: 'Seneca (Letters 76)' },
+  { text: 'Habit creates, as it were, a second nature.', by: 'Cicero (De Finibus V.74)' },
+  { text: 'Dripping water hollows out stone.', by: 'Ovid (Epistulae ex Ponto IV.10)' },
+  { text: 'A journey of a thousand miles begins with a single step.', by: 'Laozi (Tao Te Ching 64)' },
+  { text: 'Deal with the difficult while it is still easy.', by: 'Laozi (Tao Te Ching 63)' },
+  { text: 'Mastering others is strength. Mastering yourself is true power.', by: 'Laozi (Tao Te Ching 33)' },
+  { text: 'No man ever steps in the same river twice.', by: 'Heraclitus' },
+  { text: 'An ounce of prevention is worth a pound of cure.', by: 'Benjamin Franklin' },
+  { text: 'Never suffer an exception to occur till the new habit is securely rooted in your life.', by: 'William James (The Principles of Psychology)' },
+  { text: 'Seize the very first possible opportunity to act on every resolution you make.', by: 'William James (The Principles of Psychology)' },
+  {
+    text: 'I know of no more encouraging fact than the unquestionable ability of man to elevate his life by a conscious endeavor.',
+    by: 'Henry David Thoreau (Walden)',
+  },
+  { text: 'How we spend our days is, of course, how we spend our lives.', by: 'Annie Dillard (The Writing Life)' },
 ];
 
 /** Antal dagar sedan 1970-01-01 för ett datum (UTC, så sommartid inte flyttar något). */
