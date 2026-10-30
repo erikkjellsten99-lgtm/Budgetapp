@@ -27,9 +27,25 @@ export interface Economy {
   wishes: WishComet[]
   /** Det som blir över varje månad efter utgifter och planerat sparande (samma som Budget visar). */
   extraPerMonth: number
+  /** Prognosen månad för månad (index 0 = nu), för tidsreglaget i galaxen. */
+  timeline: FuturePoint[]
   /** Tillgångar (konton som inte är för vardagen), lånet och nettot. */
   worth: { assets: { name: string; amount: number }[]; loan: number; net: number }
 }
+
+export interface FuturePoint {
+  /** Månad som "2027-03". */
+  month: string
+  /** Kvar på lånet. */
+  loanLeft: number
+  /** Sparat mot sparmålet (Sparmål-prognosen med avkastning), eller null om målet saknas. */
+  goalSaved: number | null
+  /** Sparande minus lån. */
+  net: number
+}
+
+/** Hur långt fram tidsreglaget når. */
+export const TIMELINE_MONTHS = 60
 
 export interface BudgetMoon {
   name: string
@@ -115,19 +131,19 @@ export async function loadEconomy(): Promise<Economy> {
   const list = loan && loan.balance > 0 ? [{ name: loan.name, amount: loan.balance }] : []
   const debtLeft = list.reduce((s, d) => s + d.amount, 0)
 
-  let loanPaidIn: string | null = null
-  if (loan && loan.balance > 0) {
-    const goal = goals[0]
-    const startSavings = assets.filter((a) => !a.spending).reduce((s, a) => s + a.amount, 0)
-    const result = forecast(await futureInputs(60), startSavings, loan, goal?.target ?? 0, goal?.annualReturn ?? 0)
-    loanPaidIn = result.loanPaidIn ? monthText(result.loanPaidIn) : null
-  }
-
+  // Prognosen (samma uträkning som fliken Prognos) ger lånet och sparandet månad för månad framåt.
   const goal = goals[0]
+  const startSavings = assets.filter((a) => !a.spending).reduce((s, a) => s + a.amount, 0)
+  const result = forecast(await futureInputs(TIMELINE_MONTHS), startSavings, loan && loan.balance > 0 ? loan : null, goal?.target ?? 0, goal?.annualReturn ?? 0)
+  const loanPaidIn = loan && loan.balance > 0 && result.loanPaidIn ? monthText(result.loanPaidIn) : null
+
   let savings: Economy['savings'] = null
+  let goalPath: number[] | null = null
   if (goal && goal.target > 0) {
     const current = goalCurrent(goal, assets)
-    const reachedAt = project(current, goal).reachedAt
+    const projection = project(current, goal)
+    goalPath = projection.withReturn
+    const reachedAt = projection.reachedAt
     savings = { name: goal.name, current, target: goal.target, reachedIn: reachedAt === null ? null : reachedAt === 0 ? 'nu' : monthLabel(reachedAt) }
   }
 
@@ -157,5 +173,15 @@ export async function loadEconomy(): Promise<Economy> {
       .sort((a, b) => a.amount - b.amount),
     extraPerMonth,
     worth: { assets: ownAssets, loan: debtLeft, net: assetSum - debtLeft },
+    // Index 0 är nu, sedan en rad per månad framåt.
+    timeline: [
+      { month, loanLeft: debtLeft, goalSaved: savings?.current ?? null, net: assetSum - debtLeft },
+      ...result.months.map((m, i) => ({
+        month: m.month,
+        loanLeft: m.loanLeft,
+        goalSaved: goalPath ? (goalPath[i + 1] ?? goalPath[goalPath.length - 1]) : null,
+        net: m.savings - m.loanLeft,
+      })),
+    ],
   }
 }

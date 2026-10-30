@@ -3089,3 +3089,77 @@
 .galaxy-view .gv-ico.worth {
   background: radial-gradient(circle, #fff1d6 0 18%, rgb(255 217 168 / 0.5) 40%, transparent 70%);
 }
+
+/* Steg 3: tidsreglaget med prognosen */
+.galaxy-view .gv-time {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 440px;
+  padding: 10px 14px;
+  background: rgb(10 14 30 / 0.8);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+}
+
+.galaxy-view .gv-time.is-future {
+  border-color: rgb(255 210 138 / 0.45);
+}
+
+.galaxy-view .gv-time-head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  color: #cdd4f0;
+  font-size: 0.85rem;
+}
+
+.galaxy-view .gv-time-head label {
+  color: #8d97bd;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.galaxy-view .gv-time-head b {
+  color: #fff;
+  text-transform: capitalize;
+}
+
+.galaxy-view .gv-time-now {
+  margin-left: auto;
+  min-height: 32px;
+  padding: 0 4px;
+  background: transparent;
+  border: 0;
+  color: #ffd28a;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.galaxy-view .gv-time input[type='range'] {
+  width: 100%;
+  min-height: 32px;
+  accent-color: #ffd28a;
+}
+
+.galaxy-view .gv-time-sum {
+  margin: 0;
+  color: #cdd4f0;
+  font-size: 0.8rem;
+}
+
+.galaxy-view .gv-month b,
+.galaxy-view .gv-time-head b {
+  text-transform: none;
+}
+
+.galaxy-view .gv-future {
+  padding: 8px 10px;
+  background: rgb(255 210 138 / 0.1);
+  border-radius: 10px;
+  color: #ffe2b0 !important;
+}
