@@ -9,6 +9,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { planetColor, planetKind, type PlanetKind } from './planets'
+import { holeShare, loadEconomy, type Economy } from './economy'
 import { baseMilestones, monthSatellites, nextMilestone, type ModuleKind } from './space'
 import type { Task } from './tasks'
 import { galaxyMonths, monthName, monthOfWeek, monthPlanets, type MonthPlanet } from './progress'
@@ -26,6 +27,10 @@ interface Props {
 /** Rymdbasen har index -1 där månaderna har 0, 1, 2 … */
 const BASE = -1
 const BASE_POS = new THREE.Vector3(0, 2.4, 0)
+/** Det svarta hålet (skulderna) i galaxens kärna, och sparmålets nya planet. */
+const HOLE = -2
+const SAVE = -3
+const SAVE_POS = new THREE.Vector3(-3.4, 1.6, 0.9)
 
 /** Slumptal med frö, så att galaxen ser likadan ut varje gång den öppnas. */
 function seeded(seed: number) {
@@ -303,6 +308,20 @@ function GalaxyGuide({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <dt>
+            <i className="gv-ico hole" aria-hidden="true" />
+            Svart hål
+          </dt>
+          <dd>Skulderna, i galaxens kärna. Hålet krymper för varje krona ni betalar av, och slocknar när ni är skuldfria.</dd>
+        </div>
+        <div>
+          <dt>
+            <i className="gv-ico newplanet" aria-hidden="true" />
+            Ny planet
+          </dt>
+          <dd>Sparmålet. En skiva av stoft samlas ihop till en planet ju närmare målet ni kommer.</dd>
+        </div>
+        <div>
+          <dt>
             <i className="gv-ico comet" aria-hidden="true" />
             Komet
           </dt>
@@ -321,6 +340,8 @@ function GalaxyGuide({ onClose }: { onClose: () => void }) {
 const SHORT_MONTHS = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
 const shortDate = (d: string, today: string) =>
   `${Number(d.slice(8))} ${SHORT_MONTHS[Number(d.slice(5, 7)) - 1]}${d.slice(0, 4) !== today.slice(0, 4) ? ` ${d.slice(0, 4)}` : ''}`
+
+const kr = (n: number) => `${Math.round(n).toLocaleString('sv-SE')} kr`
 
 const metal = (color: string, extra: Partial<THREE.MeshStandardMaterialParameters> = {}) =>
   new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.6, transparent: true, ...extra })
@@ -592,6 +613,153 @@ function buildStation(built: Set<ModuleKind>) {
   return { group, spin, beacon, lights }
 }
 
+/** Ackretionsskivans ljus: varmt nära hålet, med virvlande stråk, och genomskinligt längst ut. */
+function diskTexture(): THREE.Texture {
+  const size = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  const img = ctx.createImageData(size, size)
+  const n = noise2(17)
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const dx = x / size - 0.5
+      const dy = y / size - 0.5
+      const r = Math.hypot(dx, dy) * 2 // 0 i mitten, 1 vid kanten
+      const a = Math.atan2(dy, dx)
+      // Mjuk innerkant (ingen trappstegskant), ljusast nära hålet, och tonar ut mot ytterkanten.
+      const band = r < 0.27 ? 0 : r < 0.36 ? (r - 0.27) / 0.09 : Math.max(0, 1 - (r - 0.36) / 0.64)
+      const swirl = 0.6 + 0.4 * n(a * 3 + r * 9, r * 14)
+      const heat = Math.pow(band, 1.6) * swirl
+      const i = (y * size + x) * 4
+      img.data[i] = 255
+      img.data[i + 1] = 150 + 105 * Math.pow(band, 2)
+      img.data[i + 2] = 60 + 190 * Math.pow(band, 4)
+      img.data[i + 3] = Math.min(255, heat * 330)
+    }
+  ctx.putImageData(img, 0, 0)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+/** Ljuset som böjs runt ett svart hål: en tunn, ljus ring med mjuk kant. */
+function haloTexture(): THREE.Texture {
+  const size = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  const g = ctx.createRadialGradient(size / 2, size / 2, size * 0.28, size / 2, size / 2, size / 2)
+  g.addColorStop(0, 'rgba(255,235,200,0)')
+  g.addColorStop(0.06, 'rgba(255,240,215,0.95)')
+  g.addColorStop(0.2, 'rgba(255,190,110,0.35)')
+  g.addColorStop(1, 'rgba(255,150,60,0)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, size, size)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+/**
+ * Det svarta hålet: skulderna. Storleken är det som är kvar av det högsta beloppet, så hålet krymper
+ * när ni betalar av. Utan skulder finns bara en ljus ring kvar där hålet var.
+ */
+function buildBlackHole(share: number, glow: THREE.Texture) {
+  const group = new THREE.Group()
+  const disk = diskTexture()
+  const halo = haloTexture()
+  const textures = [disk, halo]
+  const r = share > 0 ? 0.16 + 0.4 * share : 0.3
+  const additive = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }
+  let ring: THREE.Mesh | null = null
+  if (share > 0) {
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), new THREE.MeshBasicMaterial({ color: '#000000' })))
+    ring = new THREE.Mesh(new THREE.RingGeometry(r * 1.25, r * 4.6, 160, 1), new THREE.MeshBasicMaterial({ map: disk, side: THREE.DoubleSide, ...additive }))
+    ring.rotation.x = -Math.PI / 2 + 0.16
+    group.add(ring)
+    // Ljuset från skivans baksida böjs över och under hålet, och en tunn fotonring precis utanför horisonten
+    const lens = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: '#ffc98a', ...additive, opacity: 0.75 }))
+    lens.scale.setScalar(r * 3.1)
+    group.add(lens)
+    const photon = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: '#fff3dc', ...additive }))
+    photon.scale.setScalar(r * 2.35)
+    group.add(photon)
+  } else {
+    // Skuldfri: en lugn, ljus ring där hålet var
+    const free = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: '#bff5d6', ...additive }))
+    free.scale.setScalar(r * 4)
+    group.add(free)
+    const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: '#e8fff2', ...additive, opacity: 0.6 }))
+    core.scale.setScalar(r * 2)
+    group.add(core)
+  }
+  return {
+    group,
+    radius: r,
+    update(now: number) {
+      if (ring) ring.rotation.z = -now / 3000
+    },
+    dispose: () => textures.forEach((t) => t.dispose()),
+  }
+}
+
+/**
+ * Sparmålet som en planet som föds: en roterande skiva av gas och stoft som samlas ihop ju närmare målet
+ * ni kommer. Vid 100 % är planeten färdig, med ringar och en måne.
+ */
+function buildNewPlanet(progress: number, surface: THREE.Texture, glow: THREE.Texture) {
+  const p = Math.min(1, Math.max(0, progress))
+  const group = new THREE.Group()
+  const rand = seeded(300000)
+  const count = Math.round(2600 * (1 - 0.75 * p))
+  const pos = new Float32Array(count * 3)
+  const col = new Float32Array(count * 3)
+  const c = new THREE.Color()
+  for (let i = 0; i < count; i++) {
+    // Ju längre ni har kommit, desto tätare samlas stoftet runt planeten
+    const r = 0.05 + 0.26 * (1 - 0.5 * p) * Math.pow(rand(), 0.8 + 2.5 * p)
+    const a = rand() * Math.PI * 2
+    pos.set([Math.cos(a) * r, (rand() - 0.5) * 0.012 * (1 + r * 8), Math.sin(a) * r], i * 3)
+    c.set(rand() < 0.65 ? '#ffcf96' : '#9fc6ff').multiplyScalar(0.4 + 0.6 * rand())
+    col.set([c.r, c.g, c.b], i * 3)
+  }
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3))
+  const disk = new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({ size: 0.014, map: glow, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+  )
+  disk.rotation.x = 0.25
+  group.add(disk)
+  const planet = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 48, 32),
+    new THREE.MeshStandardMaterial({ color: '#69d2b4', map: surface, roughness: 0.6, metalness: 0, transparent: true, envMapIntensity: 0.15 }),
+  )
+  planet.scale.setScalar(0.018 + 0.07 * p)
+  group.add(planet)
+  if (p >= 1) {
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(1.5, 2.3, 96, 1),
+      new THREE.MeshStandardMaterial({ color: '#d8f5ec', transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }),
+    )
+    ring.rotation.x = -Math.PI / 2 + 0.3
+    ;(ring.material as THREE.Material).userData.opacity = 0.6
+    planet.add(ring)
+    const moon = new THREE.Mesh(new THREE.SphereGeometry(0.012, 24, 16), new THREE.MeshStandardMaterial({ color: '#c9cdd6', roughness: 0.9, transparent: true }))
+    moon.position.set(0.16, 0.02, 0)
+    group.add(moon)
+  }
+  return {
+    group,
+    update(now: number) {
+      disk.rotation.y = now / 7000
+      planet.rotation.y = now / 4000
+    },
+  }
+}
+
 export default function GalaxyView({ habits, log, paused, today, tasks, onClose }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const months = useMemo(() => galaxyMonths(habits, log, paused, today), [habits, log, paused, today])
@@ -616,6 +784,17 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
   const sats = useMemo(() => months.map((m) => monthSatellites(tasks, m.month)), [months, tasks])
   const milestones = useMemo(() => baseMilestones(habits, log, paused, today), [habits, log, paused, today])
   const built = useMemo(() => new Set(milestones.filter((m) => m.done).map((m) => m.id)), [milestones])
+  // Hushållets ekonomi (skulder och sparmål). undefined = laddas, null = gick inte att läsa.
+  const [economy, setEconomy] = useState<Economy | null | undefined>(undefined)
+  useEffect(() => {
+    let alive = true
+    loadEconomy()
+      .then((e) => alive && setEconomy(e))
+      .catch(() => alive && setEconomy(null))
+    return () => {
+      alive = false
+    }
+  }, [])
   const flyToRef = useRef<((index: number | null) => void) | null>(null)
   const totalStars = months.reduce((s, m) => s + m.checks, 0)
 
@@ -631,7 +810,8 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
 
   useEffect(() => {
     const mount = mountRef.current
-    if (!mount) return
+    // Vänta tills ekonomin är läst, så att scenen inte byggs om direkt efter att den öppnats.
+    if (!mount || economy === undefined) return
     const n = Math.max(1, months.length)
     const rMax = armPoint(n - 1).r + 2.5
 
@@ -919,23 +1099,110 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       scene.add(group)
       return { group, bodies, core, corona, rays, comets, satellites }
     })
-    // Rymdbasen ovanför kärnan: en markering på avstånd, stationen syns när man flyger dit.
-    const baseRing = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: ringTex, color: '#7fe0ff', transparent: true, depthWrite: false, opacity: 0.9 }),
-    )
-    baseRing.position.copy(BASE_POS)
-    baseRing.scale.setScalar(1.1)
-    scene.add(baseRing)
-    const baseGlow = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: glow, color: '#bfefff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.8 }),
-    )
-    baseGlow.position.copy(BASE_POS)
-    baseGlow.scale.setScalar(0.7)
-    scene.add(baseGlow)
+    // Landmärken utanför armarna, som man kan flyga till: rymdbasen, det svarta hålet och sparplaneten.
+    // Var och en har en markering (ring och sken) på avstånd och en närbild som tonas in.
+    interface Landmark {
+      id: number
+      pos: THREE.Vector3
+      /** Var kameran siktar och står, i förhållande till landmärket. */
+      aim: THREE.Vector3
+      view: THREE.Vector3
+      /** Varifrån ljuset kommer när man är här. */
+      light: THREE.Vector3
+      ring: THREE.Sprite
+      glow: THREE.Sprite
+      group: THREE.Group
+      /** Närbilden syns alltid (det svarta hålet), annars bara när man är nära. */
+      always?: boolean
+      /** Avstånd där närbilden börjar tonas in, och där man räknas som framme. Standard: som solsystemen. */
+      from?: number
+      inside?: number
+      update: (now: number, fade: number) => void
+    }
+    const landmarks: Landmark[] = []
+    const marker = (pos: THREE.Vector3, color: string, scale: number) => {
+      const ring = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTex, color, transparent: true, depthWrite: false, opacity: 0.9 }))
+      ring.position.copy(pos)
+      ring.scale.setScalar(scale)
+      scene.add(ring)
+      const halo = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: glow, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.8 }),
+      )
+      halo.position.copy(pos)
+      halo.scale.setScalar(scale * 0.6)
+      scene.add(halo)
+      return { ring, glow: halo }
+    }
+    const fadeGroup = (group: THREE.Object3D, fade: number) =>
+      group.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.Material | undefined
+        if (m && !m.userData.own) m.opacity = fade * ((m.userData.opacity as number | undefined) ?? 1)
+      })
+
     const station = buildStation(built)
     station.group.position.copy(BASE_POS)
     station.group.visible = false
     scene.add(station.group)
+    if (station.beacon) (station.beacon.material as THREE.Material).userData.own = true
+    landmarks.push({
+      id: BASE,
+      pos: BASE_POS,
+      // Vid rymdbasen siktar kameran lite under stationen, så att den syns ovanför den höga panelen.
+      aim: new THREE.Vector3(0, -0.16, 0),
+      view: new THREE.Vector3(0.3, 0.38, 0.95),
+      light: new THREE.Vector3(1.2, 0.8, 0.6),
+      ...marker(BASE_POS, '#7fe0ff', 1.1),
+      group: station.group,
+      update(now, fade) {
+        station.group.rotation.y = now / 14000
+        for (const r of station.spin) r.rotation.x = now / 5000
+        if (station.beacon) (station.beacon.material as THREE.MeshBasicMaterial).opacity = fade * (Math.sin(now / 400) > 0.6 ? 1 : 0.2)
+        fadeGroup(station.group, fade)
+      },
+    })
+
+    let hole: ReturnType<typeof buildBlackHole> | null = null
+    if (economy && (economy.debtLeft > 0 || economy.debtMax > 0)) {
+      hole = buildBlackHole(holeShare(economy.debtLeft, economy.debtMax), glow)
+      scene.add(hole.group)
+      const h = hole
+      landmarks.push({
+        id: HOLE,
+        pos: new THREE.Vector3(),
+        aim: new THREE.Vector3(0, -h.radius * 0.6, 0),
+        view: new THREE.Vector3(0, h.radius * 2.2, h.radius * 9),
+        light: new THREE.Vector3(1, 1, 1),
+        ...marker(new THREE.Vector3(), '#ff9a5a', 0.9),
+        group: h.group,
+        always: true,
+        // Hålet är större än ett solsystem, så man är framme på längre avstånd.
+        from: h.radius * 15,
+        inside: h.radius * 11,
+        update: (now) => h.update(now),
+      })
+    }
+
+    if (economy?.savings) {
+      const s = economy.savings
+      const born = buildNewPlanet(s.current / s.target, surfaceFor(0), glow)
+      born.group.position.copy(SAVE_POS)
+      born.group.visible = false
+      scene.add(born.group)
+      landmarks.push({
+        id: SAVE,
+        pos: SAVE_POS,
+        aim: new THREE.Vector3(0, -0.1, 0),
+        view: new THREE.Vector3(0.2, 0.55, 1.35),
+        light: new THREE.Vector3(1.3, 0.7, 0.9),
+        ...marker(SAVE_POS, '#7be3b2', 1.1),
+        group: born.group,
+        update(now, fade) {
+          born.update(now)
+          fadeGroup(born.group, fade)
+        },
+      })
+    }
+    const landmarkOf = (id: number) => landmarks.find((l) => l.id === id)
 
     // Svagt omgivningsljus: planeternas nattsida blir nästan svart, som i rymden.
     scene.add(new THREE.AmbientLight('#8090c0', 0.1))
@@ -959,20 +1226,20 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
 
     // Flyg till en månad (eller tillbaka till hela galaxen med null).
     let flight: { from: THREE.Vector3; to: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3; start: number } | null = null
-    const posOf = (index: number) => (index === BASE ? BASE_POS : systems[index].position)
+    const posOf = (index: number) => (index < 0 ? (landmarkOf(index)?.pos ?? new THREE.Vector3()) : systems[index].position)
     flyToRef.current = (index) => {
-      // Vid rymdbasen siktar kameran lite under stationen, så att den syns ovanför den höga panelen.
-      const target = index === null ? new THREE.Vector3() : posOf(index).clone().add(new THREE.Vector3(0, index === BASE ? -0.16 : 0, 0))
-      const dest =
-        index === null
-          ? home.clone()
-          : target.clone().add(index === BASE ? new THREE.Vector3(0.3, 0.38, 0.95) : new THREE.Vector3(0, 0.95, 1.4))
+      const lm = index !== null && index < 0 ? landmarkOf(index) : undefined
+      const target = index === null ? new THREE.Vector3() : posOf(index).clone().add(lm ? lm.aim : new THREE.Vector3())
+      const dest = index === null ? home.clone() : target.clone().add(lm ? lm.view : new THREE.Vector3(0, 0.95, 1.4))
       flight = { from: camera.position.clone(), to: dest, fromT: controls.target.clone(), toT: target, start: performance.now() }
       controls.autoRotate = index === null
     }
 
     // Allt man kan flyga till: rymdbasen och varje månad.
-    const targets = (): [number, THREE.Vector3][] => [[BASE, BASE_POS], ...systems.map((sun, i): [number, THREE.Vector3] => [i, sun.position])]
+    const targets = (): [number, THREE.Vector3][] => [
+      ...landmarks.map((l): [number, THREE.Vector3] => [l.id, l.pos]),
+      ...systems.map((sun, i): [number, THREE.Vector3] => [i, sun.position]),
+    ]
 
     // Tryck (inte drag) på ett solsystem väljer det.
     const ray = new THREE.Raycaster()
@@ -987,7 +1254,7 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1)
       ray.setFromCamera(pointer, camera)
       // Inne i ett solsystem: tryck på en planet för att se den vanan.
-      if (insideIndex !== null && insideIndex !== BASE) {
+      if (insideIndex !== null && insideIndex >= 0) {
         const detail = details[insideIndex]
         let hitPlanet: { k: number; d: number } | null = null
         detail.bodies.forEach((b, k) => {
@@ -1146,30 +1413,34 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         sun.scale.setScalar(sun.userData.scale * (1 - 0.88 * fade))
         rings[i].material.opacity = 0.85 * (1 - fade)
       })
-      // Rymdbasen tonas in på samma sätt när man kommer nära.
-      const baseD = camera.position.distanceTo(BASE_POS)
-      const baseFade = THREE.MathUtils.clamp((DETAIL_FROM - baseD) / (DETAIL_FROM - INSIDE), 0, 1)
-      station.group.visible = baseFade > 0
-      if (baseFade > 0) {
-        station.group.rotation.y = now / 14000
-        for (const r of station.spin) r.rotation.x = now / 5000
-        if (station.beacon) (station.beacon.material as THREE.MeshBasicMaterial).opacity = baseFade * (0.4 + 0.6 * (Math.sin(now / 400) > 0.6 ? 1 : 0.2))
-        station.group.traverse((o) => {
-          const m = (o as THREE.Mesh).material as THREE.Material | undefined
-          if (m && o !== station.beacon) m.opacity = baseFade * ((m.userData.opacity as number | undefined) ?? 1)
-        })
+      // Landmärkena tonas in på samma sätt när man kommer nära, och månaderna tonas bort runt dem.
+      let landmarkFade = 0
+      let holeFade = 0
+      for (const l of landmarks) {
+        const d = camera.position.distanceTo(l.pos)
+        const from = l.from ?? DETAIL_FROM
+        const inside = l.inside ?? INSIDE
+        const fade = THREE.MathUtils.clamp((from - d) / (from - inside), 0, 1)
+        landmarkFade = Math.max(landmarkFade, fade)
+        if (l.id === HOLE) holeFade = fade
+        l.group.visible = l.always || fade > 0
+        if (l.group.visible) l.update(now, fade)
+        l.ring.material.opacity = 0.9 * (1 - fade)
+        l.glow.material.opacity = 0.8 * (1 - fade)
+        // Avståndet räknas om så att varje landmärke är "framme" vid samma värde som solsystemen.
+        const scaled = (d / inside) * INSIDE
+        if (!near || scaled < (near as { d: number }).d) near = { i: l.id, d: scaled }
       }
-      baseRing.material.opacity = 0.9 * (1 - baseFade)
-      // Vid rymdbasen tonas månadernas ringar och sken bort, så att stationen står för sig själv.
-      rings.forEach((r) => (r.material.opacity *= 1 - baseFade))
-      systems.forEach((sun) => (sun.material.opacity = sun.userData.opacity * (1 - 0.9 * baseFade)))
-      baseGlow.material.opacity = 0.8 * (1 - baseFade)
-      if (!near || baseD < (near as { d: number }).d) near = { i: BASE, d: baseD }
+      rings.forEach((r) => (r.material.opacity *= 1 - landmarkFade))
+      systems.forEach((sun) => (sun.material.opacity = sun.userData.opacity * (1 - 0.9 * landmarkFade)))
 
       const maxFade = THREE.MathUtils.clamp((DETAIL_FROM - (near as { d: number } | null ?? { d: 99 }).d) / (DETAIL_FROM - INSIDE), 0, 1)
       const closest = near as { i: number; d: number } | null
       // Solen lyser upp planeterna; vid rymdbasen kommer ljuset från sidan så att stationen får skuggor.
-      if (closest) sunLight.position.copy(closest.i === BASE ? tmp.copy(BASE_POS).add(new THREE.Vector3(1.2, 0.8, 0.6)) : systems[closest.i].position)
+      if (closest) {
+        const lm = closest.i < 0 ? landmarkOf(closest.i) : undefined
+        sunLight.position.copy(lm ? tmp.copy(lm.pos).add(lm.light) : systems[closest.i].position)
+      }
       const inside =
         closest && closest.d < INSIDE && controls.target.distanceTo(posOf(closest.i)) < 0.3 ? closest.i : null
       if (inside !== insideIndex) {
@@ -1178,14 +1449,15 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       }
 
       const beat = 0.5 + 0.5 * Math.sin(now / 600)
-      if (current) current.material.opacity = (0.55 + 0.25 * beat) * (1 - 0.9 * baseFade)
+      if (current) current.material.opacity = (0.55 + 0.25 * beat) * (1 - 0.9 * landmarkFade)
       if (currentRing && currentRing.material.opacity > 0.01) currentRing.scale.setScalar(0.85 + 0.3 * beat)
       dust.rotation.y += 0.00015
       const closeness = camera.position.distanceTo(controls.target) / home.length()
       // Inne i ett solsystem tonas galaxens stjärnor ner så att solen och planeterna syns.
-      for (const m of fadeWhenClose) m.opacity = Math.min(1, 0.22 + closeness * 1.1) * (1 - 0.92 * maxFade)
-      earnedMaterial.opacity = 1 - 0.85 * maxFade
-      for (const f of fadeInside) (f.m as THREE.SpriteMaterial).opacity = f.base * (1 - 0.92 * maxFade)
+      // Vid det svarta hålet ligger kärnans stjärnor mellan dig och hålet – de tonas bort helt.
+      for (const m of fadeWhenClose) m.opacity = Math.min(1, 0.22 + closeness * 1.1) * (1 - 0.97 * maxFade) * (1 - holeFade)
+      earnedMaterial.opacity = (1 - 0.85 * maxFade) * (1 - holeFade)
+      for (const f of fadeInside) (f.m as THREE.SpriteMaterial).opacity = f.base * (1 - 0.92 * maxFade) * (1 - holeFade)
       // Panelen täcker nedre delen – flytta bilden uppåt när en månad visas.
       viewShift += ((panelShown.current ? 0.21 : 0) - viewShift) * 0.08
       camera.setViewOffset(mount.clientWidth, mount.clientHeight, 0, mount.clientHeight * viewShift, mount.clientWidth, mount.clientHeight)
@@ -1218,13 +1490,14 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       bandTex.dispose()
       surfaces.forEach((t) => t.dispose())
       envMap.dispose()
+      hole?.dispose()
       pmrem.dispose()
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [months, log, planets, sats, built])
+  }, [months, log, planets, sats, built, economy])
 
-  const selectedMonth = selected === null || selected === BASE ? null : months[selected]
+  const selectedMonth = selected === null || selected < 0 ? null : months[selected]
   const selectedPlanets: MonthPlanet[] = selectedMonth ? planets[selected!] : []
   const selectedSats = selectedMonth ? sats[selected!] : []
   const next = nextMilestone(milestones)
@@ -1269,6 +1542,60 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
 
       {guideOpen ? (
         <GalaxyGuide onClose={closeGuide} />
+      ) : selected === HOLE && economy ? (
+        <section className="gv-panel gv-economy" aria-live="polite">
+          <span className="gv-label">Det svarta hålet · skulder</span>
+          <b className="gv-big">{economy.debtLeft > 0 ? `${kr(economy.debtLeft)} kvar` : 'Skuldfria'}</b>
+          {economy.debtMax > economy.debtLeft && (
+            <p className="gv-good">
+              {kr(economy.debtMax - economy.debtLeft)} avbetalt sedan du öppnade galaxen första gången. Hålet har krympt med{' '}
+              {Math.round((1 - holeShare(economy.debtLeft, economy.debtMax)) * 100)}&nbsp;%.
+            </p>
+          )}
+          {economy.debts.length > 0 && (
+            <ul className="gv-rows">
+              {economy.debts.map((d) => (
+                <li key={d.name}>
+                  <span>{d.name}</span>
+                  <b>{kr(d.amount)}</b>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p>
+            {economy.debtLeft === 0
+              ? 'Hålet har slocknat. Kvar finns bara ljuset där det var.'
+              : economy.loanPaidIn
+                ? `Enligt prognosen är lånet betalt i ${economy.loanPaidIn}.`
+                : 'Hålet krymper när ni betalar av, i takt med siffrorna under Konton och Prognos.'}
+          </p>
+          <button type="button" className="gv-back" onClick={back}>
+            Tillbaka till hela galaxen
+          </button>
+        </section>
+      ) : selected === SAVE && economy?.savings ? (
+        <section className="gv-panel gv-economy" aria-live="polite">
+          <span className="gv-label">En ny planet · {economy.savings.name}</span>
+          <b className="gv-big">{Math.min(100, Math.floor((economy.savings.current / economy.savings.target) * 100))}&nbsp;%</b>
+          <div className="gv-next">
+            <span>
+              <b>{kr(economy.savings.current)}</b> av {kr(economy.savings.target)}
+            </span>
+            <span className="gv-next-bar save" aria-hidden="true">
+              <i style={{ width: `${Math.min(100, (economy.savings.current / economy.savings.target) * 100)}%` }} />
+            </span>
+          </div>
+          <p>
+            {economy.savings.current >= economy.savings.target
+              ? 'Planeten är färdig. Målet är nått.'
+              : `Stoftet samlas ihop för varje krona ni sparar. ${
+                  economy.savings.reachedIn ? `Enligt prognosen är planeten färdig i ${economy.savings.reachedIn}.` : ''
+                }`}
+          </p>
+          <button type="button" className="gv-back" onClick={back}>
+            Tillbaka till hela galaxen
+          </button>
+        </section>
       ) : selected === BASE ? (
         <section className="gv-panel gv-base" aria-live="polite">
           <span className="gv-label">Rymdbasen</span>
@@ -1365,12 +1692,24 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         <div className="gv-bottom">
           <p className="gv-hint">
             {months.length <= 1
-              ? 'Den gula ringen är månadens solsystem, den blå ovanför kärnan är din rymdbas.'
-              : 'Gula ringar är dina månader, den blå är din rymdbas. Tryck på en, eller välj nedan.'}
+              ? 'Gul ring: månaden. Blå: rymdbasen. Orange i kärnan: skulderna. Grön: sparmålet.'
+              : 'Gula ringar är månader, blå är rymdbasen, orange i kärnan skulderna och grön sparmålet. Tryck, eller välj nedan.'}
           </p>
           <div className="gv-months" role="list" ref={(el) => {
               if (el) el.scrollLeft = el.scrollWidth
             }}>
+            {economy && (economy.debtLeft > 0 || economy.debtMax > 0) && (
+              <button type="button" role="listitem" className="gv-month gv-hole-chip" onClick={() => open(HOLE)}>
+                <span>Skulder</span>
+                <b>{economy.debtLeft > 0 ? kr(economy.debtLeft) : '0 kr'}</b>
+              </button>
+            )}
+            {economy?.savings && (
+              <button type="button" role="listitem" className="gv-month gv-save-chip" onClick={() => open(SAVE)}>
+                <span>Sparmål</span>
+                <b>{Math.min(100, Math.floor((economy.savings.current / economy.savings.target) * 100))}&nbsp;%</b>
+              </button>
+            )}
             <button type="button" role="listitem" className="gv-month gv-base-chip" onClick={() => open(BASE)}>
               <span>Rymdbas</span>
               <b>

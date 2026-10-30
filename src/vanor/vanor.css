@@ -2960,3 +2960,59 @@
 .vanor .ramp-row small {
   font-size: 0.72rem;
 }
+
+/* Ekonomin i galaxen: det svarta hålet (skulder) och sparplaneten */
+.galaxy-view .gv-hole-chip {
+  border-color: rgb(255 154 90 / 0.55);
+}
+
+.galaxy-view .gv-save-chip {
+  border-color: rgb(123 227 178 / 0.55);
+}
+
+.galaxy-view .gv-economy .gv-big {
+  font-size: 1.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.galaxy-view .gv-good {
+  color: #9be8c2 !important;
+}
+
+.galaxy-view .gv-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0;
+  padding: 8px 0;
+  border-block: 1px solid rgb(255 255 255 / 0.1);
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.galaxy-view .gv-rows li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  color: #cdd4f0;
+}
+
+.galaxy-view .gv-rows b {
+  color: #fff;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.galaxy-view .gv-next-bar.save i {
+  background: #7be3b2;
+}
+
+.galaxy-view .gv-ico.hole {
+  background: radial-gradient(circle, #000 0 38%, #ffb46b 45%, rgb(255 154 90 / 0.3) 65%, transparent 72%);
+}
+
+.galaxy-view .gv-ico.newplanet {
+  background: radial-gradient(circle, #69d2b4 0 30%, rgb(255 207 150 / 0.5) 45%, transparent 70%);
+}
