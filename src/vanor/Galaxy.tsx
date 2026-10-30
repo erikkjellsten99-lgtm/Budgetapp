@@ -13,15 +13,53 @@ import { monthForecast, monthName, monthPlanets, monthScore, previousMonth, week
 // 3D-galaxen laddas först när den öppnas, så att resten av appen förblir snabb.
 type GalaxyProps = { habits: Habit[]; log: Log; paused: Paused; today: DateKey; tasks: Task[]; onClose: () => void }
 
+const RELOAD_KEY = 'vanor-galax-omladdad'
+/** Sätts innan sidan laddas om, så att galaxen öppnas direkt igen efteråt. */
+const REOPEN_KEY = 'vanor-galax-oppna'
+
+const session = {
+  get: (key: string) => {
+    try {
+      return sessionStorage.getItem(key)
+    } catch {
+      return null
+    }
+  },
+  set: (key: string, value: string | null) => {
+    try {
+      if (value === null) sessionStorage.removeItem(key)
+      else sessionStorage.setItem(key, value)
+    } catch {
+      // Utan lagring: inget att komma ihåg.
+    }
+  },
+}
+
 const GalaxyView = lazy<ComponentType<GalaxyProps>>(() =>
-  import('./GalaxyView').catch(() => ({
-    // Utan internet första gången (filen är inte sparad än) visas ett besked i stället för att appen kraschar.
-    default: ({ onClose }: { onClose: () => void }) => (
-      <div className="galaxy-view loading" role="dialog" aria-modal="true" onClick={onClose}>
-        Galaxen behöver internet första gången den öppnas. Tryck för att stänga.
-      </div>
-    ),
-  })),
+  import('./GalaxyView')
+    .then((module) => {
+      session.set(RELOAD_KEY, null)
+      return module
+    })
+    .catch(() => {
+      // Vanligaste orsaken: en ny version har publicerats sedan appen öppnades, och galaxens gamla fil
+      // finns inte längre på servern. Då laddas appen om en gång (med den nya versionen) och galaxen öppnas igen.
+      if (navigator.onLine && !session.get(RELOAD_KEY)) {
+        session.set(RELOAD_KEY, '1')
+        session.set(REOPEN_KEY, '1')
+        location.reload()
+        return new Promise<never>(() => {})
+      }
+      return {
+        default: ({ onClose }: { onClose: () => void }) => (
+          <div className="galaxy-view loading" role="dialog" aria-modal="true" onClick={onClose}>
+            {navigator.onLine
+              ? 'Galaxen kunde inte laddas. Stäng appen helt och öppna den igen. Tryck för att stänga.'
+              : 'Galaxen behöver internet första gången den öppnas. Tryck för att stänga.'}
+          </div>
+        ),
+      }
+    }),
 )
 
 /** Blandar en färg mot rymdens mörker – planetens skuggsida. */
@@ -490,7 +528,12 @@ export function MonthView({ habits, log, paused, today, tasks }: { habits: Habit
     if (s.weeks.some((w) => w.goal > 0)) archive.push(s)
   }
   const title = monthName(score.month, today)
-  const [galaxyOpen, setGalaxyOpen] = useState(false)
+  // Öppen direkt om appen just laddades om för att hämta galaxens nya version.
+  const [galaxyOpen, setGalaxyOpen] = useState(() => {
+    const reopen = session.get(REOPEN_KEY) === '1'
+    session.set(REOPEN_KEY, null)
+    return reopen
+  })
   const [pickedId, setPickedId] = useState<string | null>(null)
   const [howOpen, setHowOpen] = useState(false)
   const pickedIndex = bodies.findIndex((p) => p.id === pickedId)
