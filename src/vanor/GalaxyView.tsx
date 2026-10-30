@@ -9,6 +9,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { planetColor, planetKind, type PlanetKind } from './planets'
+import { onDataChange } from '../db'
 import { holeShare, loadEconomy, type Economy } from './economy'
 import { baseMilestones, monthSatellites, nextMilestone, type ModuleKind } from './space'
 import type { Task } from './tasks'
@@ -788,13 +789,21 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
   const [economy, setEconomy] = useState<Economy | null | undefined>(undefined)
   useEffect(() => {
     let alive = true
-    loadEconomy()
-      .then((e) => alive && setEconomy(e))
-      .catch(() => alive && setEconomy(null))
+    const load = () =>
+      loadEconomy()
+        // Samma siffror som förut: behåll det gamla, så att scenen inte byggs om i onödan.
+        .then((e) => alive && setEconomy((current) => (current && JSON.stringify(current) === JSON.stringify(e) ? current : e)))
+        .catch(() => alive && setEconomy((current) => current ?? null))
+    load()
+    // Ändras något i Groundwork (här eller via synk från en annan telefon) uppdateras galaxen direkt.
+    const stop = onDataChange(load)
     return () => {
       alive = false
+      stop()
     }
   }, [])
+  // Var kameran stod, så att galaxen kan byggas om (nya siffror eller bockar) utan att du hamnar på start.
+  const viewRef = useRef<{ position: THREE.Vector3; target: THREE.Vector3; rotating: boolean } | null>(null)
   const flyToRef = useRef<((index: number | null) => void) | null>(null)
   const totalStars = months.reduce((s, m) => s + m.checks, 0)
 
@@ -846,6 +855,14 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
     controls.autoRotate = true
     controls.autoRotateSpeed = 0.35
     controls.enablePan = false
+    // Byggs galaxen om medan den är öppen står kameran kvar där den var.
+    const saved = viewRef.current
+    if (saved) {
+      camera.position.copy(saved.position)
+      controls.target.copy(saved.target)
+      controls.autoRotate = saved.rotating
+      controls.update()
+    }
 
     const glow = glowTexture()
     const ringTex = ringTexture()
@@ -1476,6 +1493,7 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       renderer.domElement.removeEventListener('pointermove', onTouchMove)
       window.removeEventListener('pointerup', onTouchUp)
       window.removeEventListener('pointercancel', onTouchUp)
+      viewRef.current = { position: camera.position.clone(), target: controls.target.clone(), rotating: controls.autoRotate }
       controls.dispose()
       scene.traverse((o) => {
         const obj = o as THREE.Mesh
