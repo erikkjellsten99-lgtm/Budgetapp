@@ -10,7 +10,7 @@ import { isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { planetColor, planetKind, type PlanetKind } from './planets'
 import { onDataChange } from '../db'
-import { holeShare, loadEconomy, type Economy } from './economy'
+import { holeShare, loadEconomy, type BudgetMoon, type Economy } from './economy'
 import { baseMilestones, monthSatellites, nextMilestone, type ModuleKind } from './space'
 import type { Task } from './tasks'
 import { galaxyMonths, monthName, monthOfWeek, monthPlanets, type MonthPlanet } from './progress'
@@ -32,6 +32,14 @@ const BASE_POS = new THREE.Vector3(0, 2.4, 0)
 const HOLE = -2
 const SAVE = -3
 const SAVE_POS = new THREE.Vector3(-3.4, 1.6, 0.9)
+/** Budgetens månsystem, önskelistans kometer och tillgångarna (de två sista visas från hela galaxen). */
+const MOONS = -4
+const MOONS_POS = new THREE.Vector3(3.4, 1.4, -1.0)
+const WISH = -5
+const WORTH = -6
+const TYPE_COLORS = { fixed: '#c9d1e0', variable: '#f0aa6c', savings: '#7be3b2' } as const
+const TYPE_NAMES = { fixed: 'Fast', variable: 'Rörlig', savings: 'Sparande' } as const
+const LIST_COLORS = { erik: '#8fc2ff', cassandra: '#ff9ec8' } as const
 
 /** Slumptal med frö, så att galaxen ser likadan ut varje gång den öppnas. */
 function seeded(seed: number) {
@@ -320,6 +328,27 @@ function GalaxyGuide({ onClose }: { onClose: () => void }) {
             Ny planet
           </dt>
           <dd>Sparmålet. En skiva av stoft samlas ihop till en planet ju närmare målet ni kommer.</dd>
+        </div>
+        <div>
+          <dt>
+            <i className="gv-ico moons" aria-hidden="true" />
+            Månsystem
+          </dt>
+          <dd>Budgeten: en måne per kategori runt en gasjätte. Månen lyser när kategorin är betald den här månaden.</dd>
+        </div>
+        <div>
+          <dt>
+            <i className="gv-ico wish" aria-hidden="true" />
+            Önskekometer
+          </dt>
+          <dd>Önskelistan. Det som ryms i månadens överskott är nära galaxen, det som kostar flera månader ligger långt ute.</dd>
+        </div>
+        <div>
+          <dt>
+            <i className="gv-ico worth" aria-hidden="true" />
+            Galaxens sken
+          </dt>
+          <dd>Tillgångarna. Hela galaxen lyser starkare ju större ert netto är.</dd>
         </div>
         <div>
           <dt>
@@ -757,6 +786,68 @@ function buildNewPlanet(progress: number, surface: THREE.Texture, glow: THREE.Te
     update(now: number) {
       disk.rotation.y = now / 7000
       planet.rotation.y = now / 4000
+    },
+  }
+}
+
+/**
+ * Budgeten som ett månsystem runt en gasjätte: en måne per kategori, större ju större budget. Månen lyser när
+ * kategorin är betald den här månaden och är mörk så länge den inte är det.
+ */
+function buildMoonSystem(moons: BudgetMoon[], surface: THREE.Texture, glow: THREE.Texture) {
+  const group = new THREE.Group()
+  const giant = new THREE.Mesh(
+    new THREE.SphereGeometry(0.06, 48, 32),
+    new THREE.MeshStandardMaterial({ color: '#e2b77a', map: surface, roughness: 0.8, transparent: true, envMapIntensity: 0.15 }),
+  )
+  giant.rotation.z = 0.2
+  group.add(giant)
+  const max = Math.max(1, ...moons.map((m) => m.budget))
+  const shown = moons.slice(0, 16)
+  const bodies = shown.map((m, i) => {
+    const radius = 0.11 + i * (0.36 / Math.max(1, shown.length))
+    const orbit = new THREE.LineLoop(
+      new THREE.BufferGeometry().setFromPoints(
+        Array.from({ length: 96 }, (_, a) => new THREE.Vector3(Math.cos((a / 96) * Math.PI * 2) * radius, 0, Math.sin((a / 96) * Math.PI * 2) * radius)),
+      ),
+      new THREE.LineBasicMaterial({ color: '#aab4d8', transparent: true, depthWrite: false }),
+    )
+    orbit.material.userData.opacity = 0.12
+    group.add(orbit)
+    const share = m.budget > 0 ? m.paid / m.budget : 0
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 24, 16),
+      new THREE.MeshStandardMaterial({
+        color: TYPE_COLORS[m.type],
+        roughness: 0.85,
+        transparent: true,
+        emissive: TYPE_COLORS[m.type],
+        emissiveIntensity: 0.05 + 0.5 * share,
+        envMapIntensity: 0.1,
+      }),
+    )
+    mesh.material.userData.opacity = 0.55 + 0.45 * share
+    mesh.scale.setScalar(0.006 + 0.016 * Math.sqrt(m.budget / max))
+    group.add(mesh)
+    let halo: THREE.Sprite | null = null
+    if (share >= 1) {
+      halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: TYPE_COLORS[m.type], transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))
+      halo.material.userData.opacity = 0.7
+      halo.scale.setScalar(mesh.scale.x * 7)
+      group.add(halo)
+    }
+    return { mesh, halo, radius, phase: i * 2.4, speed: 0.25 / Math.sqrt(radius) }
+  })
+  group.rotation.x = 0.18
+  return {
+    group,
+    update(now: number) {
+      giant.rotation.y = now / 5000
+      for (const b of bodies) {
+        const a = b.phase + (now / 1000) * b.speed
+        b.mesh.position.set(Math.cos(a) * b.radius, 0, Math.sin(a) * b.radius)
+        b.halo?.position.copy(b.mesh.position)
+      }
     },
   }
 }
@@ -1219,6 +1310,61 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         },
       })
     }
+    if (economy && economy.budget.moons.length) {
+      const moonSystem = buildMoonSystem(economy.budget.moons, surfaceFor(2), glow)
+      moonSystem.group.position.copy(MOONS_POS)
+      moonSystem.group.visible = false
+      scene.add(moonSystem.group)
+      landmarks.push({
+        id: MOONS,
+        pos: MOONS_POS,
+        // Panelen är hög här (en rad per kategori), så kameran siktar under systemet och lyfter det uppåt.
+        aim: new THREE.Vector3(0, -0.3, 0),
+        view: new THREE.Vector3(-0.2, 0.55, 1.4),
+        light: new THREE.Vector3(-1.2, 0.8, 0.9),
+        ...marker(MOONS_POS, '#e8b46b', 1.1),
+        group: moonSystem.group,
+        update(now, fade) {
+          moonSystem.update(now)
+          fadeGroup(moonSystem.group, fade)
+        },
+      })
+    }
+
+    // Önskelistan: en komet per önskan. Det som ryms i månadens överskott dras in mot galaxen,
+    // det som skulle ta många månader ligger långt ute.
+    const comets: { head: THREE.Sprite; tail: THREE.Line; r: number; a: number; y: number }[] = []
+    if (economy) {
+      const list = economy.wishes.slice(0, 14)
+      list.forEach((w, i) => {
+        const near = rMax * 0.6
+        const farthest = rMax + 3
+        const reach = w.months === null ? 1 : w.months <= 1 ? 0 : Math.min(1, Math.log2(w.months) / 5)
+        const r = near + reach * (farthest - near)
+        const a = (i / Math.max(1, list.length)) * Math.PI * 2 + 0.4
+        const head = new THREE.Sprite(
+          new THREE.SpriteMaterial({ map: glow, color: LIST_COLORS[w.list], transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+        )
+        head.scale.setScalar(0.5)
+        scene.add(head)
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()])
+        geo.setAttribute('color', new THREE.Float32BufferAttribute([1, 1, 1, 0, 0, 0], 3))
+        const tail = new THREE.Line(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))
+        scene.add(tail)
+        comets.push({ head, tail, r, a, y: 0.6 + (i % 3) * 0.35 })
+      })
+    }
+
+    // Tillgångarna: hela galaxen lyser starkare ju större nettot är (1 000 kr → svagt, 1 miljon → starkt).
+    const worthGlow = economy ? THREE.MathUtils.clamp((Math.log10(Math.max(1000, economy.worth.net)) - 3) / 3, 0, 1) : 0
+    coreSprite.scale.multiplyScalar(0.85 + 0.4 * worthGlow)
+    const halo = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: glow, color: '#ffd9a8', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+    )
+    halo.scale.setScalar(rMax * 3.2)
+    scene.add(halo)
+    fadeInside.push({ m: halo.material, base: 0.04 + 0.14 * worthGlow })
+
     const landmarkOf = (id: number) => landmarks.find((l) => l.id === id)
 
     // Svagt omgivningsljus: planeternas nattsida blir nästan svart, som i rymden.
@@ -1289,6 +1435,14 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         const projected = pos.clone().project(camera)
         const d = Math.hypot(projected.x - pointer.x, projected.y - pointer.y)
         if (projected.z < 1 && d < 0.18 && (!best || d < best.d)) best = { i, d }
+      }
+      // Tryck på en komet visar önskelistan.
+      for (const c of comets) {
+        const projected = c.head.position.clone().project(camera)
+        if (projected.z < 1 && Math.hypot(projected.x - pointer.x, projected.y - pointer.y) < 0.07) {
+          setSelected(WISH)
+          return
+        }
       }
       if (best && best.i !== insideIndex) {
         setSelected(best.i)
@@ -1465,6 +1619,20 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         if (!flight) setSelected(inside)
       }
 
+      // Kometerna glider runt, med svansen bort från galaxens kärna.
+      for (const c of comets) {
+        const a = c.a + now / 90000
+        c.head.position.set(Math.cos(a) * c.r, c.y, Math.sin(a) * c.r)
+        const away = tmp.copy(c.head.position).setY(c.y * 0.3).normalize().multiplyScalar(0.9).add(c.head.position)
+        const pos = c.tail.geometry.getAttribute('position') as THREE.BufferAttribute
+        pos.setXYZ(0, c.head.position.x, c.head.position.y, c.head.position.z)
+        pos.setXYZ(1, away.x, away.y, away.z)
+        pos.needsUpdate = true
+        const visible = 1 - landmarkFade
+        c.head.material.opacity = 0.9 * visible
+        ;(c.tail.material as THREE.LineBasicMaterial).opacity = 0.6 * visible
+      }
+
       const beat = 0.5 + 0.5 * Math.sin(now / 600)
       if (current) current.material.opacity = (0.55 + 0.25 * beat) * (1 - 0.9 * landmarkFade)
       if (currentRing && currentRing.material.opacity > 0.01) currentRing.scale.setScalar(0.85 + 0.3 * beat)
@@ -1524,7 +1692,8 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
 
   const open = (i: number) => {
     setSelected(i)
-    flyToRef.current?.(i)
+    // Önskelistan och tillgångarna syns bäst från hela galaxen.
+    flyToRef.current?.(i === WISH || i === WORTH ? null : i)
   }
 
   const back = () => {
@@ -1612,6 +1781,94 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
           </p>
           <button type="button" className="gv-back" onClick={back}>
             Tillbaka till hela galaxen
+          </button>
+        </section>
+      ) : selected === MOONS && economy ? (
+        <section className="gv-panel gv-economy gv-scroll" aria-live="polite">
+          <span className="gv-label">Budgetens månar · {monthName(economy.budget.month, today)}</span>
+          <b className="gv-big">
+            {kr(economy.budget.paid)} <small>av {kr(economy.budget.total)} betalt</small>
+          </b>
+          <p>En måne per kategori, större ju större budget. Den lyser när kategorin är betald den här månaden.</p>
+          <ul className="gv-rows">
+            {economy.budget.moons.map((m) => (
+              <li key={`${m.type}-${m.name}`} className={m.paid >= m.budget ? 'is-paid' : undefined}>
+                <span>
+                  <i className="gv-dot" style={{ background: TYPE_COLORS[m.type] }} aria-hidden="true" />
+                  {m.name} <em>{TYPE_NAMES[m.type]}</em>
+                </span>
+                <b>
+                  {m.paid >= m.budget ? '✓ ' : m.paid > 0 ? `${kr(m.paid)} av ` : ''}
+                  {kr(m.budget)}
+                </b>
+              </li>
+            ))}
+          </ul>
+          <p>
+            {economy.extraPerMonth >= 0
+              ? `Det blir ${kr(economy.extraPerMonth)} över att spara extra i månaden.`
+              : `Budgeten går ${kr(-economy.extraPerMonth)} back i månaden.`}
+          </p>
+          <button type="button" className="gv-back" onClick={back}>
+            Tillbaka till hela galaxen
+          </button>
+        </section>
+      ) : selected === WISH && economy ? (
+        <section className="gv-panel gv-economy gv-scroll" aria-live="polite">
+          <span className="gv-label">Önskelistan · kometer</span>
+          <b className="gv-big">
+            {economy.wishes.length} {economy.wishes.length === 1 ? 'önskan' : 'önskningar'}
+          </b>
+          <p>
+            {economy.extraPerMonth > 0
+              ? `Det som ryms i månadens överskott (${kr(economy.extraPerMonth)}) är nära galaxen. Ju fler månader en önskan kostar, desto längre ut ligger kometen.`
+              : 'Inget blir över i budgeten den här månaden, så alla kometer ligger långt ute.'}
+          </p>
+          {economy.wishes.length > 0 ? (
+            <ul className="gv-rows">
+              {economy.wishes.map((w) => (
+                <li key={`${w.list}-${w.name}`} className={w.months !== null && w.months <= 1 ? 'is-paid' : undefined}>
+                  <span>
+                    <i className="gv-dot" style={{ background: LIST_COLORS[w.list] }} aria-hidden="true" />
+                    {w.name}
+                    <em>{w.months === null ? '' : w.months <= 1 ? 'ryms nu' : `≈ ${Math.ceil(w.months)} mån`}</em>
+                  </span>
+                  <b>{kr(w.amount)}</b>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Önskelistan är tom.</p>
+          )}
+          <p className="gv-legend">
+            <i className="gv-dot" style={{ background: LIST_COLORS.erik }} aria-hidden="true" /> Erik{' '}
+            <i className="gv-dot" style={{ background: LIST_COLORS.cassandra }} aria-hidden="true" /> Cassandra
+          </p>
+          <button type="button" className="gv-back" onClick={() => setSelected(null)}>
+            Stäng
+          </button>
+        </section>
+      ) : selected === WORTH && economy ? (
+        <section className="gv-panel gv-economy gv-scroll" aria-live="polite">
+          <span className="gv-label">Tillgångar · galaxens sken</span>
+          <b className="gv-big">{kr(economy.worth.net)}</b>
+          <p>Nettot: det ni äger minus lånet. Hela galaxen lyser starkare ju större det blir.</p>
+          <ul className="gv-rows">
+            {economy.worth.assets.map((a) => (
+              <li key={a.name}>
+                <span>{a.name}</span>
+                <b>{kr(a.amount)}</b>
+              </li>
+            ))}
+            {economy.worth.loan > 0 && (
+              <li>
+                <span>Lån</span>
+                <b>− {kr(economy.worth.loan)}</b>
+              </li>
+            )}
+          </ul>
+          <button type="button" className="gv-back" onClick={() => setSelected(null)}>
+            Stäng
           </button>
         </section>
       ) : selected === BASE ? (
@@ -1710,8 +1967,8 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         <div className="gv-bottom">
           <p className="gv-hint">
             {months.length <= 1
-              ? 'Gul ring: månaden. Blå: rymdbasen. Orange i kärnan: skulderna. Grön: sparmålet.'
-              : 'Gula ringar är månader, blå är rymdbasen, orange i kärnan skulderna och grön sparmålet. Tryck, eller välj nedan.'}
+              ? 'Gul ring: månaden. Blå: rymdbasen. Orange: skulderna. Grön: sparmålet. Guld: budgeten.'
+              : 'Gula ringar är månader, blå rymdbasen, orange skulderna, grön sparmålet och guld budgeten. Tryck, eller välj nedan.'}
           </p>
           <div className="gv-months" role="list" ref={(el) => {
               if (el) el.scrollLeft = el.scrollWidth
@@ -1726,6 +1983,24 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
               <button type="button" role="listitem" className="gv-month gv-save-chip" onClick={() => open(SAVE)}>
                 <span>Sparmål</span>
                 <b>{Math.min(100, Math.floor((economy.savings.current / economy.savings.target) * 100))}&nbsp;%</b>
+              </button>
+            )}
+            {economy && economy.budget.moons.length > 0 && (
+              <button type="button" role="listitem" className="gv-month gv-moon-chip" onClick={() => open(MOONS)}>
+                <span>Budget</span>
+                <b>{economy.budget.total > 0 ? Math.round((economy.budget.paid / economy.budget.total) * 100) : 0}&nbsp;%</b>
+              </button>
+            )}
+            {economy && economy.wishes.length > 0 && (
+              <button type="button" role="listitem" className="gv-month gv-wish-chip" onClick={() => open(WISH)}>
+                <span>Önskningar</span>
+                <b>{economy.wishes.length}</b>
+              </button>
+            )}
+            {economy && (
+              <button type="button" role="listitem" className="gv-month gv-worth-chip" onClick={() => open(WORTH)}>
+                <span>Tillgångar</span>
+                <b>{kr(economy.worth.net)}</b>
               </button>
             )}
             <button type="button" role="listitem" className="gv-month gv-base-chip" onClick={() => open(BASE)}>
