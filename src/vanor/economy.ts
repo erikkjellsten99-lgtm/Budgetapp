@@ -1,7 +1,9 @@
-// Ekonomin i galaxen: skulderna blir ett svart hål i kärnan och sparmålet en planet som föds.
+// Ekonomin i galaxen: skulderna blir ett svart hål i kärnan, sparmålet en planet som föds, budgeten ett
+// månsystem, önskelistan kometer och tillgångarna galaxens sken.
 // Läser hushållets data (samma som Budget, Prognos och Konton) men ändrar ingenting i den.
 
-import { currentMonth, getAssets, getBudget, getGoals, getIncome, getLoans, shiftMonth } from '../db'
+import { currentMonth, getAssets, getBudget, getGoals, getIncome, getLoans, getWishes, shiftMonth } from '../db'
+import type { Category, CategoryType, Wish } from '../types'
 import { forecast, type MonthInput } from '../forecast'
 import { goalCurrent, monthLabel, project } from '../Goal'
 
@@ -19,6 +21,41 @@ export interface Economy {
   loanPaidIn: string | null
   /** Sparmålet, eller null om inget mål finns. */
   savings: { name: string; current: number; target: number; reachedIn: string | null } | null
+  /** Månadens budget: en måne per kategori. */
+  budget: { month: string; moons: BudgetMoon[]; total: number; paid: number }
+  /** Önskningar som inte är köpta, och hur många månaders överskott var och en motsvarar. */
+  wishes: WishComet[]
+  /** Det som blir över varje månad efter utgifter och planerat sparande (samma som Budget visar). */
+  extraPerMonth: number
+  /** Tillgångar (konton som inte är för vardagen), lånet och nettot. */
+  worth: { assets: { name: string; amount: number }[]; loan: number; net: number }
+}
+
+export interface BudgetMoon {
+  name: string
+  type: CategoryType
+  budget: number
+  /** Hur mycket av kategorin som är markerad som betald den här månaden. */
+  paid: number
+}
+
+export interface WishComet {
+  name: string
+  amount: number
+  list: Wish['list']
+  /** Pris delat med månadens överskott. 1 eller mindre = ryms i det som blir över denna månad. Null = inget blir över. */
+  months: number | null
+}
+
+/** Betalt den här månaden för en kategori: markerade rader, eller hela kategorin om den saknar rader. */
+export function paidThisMonth(category: Category, month: string): number {
+  if (category.items?.length) return category.items.filter((i) => i.paidMonth === month).reduce((s, i) => s + i.amount, 0)
+  return category.paidMonth === month ? category.monthlyBudget : 0
+}
+
+/** Hur många månaders överskott en önskan kostar (samma uträkning som Budgets "över att spara extra"). */
+export function wishMonths(amount: number, extraPerMonth: number): number | null {
+  return extraPerMonth > 0 ? amount / extraPerMonth : null
 }
 
 // v2: den första versionen räknade med den gamla skuldlistan, så det sparade maxbeloppet var för högt.
@@ -65,7 +102,15 @@ async function futureInputs(count: number): Promise<MonthInput[]> {
 }
 
 export async function loadEconomy(): Promise<Economy> {
-  const [loans, assets, goals] = await Promise.all([getLoans(), getAssets(), getGoals()])
+  const month = currentMonth()
+  const [loans, assets, goals, wishes, budget, income] = await Promise.all([
+    getLoans(),
+    getAssets(),
+    getGoals(),
+    getWishes(),
+    getBudget(month),
+    getIncome(month),
+  ])
   const loan = loans[0] ?? null
   const list = loan && loan.balance > 0 ? [{ name: loan.name, amount: loan.balance }] : []
   const debtLeft = list.reduce((s, d) => s + d.amount, 0)
@@ -86,5 +131,31 @@ export async function loadEconomy(): Promise<Economy> {
     savings = { name: goal.name, current, target: goal.target, reachedIn: reachedAt === null ? null : reachedAt === 0 ? 'nu' : monthLabel(reachedAt) }
   }
 
-  return { debts: list, debtLeft, debtMax: rememberDebtMax(debtLeft), loanPaidIn, savings }
+  // Budgeten den här månaden, som i fliken Budget: inkomster minus utgifter (önskningar köpta i månaden räknas
+  // som rörliga utgifter) minus planerat sparande blir det som är över att spara extra.
+  const categories = budget.categories.filter((c) => c.monthlyBudget > 0)
+  const sum = (type: CategoryType) => categories.filter((c) => c.type === type).reduce((s, c) => s + c.monthlyBudget, 0)
+  const boughtThisMonth = wishes.filter((w) => w.paidMonth === month).reduce((s, w) => s + w.amount, 0)
+  const extraPerMonth = income.csn + income.other - sum('fixed') - sum('variable') - boughtThisMonth - sum('savings')
+  const moons = categories
+    .map((c) => ({ name: c.name, type: c.type, budget: c.monthlyBudget, paid: Math.min(c.monthlyBudget, paidThisMonth(c, month)) }))
+    .sort((a, b) => b.budget - a.budget)
+
+  const ownAssets = assets.filter((a) => !a.spending && a.amount !== 0).map((a) => ({ name: a.name, amount: a.amount }))
+  const assetSum = ownAssets.reduce((s, a) => s + a.amount, 0)
+
+  return {
+    debts: list,
+    debtLeft,
+    debtMax: rememberDebtMax(debtLeft),
+    loanPaidIn,
+    savings,
+    budget: { month, moons, total: moons.reduce((s, m) => s + m.budget, 0), paid: moons.reduce((s, m) => s + m.paid, 0) },
+    wishes: wishes
+      .filter((w) => !w.paidMonth && w.amount > 0)
+      .map((w) => ({ name: w.name, amount: w.amount, list: w.list, months: wishMonths(w.amount, extraPerMonth) }))
+      .sort((a, b) => a.amount - b.amount),
+    extraPerMonth,
+    worth: { assets: ownAssets, loan: debtLeft, net: assetSum - debtLeft },
+  }
 }

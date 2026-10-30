@@ -3016,3 +3016,76 @@
 .galaxy-view .gv-ico.newplanet {
   background: radial-gradient(circle, #69d2b4 0 30%, rgb(255 207 150 / 0.5) 45%, transparent 70%);
 }
+
+/* Steg 2: budgetens månar, önskekometer och tillgångar */
+.galaxy-view .gv-moon-chip {
+  border-color: rgb(232 180 107 / 0.55);
+}
+
+.galaxy-view .gv-wish-chip {
+  border-color: rgb(143 194 255 / 0.5);
+}
+
+.galaxy-view .gv-worth-chip {
+  border-color: rgb(255 217 168 / 0.4);
+}
+
+.galaxy-view .gv-scroll {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.galaxy-view .gv-economy .gv-big small {
+  color: #aab4d8;
+  font-family: 'Figtree', system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.galaxy-view .gv-rows li span {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.galaxy-view .gv-rows li em {
+  color: #8d97bd;
+  font-size: 0.76rem;
+  font-style: normal;
+}
+
+.galaxy-view .gv-rows li.is-paid b {
+  color: #9be8c2;
+}
+
+.galaxy-view .gv-dot {
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.galaxy-view .gv-legend {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.galaxy-view .gv-ico.moons {
+  background: radial-gradient(circle at 50% 50%, #e2b77a 0 28%, transparent 30%), radial-gradient(circle at 85% 30%, #c9d1e0 0 12%, transparent 14%);
+}
+
+.galaxy-view .gv-ico.wish {
+  width: 18px;
+  height: 3px;
+  margin-top: 8px;
+  border-radius: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 158 200 / 0.6) 60%, #fff 80%, transparent 82%);
+}
+
+.galaxy-view .gv-ico.worth {
+  background: radial-gradient(circle, #fff1d6 0 18%, rgb(255 217 168 / 0.5) 40%, transparent 70%);
+}
