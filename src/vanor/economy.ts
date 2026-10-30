@@ -1,12 +1,15 @@
 // Ekonomin i galaxen: skulderna blir ett svart hål i kärnan och sparmålet en planet som föds.
 // Läser hushållets data (samma som Budget, Prognos och Konton) men ändrar ingenting i den.
 
-import { currentMonth, getAssets, getBudget, getDebts, getGoals, getIncome, getLoans, shiftMonth } from '../db'
+import { currentMonth, getAssets, getBudget, getGoals, getIncome, getLoans, shiftMonth } from '../db'
 import { forecast, type MonthInput } from '../forecast'
 import { goalCurrent, monthLabel, project } from '../Goal'
 
 export interface Economy {
-  /** Skulder: lånet (prognosens) och skulder till personer, med kvar att betala i kronor. */
+  /**
+   * Skulder: lånet som Prognos räknar med, med kvar att betala i kronor. Den gamla listan med skulder
+   * till personer (tabellen debts) används inte längre någonstans i appen och räknas därför inte.
+   */
   debts: { name: string; amount: number }[]
   /** Summan kvar att betala. */
   debtLeft: number
@@ -18,7 +21,8 @@ export interface Economy {
   savings: { name: string; current: number; target: number; reachedIn: string | null } | null
 }
 
-const MAX_KEY = 'vanor-galax-skuldmax'
+// v2: den första versionen räknade med den gamla skuldlistan, så det sparade maxbeloppet var för högt.
+const MAX_KEY = 'vanor-galax-skuldmax-v2'
 const SHORT = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december']
 const monthText = (month: string) => `${SHORT[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`
 
@@ -29,6 +33,7 @@ const monthText = (month: string) => `${SHORT[Number(month.slice(5, 7)) - 1]} ${
 export function rememberDebtMax(debtLeft: number): number {
   let max = debtLeft
   try {
+    localStorage.removeItem('vanor-galax-skuldmax') // den gamla, för höga
     max = Math.max(debtLeft, Number(localStorage.getItem(MAX_KEY)) || 0)
     localStorage.setItem(MAX_KEY, String(Math.round(max)))
   } catch {
@@ -60,12 +65,9 @@ async function futureInputs(count: number): Promise<MonthInput[]> {
 }
 
 export async function loadEconomy(): Promise<Economy> {
-  const [debts, loans, assets, goals] = await Promise.all([getDebts(), getLoans(), getAssets(), getGoals()])
+  const [loans, assets, goals] = await Promise.all([getLoans(), getAssets(), getGoals()])
   const loan = loans[0] ?? null
-  const list = [
-    ...(loan && loan.balance > 0 ? [{ name: loan.name, amount: loan.balance }] : []),
-    ...debts.filter((d) => d.amount > 0).map((d) => ({ name: d.name, amount: d.amount })),
-  ]
+  const list = loan && loan.balance > 0 ? [{ name: loan.name, amount: loan.balance }] : []
   const debtLeft = list.reduce((s, d) => s + d.amount, 0)
 
   let loanPaidIn: string | null = null
