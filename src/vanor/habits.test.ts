@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { daySummary, dayStreak, habitPlan, nameError, remindDaysText, remindText, todayInfo, weekCount, weekGoal, weekStreak, type Habit, type Log } from './habits'
+import { addDays } from './dates'
+import { daySummary, rampToday, dayStreak, habitPlan, nameError, remindDaysText, remindText, todayInfo, weekCount, weekGoal, weekStreak, type Habit, type Log } from './habits'
 
 const habit = (goal: number): Habit => ({
   id: 'h',
@@ -246,5 +247,27 @@ describe('planerade dagar', () => {
   it('planen och påminnelsen visar dagarna', () => {
     expect(habitPlan(gym([0, 2]), () => undefined)).toBe('mån, ons')
     expect(remindText({ ...gym([0, 2]), remind: '17:00', remindDays: [6] })).toBe('mån, ons 17:00')
+  })
+})
+
+describe('rampToday', () => {
+  const med = (ramp?: Habit['ramp']): Habit => ({ id: 'med', name: 'Meditation', goal: 7, created: '2026-10-25', after: [], order: 0, archived: false, ramp })
+  const ramp = { start: '2026-10-30', from: 3, step: 1, max: 30, unit: 'min' }
+
+  it('startar på from och ökar en minut för varje gjord dag före idag', () => {
+    const log = { '2026-10-30': ['med'], '2026-10-31': ['med'] }
+    expect(rampToday(med(ramp), log, '2026-10-30')).toBe(3)
+    expect(rampToday(med(ramp), log, '2026-10-31')).toBe(4)
+    expect(rampToday(med(ramp), log, '2026-11-01')).toBe(5)
+  })
+
+  it('står still en missad dag och stannar vid taket', () => {
+    expect(rampToday(med(ramp), { '2026-10-30': ['med'] }, '2026-11-05')).toBe(4)
+    const every = Object.fromEntries(Array.from({ length: 60 }, (_, i) => [addDays('2026-10-30', i), ['med']]))
+    expect(rampToday(med(ramp), every, '2026-12-31')).toBe(30)
+  })
+
+  it('null för vanor som inte ökar', () => {
+    expect(rampToday(med(), {}, '2026-10-30')).toBeNull()
   })
 })

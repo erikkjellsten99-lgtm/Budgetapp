@@ -5,7 +5,7 @@ import TaskSheet from './TaskSheet'
 import { doneToday, dueTasks, upcomingTasks, whenText, type Task } from './tasks'
 import HabitSheet from './HabitSheet'
 import { addDays, isoWeek, longDate, todayKey, weekStart, type DateKey } from './dates'
-import { daySummary, habitPlan, isDaily, isDone, todayInfo, type Habit, type TodayInfo } from './habits'
+import { daySummary, habitPlan, isDaily, isDone, rampToday, todayInfo, type Habit, type TodayInfo } from './habits'
 import { loadHabitData, minimumKeys, onHabitChange, saveTaskRecord, toggleCheck, togglePause, toLog, type HabitData } from './store'
 import { dayQuote } from './quotes'
 import '@fontsource/bricolage-grotesque/700.css'
@@ -140,6 +140,7 @@ export default function Vanor() {
       week={weekOf(habit.id)}
       waiting={!!habit.after.length && !info.done && !info.due}
       min={minimums.has(`${today}|${habit.id}`)}
+      length={rampToday(habit, log, today)}
       pop={popped === habit.id}
       onCheck={check}
       onDays={() => setDaysFor(habit.id)}
@@ -357,6 +358,8 @@ interface RowProps {
   waiting: boolean
   /** Bara minimiversionen gjord idag. */
   min: boolean
+  /** Dagens längd för en vana som ökar gradvis, t.ex. 4 (min). */
+  length: number | null
   pop: boolean
   onCheck: (habit: Habit, min?: boolean) => void
   /** Öppna dagarna för att bocka i efterhand. */
@@ -364,12 +367,18 @@ interface RowProps {
   onPopEnd: () => void
 }
 
-function HabitRow({ habit, info, plan, week, waiting, min, pop, onCheck, onDays, onPopEnd }: RowProps) {
+function HabitRow({ habit, info, plan, week, waiting, min, length, pop, onCheck, onDays, onPopEnd }: RowProps) {
   // Starka lägen visas som lappar, resten som lugn text under namnet.
   const strong = info.pills.filter((p) => p.kind === 'warn' || p.kind === 'bad' || (p.kind === 'ok' && !info.done))
   const notes = info.pills.filter((p) => p.kind === 'plain').map((p) => p.text)
   const streak = info.pills.find((p) => p.kind === 'fire')?.text
   if (info.done && min) notes.unshift(habit.minimum ? `Minimum ${habit.minimum}` : 'Minimum')
+  const today = length !== null && habit.ramp ? (
+    <span className="ramp">
+      {info.done && !min ? 'Gjort' : 'Idag'} {length} {habit.ramp.unit}
+      {length >= habit.ramp.max ? ' (max)' : ''}
+    </span>
+  ) : null
   const count = isDaily(habit) ? null : info.goal > 0 ? `${info.count} av ${info.goal}` : null
   const label = (info.done ? 'Ångra ' : 'Bocka av ') + habit.name
   const cls = ['habit', info.done && 'is-done', waiting && 'is-waiting'].filter(Boolean).join(' ')
@@ -380,6 +389,7 @@ function HabitRow({ habit, info, plan, week, waiting, min, pop, onCheck, onDays,
       <div className="info">
         <span className="name">{habit.name}</span>
         <span className="meta">
+          {today}
           {/* Planen ("4 gånger i veckan") syns redan i räknaren – visa läget i stället när det finns. */}
           {notes.length ? notes.join(', ') : plan}
           {streak && <span className="streak">{streak}</span>}
