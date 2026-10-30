@@ -358,6 +358,10 @@ function GalaxyGuide({ onClose }: { onClose: () => void }) {
           <dd>7 dagar i rad på en vana ger en komet som flyger runt solen.</dd>
         </div>
       </dl>
+      <p className="gv-guide-how">
+        <b>Tidsreglaget</b> längst ner visar galaxen som prognosen säger att den ser ut om upp till fem år: hålet krymper, planeten
+        växer och galaxen lyser starkare om budgeten håller.
+      </p>
       <p className="gv-guide-how">Dra för att snurra. Nyp eller zooma mot en ring för att flyga in. Tryck på en planet för att se vanan.</p>
       <button type="button" className="gv-guide-ok" onClick={onClose}>
         Uppfattat
@@ -371,6 +375,7 @@ const SHORT_MONTHS = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 's
 const shortDate = (d: string, today: string) =>
   `${Number(d.slice(8))} ${SHORT_MONTHS[Number(d.slice(5, 7)) - 1]}${d.slice(0, 4) !== today.slice(0, 4) ? ` ${d.slice(0, 4)}` : ''}`
 
+const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 const kr = (n: number) => `${Math.round(n).toLocaleString('sv-SE')} kr`
 
 const metal = (color: string, extra: Partial<THREE.MeshStandardMaterialParameters> = {}) =>
@@ -700,35 +705,46 @@ function buildBlackHole(share: number, glow: THREE.Texture) {
   const disk = diskTexture()
   const halo = haloTexture()
   const textures = [disk, halo]
-  const r = share > 0 ? 0.16 + 0.4 * share : 0.3
   const additive = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }
-  let ring: THREE.Mesh | null = null
-  if (share > 0) {
-    group.add(new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), new THREE.MeshBasicMaterial({ color: '#000000' })))
-    ring = new THREE.Mesh(new THREE.RingGeometry(r * 1.25, r * 4.6, 160, 1), new THREE.MeshBasicMaterial({ map: disk, side: THREE.DoubleSide, ...additive }))
-    ring.rotation.x = -Math.PI / 2 + 0.16
-    group.add(ring)
-    // Ljuset från skivans baksida böjs över och under hålet, och en tunn fotonring precis utanför horisonten
-    const lens = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: '#ffc98a', ...additive, opacity: 0.75 }))
-    lens.scale.setScalar(r * 3.1)
-    group.add(lens)
-    const photon = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: '#fff3dc', ...additive }))
-    photon.scale.setScalar(r * 2.35)
-    group.add(photon)
-  } else {
-    // Skuldfri: en lugn, ljus ring där hålet var
-    const free = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: '#bff5d6', ...additive }))
-    free.scale.setScalar(r * 4)
-    group.add(free)
-    const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: '#e8fff2', ...additive, opacity: 0.6 }))
-    core.scale.setScalar(r * 2)
-    group.add(core)
+  const radiusFor = (s: number) => (s > 0 ? 0.16 + 0.4 * s : 0.3)
+
+  // Hålet byggs i storlek 1 och skalas, så att tidsreglaget kan krympa det utan att bygga om något.
+  const hole = new THREE.Group()
+  hole.add(new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), new THREE.MeshBasicMaterial({ color: '#000000' })))
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.25, 4.6, 160, 1), new THREE.MeshBasicMaterial({ map: disk, side: THREE.DoubleSide, ...additive }))
+  ring.rotation.x = -Math.PI / 2 + 0.16
+  hole.add(ring)
+  // Ljuset från skivans baksida böjs över och under hålet, och en tunn fotonring precis utanför horisonten
+  const lens = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: '#ffc98a', ...additive, opacity: 0.75 }))
+  lens.scale.setScalar(3.1)
+  hole.add(lens)
+  const photon = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: '#fff3dc', ...additive }))
+  photon.scale.setScalar(2.35)
+  hole.add(photon)
+  group.add(hole)
+
+  // Skuldfri: en lugn, ljus ring där hålet var
+  const free = new THREE.Group()
+  const freeRing = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: '#bff5d6', ...additive }))
+  freeRing.scale.setScalar(4)
+  free.add(freeRing)
+  const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: '#e8fff2', ...additive, opacity: 0.6 }))
+  core.scale.setScalar(2)
+  free.add(core)
+  group.add(free)
+
+  const setShare = (s: number) => {
+    hole.visible = s > 0
+    free.visible = s <= 0
+    ;(s > 0 ? hole : free).scale.setScalar(radiusFor(s))
   }
+  setShare(share)
   return {
     group,
-    radius: r,
+    radius: radiusFor(share),
+    setShare,
     update(now: number) {
-      if (ring) ring.rotation.z = -now / 3000
+      ring.rotation.z = -now / 3000
     },
     dispose: () => textures.forEach((t) => t.dispose()),
   }
@@ -893,6 +909,12 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       stop()
     }
   }, [])
+  // Tidsreglaget: hur många månader framåt galaxen visas (0 = nu).
+  const [future, setFuture] = useState(0)
+  const futureRef = useRef(0)
+  futureRef.current = future
+  const applyFutureRef = useRef<((k: number) => void) | null>(null)
+  useEffect(() => applyFutureRef.current?.(future), [future])
   // Var kameran stod, så att galaxen kan byggas om (nya siffror eller bockar) utan att du hamnar på start.
   const viewRef = useRef<{ position: THREE.Vector3; target: THREE.Vector3; rotating: boolean } | null>(null)
   const flyToRef = useRef<((index: number | null) => void) | null>(null)
@@ -1290,12 +1312,31 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       })
     }
 
+    // Sparplaneten ligger i en hållare, så att tidsreglaget kan byta ut den mot en mer färdig planet.
+    const saveHolder = new THREE.Group()
+    let born: ReturnType<typeof buildNewPlanet> | null = null
+    let bornProgress = -1
+    const setBorn = (progress: number) => {
+      const p = Math.round(Math.min(1, Math.max(0, progress)) * 100) / 100
+      if (p === bornProgress) return
+      bornProgress = p
+      if (born) {
+        saveHolder.remove(born.group)
+        born.group.traverse((o) => {
+          const mesh = o as THREE.Mesh
+          if (mesh.geometry && mesh.geometry !== planetGeo) mesh.geometry.dispose()
+          ;(mesh.material as THREE.Material | undefined)?.dispose()
+        })
+      }
+      born = buildNewPlanet(p, surfaceFor(0), glow)
+      saveHolder.add(born.group)
+    }
     if (economy?.savings) {
       const s = economy.savings
-      const born = buildNewPlanet(s.current / s.target, surfaceFor(0), glow)
-      born.group.position.copy(SAVE_POS)
-      born.group.visible = false
-      scene.add(born.group)
+      setBorn(s.current / s.target)
+      saveHolder.position.copy(SAVE_POS)
+      saveHolder.visible = false
+      scene.add(saveHolder)
       landmarks.push({
         id: SAVE,
         pos: SAVE_POS,
@@ -1303,10 +1344,10 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         view: new THREE.Vector3(0.2, 0.55, 1.35),
         light: new THREE.Vector3(1.3, 0.7, 0.9),
         ...marker(SAVE_POS, '#7be3b2', 1.1),
-        group: born.group,
+        group: saveHolder,
         update(now, fade) {
-          born.update(now)
-          fadeGroup(born.group, fade)
+          born?.update(now)
+          fadeGroup(saveHolder, fade)
         },
       })
     }
@@ -1356,14 +1397,31 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
     }
 
     // Tillgångarna: hela galaxen lyser starkare ju större nettot är (1 000 kr → svagt, 1 miljon → starkt).
-    const worthGlow = economy ? THREE.MathUtils.clamp((Math.log10(Math.max(1000, economy.worth.net)) - 3) / 3, 0, 1) : 0
-    coreSprite.scale.multiplyScalar(0.85 + 0.4 * worthGlow)
+    const glowFor = (net: number) => THREE.MathUtils.clamp((Math.log10(Math.max(1000, net)) - 3) / 3, 0, 1)
+    const coreScale = coreSprite.scale.x
     const halo = new THREE.Sprite(
       new THREE.SpriteMaterial({ map: glow, color: '#ffd9a8', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
     )
     halo.scale.setScalar(rMax * 3.2)
     scene.add(halo)
-    fadeInside.push({ m: halo.material, base: 0.04 + 0.14 * worthGlow })
+    const haloFade = { m: halo.material as THREE.Material, base: 0 }
+    fadeInside.push(haloFade)
+    const setWorth = (net: number) => {
+      const g = glowFor(net)
+      coreSprite.scale.setScalar(coreScale * (0.85 + 0.4 * g))
+      haloFade.base = 0.04 + 0.14 * g
+    }
+    setWorth(economy?.worth.net ?? 0)
+
+    // Tidsreglaget: visa galaxen som prognosen säger att den ser ut om k månader (0 = nu).
+    applyFutureRef.current = (k: number) => {
+      if (!economy) return
+      const point = economy.timeline[Math.min(k, economy.timeline.length - 1)]
+      hole?.setShare(holeShare(point.loanLeft, economy.debtMax))
+      if (economy.savings && point.goalSaved !== null) setBorn(point.goalSaved / economy.savings.target)
+      setWorth(point.net)
+    }
+    applyFutureRef.current(futureRef.current)
 
     const landmarkOf = (id: number) => landmarks.find((l) => l.id === id)
 
@@ -1687,6 +1745,7 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
   const selectedPlanets: MonthPlanet[] = selectedMonth ? planets[selected!] : []
   const selectedSats = selectedMonth ? sats[selected!] : []
   const next = nextMilestone(milestones)
+  const futurePoint = economy ? economy.timeline[Math.min(future, economy.timeline.length - 1)] : null
   const chosenPlanet = planetSel === null ? null : (selectedPlanets[planetSel] ?? null)
   const monthComets = selectedPlanets.reduce((n, p) => n + p.comets, 0)
 
@@ -1749,6 +1808,12 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
               ))}
             </ul>
           )}
+          {future > 0 && futurePoint && (
+            <p className="gv-future">
+              Om {future} mån ({monthName(futurePoint.month, today)}):{' '}
+              {futurePoint.loanLeft > 0 ? `${kr(futurePoint.loanLeft)} kvar enligt prognosen.` : 'lånet är betalt enligt prognosen.'}
+            </p>
+          )}
           <p>
             {economy.debtLeft === 0
               ? 'Hålet har slocknat. Kvar finns bara ljuset där det var.'
@@ -1772,6 +1837,12 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
               <i style={{ width: `${Math.min(100, (economy.savings.current / economy.savings.target) * 100)}%` }} />
             </span>
           </div>
+          {future > 0 && futurePoint && futurePoint.goalSaved !== null && (
+            <p className="gv-future">
+              Om {future} mån ({monthName(futurePoint.month, today)}): {kr(futurePoint.goalSaved)},{' '}
+              {Math.min(100, Math.floor((futurePoint.goalSaved / economy.savings.target) * 100))}&nbsp;% enligt Sparmål-prognosen.
+            </p>
+          )}
           <p>
             {economy.savings.current >= economy.savings.target
               ? 'Planeten är färdig. Målet är nått.'
@@ -1965,8 +2036,42 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         </section>
       ) : (
         <div className="gv-bottom">
+          {economy && economy.timeline.length > 1 && (
+            <div className={future > 0 ? 'gv-time is-future' : 'gv-time'}>
+              <div className="gv-time-head">
+                <label htmlFor="gv-time">Tid</label>
+                <b>{future === 0 ? 'Nu' : `${capital(monthName(futurePoint!.month, today))} · om ${future} mån`}</b>
+                {future > 0 && (
+                  <button type="button" className="gv-time-now" onClick={() => setFuture(0)}>
+                    Tillbaka till nu
+                  </button>
+                )}
+              </div>
+              <input
+                id="gv-time"
+                type="range"
+                min={0}
+                max={economy.timeline.length - 1}
+                step={1}
+                value={future}
+                onChange={(e) => setFuture(Number(e.target.value))}
+                aria-valuetext={future === 0 ? 'Nu' : `Om ${future} månader`}
+              />
+              {future > 0 && futurePoint && (
+                <p className="gv-time-sum">
+                  Prognos: {futurePoint.loanLeft > 0 ? `lånet ${kr(futurePoint.loanLeft)} kvar` : 'lånet betalt'}
+                  {economy.savings && futurePoint.goalSaved !== null
+                    ? ` · sparmålet ${Math.min(100, Math.floor((futurePoint.goalSaved / economy.savings.target) * 100))} %`
+                    : ''}
+                  {` · netto ${kr(futurePoint.net)}`}
+                </p>
+              )}
+            </div>
+          )}
           <p className="gv-hint">
-            {months.length <= 1
+            {future > 0
+              ? 'Så här ser galaxen ut enligt prognosen om budgeten håller. Vanorna visas som de är idag.'
+              : months.length <= 1
               ? 'Gul ring: månaden. Blå: rymdbasen. Orange: skulderna. Grön: sparmålet. Guld: budgeten.'
               : 'Gula ringar är månader, blå rymdbasen, orange skulderna, grön sparmålet och guld budgeten. Tryck, eller välj nedan.'}
           </p>
