@@ -5,9 +5,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { planetColor, planetKind, type PlanetKind } from './planets'
+import { baseMilestones, monthSatellites, nextMilestone, type ModuleKind } from './space'
+import type { Task } from './tasks'
 import { galaxyMonths, monthName, monthOfWeek, monthPlanets, type MonthPlanet } from './progress'
 
 interface Props {
@@ -15,8 +18,14 @@ interface Props {
   log: Log
   paused: Paused
   today: DateKey
+  /** Att göra-saker: de avklarade blir satelliter. */
+  tasks: Task[]
   onClose: () => void
 }
+
+/** Rymdbasen har index -1 där månaderna har 0, 1, 2 … */
+const BASE = -1
+const BASE_POS = new THREE.Vector3(0, 2.4, 0)
 
 /** Slumptal med frö, så att galaxen ser likadan ut varje gång den öppnas. */
 function seeded(seed: number) {
@@ -280,6 +289,20 @@ function GalaxyGuide({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <dt>
+            <i className="gv-ico sat" aria-hidden="true" />
+            Satellit
+          </dt>
+          <dd>Varje Att göra-sak du bockar av skjuts upp som en satellit runt månadens solsystem.</dd>
+        </div>
+        <div>
+          <dt>
+            <i className="gv-ico base" aria-hidden="true" />
+            Rymdbas
+          </dt>
+          <dd>Stationen ovanför kärnan är du, över hela tiden. Den byggs ut med en ny modul för varje milstolpe och kan bara växa.</dd>
+        </div>
+        <div>
+          <dt>
             <i className="gv-ico comet" aria-hidden="true" />
             Komet
           </dt>
@@ -294,7 +317,282 @@ function GalaxyGuide({ onClose }: { onClose: () => void }) {
   )
 }
 
-export default function GalaxyView({ habits, log, paused, today, onClose }: Props) {
+/** "2026-10-05" → "5 okt". */
+const SHORT_MONTHS = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+const shortDate = (d: string, today: string) =>
+  `${Number(d.slice(8))} ${SHORT_MONTHS[Number(d.slice(5, 7)) - 1]}${d.slice(0, 4) !== today.slice(0, 4) ? ` ${d.slice(0, 4)}` : ''}`
+
+const metal = (color: string, extra: Partial<THREE.MeshStandardMaterialParameters> = {}) =>
+  new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.6, transparent: true, ...extra })
+
+/** Ytor för stationen och satelliterna, ritade en gång och återanvända. */
+let hardware: { cells: THREE.Texture; foil: THREE.Texture; hull: THREE.Texture } | null = null
+function hardwareTextures() {
+  if (hardware) return hardware
+  const canvas = (w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void) => {
+    const c = document.createElement('canvas')
+    c.width = w
+    c.height = h
+    draw(c.getContext('2d')!)
+    const t = new THREE.CanvasTexture(c)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 4
+    return t
+  }
+  const n = noise2(42)
+  // Solceller: mörkblå rutor med ljusa ledare emellan, som på riktiga solpaneler.
+  const cells = canvas(128, 256, (ctx) => {
+    ctx.fillStyle = '#b9c2d0'
+    ctx.fillRect(0, 0, 128, 256)
+    for (let y = 0; y < 16; y++)
+      for (let x = 0; x < 8; x++) {
+        const g = ctx.createLinearGradient(0, y * 16, 0, y * 16 + 16)
+        const tint = 0.85 + n(x, y) * 0.3
+        g.addColorStop(0, `rgb(${22 * tint},${44 * tint},${108 * tint})`)
+        g.addColorStop(1, `rgb(${12 * tint},${24 * tint},${66 * tint})`)
+        ctx.fillStyle = g
+        ctx.fillRect(x * 16 + 1, y * 16 + 1, 14, 14)
+      }
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'
+    for (let x = 0; x < 128; x += 4) ctx.fillRect(x, 0, 1, 256)
+  })
+  // Guldfolie (isolering): skrynklig, med ljusa och mörka veck.
+  const foil = canvas(128, 128, (ctx) => {
+    const img = ctx.createImageData(128, 128)
+    for (let y = 0; y < 128; y++)
+      for (let x = 0; x < 128; x++) {
+        const v = n(x / 6, y / 6) * 0.7 + n(x / 2, y / 2) * 0.3
+        const i = (y * 128 + x) * 4
+        img.data[i] = 150 + v * 105
+        img.data[i + 1] = 105 + v * 85
+        img.data[i + 2] = 30 + v * 40
+        img.data[i + 3] = 255
+      }
+    ctx.putImageData(img, 0, 0)
+  })
+  // Skrovet: benvitt med fogar, nitrader och små luckor.
+  const hull = canvas(256, 128, (ctx) => {
+    ctx.fillStyle = '#e9e7e1'
+    ctx.fillRect(0, 0, 256, 128)
+    for (let x = 0; x < 256; x += 32) {
+      ctx.fillStyle = 'rgba(80,85,95,0.35)'
+      ctx.fillRect(x, 0, 1.5, 128)
+    }
+    for (let y = 0; y < 128; y += 42) {
+      ctx.fillStyle = 'rgba(80,85,95,0.25)'
+      ctx.fillRect(0, y, 256, 1)
+    }
+    for (let k = 0; k < 40; k++) {
+      ctx.fillStyle = `rgba(60,64,72,${0.15 + n(k, 3) * 0.25})`
+      ctx.fillRect(n(k, 1) * 250, n(k, 2) * 120, 4 + n(k, 4) * 8, 3 + n(k, 5) * 5)
+    }
+  })
+  hardware = { cells, foil, hull }
+  return hardware
+}
+
+const cellMat = () => metal('#ffffff', { map: hardwareTextures().cells, metalness: 0.55, roughness: 0.28, side: THREE.DoubleSide })
+const foilMat = () => metal('#ffffff', { map: hardwareTextures().foil, metalness: 0.95, roughness: 0.32 })
+const hullMat = () => metal('#ffffff', { map: hardwareTextures().hull, metalness: 0.15, roughness: 0.55 })
+const frameMat = () => metal('#aeb6c4', { metalness: 0.8, roughness: 0.35 })
+
+/** Ett solpanelsfält: ram och celler, på en bom. */
+function solarArray(length: number, width: number) {
+  const g = new THREE.Group()
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(length, 0.0012, width), cellMat())
+  g.add(panel)
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(length + 0.002, 0.002, 0.0016), frameMat())
+  frame.position.z = width / 2
+  g.add(frame)
+  const frame2 = frame.clone()
+  frame2.position.z = -width / 2
+  g.add(frame2)
+  const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, length, 8), frameMat())
+  spine.rotation.z = Math.PI / 2
+  g.add(spine)
+  return g
+}
+
+/** En liten satellit: guldfolieklädd kropp, två solpanelsvingar, parabolantenn och en spröt. */
+function makeSatellite(): THREE.Group {
+  const g = new THREE.Group()
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.009, 0.008), foilMat()))
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.0084, 0.0015, 0.0084), hullMat())
+  top.position.y = 0.0052
+  g.add(top)
+  for (const side of [-1, 1]) {
+    const wing = solarArray(0.016, 0.0065)
+    wing.position.x = side * 0.0135
+    g.add(wing)
+  }
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.004, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.6), metal('#f2f4f8', { side: THREE.DoubleSide }))
+  dish.position.set(0, -0.0065, 0)
+  g.add(dish)
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.0003, 0.0003, 0.008, 6), frameMat())
+  rod.position.set(0.002, 0.009, 0.002)
+  g.add(rod)
+  return g
+}
+
+/**
+ * Rymdbasen: en station som byggs av de moduler du har låst upp. Varje milstolpe lägger till en del,
+ * så att stationen syns växa över tid. Utan bockar visas bara en tunn byggplats.
+ * Byggd som en riktig rymdstation: ett fackverk i mitten, vita moduler med fogar, guldfolie och solcellsfält.
+ */
+function buildStation(built: Set<ModuleKind>) {
+  const group = new THREE.Group()
+  const spin: THREE.Object3D[] = []
+  const lights: THREE.Mesh[] = []
+  const add = (mesh: THREE.Object3D, x = 0, y = 0, z = 0) => {
+    mesh.position.set(x, y, z)
+    group.add(mesh)
+    return mesh
+  }
+  /** En trycksatt modul längs z-axeln: rund med avrundade ändar. */
+  const module = (r: number, len: number, mat = hullMat()) => {
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 6, 24), mat)
+    m.rotation.x = Math.PI / 2
+    return m
+  }
+  if (!built.has('core')) {
+    add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.05), new THREE.MeshBasicMaterial({ color: '#7fe0ff', wireframe: true, transparent: true })))
+    return { group, spin, beacon: null as THREE.Mesh | null, lights }
+  }
+
+  // Fackverket: fyra balkar med stag, stationens ryggrad
+  const truss = new THREE.Group()
+  const L = 0.3
+  const s = 0.009
+  for (const [y, z] of [[s, s], [s, -s], [-s, s], [-s, -s]]) {
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.0011, 0.0011, L, 6), frameMat())
+    beam.rotation.z = Math.PI / 2
+    beam.position.set(0, y, z)
+    truss.add(beam)
+  }
+  for (let x = -L / 2; x <= L / 2 + 1e-6; x += 0.02) {
+    for (const [y, z, rot] of [[s, 0, 'x'], [-s, 0, 'x'], [0, s, 'y'], [0, -s, 'y']] as const) {
+      const strut = new THREE.Mesh(new THREE.BoxGeometry(0.0012, 0.0012, s * 2), frameMat())
+      if (rot === 'y') strut.rotation.x = Math.PI / 2
+      strut.position.set(x, y, z)
+      truss.add(strut)
+    }
+  }
+  add(truss)
+
+  // Kärnan: två moduler i kors och en nod i mitten
+  add(module(0.016, 0.09), 0, 0.028, 0)
+  add(new THREE.Mesh(new THREE.SphereGeometry(0.02, 24, 16), hullMat()), 0, 0.028, 0)
+  const cross = module(0.013, 0.05)
+  cross.rotation.set(0, 0, Math.PI / 2)
+  add(cross, 0, 0.028, 0)
+  // Radiatorer: vita kylpaneler som sticker ut ur fackverket
+  for (const side of [-1, 1]) {
+    const radiator = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.0012, 0.05), metal('#f4f6f8', { metalness: 0.1, roughness: 0.7 }))
+    radiator.position.set(side * 0.05, -0.012, 0)
+    radiator.rotation.x = 0.5
+    group.add(radiator)
+  }
+
+  // Solpanelsfält vid fackverkets ändar: två vingar uppåt och nedåt (panel), sedan två till (panel2)
+  const arrays = (x: number) => {
+    for (const side of [-1, 1]) {
+      const wing = solarArray(0.045, 0.14)
+      wing.rotation.x = 0.35
+      wing.position.set(x, 0, side * 0.085)
+      group.add(wing)
+    }
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.04, 12), foilMat())
+    mast.rotation.x = Math.PI / 2
+    mast.position.set(x, 0, 0)
+    group.add(mast)
+  }
+  if (built.has('panel')) arrays(L / 2 - 0.01)
+  if (built.has('panel2')) arrays(-L / 2 + 0.01)
+
+  if (built.has('antenna')) {
+    const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.05, 8), frameMat())
+    add(boom, 0.02, 0.07, -0.02)
+    const dish = new THREE.Mesh(new THREE.SphereGeometry(0.016, 32, 12, 0, Math.PI * 2, 0, Math.PI / 3.2), metal('#f4f6f8', { side: THREE.DoubleSide, metalness: 0.3, roughness: 0.4 }))
+    dish.rotation.x = Math.PI + 0.5
+    add(dish, 0.02, 0.098, -0.02)
+    const feed = new THREE.Mesh(new THREE.ConeGeometry(0.002, 0.008, 8), foilMat())
+    add(feed, 0.02, 0.09, -0.017)
+  }
+  if (built.has('dock')) {
+    // Dockningsport med en dockad kapsel
+    add(module(0.009, 0.02), 0, 0.028, 0.075)
+    const port = new THREE.Mesh(new THREE.TorusGeometry(0.01, 0.0018, 10, 32), foilMat())
+    add(port, 0, 0.028, 0.092)
+    const capsule = new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.024, 24, 1, true), hullMat())
+    capsule.rotation.x = -Math.PI / 2
+    add(capsule, 0, 0.028, 0.108)
+    const shield = new THREE.Mesh(new THREE.CircleGeometry(0.014, 24), metal('#3a3026', { metalness: 0.2, roughness: 0.9, side: THREE.DoubleSide }))
+    add(shield, 0, 0.028, 0.12)
+    for (const side of [-1, 1]) {
+      const wing = solarArray(0.03, 0.01)
+      add(wing, side * 0.028, 0.028, 0.112)
+    }
+  }
+  if (built.has('habitat')) {
+    // Uppblåsbar bostadsmodul med tygbanden synliga
+    const hab = new THREE.Mesh(new THREE.CapsuleGeometry(0.024, 0.03, 8, 32), metal('#efece4', { metalness: 0.05, roughness: 0.85 }))
+    add(hab, 0, 0.028, -0.085).rotation.x = Math.PI / 2
+    for (let k = -1; k <= 1; k++) {
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.0245, 0.0012, 8, 40), metal('#c9c4b6', { metalness: 0.1, roughness: 0.8 }))
+      add(band, 0, 0.028, -0.085 + k * 0.014)
+    }
+  }
+  if (built.has('greenhouse')) {
+    // Växthus: en glaskupol med grönt ljus inifrån
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.02, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshPhysicalMaterial({ color: '#cfefff', roughness: 0.05, metalness: 0, transmission: 0.6, transparent: true, opacity: 0.6 }),
+    )
+    ;(dome.material as THREE.Material).userData.opacity = 0.6
+    add(dome, 0, 0.048, 0)
+    const plants = new THREE.Mesh(new THREE.SphereGeometry(0.014, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#3fae5c', emissive: '#2c8a45', emissiveIntensity: 0.8, transparent: true }))
+    add(plants, 0, 0.048, 0)
+  }
+  if (built.has('telescope')) {
+    // Teleskop i guldfolie med solskydd
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.05, 24), foilMat())
+    tube.rotation.z = -0.5
+    add(tube, -0.06, 0.055, 0)
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.0105, 0.0105, 0.016, 24, 1, true), metal('#f4f6f8', { side: THREE.DoubleSide, metalness: 0.2 }))
+    shade.rotation.z = -0.5
+    add(shade, -0.047, 0.077, 0)
+  }
+  if (built.has('ring')) {
+    // Roterande bostadsring med ekrar
+    const holder = new THREE.Group()
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.0075, 16, 96), hullMat())
+    ring.rotation.y = Math.PI / 2
+    holder.add(ring)
+    for (let k = 0; k < 6; k++) {
+      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0016, 0.23, 8), frameMat())
+      spoke.rotation.x = (k * Math.PI) / 6
+      holder.add(spoke)
+    }
+    holder.position.y = 0.028
+    spin.push(add(holder, 0, 0.028, 0))
+  }
+  if (built.has('sail')) {
+    // Solsegel: tunn guldfolie spänd på fyra bommar
+    const sail = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.17), metal('#ffffff', { map: hardwareTextures().foil, metalness: 1, roughness: 0.2, side: THREE.DoubleSide }))
+    sail.rotation.set(0, Math.PI / 2, Math.PI / 4)
+    add(sail, -0.23, 0.028, 0)
+  }
+  let beacon: THREE.Mesh | null = null
+  if (built.has('beacon')) {
+    beacon = new THREE.Mesh(new THREE.SphereGeometry(0.003, 12, 8), new THREE.MeshBasicMaterial({ color: '#ff5a4a', transparent: true }))
+    add(beacon, L / 2, 0.012, 0)
+    const green = new THREE.Mesh(new THREE.SphereGeometry(0.003, 12, 8), new THREE.MeshBasicMaterial({ color: '#4dff8a', transparent: true }))
+    lights.push(add(green, -L / 2, 0.012, 0) as THREE.Mesh)
+  }
+  return { group, spin, beacon, lights }
+}
+
+export default function GalaxyView({ habits, log, paused, today, tasks, onClose }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const months = useMemo(() => galaxyMonths(habits, log, paused, today), [habits, log, paused, today])
   const [selected, setSelected] = useState<number | null>(null)
@@ -315,6 +613,9 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
   planetSelRef.current = planetSel
   useEffect(() => setPlanetSel(null), [selected])
   const planets = useMemo(() => months.map((m) => monthPlanets(habits, log, paused, today, m.month)), [months, habits, log, paused, today])
+  const sats = useMemo(() => months.map((m) => monthSatellites(tasks, m.month)), [months, tasks])
+  const milestones = useMemo(() => baseMilestones(habits, log, paused, today), [habits, log, paused, today])
+  const built = useMemo(() => new Set(milestones.filter((m) => m.done).map((m) => m.id)), [milestones])
   const flyToRef = useRef<((index: number | null) => void) | null>(null)
   const totalStars = months.reduce((s, m) => s + m.checks, 0)
 
@@ -341,6 +642,11 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
+    // Svag miljöreflektion så att metall och guldfolie på stationen glänser som i rymden.
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    const envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    scene.environment = envMap
+    scene.environmentIntensity = 0.45
     const camera = new THREE.PerspectiveCamera(55, mount.clientWidth / mount.clientHeight, 0.05, 600)
     // Avstånd så att hela galaxen får plats på bredden, även på en smal telefon. Sedd snett ovanifrån.
     const homeFor = (aspect: number) => {
@@ -485,6 +791,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       sprite.scale.setScalar(0.55 + 1.25 * share)
       sprite.userData.index = i
       sprite.userData.scale = 0.55 + 1.25 * share
+      sprite.userData.opacity = 0.45 + 0.55 * share
       scene.add(sprite)
       // Ring runt solsystemet så det syns mot stjärnorna i armen.
       const ring = new THREE.Sprite(
@@ -538,6 +845,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
             metalness: 0,
             emissive: planetColor(k),
             emissiveIntensity: 0.02,
+            envMapIntensity: 0.15,
             transparent: true,
           }),
         )
@@ -602,9 +910,33 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         group.add(tail)
         return { head, tail, a: 0.42 + 0.07 * c, b: 0.16 + 0.03 * c, tilt: 0.5 + c * 1.9, speed: 0.35 - c * 0.06, phase: c * 2.1 }
       })
+      // Satelliter: en per avklarad Att göra-sak den månaden (högst 12 syns), på lutande banor utanför planeterna.
+      const satellites = sats[i].slice(0, 12).map((_, j) => {
+        const sat = makeSatellite()
+        group.add(sat)
+        return { sat, r: 0.36 + (j % 4) * 0.012, tilt: 0.3 + j * 0.9, incline: 0.12 + (j % 3) * 0.08, speed: 0.5 + (j % 5) * 0.06, phase: j * 1.7 }
+      })
       scene.add(group)
-      return { group, bodies, core, corona, rays, comets }
+      return { group, bodies, core, corona, rays, comets, satellites }
     })
+    // Rymdbasen ovanför kärnan: en markering på avstånd, stationen syns när man flyger dit.
+    const baseRing = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: ringTex, color: '#7fe0ff', transparent: true, depthWrite: false, opacity: 0.9 }),
+    )
+    baseRing.position.copy(BASE_POS)
+    baseRing.scale.setScalar(1.1)
+    scene.add(baseRing)
+    const baseGlow = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: glow, color: '#bfefff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.8 }),
+    )
+    baseGlow.position.copy(BASE_POS)
+    baseGlow.scale.setScalar(0.7)
+    scene.add(baseGlow)
+    const station = buildStation(built)
+    station.group.position.copy(BASE_POS)
+    station.group.visible = false
+    scene.add(station.group)
+
     // Svagt omgivningsljus: planeternas nattsida blir nästan svart, som i rymden.
     scene.add(new THREE.AmbientLight('#8090c0', 0.1))
     // Svagt fyllnadsljus från kameran, så att planeterna mellan dig och solen inte blir helt svarta.
@@ -627,12 +959,20 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
 
     // Flyg till en månad (eller tillbaka till hela galaxen med null).
     let flight: { from: THREE.Vector3; to: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3; start: number } | null = null
+    const posOf = (index: number) => (index === BASE ? BASE_POS : systems[index].position)
     flyToRef.current = (index) => {
-      const target = index === null ? new THREE.Vector3() : systems[index].position.clone()
-      const dest = index === null ? home.clone() : target.clone().add(new THREE.Vector3(0, 0.95, 1.4))
+      // Vid rymdbasen siktar kameran lite under stationen, så att den syns ovanför den höga panelen.
+      const target = index === null ? new THREE.Vector3() : posOf(index).clone().add(new THREE.Vector3(0, index === BASE ? -0.16 : 0, 0))
+      const dest =
+        index === null
+          ? home.clone()
+          : target.clone().add(index === BASE ? new THREE.Vector3(0.3, 0.38, 0.95) : new THREE.Vector3(0, 0.95, 1.4))
       flight = { from: camera.position.clone(), to: dest, fromT: controls.target.clone(), toT: target, start: performance.now() }
       controls.autoRotate = index === null
     }
+
+    // Allt man kan flyga till: rymdbasen och varje månad.
+    const targets = (): [number, THREE.Vector3][] => [[BASE, BASE_POS], ...systems.map((sun, i): [number, THREE.Vector3] => [i, sun.position])]
 
     // Tryck (inte drag) på ett solsystem väljer det.
     const ray = new THREE.Raycaster()
@@ -647,7 +987,7 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1)
       ray.setFromCamera(pointer, camera)
       // Inne i ett solsystem: tryck på en planet för att se den vanan.
-      if (insideIndex !== null) {
+      if (insideIndex !== null && insideIndex !== BASE) {
         const detail = details[insideIndex]
         let hitPlanet: { k: number; d: number } | null = null
         detail.bodies.forEach((b, k) => {
@@ -661,10 +1001,10 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       }
       // Sprites är små i 3D – välj den månad som ligger närmast trycket på skärmen.
       let best: { i: number; d: number } | null = null
-      for (const s of systems) {
-        const projected = s.position.clone().project(camera)
+      for (const [i, pos] of targets()) {
+        const projected = pos.clone().project(camera)
         const d = Math.hypot(projected.x - pointer.x, projected.y - pointer.y)
-        if (projected.z < 1 && d < 0.18 && (!best || d < best.d)) best = { i: s.userData.index, d }
+        if (projected.z < 1 && d < 0.18 && (!best || d < best.d)) best = { i, d }
       }
       if (best && best.i !== insideIndex) {
         setSelected(best.i)
@@ -675,7 +1015,10 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
     // Zooma in = dras mot det solsystem du zoomar mot (där fingrarna/musen är, annars mitten av skärmen).
     const zoomPoint = new THREE.Vector2(0, 0)
     const touches = new Map<number, { x: number; y: number }>()
+    // Dragningen mot ett solsystem gäller bara medan du själv zoomar (inte när kameran glider av sig själv).
+    let zoomingUntil = 0
     const toNdc = (x: number, y: number) => {
+      zoomingUntil = performance.now() + 400
       const rect = renderer.domElement.getBoundingClientRect()
       zoomPoint.set(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1)
     }
@@ -698,11 +1041,11 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
 
     const nearestToZoom = () => {
       let best: { i: number; d: number } | null = null
-      for (const sun of systems) {
-        const projected = sun.position.clone().project(camera)
+      for (const [i, pos] of targets()) {
+        const projected = pos.clone().project(camera)
         if (projected.z >= 1) continue
         const d = Math.hypot(projected.x - zoomPoint.x, projected.y - zoomPoint.y)
-        if (!best || d < best.d) best = { i: sun.userData.index, d }
+        if (!best || d < best.d) best = { i, d }
       }
       return best?.i ?? null
     }
@@ -736,11 +1079,11 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       // Den pågående månaden pulserar svagt – den byggs fortfarande.
       // Inzoomning drar kameran mot solsystemet – ju närmare, desto mer centrerat.
       const distance = camera.position.distanceTo(controls.target)
-      if (!flight && distance < lastDistance - 1e-4) {
+      if (!flight && now < zoomingUntil && distance < lastDistance - 1e-4) {
         const i = nearestToZoom()
         if (i !== null) {
           const pull = Math.min(1, ((lastDistance - distance) / distance) * 1.6)
-          offset.subVectors(systems[i].position, controls.target).multiplyScalar(pull)
+          offset.subVectors(posOf(i), controls.target).multiplyScalar(pull)
           controls.target.add(offset)
           camera.position.add(offset)
         }
@@ -788,21 +1131,54 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
             positions.needsUpdate = true
             ;(c.tail.material as THREE.LineBasicMaterial).opacity = 0.55 * fade
           }
+          for (const s of detail.satellites) {
+            const a = s.phase + (now / 1000) * s.speed
+            const x = Math.cos(a) * s.r
+            const z = Math.sin(a) * s.r
+            s.sat.position.set(x * Math.cos(s.tilt) - z * Math.sin(s.tilt), Math.sin(a) * s.r * s.incline, x * Math.sin(s.tilt) + z * Math.cos(s.tilt))
+            s.sat.rotation.set(a * 0.5, a, 0)
+            s.sat.traverse((o) => {
+              const m = (o as THREE.Mesh).material as THREE.Material | undefined
+              if (m) m.opacity = fade
+            })
+          }
         }
         sun.scale.setScalar(sun.userData.scale * (1 - 0.88 * fade))
         rings[i].material.opacity = 0.85 * (1 - fade)
       })
+      // Rymdbasen tonas in på samma sätt när man kommer nära.
+      const baseD = camera.position.distanceTo(BASE_POS)
+      const baseFade = THREE.MathUtils.clamp((DETAIL_FROM - baseD) / (DETAIL_FROM - INSIDE), 0, 1)
+      station.group.visible = baseFade > 0
+      if (baseFade > 0) {
+        station.group.rotation.y = now / 14000
+        for (const r of station.spin) r.rotation.x = now / 5000
+        if (station.beacon) (station.beacon.material as THREE.MeshBasicMaterial).opacity = baseFade * (0.4 + 0.6 * (Math.sin(now / 400) > 0.6 ? 1 : 0.2))
+        station.group.traverse((o) => {
+          const m = (o as THREE.Mesh).material as THREE.Material | undefined
+          if (m && o !== station.beacon) m.opacity = baseFade * ((m.userData.opacity as number | undefined) ?? 1)
+        })
+      }
+      baseRing.material.opacity = 0.9 * (1 - baseFade)
+      // Vid rymdbasen tonas månadernas ringar och sken bort, så att stationen står för sig själv.
+      rings.forEach((r) => (r.material.opacity *= 1 - baseFade))
+      systems.forEach((sun) => (sun.material.opacity = sun.userData.opacity * (1 - 0.9 * baseFade)))
+      baseGlow.material.opacity = 0.8 * (1 - baseFade)
+      if (!near || baseD < (near as { d: number }).d) near = { i: BASE, d: baseD }
+
       const maxFade = THREE.MathUtils.clamp((DETAIL_FROM - (near as { d: number } | null ?? { d: 99 }).d) / (DETAIL_FROM - INSIDE), 0, 1)
       const closest = near as { i: number; d: number } | null
-      if (closest) sunLight.position.copy(systems[closest.i].position)
-      const inside = closest && closest.d < INSIDE && controls.target.distanceTo(systems[closest.i].position) < 0.3 ? closest.i : null
+      // Solen lyser upp planeterna; vid rymdbasen kommer ljuset från sidan så att stationen får skuggor.
+      if (closest) sunLight.position.copy(closest.i === BASE ? tmp.copy(BASE_POS).add(new THREE.Vector3(1.2, 0.8, 0.6)) : systems[closest.i].position)
+      const inside =
+        closest && closest.d < INSIDE && controls.target.distanceTo(posOf(closest.i)) < 0.3 ? closest.i : null
       if (inside !== insideIndex) {
         insideIndex = inside
         if (!flight) setSelected(inside)
       }
 
       const beat = 0.5 + 0.5 * Math.sin(now / 600)
-      if (current) current.material.opacity = 0.55 + 0.25 * beat
+      if (current) current.material.opacity = (0.55 + 0.25 * beat) * (1 - 0.9 * baseFade)
       if (currentRing && currentRing.material.opacity > 0.01) currentRing.scale.setScalar(0.85 + 0.3 * beat)
       dust.rotation.y += 0.00015
       const closeness = camera.position.distanceTo(controls.target) / home.length()
@@ -841,13 +1217,17 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
       raysTex.dispose()
       bandTex.dispose()
       surfaces.forEach((t) => t.dispose())
+      envMap.dispose()
+      pmrem.dispose()
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [months, log, planets])
+  }, [months, log, planets, sats, built])
 
-  const selectedMonth = selected === null ? null : months[selected]
-  const selectedPlanets: MonthPlanet[] = selected === null ? [] : planets[selected]
+  const selectedMonth = selected === null || selected === BASE ? null : months[selected]
+  const selectedPlanets: MonthPlanet[] = selectedMonth ? planets[selected!] : []
+  const selectedSats = selectedMonth ? sats[selected!] : []
+  const next = nextMilestone(milestones)
   const chosenPlanet = planetSel === null ? null : (selectedPlanets[planetSel] ?? null)
   const monthComets = selectedPlanets.reduce((n, p) => n + p.comets, 0)
 
@@ -889,6 +1269,42 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
 
       {guideOpen ? (
         <GalaxyGuide onClose={closeGuide} />
+      ) : selected === BASE ? (
+        <section className="gv-panel gv-base" aria-live="polite">
+          <span className="gv-label">Rymdbasen</span>
+          <b className="gv-big">
+            {built.size} av {milestones.length} moduler
+          </b>
+          {next?.progress && (
+            <div className="gv-next">
+              <span>
+                Nästa: <b>{next.module}</b> vid {next.title.toLowerCase()}
+              </span>
+              <span className="gv-next-bar" aria-hidden="true">
+                <i style={{ width: `${Math.min(100, Math.round((next.progress.now / next.progress.target) * 100))}%` }} />
+              </span>
+              <span className="gv-next-num">
+                {Math.min(next.progress.now, next.progress.target)} av {next.progress.target} {next.progress.unit}
+              </span>
+            </div>
+          )}
+          <ol className="gv-modules">
+            {milestones.map((m) => (
+              <li key={m.id} className={m.done ? 'done' : undefined}>
+                <span className="gv-module-check" aria-hidden="true">
+                  {m.done ? '✓' : ''}
+                </span>
+                <span>
+                  <b>{m.module}</b> · {m.title}
+                </span>
+                <span className="gv-module-date">{m.done ? shortDate(m.done, today) : ''}</span>
+              </li>
+            ))}
+          </ol>
+          <button type="button" className="gv-back" onClick={back}>
+            Tillbaka till hela galaxen
+          </button>
+        </section>
       ) : selectedMonth ? (
         <section className="gv-panel" aria-live="polite">
           <span className="gv-label">{monthName(selectedMonth.month, today)}</span>
@@ -931,6 +1347,16 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
               </p>
             )
           )}
+          {selectedSats.length > 0 && (
+            <p className="gv-planet-detail">
+              🛰 {selectedSats.length} {selectedSats.length === 1 ? 'satellit' : 'satelliter'}:{' '}
+              {selectedSats
+                .slice(0, 4)
+                .map((t) => t.title)
+                .join(', ')}
+              {selectedSats.length > 4 && ` och ${selectedSats.length - 4} till`}.
+            </p>
+          )}
           <button type="button" className="gv-back" onClick={back}>
             Tillbaka till hela galaxen
           </button>
@@ -939,12 +1365,18 @@ export default function GalaxyView({ habits, log, paused, today, onClose }: Prop
         <div className="gv-bottom">
           <p className="gv-hint">
             {months.length <= 1
-              ? 'Ringen är ditt solsystem för den här månaden. Nästa månad läggs till längre ut i armen.'
-              : 'Ringarna är dina månader. Tryck på en, eller välj nedan.'}
+              ? 'Den gula ringen är månadens solsystem, den blå ovanför kärnan är din rymdbas.'
+              : 'Gula ringar är dina månader, den blå är din rymdbas. Tryck på en, eller välj nedan.'}
           </p>
           <div className="gv-months" role="list" ref={(el) => {
               if (el) el.scrollLeft = el.scrollWidth
             }}>
+            <button type="button" role="listitem" className="gv-month gv-base-chip" onClick={() => open(BASE)}>
+              <span>Rymdbas</span>
+              <b>
+                {built.size}/{milestones.length}
+              </b>
+            </button>
             {months.map((m, i) => (
               <button key={m.month} type="button" role="listitem" className={m.current ? 'gv-month is-current' : 'gv-month'} onClick={() => open(i)}>
                 <span>{monthName(m.month, today)}</span>

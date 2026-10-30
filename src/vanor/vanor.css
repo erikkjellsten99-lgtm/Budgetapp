@@ -2809,3 +2809,115 @@
 .vanor .galaxy .gx-pick * {
   pointer-events: auto;
 }
+
+.vanor .gx-orbit.sat {
+  stroke: #8fb8ff;
+  stroke-dasharray: 1 3;
+  opacity: 0.22;
+}
+
+.vanor .gx-events {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Rymdbasen och satelliterna i 3D-galaxen */
+.galaxy-view .gv-ico.sat {
+  border-radius: 2px;
+  background: linear-gradient(90deg, #3d66c4 0 35%, #e8ecf4 35% 65%, #3d66c4 65%);
+  height: 6px;
+  margin-top: 6px;
+}
+
+.galaxy-view .gv-ico.base {
+  border: 2px solid #7fe0ff;
+}
+
+.galaxy-view .gv-base-chip {
+  border-color: rgb(127 224 255 / 0.5);
+}
+
+.galaxy-view .gv-base {
+  max-height: 58vh;
+  overflow-y: auto;
+}
+
+.galaxy-view .gv-base .gv-big {
+  font-size: 1.7rem;
+}
+
+.galaxy-view .gv-next {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 10px;
+  margin-top: 6px;
+  color: #cdd4f0;
+  font-size: 0.86rem;
+}
+
+.galaxy-view .gv-next b {
+  color: #fff;
+}
+
+.galaxy-view .gv-next-bar {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.1);
+  border-radius: 999px;
+}
+
+.galaxy-view .gv-next-bar i {
+  display: block;
+  height: 100%;
+  background: #7fe0ff;
+  border-radius: inherit;
+}
+
+.galaxy-view .gv-next-num {
+  grid-row: 1;
+  grid-column: 2;
+  color: #8d97bd;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
+.galaxy-view .gv-modules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.galaxy-view .gv-modules li {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  border: 0;
+  color: #6f7899;
+}
+
+.galaxy-view .gv-modules li.done {
+  color: #cdd4f0;
+}
+
+.galaxy-view .gv-modules li.done b {
+  color: #fff;
+}
+
+.galaxy-view .gv-module-check {
+  color: #7fe0ff;
+  font-weight: 700;
+}
+
+.galaxy-view .gv-module-date {
+  color: #8d97bd;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+}

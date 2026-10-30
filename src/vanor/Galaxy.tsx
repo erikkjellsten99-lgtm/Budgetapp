@@ -2,6 +2,8 @@ import { lazy, Suspense, useState, type ComponentType, type KeyboardEvent } from
 import { isoWeek, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { planetColor, planetKind } from './planets'
+import { monthSatellites } from './space'
+import type { Task } from './tasks'
 import { monthForecast, monthName, monthPlanets, monthScore, previousMonth, weekHabits, type MonthPlanet, type MonthScore } from './progress'
 
 /**
@@ -9,7 +11,7 @@ import { monthForecast, monthName, monthPlanets, monthScore, previousMonth, week
  * Inspirerade av riktiga planeter, så att bilden känns som rymden och inte som en tecknad bild.
  */
 // 3D-galaxen laddas först när den öppnas, så att resten av appen förblir snabb.
-type GalaxyProps = { habits: Habit[]; log: Log; paused: Paused; today: DateKey; onClose: () => void }
+type GalaxyProps = { habits: Habit[]; log: Log; paused: Paused; today: DateKey; tasks: Task[]; onClose: () => void }
 
 const GalaxyView = lazy<ComponentType<GalaxyProps>>(() =>
   import('./GalaxyView').catch(() => ({
@@ -63,6 +65,7 @@ export function GalaxyScene({
   bodies,
   small = false,
   comets = 0,
+  satellites = 0,
   picked = null,
   onPick,
 }: {
@@ -72,6 +75,8 @@ export function GalaxyScene({
   small?: boolean
   /** Antal kometer (7 dagar i rad på en vana) under månaden. */
   comets?: number
+  /** Antal satelliter (avklarade Att göra-saker) under månaden. */
+  satellites?: number
   picked?: string | null
   onPick?: (planet: MonthPlanet) => void
 }) {
@@ -99,6 +104,25 @@ export function GalaxyScene({
   })
 
   // Kometer flyger in uppifrån mot solen, med svansen bort från den. Högst tre syns.
+  // Satelliter på en egen yttre bana: en per avklarad Att göra-sak (högst 16 syns).
+  const outerRx = (36 + Math.max(1, bodies.length) * Math.min(25, 150 / Math.max(1, bodies.length)) + 10) * k
+  const satList = Array.from({ length: Math.min(16, satellites) }, (_, i) => {
+    const a = ((i * 360) / Math.min(16, satellites) + 18) * (Math.PI / 180)
+    const x = cx + outerRx * Math.cos(a)
+    const y = cy + outerRx * 0.3 * Math.sin(a)
+    // Lutning längs banan
+    const tangent = (Math.atan2(outerRx * 0.3 * Math.cos(a), -outerRx * Math.sin(a)) * 180) / Math.PI
+    return { x, y, rot: tangent, behind: Math.sin(a) < 0 }
+  })
+  const satellite = (sat: (typeof satList)[number], i: number) => (
+    <g key={`s${i}`} transform={`translate(${sat.x} ${sat.y}) rotate(${sat.rot}) scale(${small ? 0.5 : 1})`} opacity={sat.behind ? 0.75 : 1}>
+      <rect x="-4.6" y="-0.75" width="3.3" height="1.5" fill="#5f86d6" />
+      <rect x="1.3" y="-0.75" width="3.3" height="1.5" fill="#5f86d6" />
+      <rect x="-1.3" y="-1.1" width="2.6" height="2.2" rx="0.4" fill="#e9edf5" />
+      <circle cx="0" cy="0" r="3" fill={`url(#gx-star-hot-${id})`} opacity="0.6" />
+    </g>
+  )
+
   const cometList = Array.from({ length: Math.min(3, comets) }, (_, i) => {
     const x = W * (0.5 + 0.17 * i) + rand() * 20
     const y = H * (0.14 + rand() * 0.22)
@@ -373,7 +397,10 @@ export function GalaxyScene({
       ))}
       <circle cx={cx} cy={cy} r={small ? 2.6 : 6} fill="#fffdf6" />
 
+      {satList.length > 0 && <ellipse className="gx-orbit sat" cx={cx} cy={cy} rx={outerRx} ry={outerRx * 0.3} />}
+      {satList.filter((sat) => sat.behind).map(satellite)}
       {planets.filter((p) => !p.behind).map(planet)}
+      {satList.filter((sat) => !sat.behind).map(satellite)}
       <rect width={W} height={H} fill={`url(#gx-vignette-${id})`} pointerEvents="none" />
     </svg>
   )
@@ -451,7 +478,7 @@ function HabitDetails({
 }
 
 /** Månadsvyn i kortet: galaxen, procent och tidigare månader. */
-export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log: Log; paused: Paused; today: DateKey }) {
+export function MonthView({ habits, log, paused, today, tasks }: { habits: Habit[]; log: Log; paused: Paused; today: DateKey; tasks: Task[] }) {
   const score = monthScore(habits, log, paused, today)
   const bodies = monthPlanets(habits, log, paused, today, score.month)
   const built = bodies.filter((p) => p.share >= 0.8).length
@@ -469,6 +496,7 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
   const pickedIndex = bodies.findIndex((p) => p.id === pickedId)
   const picked = pickedIndex >= 0 ? bodies[pickedIndex] : null
   const comets = bodies.reduce((n, p) => n + p.comets, 0)
+  const satellites = monthSatellites(tasks, score.month)
   const forecast = monthForecast(score, today)
   // Förra månaden jämförs bara om vanorna fanns större delen av den (annars blir jämförelsen missvisande).
   const last = archive[0]
@@ -495,6 +523,7 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
           score={score}
           bodies={bodies}
           comets={comets}
+          satellites={satellites.length}
           picked={picked?.id ?? null}
           onPick={(planet) => setPickedId((cur) => (cur === planet.id ? null : planet.id))}
         />
@@ -503,9 +532,18 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
       {picked && (
         <HabitDetails planet={picked} index={pickedIndex} score={score} habits={habits} log={log} paused={paused} onClose={() => setPickedId(null)} />
       )}
-      {!picked && comets > 0 && (
+      {!picked && (comets > 0 || satellites.length > 0) && (
         <p className="gx-events">
-          <span aria-hidden="true">☄</span> {comets} {comets === 1 ? 'komet' : 'kometer'} i {title}: 7 dagar i rad på en vana.
+          {comets > 0 && (
+            <span className="gx-event">
+              <span aria-hidden="true">☄</span> {comets} {comets === 1 ? 'komet' : 'kometer'}: 7 dagar i rad på en vana.
+            </span>
+          )}
+          {satellites.length > 0 && (
+            <span className="gx-event">
+              <span aria-hidden="true">🛰</span> {satellites.length} {satellites.length === 1 ? 'satellit' : 'satelliter'}: avklarade Att göra-saker.
+            </span>
+          )}
         </p>
       )}
       {!picked && (
@@ -522,7 +560,7 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
                 <b>Varje planet</b> är en av dina vanor, i samma färg som i galaxen. Den är större ju mer av målet du har klarat i månaden. Tryck på en planet för att se vanan vecka för vecka.
               </li>
               <li>
-                <b>Varje bock</b> blir en stjärna.
+                <b>Varje bock</b> blir en stjärna, och <b>varje avklarad Att göra-sak</b> en satellit på den yttersta banan.
               </li>
               <li>
                 <b>En vana som klarar målet varje vecka</b> får planeten att lysa, och <b>7 dagar i rad</b> på en vana ger en komet.
@@ -536,7 +574,7 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
       )}
       {galaxyOpen && (
         <Suspense fallback={<div className="galaxy-view loading">Laddar galaxen …</div>}>
-          <GalaxyView habits={habits} log={log} paused={paused} today={today} onClose={() => setGalaxyOpen(false)} />
+          <GalaxyView habits={habits} log={log} paused={paused} today={today} tasks={tasks} onClose={() => setGalaxyOpen(false)} />
         </Suspense>
       )}
       <div className="ws-foot gx-foot">
@@ -591,7 +629,11 @@ export function MonthView({ habits, log, paused, today }: { habits: Habit[]; log
                 className={best?.month === s.month ? 'best' : undefined}
                 aria-label={`${monthName(s.month, today)}: ${s.pct} %${best?.month === s.month ? ', bästa månaden' : ''}`}
               >
-                <GalaxyScene score={s} small bodies={monthPlanets(habits, log, paused, today, s.month)} comets={cometsIn(habits, log, paused, today, s.month)} />
+                <GalaxyScene score={s} small
+                  bodies={monthPlanets(habits, log, paused, today, s.month)}
+                  comets={cometsIn(habits, log, paused, today, s.month)}
+                  satellites={monthSatellites(tasks, s.month).length}
+                />
                 <span>
                   {monthName(s.month, today).slice(0, 3)} · {s.pct}&nbsp;%
                 </span>
