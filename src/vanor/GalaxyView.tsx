@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { planetColor, planetKind, type PlanetKind } from './planets'
@@ -324,108 +325,271 @@ const shortDate = (d: string, today: string) =>
 const metal = (color: string, extra: Partial<THREE.MeshStandardMaterialParameters> = {}) =>
   new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.6, transparent: true, ...extra })
 
-/** En liten satellit: kropp med två solpaneler. */
+/** Ytor för stationen och satelliterna, ritade en gång och återanvända. */
+let hardware: { cells: THREE.Texture; foil: THREE.Texture; hull: THREE.Texture } | null = null
+function hardwareTextures() {
+  if (hardware) return hardware
+  const canvas = (w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void) => {
+    const c = document.createElement('canvas')
+    c.width = w
+    c.height = h
+    draw(c.getContext('2d')!)
+    const t = new THREE.CanvasTexture(c)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 4
+    return t
+  }
+  const n = noise2(42)
+  // Solceller: mörkblå rutor med ljusa ledare emellan, som på riktiga solpaneler.
+  const cells = canvas(128, 256, (ctx) => {
+    ctx.fillStyle = '#b9c2d0'
+    ctx.fillRect(0, 0, 128, 256)
+    for (let y = 0; y < 16; y++)
+      for (let x = 0; x < 8; x++) {
+        const g = ctx.createLinearGradient(0, y * 16, 0, y * 16 + 16)
+        const tint = 0.85 + n(x, y) * 0.3
+        g.addColorStop(0, `rgb(${22 * tint},${44 * tint},${108 * tint})`)
+        g.addColorStop(1, `rgb(${12 * tint},${24 * tint},${66 * tint})`)
+        ctx.fillStyle = g
+        ctx.fillRect(x * 16 + 1, y * 16 + 1, 14, 14)
+      }
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'
+    for (let x = 0; x < 128; x += 4) ctx.fillRect(x, 0, 1, 256)
+  })
+  // Guldfolie (isolering): skrynklig, med ljusa och mörka veck.
+  const foil = canvas(128, 128, (ctx) => {
+    const img = ctx.createImageData(128, 128)
+    for (let y = 0; y < 128; y++)
+      for (let x = 0; x < 128; x++) {
+        const v = n(x / 6, y / 6) * 0.7 + n(x / 2, y / 2) * 0.3
+        const i = (y * 128 + x) * 4
+        img.data[i] = 150 + v * 105
+        img.data[i + 1] = 105 + v * 85
+        img.data[i + 2] = 30 + v * 40
+        img.data[i + 3] = 255
+      }
+    ctx.putImageData(img, 0, 0)
+  })
+  // Skrovet: benvitt med fogar, nitrader och små luckor.
+  const hull = canvas(256, 128, (ctx) => {
+    ctx.fillStyle = '#e9e7e1'
+    ctx.fillRect(0, 0, 256, 128)
+    for (let x = 0; x < 256; x += 32) {
+      ctx.fillStyle = 'rgba(80,85,95,0.35)'
+      ctx.fillRect(x, 0, 1.5, 128)
+    }
+    for (let y = 0; y < 128; y += 42) {
+      ctx.fillStyle = 'rgba(80,85,95,0.25)'
+      ctx.fillRect(0, y, 256, 1)
+    }
+    for (let k = 0; k < 40; k++) {
+      ctx.fillStyle = `rgba(60,64,72,${0.15 + n(k, 3) * 0.25})`
+      ctx.fillRect(n(k, 1) * 250, n(k, 2) * 120, 4 + n(k, 4) * 8, 3 + n(k, 5) * 5)
+    }
+  })
+  hardware = { cells, foil, hull }
+  return hardware
+}
+
+const cellMat = () => metal('#ffffff', { map: hardwareTextures().cells, metalness: 0.55, roughness: 0.28, side: THREE.DoubleSide })
+const foilMat = () => metal('#ffffff', { map: hardwareTextures().foil, metalness: 0.95, roughness: 0.32 })
+const hullMat = () => metal('#ffffff', { map: hardwareTextures().hull, metalness: 0.15, roughness: 0.55 })
+const frameMat = () => metal('#aeb6c4', { metalness: 0.8, roughness: 0.35 })
+
+/** Ett solpanelsfält: ram och celler, på en bom. */
+function solarArray(length: number, width: number) {
+  const g = new THREE.Group()
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(length, 0.0012, width), cellMat())
+  g.add(panel)
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(length + 0.002, 0.002, 0.0016), frameMat())
+  frame.position.z = width / 2
+  g.add(frame)
+  const frame2 = frame.clone()
+  frame2.position.z = -width / 2
+  g.add(frame2)
+  const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, length, 8), frameMat())
+  spine.rotation.z = Math.PI / 2
+  g.add(spine)
+  return g
+}
+
+/** En liten satellit: guldfolieklädd kropp, två solpanelsvingar, parabolantenn och en spröt. */
 function makeSatellite(): THREE.Group {
   const g = new THREE.Group()
-  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.008, 0.011), metal('#e8ecf4')))
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.009, 0.008), foilMat()))
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.0084, 0.0015, 0.0084), hullMat())
+  top.position.y = 0.0052
+  g.add(top)
   for (const side of [-1, 1]) {
-    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.0008, 0.007), metal('#3d66c4', { metalness: 0.3, roughness: 0.3 }))
-    panel.position.x = side * 0.014
-    g.add(panel)
+    const wing = solarArray(0.016, 0.0065)
+    wing.position.x = side * 0.0135
+    g.add(wing)
   }
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.004, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.6), metal('#f2f4f8', { side: THREE.DoubleSide }))
+  dish.position.set(0, -0.0065, 0)
+  g.add(dish)
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.0003, 0.0003, 0.008, 6), frameMat())
+  rod.position.set(0.002, 0.009, 0.002)
+  g.add(rod)
   return g
 }
 
 /**
  * Rymdbasen: en station som byggs av de moduler du har låst upp. Varje milstolpe lägger till en del,
  * så att stationen syns växa över tid. Utan bockar visas bara en tunn byggplats.
+ * Byggd som en riktig rymdstation: ett fackverk i mitten, vita moduler med fogar, guldfolie och solcellsfält.
  */
 function buildStation(built: Set<ModuleKind>) {
   const group = new THREE.Group()
   const spin: THREE.Object3D[] = []
-  let beacon: THREE.Mesh | null = null
+  const lights: THREE.Mesh[] = []
   const add = (mesh: THREE.Object3D, x = 0, y = 0, z = 0) => {
     mesh.position.set(x, y, z)
     group.add(mesh)
     return mesh
   }
-  const tube = (r: number, len: number, color: string) => {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 24), metal(color))
-    m.rotation.z = Math.PI / 2
+  /** En trycksatt modul längs z-axeln: rund med avrundade ändar. */
+  const module = (r: number, len: number, mat = hullMat()) => {
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 6, 24), mat)
+    m.rotation.x = Math.PI / 2
     return m
   }
   if (!built.has('core')) {
     add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.05), new THREE.MeshBasicMaterial({ color: '#7fe0ff', wireframe: true, transparent: true })))
-    return { group, spin, beacon }
+    return { group, spin, beacon: null as THREE.Mesh | null, lights }
   }
-  // Kärnmodulen: en lång tub med noder i ändarna
-  add(tube(0.018, 0.14, '#dfe4ee'))
-  add(new THREE.Mesh(new THREE.SphereGeometry(0.024, 24, 16), metal('#c9d0dc')), 0.075)
-  add(new THREE.Mesh(new THREE.SphereGeometry(0.024, 24, 16), metal('#c9d0dc')), -0.075)
-  const panels = (x: number) => {
-    for (const side of [-1, 1]) {
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.04, 8), metal('#aab3c2'))
-      arm.rotation.x = Math.PI / 2
-      add(arm, x, 0, side * 0.035)
-      const panel = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.0015, 0.09), metal('#2f5fc7', { metalness: 0.35, roughness: 0.25 }))
-      add(panel, x, 0, side * 0.1)
+
+  // Fackverket: fyra balkar med stag, stationens ryggrad
+  const truss = new THREE.Group()
+  const L = 0.3
+  const s = 0.009
+  for (const [y, z] of [[s, s], [s, -s], [-s, s], [-s, -s]]) {
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.0011, 0.0011, L, 6), frameMat())
+    beam.rotation.z = Math.PI / 2
+    beam.position.set(0, y, z)
+    truss.add(beam)
+  }
+  for (let x = -L / 2; x <= L / 2 + 1e-6; x += 0.02) {
+    for (const [y, z, rot] of [[s, 0, 'x'], [-s, 0, 'x'], [0, s, 'y'], [0, -s, 'y']] as const) {
+      const strut = new THREE.Mesh(new THREE.BoxGeometry(0.0012, 0.0012, s * 2), frameMat())
+      if (rot === 'y') strut.rotation.x = Math.PI / 2
+      strut.position.set(x, y, z)
+      truss.add(strut)
     }
   }
-  if (built.has('panel')) panels(0.03)
-  if (built.has('panel2')) panels(-0.03)
+  add(truss)
+
+  // Kärnan: två moduler i kors och en nod i mitten
+  add(module(0.016, 0.09), 0, 0.028, 0)
+  add(new THREE.Mesh(new THREE.SphereGeometry(0.02, 24, 16), hullMat()), 0, 0.028, 0)
+  const cross = module(0.013, 0.05)
+  cross.rotation.set(0, 0, Math.PI / 2)
+  add(cross, 0, 0.028, 0)
+  // Radiatorer: vita kylpaneler som sticker ut ur fackverket
+  for (const side of [-1, 1]) {
+    const radiator = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.0012, 0.05), metal('#f4f6f8', { metalness: 0.1, roughness: 0.7 }))
+    radiator.position.set(side * 0.05, -0.012, 0)
+    radiator.rotation.x = 0.5
+    group.add(radiator)
+  }
+
+  // Solpanelsfält vid fackverkets ändar: två vingar uppåt och nedåt (panel), sedan två till (panel2)
+  const arrays = (x: number) => {
+    for (const side of [-1, 1]) {
+      const wing = solarArray(0.045, 0.14)
+      wing.rotation.x = 0.35
+      wing.position.set(x, 0, side * 0.085)
+      group.add(wing)
+    }
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.04, 12), foilMat())
+    mast.rotation.x = Math.PI / 2
+    mast.position.set(x, 0, 0)
+    group.add(mast)
+  }
+  if (built.has('panel')) arrays(L / 2 - 0.01)
+  if (built.has('panel2')) arrays(-L / 2 + 0.01)
+
   if (built.has('antenna')) {
-    add(new THREE.Mesh(new THREE.CylinderGeometry(0.0018, 0.0018, 0.06, 8), metal('#c9d0dc')), 0.075, 0.05)
-    const dish = new THREE.Mesh(new THREE.SphereGeometry(0.02, 24, 12, 0, Math.PI * 2, 0, Math.PI / 3), metal('#f2f4f8', { side: THREE.DoubleSide }))
-    dish.rotation.x = Math.PI
-    add(dish, 0.075, 0.09)
+    const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.05, 8), frameMat())
+    add(boom, 0.02, 0.07, -0.02)
+    const dish = new THREE.Mesh(new THREE.SphereGeometry(0.016, 32, 12, 0, Math.PI * 2, 0, Math.PI / 3.2), metal('#f4f6f8', { side: THREE.DoubleSide, metalness: 0.3, roughness: 0.4 }))
+    dish.rotation.x = Math.PI + 0.5
+    add(dish, 0.02, 0.098, -0.02)
+    const feed = new THREE.Mesh(new THREE.ConeGeometry(0.002, 0.008, 8), foilMat())
+    add(feed, 0.02, 0.09, -0.017)
   }
   if (built.has('dock')) {
-    add(tube(0.012, 0.04, '#b9c1cf'), -0.115)
-    const port = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.003, 10, 24), metal('#ffcf7a'))
-    port.rotation.y = Math.PI / 2
-    add(port, -0.137)
+    // Dockningsport med en dockad kapsel
+    add(module(0.009, 0.02), 0, 0.028, 0.075)
+    const port = new THREE.Mesh(new THREE.TorusGeometry(0.01, 0.0018, 10, 32), foilMat())
+    add(port, 0, 0.028, 0.092)
+    const capsule = new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.024, 24, 1, true), hullMat())
+    capsule.rotation.x = -Math.PI / 2
+    add(capsule, 0, 0.028, 0.108)
+    const shield = new THREE.Mesh(new THREE.CircleGeometry(0.014, 24), metal('#3a3026', { metalness: 0.2, roughness: 0.9, side: THREE.DoubleSide }))
+    add(shield, 0, 0.028, 0.12)
+    for (const side of [-1, 1]) {
+      const wing = solarArray(0.03, 0.01)
+      add(wing, side * 0.028, 0.028, 0.112)
+    }
   }
   if (built.has('habitat')) {
-    const hab = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.07, 24), metal('#f4f1ea', { metalness: 0.2, roughness: 0.6 }))
-    add(hab, 0.075, -0.055)
+    // Uppblåsbar bostadsmodul med tygbanden synliga
+    const hab = new THREE.Mesh(new THREE.CapsuleGeometry(0.024, 0.03, 8, 32), metal('#efece4', { metalness: 0.05, roughness: 0.85 }))
+    add(hab, 0, 0.028, -0.085).rotation.x = Math.PI / 2
+    for (let k = -1; k <= 1; k++) {
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.0245, 0.0012, 8, 40), metal('#c9c4b6', { metalness: 0.1, roughness: 0.8 }))
+      add(band, 0, 0.028, -0.085 + k * 0.014)
+    }
   }
   if (built.has('greenhouse')) {
-    add(
-      new THREE.Mesh(
-        new THREE.SphereGeometry(0.03, 24, 16),
-        new THREE.MeshStandardMaterial({ color: '#7fe0a0', roughness: 0.1, metalness: 0, transparent: true, emissive: '#1f6b3a', emissiveIntensity: 0.4 }),
-      ),
-      -0.075,
-      -0.05,
+    // Växthus: en glaskupol med grönt ljus inifrån
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.02, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshPhysicalMaterial({ color: '#cfefff', roughness: 0.05, metalness: 0, transmission: 0.6, transparent: true, opacity: 0.6 }),
     )
+    ;(dome.material as THREE.Material).userData.opacity = 0.6
+    add(dome, 0, 0.048, 0)
+    const plants = new THREE.Mesh(new THREE.SphereGeometry(0.014, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#3fae5c', emissive: '#2c8a45', emissiveIntensity: 0.8, transparent: true }))
+    add(plants, 0, 0.048, 0)
   }
   if (built.has('telescope')) {
-    const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.014, 0.06, 20), metal('#2b2f3a', { metalness: 0.8 }))
-    scope.rotation.z = -0.6
-    add(scope, -0.04, 0.04)
+    // Teleskop i guldfolie med solskydd
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.05, 24), foilMat())
+    tube.rotation.z = -0.5
+    add(tube, -0.06, 0.055, 0)
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.0105, 0.0105, 0.016, 24, 1, true), metal('#f4f6f8', { side: THREE.DoubleSide, metalness: 0.2 }))
+    shade.rotation.z = -0.5
+    add(shade, -0.047, 0.077, 0)
   }
   if (built.has('ring')) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.005, 12, 64), metal('#dfe4ee'))
-    ring.rotation.y = Math.PI / 2
+    // Roterande bostadsring med ekrar
     const holder = new THREE.Group()
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.0075, 16, 96), hullMat())
+    ring.rotation.y = Math.PI / 2
     holder.add(ring)
-    for (let k = 0; k < 4; k++) {
-      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.0015, 0.0015, 0.22, 6), metal('#aab3c2'))
-      spoke.rotation.x = (k * Math.PI) / 4
+    for (let k = 0; k < 6; k++) {
+      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0016, 0.23, 8), frameMat())
+      spoke.rotation.x = (k * Math.PI) / 6
       holder.add(spoke)
     }
-    spin.push(add(holder))
+    holder.position.y = 0.028
+    spin.push(add(holder, 0, 0.028, 0))
   }
   if (built.has('sail')) {
-    const sail = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), metal('#ffcf7a', { side: THREE.DoubleSide, metalness: 0.9, roughness: 0.2 }))
-    sail.rotation.y = Math.PI / 2
-    add(sail, -0.2)
+    // Solsegel: tunn guldfolie spänd på fyra bommar
+    const sail = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.17), metal('#ffffff', { map: hardwareTextures().foil, metalness: 1, roughness: 0.2, side: THREE.DoubleSide }))
+    sail.rotation.set(0, Math.PI / 2, Math.PI / 4)
+    add(sail, -0.23, 0.028, 0)
   }
+  let beacon: THREE.Mesh | null = null
   if (built.has('beacon')) {
-    beacon = new THREE.Mesh(new THREE.SphereGeometry(0.006, 12, 8), new THREE.MeshBasicMaterial({ color: '#ff5a4a', transparent: true }))
-    add(beacon, 0, 0.03)
+    beacon = new THREE.Mesh(new THREE.SphereGeometry(0.003, 12, 8), new THREE.MeshBasicMaterial({ color: '#ff5a4a', transparent: true }))
+    add(beacon, L / 2, 0.012, 0)
+    const green = new THREE.Mesh(new THREE.SphereGeometry(0.003, 12, 8), new THREE.MeshBasicMaterial({ color: '#4dff8a', transparent: true }))
+    lights.push(add(green, -L / 2, 0.012, 0) as THREE.Mesh)
   }
-  return { group, spin, beacon }
+  return { group, spin, beacon, lights }
 }
 
 export default function GalaxyView({ habits, log, paused, today, tasks, onClose }: Props) {
@@ -478,6 +642,11 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
+    // Svag miljöreflektion så att metall och guldfolie på stationen glänser som i rymden.
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    const envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    scene.environment = envMap
+    scene.environmentIntensity = 0.45
     const camera = new THREE.PerspectiveCamera(55, mount.clientWidth / mount.clientHeight, 0.05, 600)
     // Avstånd så att hela galaxen får plats på bredden, även på en smal telefon. Sedd snett ovanifrån.
     const homeFor = (aspect: number) => {
@@ -676,6 +845,7 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
             metalness: 0,
             emissive: planetColor(k),
             emissiveIntensity: 0.02,
+            envMapIntensity: 0.15,
             transparent: true,
           }),
         )
@@ -796,7 +966,7 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       const dest =
         index === null
           ? home.clone()
-          : target.clone().add(index === BASE ? new THREE.Vector3(0.25, 0.3, 0.85) : new THREE.Vector3(0, 0.95, 1.4))
+          : target.clone().add(index === BASE ? new THREE.Vector3(0.3, 0.38, 0.95) : new THREE.Vector3(0, 0.95, 1.4))
       flight = { from: camera.position.clone(), to: dest, fromT: controls.target.clone(), toT: target, start: performance.now() }
       controls.autoRotate = index === null
     }
@@ -986,7 +1156,7 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         if (station.beacon) (station.beacon.material as THREE.MeshBasicMaterial).opacity = baseFade * (0.4 + 0.6 * (Math.sin(now / 400) > 0.6 ? 1 : 0.2))
         station.group.traverse((o) => {
           const m = (o as THREE.Mesh).material as THREE.Material | undefined
-          if (m && o !== station.beacon) m.opacity = baseFade
+          if (m && o !== station.beacon) m.opacity = baseFade * ((m.userData.opacity as number | undefined) ?? 1)
         })
       }
       baseRing.material.opacity = 0.9 * (1 - baseFade)
@@ -1047,6 +1217,8 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       raysTex.dispose()
       bandTex.dispose()
       surfaces.forEach((t) => t.dispose())
+      envMap.dispose()
+      pmrem.dispose()
       renderer.dispose()
       renderer.domElement.remove()
     }
