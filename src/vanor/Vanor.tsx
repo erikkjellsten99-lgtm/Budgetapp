@@ -462,12 +462,12 @@ function DayQuote({ today }: { today: DateKey }) {
     <button
       type="button"
       className="day-quote"
-      aria-label={`Dagens citat: ${quote.text}${quote.by ? `, ${quote.by}` : ''}. Tryck för ett annat.`}
+      aria-label={`Dagens citat: ${quote.text}, ${quote.by}. Tryck för ett annat.`}
       onClick={() => setShift({ day: today, offset: offset + 1 })}
     >
-      <span className="quote-text" key={`${today}-${offset}`}>
-        ”{quote.text}”
-        {quote.by && <small>{quote.by}</small>}
+      <span className="quote-text" key={`${today}-${offset}`} lang="en">
+        “{quote.text}”
+        <small>{quote.by}</small>
       </span>
     </button>
   )
