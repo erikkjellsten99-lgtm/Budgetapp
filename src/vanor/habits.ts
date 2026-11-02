@@ -28,6 +28,8 @@ export interface Habit {
    * upp till ett tak. En missad dag står tiden still. Se rampToday.
    */
   ramp?: Ramp
+  /** Livsområde, t.ex. "Träning" – blir ett solsystem i galaxen. Saknas = Övrigt. Se areas.ts. */
+  area?: string
 }
 
 export interface Ramp {
