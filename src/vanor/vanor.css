@@ -2318,7 +2318,6 @@
   background: rgb(10 14 30 / 0.94);
   border: 1px solid rgb(255 255 255 / 0.12);
   border-radius: 18px;
-  backdrop-filter: blur(12px);
   animation: vanor-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -2695,7 +2694,6 @@
   background: rgb(10 14 30 / 0.95);
   border: 1px solid rgb(255 255 255 / 0.12);
   border-radius: 18px;
-  backdrop-filter: blur(12px);
   animation: vanor-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -3179,10 +3177,9 @@
   width: 100%;
   max-width: 440px;
   padding: 10px 14px;
-  background: rgb(10 14 30 / 0.8);
+  background: rgb(10 14 30 / 0.9);
   border: 1px solid rgb(255 255 255 / 0.12);
   border-radius: 14px;
-  backdrop-filter: blur(10px);
 }
 
 .galaxy-view .gv-time.is-future {
@@ -3385,10 +3382,9 @@
   align-items: center;
   min-width: 44px;
   padding: 5px 10px 6px;
-  background: rgb(4 7 18 / 0.42);
+  background: rgb(4 7 18 / 0.62);
   border: 0;
   border-radius: 12px;
-  backdrop-filter: blur(6px);
   color: #fff;
   opacity: 0;
   text-align: center;

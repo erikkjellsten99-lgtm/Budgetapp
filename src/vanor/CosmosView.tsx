@@ -1131,6 +1131,9 @@ function createCore(mount: HTMLDivElement, hooks: CoreHooks): Core {
       }
       const o = opacity.toFixed(2)
       if (el.style.opacity !== o) el.style.opacity = o
+      // Osynliga etiketter döljs helt så att webbläsaren inte lägger extra lager över 3D-bilden
+      const vis = opacity > 0 ? 'visible' : 'hidden'
+      if (el.style.visibility !== vis) el.style.visibility = vis
       const pe = opacity > 0.4 ? 'auto' : 'none'
       if (el.style.pointerEvents !== pe) el.style.pointerEvents = pe
     }
