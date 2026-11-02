@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Habit, Log } from './habits'
-import { baseMilestones, monthSatellites, nextMilestone } from './space'
+import { baseCrew, baseMilestones, monthSatellites, nextMilestone } from './space'
 import type { Task } from './tasks'
 
 const make = (id: string, goal: number, created = '2026-10-01'): Habit => ({ id, name: id, goal, created, after: [], order: 0, archived: false })
@@ -41,4 +41,26 @@ it('satelliter: avklarade saker i månaden, äldst först', () => {
   // 1 nov hör till oktober (v.44, torsdagen 29 okt). 2 nov hör till november.
   const tasks = [t('b', '2026-11-01'), t('a', '2026-10-05'), t('c', '2026-11-02'), t('ej')]
   expect(monthSatellites(tasks, '2026-10').map((x) => x.id)).toEqual(['a', 'b'])
+})
+
+describe('baseCrew', () => {
+  it('en astronaut per aktiv vana, arbetar om vanan är gjord idag', () => {
+    const habits = [make('a', 7), make('b', 3), { ...make('c', 7), archived: true }]
+    const log: Log = { '2026-10-29': ['a'] }
+    const crew = baseCrew(habits, log, NONE, '2026-10-29', baseMilestones(habits, log, NONE, '2026-10-29'))
+    expect(crew.members.map((m) => [m.id, m.working])).toEqual([['a', true], ['b', false]])
+    expect(crew.celebrate).toBe(true) // första bocken idag = basen grundas
+  })
+
+  it('extra byggare per sju dagar i rad, högst fyra', () => {
+    const log: Log = Object.fromEntries(days('2026-09-01', 59).map((d) => [d, ['a']]))
+    const crew = baseCrew([make('a', 7, '2026-09-01')], log, NONE, '2026-10-29', [])
+    expect(crew.members[0].streak).toBe(59)
+    expect(crew.extra).toBe(4)
+    expect(baseCrew([make('a', 7)], { '2026-10-28': ['a'] }, NONE, '2026-10-29', []).extra).toBe(0)
+  })
+
+  it('pausad dag: laget vilar', () => {
+    expect(baseCrew([make('a', 7)], {}, new Set(['2026-10-29']), '2026-10-29', []).paused).toBe(true)
+  })
 })

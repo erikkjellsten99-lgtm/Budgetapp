@@ -1,9 +1,10 @@
 // Rymdbasen och satelliterna i galaxen. Rena funktioner, tester i space.test.ts.
 // - Rymdbasen: en station vid galaxens kärna som byggs ut med en modul för varje milstolpe. Den kan bara växa.
 // - Satelliter: varje avklarad Att göra-sak blir en satellit runt månadens solsystem.
+// - Arbetslaget: en astronaut per vana som bygger när vanan är gjord idag, plus extra byggare för långa serier.
 
 import { addDays, weekStart, type DateKey } from './dates'
-import { weekCount, weekGoal, type Habit, type Log, type Paused } from './habits'
+import { dayStreak, weekCount, weekGoal, type Habit, type Log, type Paused } from './habits'
 import { monthOfWeek } from './progress'
 import type { Task } from './tasks'
 
@@ -123,4 +124,45 @@ export function monthSatellites(tasks: Task[], month: string): Task[] {
   return tasks
     .filter((t) => t.doneOn && monthOfWeek(weekStart(t.doneOn)) === month)
     .sort((a, b) => a.doneOn!.localeCompare(b.doneOn!) || a.created - b.created)
+}
+
+export interface CrewMember {
+  id: string
+  name: string
+  /** Vanan är bockad idag: astronauten bygger. Annars väntar den vid luftslussen. */
+  working: boolean
+  /** Dagar i rad (pausade dagar bryter inte). */
+  streak: number
+}
+
+export interface Crew {
+  members: CrewMember[]
+  /** Extra byggare: en per sju dagar i rad på den bästa serien just nu, högst fyra. */
+  extra: number
+  /** Dagen är pausad: alla vilar inne i stationen. */
+  paused: boolean
+  /** En milstolpe nåddes idag: modulen är klar och laget firar. */
+  celebrate: boolean
+  /** Hur långt bygget av nästa modul har kommit (0–1). */
+  progress: number
+}
+
+export const MAX_EXTRA_CREW = 4
+
+/** Arbetslaget på rymdbasen idag. */
+export function baseCrew(habits: Habit[], log: Log, paused: Paused, today: DateKey, milestones: Milestone[]): Crew {
+  const members = habits
+    .filter((h) => !h.archived)
+    .sort((a, b) => a.order - b.order)
+    .map((h) => ({ id: h.id, name: h.name, working: !!log[today]?.includes(h.id), streak: dayStreak(log, h.id, today, paused) }))
+  const best = members.reduce((m, c) => Math.max(m, c.streak), 0)
+  const next = nextMilestone(milestones)
+  const progress = !next ? 1 : next.progress ? Math.min(1, next.progress.now / next.progress.target) : 0.5
+  return {
+    members,
+    extra: Math.min(MAX_EXTRA_CREW, Math.floor(best / 7)),
+    paused: paused.has(today),
+    celebrate: milestones.some((m) => m.done === today),
+    progress,
+  }
 }
