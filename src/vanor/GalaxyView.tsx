@@ -313,7 +313,7 @@ function GalaxyGuide({ onClose }: { onClose: () => void }) {
             <i className="gv-ico base" aria-hidden="true" />
             Rymdbas
           </dt>
-          <dd>Stationen ovanför kärnan är du, över hela tiden. Den byggs ut med en ny modul för varje milstolpe och kan bara växa. Varje vana har en astronaut: bockad idag bygger den på nästa modul, annars väntar den vid luftslussen. Långa serier ger extra byggare. Zooma in och tryck på en astronaut.</dd>
+          <dd>Stationen ovanför kärnan är du, över hela tiden. Den byggs ut med en ny modul för varje milstolpe och kan bara växa. Varje vana har en astronaut: bockad idag bygger den på nästa modul, annars väntar den vid luftslussen. Långa serier ger extra byggare. Zooma in (det går ända fram) eller tryck på en astronaut så flyger du dit.</dd>
         </div>
         <div>
           <dt>
@@ -1838,6 +1838,15 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         if (got) {
           setCrewSel(got.idx)
           setSelected(BASE)
+          // Flyg nära astronauten du tryckte på
+          const pick = crewPicks.find((p) => p.idx === got.idx)
+          if (pick) {
+            const at = pick.obj.getWorldPosition(new THREE.Vector3())
+            const dir = camera.position.clone().sub(at).normalize()
+            flight = { from: camera.position.clone(), to: at.clone().addScaledVector(dir, 0.09), fromT: controls.target.clone(), toT: at, start: performance.now() }
+            controls.autoRotate = false
+            follow = pick.obj
+          }
           return
         }
       }
@@ -1902,6 +1911,10 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
     let lastDistance = camera.position.distanceTo(controls.target)
     let insideIndex: number | null = null
     let viewShift = 0
+    /** Kameran är vid rymdbasen: då går det att zooma ända in till astronauterna. */
+    let closeToBase = false
+    /** Astronauten kameran följer efter ett tryck (stationen snurrar sakta). */
+    let follow: THREE.Object3D | null = null
     const tmp = new THREE.Vector3()
     const offset = new THREE.Vector3()
     renderer.domElement.addEventListener('pointerdown', onDown)
@@ -1929,7 +1942,8 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       // Den pågående månaden pulserar svagt – den byggs fortfarande.
       // Inzoomning drar kameran mot solsystemet – ju närmare, desto mer centrerat.
       const distance = camera.position.distanceTo(controls.target)
-      if (!flight && now < zoomingUntil && distance < lastDistance - 1e-4) {
+      // (Vid rymdbasen zoomar man i stället dit fingrarna är, för att komma nära astronauterna.)
+      if (!flight && now < zoomingUntil && distance < lastDistance - 1e-4 && !closeToBase) {
         const i = nearestToZoom()
         if (i !== null) {
           const pull = Math.min(1, ((lastDistance - distance) / distance) * 1.6)
@@ -1939,6 +1953,15 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         }
       }
       lastDistance = camera.position.distanceTo(controls.target)
+      // Följ astronauten du tryckt på, så att den stannar i bild medan stationen snurrar.
+      if (follow && !flight) {
+        if (!closeToBase || !follow.visible) follow = null
+        else {
+          const d = follow.getWorldPosition(tmp).sub(controls.target)
+          controls.target.add(d)
+          camera.position.add(d)
+        }
+      }
 
       // Närmaste solsystem: planeterna tonas in, solen lyser upp dem, och månaden visas när man är inne i det.
       let near: { i: number; d: number } | null = null
@@ -2019,6 +2042,16 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
 
       const maxFade = THREE.MathUtils.clamp((DETAIL_FROM - (near as { d: number } | null ?? { d: 99 }).d) / (DETAIL_FROM - INSIDE), 0, 1)
       const closest = near as { i: number; d: number } | null
+      // Vid rymdbasen: zooma mot fingrarna/muspekaren och mycket närmare (astronauterna är någon centimeter stora).
+      closeToBase = !!closest && closest.i === BASE && closest.d < DETAIL_FROM
+      controls.minDistance = closeToBase ? 0.02 : 0.6
+      controls.zoomToCursor = closeToBase
+      // Närmaste klippplanet följer med in, så att det man zoomar mot inte skärs bort.
+      const nearPlane = closeToBase ? THREE.MathUtils.clamp(distance * 0.04, 0.0006, 0.05) : 0.05
+      if (Math.abs(camera.near - nearPlane) > 1e-5) {
+        camera.near = nearPlane
+        camera.updateProjectionMatrix()
+      }
       // Solen lyser upp planeterna; vid rymdbasen kommer ljuset från sidan så att stationen får skuggor.
       if (closest) {
         const lm = closest.i < 0 ? landmarkOf(closest.i) : undefined
