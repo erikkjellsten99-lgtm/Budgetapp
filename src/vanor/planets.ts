@@ -1,4 +1,4 @@
-// Planeternas utseende, gemensamt för månadsbilden (Galaxy.tsx) och 3D-galaxen (GalaxyView.tsx),
+// Planeternas utseende i månadsbilden (Galaxy.tsx) och planetytorna i 3D (space3d.ts),
 // så att samma vana ser likadan ut överallt: en planet per vana, i vanornas ordning.
 
 export type PlanetKind = 'ocean' | 'rock' | 'gas' | 'ring' | 'ice'

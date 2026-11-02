@@ -8,6 +8,7 @@
 import { todayKey, type DateKey } from './dates';
 import { sameName, type Habit, type Log, type Ramp } from './habits';
 import type { Task } from './tasks';
+import { cleanArea } from './areas';
 
 const DB_NAME = 'vanor';
 const DB_VERSION = 3;
@@ -212,6 +213,7 @@ export async function addHabit(
   remind = '',
   remindDays?: number[],
   days?: number[],
+  area?: string,
 ): Promise<string> {
   const all = await getAll<Habit>('habits');
   const text = clean(name);
@@ -235,6 +237,9 @@ export async function addHabit(
     delete habit.remind;
     delete habit.remindDays;
   }
+  const where = cleanArea(area);
+  if (where) habit.area = where;
+  else if (area !== undefined) delete habit.area;
   await change([{ store: 'habits', record: habit }]);
   return habit.id;
 }
@@ -267,6 +272,8 @@ export function updateHabit(
     days?: number[];
     /** Gradvis ökning. null = ta bort, undefined = lämna som den är. */
     ramp?: Ramp | null;
+    /** Område (solsystem i galaxen). Tom = Övrigt, undefined = lämna som det är. */
+    area?: string;
   },
 ) {
   return updateRecord(id, (h) => {
@@ -281,6 +288,7 @@ export function updateHabit(
       remind,
       days: planned,
       ramp: changes.ramp === undefined ? h.ramp : cleanRamp(changes.ramp),
+      area: changes.area === undefined ? h.area : cleanArea(changes.area),
       // Med planerade dagar gäller påminnelsen de dagarna, annars de valda påminnelsedagarna.
       remindDays: !remind || planned ? undefined : changes.remind === undefined ? h.remindDays : cleanDays(changes.remindDays),
     };

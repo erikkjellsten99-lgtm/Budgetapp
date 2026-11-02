@@ -35,8 +35,8 @@ const session = {
   },
 }
 
-const GalaxyView = lazy<ComponentType<GalaxyProps>>(() =>
-  import('./GalaxyView')
+const CosmosView = lazy<ComponentType<GalaxyProps>>(() =>
+  import('./CosmosView')
     .then((module) => {
       session.set(RELOAD_KEY, null)
       return module
@@ -617,7 +617,7 @@ export function MonthView({ habits, log, paused, today, tasks }: { habits: Habit
       )}
       {galaxyOpen && (
         <Suspense fallback={<div className="galaxy-view loading">Laddar galaxen …</div>}>
-          <GalaxyView habits={habits} log={log} paused={paused} today={today} tasks={tasks} onClose={() => setGalaxyOpen(false)} />
+          <CosmosView habits={habits} log={log} paused={paused} today={today} tasks={tasks} onClose={() => setGalaxyOpen(false)} />
         </Suspense>
       )}
       <div className="ws-foot gx-foot">

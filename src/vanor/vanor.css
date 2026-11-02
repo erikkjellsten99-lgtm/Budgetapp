@@ -3244,3 +3244,242 @@
   border-radius: 10px;
   color: #ffe2b0 !important;
 }
+
+/* ===== Galaxen i tre nivåer (CosmosView): Jorden → galax → solsystem ===== */
+.cosmos-view .cv-top {
+  align-items: flex-start;
+  padding-bottom: 40px;
+  background: linear-gradient(180deg, rgb(2 3 9 / 0.78), rgb(2 3 9 / 0.35) 70%, rgb(2 3 9 / 0));
+}
+
+.cosmos-view .cv-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  max-width: min(78vw, 460px);
+}
+
+.cosmos-view .cv-eyebrow {
+  color: #ffcf8a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.cosmos-view .cv-score {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin: 2px 0 0;
+}
+
+.cosmos-view .cv-score b {
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.cosmos-view .cv-score span {
+  color: #aab4d8;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.8rem;
+}
+
+.cosmos-view .gv-top .cv-phase,
+.cosmos-view .gv-top .cv-tip {
+  font-family: 'Figtree', system-ui, sans-serif;
+}
+
+.cosmos-view .cv-phase {
+  margin: 4px 0 0;
+  color: #dfe4f7;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.cosmos-view .cv-phase b {
+  color: #fff;
+}
+
+.cosmos-view .cv-hero h2 {
+  margin: 2px 0 0;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.cosmos-view .cv-sub {
+  margin: 4px 0 0;
+  color: #cdd4f0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
+.cosmos-view .cv-tip {
+  margin: 4px 0 0;
+  color: #8d97bd;
+  font-size: 0.8rem;
+}
+
+.cosmos-view .cv-next,
+.cosmos-view .cv-backlink {
+  align-self: flex-start;
+  pointer-events: auto;
+}
+
+.cosmos-view .cv-next {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 36px;
+  margin-top: 10px;
+  padding: 6px 14px 6px 8px;
+  background: rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 207 138 / 0.35);
+  border-radius: 999px;
+  color: #eef1ff;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.cosmos-view .cv-next span {
+  padding: 2px 8px;
+  background: rgb(255 207 138 / 0.16);
+  border-radius: 999px;
+  color: #ffcf8a;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+}
+
+.cosmos-view .cv-backlink {
+  min-height: 36px;
+  margin: -6px 0 4px -8px;
+  padding: 4px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: #ffcf8a;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.cosmos-view .cv-labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cosmos-view .cv-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  opacity: 0;
+  text-align: center;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.9);
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.cosmos-view .cv-label b {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.cosmos-view .cv-label small {
+  margin-top: 1px;
+  color: #b6bfdf;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+}
+
+.cosmos-view .cv-label.base b {
+  color: #7fe0ff;
+}
+
+.cosmos-view .cv-label:focus-visible {
+  outline: 2px solid #ffcf8a;
+}
+
+.cosmos-view .cv-fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cosmos-view .cv-periods {
+  display: flex;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.cosmos-view .cv-period {
+  flex: none;
+  min-height: 40px;
+  padding: 6px 14px;
+  background: rgb(10 14 30 / 0.85);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+  color: #cdd4f0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.cosmos-view .cv-period[aria-pressed='true'] {
+  border-color: #ffcf8a;
+  background: rgb(255 207 138 / 0.14);
+  color: #fff;
+}
+
+.cosmos-view .cv-period-now {
+  color: #ffcf8a;
+  font-size: 0.78rem;
+}
+
+.cosmos-view .cv-card-title {
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.cosmos-view .cv-card p b {
+  color: #fff;
+}
+
+.cosmos-view .gv-base.gv-scroll {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 380px) {
+  .cosmos-view .cv-score b {
+    font-size: 2.9rem;
+  }
+
+  .cosmos-view .cv-hero h2 {
+    font-size: 1.6rem;
+  }
+}

@@ -3,6 +3,7 @@ import { SUGGESTIONS } from './defaults'
 import { NAME_MAX, goalText, habitPlan, nameError, remindText, sameName, type Habit } from './habits'
 import { addHabit, removeHabit, restoreHabit, updateHabit } from './store'
 import { todayKey } from './dates'
+import { AREAS, NO_AREA, guessArea } from './areas'
 
 /** Lägg till, ändra, ta bort och lägg tillbaka vanor. Visas i Inställningar. */
 export default function ManageHabits({ all }: { all: Habit[] }) {
@@ -31,6 +32,7 @@ export default function ManageHabits({ all }: { all: Habit[] }) {
                       {h.after.some((id) => active.some((a) => a.id === id)) ? ` · ${goalText(h.goal)}` : ''}
                       {h.minimum ? ` · minimum ${h.minimum}` : ''}
                       {h.remind ? ` · påminnelse ${remindText(h)}` : ''}
+                      {` · ${h.area || 'inget område'}`}
                     </span>
                   </div>
                   <button type="button" className="text-btn" onClick={() => setEditing(h.id)}>
@@ -57,7 +59,7 @@ export default function ManageHabits({ all }: { all: Habit[] }) {
                   key={s.name}
                   type="button"
                   className="chip"
-                  onClick={() => addHabit(s.name, s.goal, s.minimum)}
+                  onClick={() => addHabit(s.name, s.goal, s.minimum, [], '', undefined, undefined, guessArea(s.name) ?? undefined)}
                 >
                   + {s.name} <span>{s.goal >= 7 ? 'dagl.' : `${s.goal}/v`}</span>
                 </button>
@@ -320,6 +322,8 @@ function NewHabit({ active }: { active: Habit[] }) {
   const [tried, setTried] = useState(false)
   const [busy, setBusy] = useState(false)
   const [added, setAdded] = useState('')
+  /** Valt område; tomt = förslaget utifrån namnet används. */
+  const [area, setArea] = useState('')
   const error = tried ? nameError(name, active) : null
 
   async function submit(e: React.FormEvent) {
@@ -327,8 +331,9 @@ function NewHabit({ active }: { active: Habit[] }) {
     setTried(true)
     if (busy || nameError(name, active) || (remind && !days.length && !remindDays.length)) return
     setBusy(true)
-    await addHabit(name, goal, minimum, after, remind, remindDays, days)
+    await addHabit(name, goal, minimum, after, remind, remindDays, days, area || guessArea(name) || '')
     setAdded(name.trim())
+    setArea('')
     setName('')
     setMinimum('')
     setRemind('')
@@ -364,6 +369,7 @@ function NewHabit({ active }: { active: Habit[] }) {
         setRemindDays={setRemindDays}
         setDays={setDays}
       />
+      <AreaField idPrefix="new" value={area || guessArea(name) || ''} onChange={setArea} />
       <button type="submit" className="primary" disabled={busy}>
         Lägg till
       </button>
@@ -434,6 +440,29 @@ function RampField({ idPrefix, on, setOn, from, setFrom, step, setStep, max, set
   )
 }
 
+/** Område: blir vanans solsystem i galaxen (Hälsa). */
+function AreaField({ idPrefix, value, onChange }: { idPrefix: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="field">
+      <span id={`${idPrefix}-area`}>
+        Område
+      </span>
+      <div className="chips" role="radiogroup" aria-labelledby={`${idPrefix}-area`}>
+        {[...AREAS, NO_AREA].map((a) => {
+          const on = (value || NO_AREA) === a
+          return (
+            <button key={a} type="button" className="chip" role="radio" aria-checked={on} aria-pressed={on} onClick={() => onChange(a === NO_AREA ? NO_AREA : a)}>
+              {on ? '✓ ' : ''}
+              {a}
+            </button>
+          )
+        })}
+      </div>
+      <small className="field-help">Varje område blir ett solsystem i din galax, och vanan en stjärna i det.</small>
+    </div>
+  )
+}
+
 function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; onDone: () => void }) {
   const [name, setName] = useState(habit.name)
   const [goal, setGoal] = useState(habit.goal)
@@ -446,6 +475,8 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
   const [rampFrom, setRampFrom] = useState(String(habit.ramp?.from ?? 5))
   const [rampStep, setRampStep] = useState(String(habit.ramp?.step ?? 1))
   const [rampMax, setRampMax] = useState(String(habit.ramp?.max ?? 20))
+  // Saknar vanan område föreslås ett utifrån namnet (sparas när du trycker Spara).
+  const [area, setArea] = useState(habit.area ?? guessArea(habit.name) ?? '')
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const error = nameError(name, active, habit.id)
@@ -459,7 +490,7 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
     // Ändras startlängden börjar ökningen om från idag, annars fortsätter den där den är.
     const start = habit.ramp && habit.ramp.from === from ? habit.ramp.start : todayKey()
     const ramp = rampOn ? { start, from, step: Number(rampStep), max: Number(rampMax), unit: 'min' } : null
-    await updateHabit(habit.id, { name, goal, minimum, after, remind, remindDays, days, ramp })
+    await updateHabit(habit.id, { name, goal, minimum, after, remind, remindDays, days, ramp, area })
     onDone()
   }
 
@@ -503,6 +534,7 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
           setMax={setRampMax}
           start={habit.ramp ? shortDay(habit.ramp.start) : undefined}
         />
+        <AreaField idPrefix={`edit-${habit.id}`} value={area} onChange={setArea} />
         {confirm ? (
           <div className="confirm" role="alert">
             <p>
