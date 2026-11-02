@@ -129,7 +129,7 @@ export function monthSatellites(tasks: Task[], month: string): Task[] {
 export interface CrewMember {
   id: string
   name: string
-  /** Vanan är bockad idag: astronauten bygger. Annars väntar den vid luftslussen. */
+  /** Vanan är bockad idag: astronauten bygger. Annars är den inne i basen. */
   working: boolean
   /** Dagar i rad (pausade dagar bryter inte). */
   streak: number
