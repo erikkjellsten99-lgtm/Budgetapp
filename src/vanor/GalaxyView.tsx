@@ -313,7 +313,7 @@ function GalaxyGuide({ onClose }: { onClose: () => void }) {
             <i className="gv-ico base" aria-hidden="true" />
             Rymdbas
           </dt>
-          <dd>Stationen ovanför kärnan är du, över hela tiden. Den byggs ut med en ny modul för varje milstolpe och kan bara växa. Varje vana har en astronaut: bockad idag bygger den på nästa modul, annars väntar den vid luftslussen. Långa serier ger extra byggare. Zooma in (det går ända fram) eller tryck på en astronaut så flyger du dit.</dd>
+          <dd>Stationen ovanför kärnan är du, över hela tiden. Den byggs ut med en ny modul för varje milstolpe och kan bara växa. Varje vana har en astronaut: är vanan bockad idag är den ute och bygger på nästa modul, annars är den inne i basen. Bockar du av kommer den ut genom luckan. Långa serier ger extra byggare. Zooma in (det går ända fram) eller tryck på en astronaut så flyger du dit.</dd>
         </div>
         <div>
           <dt>
@@ -595,17 +595,19 @@ function nameTag(text: string): { sprite: THREE.Sprite; texture: THREE.Texture }
 
 /**
  * Arbetslaget på rymdbasen, kopplat till vanorna:
- * - en astronaut per vana med namnskylt. Bockad idag = bygger vid nästa modul (med livlina), annars väntar den vid luftslussen
+ * - en astronaut per vana med namnskylt. Bockad idag = bygger vid nästa modul (med livlina), annars är den inne i basen
  * - modulen växer fram i ställningen i takt med hur nära nästa milstolpe du är; klar idag = laget firar
  * - extra byggare för långa serier, som kommer med en kapsel som dockar
  * - pausad dag: alla vilar inne i stationen, och fönstret lyser
- * - pannlampor på hjälmarna, och en väntande astronaut vinkar
+ * - pannlampor på hjälmarna
+ * Den som inte har bockat idag är inne i basen (fönstret lyser). Bockar du av kommer astronauten ut genom
+ * luckan och flyger till bygget – nästa gång du öppnar galaxen (arrivals = vanor som bockats sedan sist).
  */
-function buildCrew(next: ModuleKind | null, crew: Crew | null) {
+function buildCrew(next: ModuleKind | null, crew: Crew | null, arrivals: ReadonlySet<string> = new Set()) {
   const group = new THREE.Group()
   const disposables: { dispose: () => void }[] = []
   const site = new THREE.Vector3(...MODULE_SPOT[next ?? 'panel'])
-  const airlock = new THREE.Vector3(0.022, 0.05, 0.026)
+  const hatch = new THREE.Vector3(0, 0.049, 0) // luckan överst på kärnans nod
   const progress = crew ? (crew.celebrate ? 1 : crew.progress) : 0.3
   const paused = !!crew?.paused
 
@@ -630,10 +632,19 @@ function buildCrew(next: ModuleKind | null, crew: Crew | null) {
   const lampMat = new THREE.SpriteMaterial({ ...additive, color: '#fff2c8' })
   lampMat.userData.opacity = 0.9
 
-  type Worker = { body: THREE.Group; arms: THREE.Group[]; base: THREE.Vector3; tether: THREE.Line | null; weld: boolean; wave: boolean; idx: number | null }
+  type Worker = {
+    body: THREE.Group
+    arms: THREE.Group[]
+    base: THREE.Vector3
+    tether: THREE.Line | null
+    weld: boolean
+    idx: number | null
+    /** Kommer ut ur basen: sekunder efter att galaxen öppnats. */
+    arrive: number | null
+  }
   const workers: Worker[] = []
   const anchor = new THREE.Vector3(site.x * 0.6, 0, site.z * 0.6) // livlinorna fästs i fackverket
-  const addWorker = (pos: THREE.Vector3, face: number, opts: { tether: boolean; weld: boolean; wave?: boolean; name?: string; idx?: number }) => {
+  const addWorker = (pos: THREE.Vector3, face: number, opts: { tether: boolean; weld: boolean; name?: string; idx?: number; arrive?: number }) => {
     const a = buildAstronaut()
     a.body.position.copy(pos)
     a.body.rotation.set(0.2, face, 0.15)
@@ -657,31 +668,28 @@ function buildCrew(next: ModuleKind | null, crew: Crew | null) {
       ;(tether.material as THREE.Material).userData.opacity = 0.5
       group.add(tether)
     }
-    workers.push({ ...a, base: pos.clone(), tether, weld: opts.weld, wave: !!opts.wave, idx: opts.idx ?? null })
+    workers.push({ ...a, base: pos.clone(), tether, weld: opts.weld, idx: opts.idx ?? null, arrive: opts.arrive ?? null })
   }
 
-  // Platser runt bygget (byggarna) och vid luftslussen (de som väntar)
+  // Platser runt bygget
   const siteSlot = (k: number) => {
     const ang = k * 2.4
     const r = 0.017 + (k % 3) * 0.003
     return site.clone().add(new THREE.Vector3(Math.cos(ang) * r, ((k % 4) - 1.5) * 0.006, Math.sin(ang) * r))
   }
-  const lockSlot = (k: number) => airlock.clone().add(new THREE.Vector3((k % 3) * 0.009, Math.floor(k / 3) * 0.011, (k % 2) * 0.006))
 
   const members = crew?.members ?? []
   if (!paused) {
     let s = 0
-    let l = 0
+    let order = 0
     members.forEach((m, idx) => {
-      if (m.working) {
-        const pos = siteSlot(s)
-        const face = Math.atan2(site.x - pos.x, site.z - pos.z)
-        addWorker(pos, face, { tether: true, weld: s % 2 === 0, name: m.name, idx })
-        s++
-      } else {
-        addWorker(lockSlot(l), 0.6 + l * 0.4, { tether: false, weld: false, wave: l === 0, name: m.name, idx })
-        l++
-      }
+      if (!m.working) return // inne i basen
+      const pos = siteSlot(s)
+      const face = Math.atan2(site.x - pos.x, site.z - pos.z)
+      // nyss bockad: kommer ut ur luckan, en i taget
+      const arrive = arrivals.has(m.id) ? 1.2 + 3.2 * order++ : undefined
+      addWorker(pos, face, { tether: true, weld: s % 2 === 0, name: m.name, idx, arrive })
+      s++
     })
     // Extra byggare för långa serier
     for (let k = 0; k < (crew?.extra ?? 0); k++) {
@@ -706,8 +714,20 @@ function buildCrew(next: ModuleKind | null, crew: Crew | null) {
       sp.material.userData.own = true
       sp.position.copy(w.base).lerp(site, 0.55)
       group.add(sp)
-      return sp
+      return { sp, w }
     })
+
+  // Luckan på kärnan, med en lampa som blinkar när någon kommer ut
+  const hatchRing = new THREE.Mesh(new THREE.TorusGeometry(0.005, 0.0011, 8, 24), foilMat())
+  hatchRing.rotation.x = Math.PI / 2
+  hatchRing.position.copy(hatch)
+  group.add(hatchRing)
+  const hatchLight = new THREE.Sprite(new THREE.SpriteMaterial({ ...additive, color: '#8dffb0' }))
+  hatchLight.material.userData.own = true
+  hatchLight.scale.setScalar(0.008)
+  hatchLight.position.copy(hatch).add(new THREE.Vector3(0.007, 0.001, 0))
+  group.add(hatchLight)
+  const lastArrival = workers.reduce((m, w) => Math.max(m, w.arrive ?? -1), -1)
 
   // Bäraren flyger med en balk mellan kärnan och bygget (när någon bygger)
   const anyone = workers.some((w) => w.tether)
@@ -738,9 +758,9 @@ function buildCrew(next: ModuleKind | null, crew: Crew | null) {
     group.add(shuttle)
   }
 
-  // Pausad dag: fönstret i stationen lyser, laget vilar inne
+  // Någon är inne (inte bockad än, eller pausad dag): fönstret i stationen lyser
   let window_: THREE.Sprite | null = null
-  if (paused) {
+  if (paused || members.some((m) => !m.working)) {
     window_ = new THREE.Sprite(new THREE.SpriteMaterial({ ...additive, color: '#ffd38a' }))
     window_.material.userData.own = true
     window_.scale.setScalar(0.02)
@@ -763,19 +783,39 @@ function buildCrew(next: ModuleKind | null, crew: Crew | null) {
   }
 
   const tmp = new THREE.Vector3()
+  const out = hatch.clone().add(new THREE.Vector3(0, 0.012, 0))
+  let t0: number | null = null
   return {
     group,
     /** Astronauterna som går att trycka på, med vanans index i laget. */
     pickables: workers.filter((w) => w.idx !== null).map((w) => ({ obj: w.body, idx: w.idx as number })),
     update(now: number, fade: number) {
+      if (t0 === null) t0 = now
+      const since = (now - t0) / 1000
       for (const [i, w] of workers.entries()) {
+        // På väg ut ur basen: upp ur luckan, sedan en båge till bygget medan den vinkar
+        if (w.arrive !== null && since < w.arrive + 5) {
+          const t = since - w.arrive
+          w.body.visible = t >= 0
+          if (w.tether) w.tether.visible = false
+          if (t < 0) continue
+          if (t < 1) w.body.position.lerpVectors(hatch, out, t * t * (3 - 2 * t))
+          else {
+            const k = Math.min(1, (t - 1) / 4)
+            const e = k * k * (3 - 2 * k)
+            w.body.position.lerpVectors(out, w.base, e).add(tmp.set(0, Math.sin(e * Math.PI) * 0.02, 0))
+          }
+          w.arms[1].rotation.set(0, 0, 2.4 + Math.sin(now / 180) * 0.35)
+          w.arms[0].rotation.x = -0.4
+          continue
+        }
+        w.body.visible = true
+        if (w.tether) w.tether.visible = true
+        if (w.arrive !== null) w.arms[1].rotation.z = 0.35
         // svävar lätt och arbetar med armarna (eller vinkar)
         w.body.position.copy(w.base).add(tmp.set(0, Math.sin(now / 900 + i * 2) * 0.0012, Math.cos(now / 1300 + i) * 0.0008))
         if (crew?.celebrate && w.tether) w.body.rotation.y = now / 600 + i
-        if (w.wave) {
-          w.arms[1].rotation.x = 0
-          w.arms[1].rotation.z = 2.4 + Math.sin(now / 180) * 0.35
-        } else if (w.tether) {
+        if (w.tether) {
           w.arms[1].rotation.x = -1.1 + Math.sin(now / (w.weld ? 160 : 420) + i) * (w.weld ? 0.12 : 0.45)
           w.arms[0].rotation.x = -0.5 + Math.sin(now / 700 + i) * 0.2
         } else {
@@ -789,8 +829,11 @@ function buildCrew(next: ModuleKind | null, crew: Crew | null) {
         }
       }
       // svetsen blixtrar i korta stötar
-      sparks.forEach((sp, k) => {
-        const on = Math.sin(now / 90 + k * 3) * Math.sin(now / 37 + k) > 0.15 && Math.sin(now / 2300 + k * 2) > -0.4
+      // luckans lampa blinkar medan någon är på väg ut
+      hatchLight.material.opacity = since < lastArrival + 1.2 && Math.sin(now / 150) > 0 ? fade : fade * 0.15
+      sparks.forEach(({ sp, w }, k) => {
+        const on =
+          w.body.visible && (w.arrive === null || since > w.arrive + 5) && Math.sin(now / 90 + k * 3) * Math.sin(now / 37 + k) > 0.15 && Math.sin(now / 2300 + k * 2) > -0.4
         sp.material.opacity = on ? fade * (0.7 + 0.3 * Math.random()) : 0
         sp.scale.setScalar(0.006 + Math.random() * 0.006)
       })
@@ -820,7 +863,25 @@ function buildCrew(next: ModuleKind | null, crew: Crew | null) {
   }
 }
 
-function buildStation(built: Set<ModuleKind>, next: ModuleKind | null = null, crewInfo: Crew | null = null) {
+/**
+ * Vilka astronauter som ska komma ut ur basen nu: vanor som är bockade idag men inte var det förra gången
+ * galaxen visades. Sparas per telefon och dag.
+ */
+const OUT_KEY = 'vanor-galax-ute'
+function crewArrivals(crew: Crew, today: string): Set<string> {
+  const working = crew.members.filter((m) => m.working).map((m) => m.id)
+  let before: string[] = []
+  try {
+    const saved = JSON.parse(localStorage.getItem(OUT_KEY) ?? 'null') as { day: string; ids: string[] } | null
+    if (saved?.day === today && Array.isArray(saved.ids)) before = saved.ids
+    localStorage.setItem(OUT_KEY, JSON.stringify({ day: today, ids: working }))
+  } catch {
+    return new Set() // utan lagring står de redan ute
+  }
+  return new Set(working.filter((id) => !before.includes(id)))
+}
+
+function buildStation(built: Set<ModuleKind>, next: ModuleKind | null = null, crewInfo: Crew | null = null, arrivals: ReadonlySet<string> = new Set()) {
   const group = new THREE.Group()
   const spin: THREE.Object3D[] = []
   const lights: THREE.Mesh[] = []
@@ -838,7 +899,7 @@ function buildStation(built: Set<ModuleKind>, next: ModuleKind | null = null, cr
   if (!built.has('core')) {
     add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.05), new THREE.MeshBasicMaterial({ color: '#7fe0ff', wireframe: true, transparent: true })))
     // Före första bocken: astronauterna bygger på kärnan
-    const crew = buildCrew('core', crewInfo)
+    const crew = buildCrew('core', crewInfo, arrivals)
     group.add(crew.group)
     return { group, spin, beacon: null as THREE.Mesh | null, lights, crew }
   }
@@ -973,7 +1034,7 @@ function buildStation(built: Set<ModuleKind>, next: ModuleKind | null = null, cr
     const green = new THREE.Mesh(new THREE.SphereGeometry(0.003, 12, 8), new THREE.MeshBasicMaterial({ color: '#4dff8a', transparent: true }))
     lights.push(add(green, -L / 2, 0.012, 0) as THREE.Mesh)
   }
-  const crew = buildCrew(next, crewInfo)
+  const crew = buildCrew(next, crewInfo, arrivals)
   group.add(crew.group)
   return { group, spin, beacon, lights, crew }
 }
@@ -1605,7 +1666,7 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
         if (m && !m.userData.own) m.opacity = fade * ((m.userData.opacity as number | undefined) ?? 1)
       })
 
-    const station = buildStation(built, nextModule, crew)
+    const station = buildStation(built, nextModule, crew, crewArrivals(crew, today))
     const crewPicks = station.crew.pickables
     station.group.position.copy(BASE_POS)
     station.group.visible = false
@@ -2127,7 +2188,7 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [months, log, planets, sats, built, nextModule, crew, economy])
+  }, [months, log, planets, sats, built, nextModule, crew, today, economy])
 
   const selectedMonth = selected === null || selected < 0 ? null : months[selected]
   const selectedPlanets: MonthPlanet[] = selectedMonth ? planets[selected!] : []
@@ -2364,7 +2425,7 @@ export default function GalaxyView({ habits, log, paused, today, tasks, onClose 
                     <span>
                       <b>{m.name}</b>
                       <small>
-                        {crew.paused ? 'Vilar idag' : m.working ? 'Bygger idag – bockad' : 'Väntar vid luftslussen – inte bockad än'}
+                        {crew.paused ? 'Vilar inne idag' : m.working ? 'Ute och bygger – bockad idag' : 'Inne i basen – kommer ut när du bockar av'}
                       </small>
                     </span>
                     <span className="gv-crew-streak">{m.streak > 0 ? `${m.streak} ${m.streak === 1 ? 'dag' : 'dagar'} i rad` : ''}</span>
