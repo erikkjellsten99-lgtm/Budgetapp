@@ -2883,6 +2883,87 @@
   font-size: 0.78rem;
 }
 
+/* Arbetslaget på rymdbasen: en astronaut per vana */
+.galaxy-view .gv-crew {
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.galaxy-view .gv-crew-title {
+  display: block;
+  margin-bottom: 6px;
+  color: #8d97bd;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.galaxy-view .gv-crew ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.galaxy-view .gv-crew li {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 10px;
+  color: #8d97bd;
+  font-size: 0.85rem;
+}
+
+.galaxy-view .gv-crew li b {
+  display: block;
+  color: #cdd4f0;
+}
+
+.galaxy-view .gv-crew li small {
+  font-size: 0.75rem;
+}
+
+.galaxy-view .gv-crew li.working b {
+  color: #fff;
+}
+
+.galaxy-view .gv-crew li.sel {
+  background: rgb(127 224 255 / 0.12);
+  box-shadow: inset 0 0 0 1px rgb(127 224 255 / 0.35);
+}
+
+.galaxy-view .gv-crew-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4a5272;
+}
+
+.galaxy-view .gv-crew li.working .gv-crew-dot {
+  background: #ffd36b;
+  box-shadow: 0 0 8px #ffb84a;
+}
+
+.galaxy-view .gv-crew-streak {
+  color: #8d97bd;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+}
+
+.galaxy-view .gv-crew-extra,
+.galaxy-view .gv-crew-empty {
+  margin: 6px 0 0;
+  color: #8d97bd;
+  font-size: 0.8rem;
+}
+
 .galaxy-view .gv-modules {
   display: flex;
   flex-direction: column;
