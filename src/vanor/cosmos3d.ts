@@ -1,373 +1,789 @@
-// 3D-byggstenar för galaxen (CosmosView): Jorden med stadsljus och atmosfär, spiralgalaxer,
-// nebulosor, stjärnhimmel och en stjärna per vana. Rena three.js-funktioner utan React.
+// Himlen och galaxerna i galaxen (CosmosView): Vintergatan och stjärnhimlen långt bort, avlägsna galaxer,
+// spiralgalaxerna för Hälsa och Ekonomi, och en stjärna per vana. Rena three.js-funktioner utan React.
+// Punkterna (stjärnorna) ritas med egen skuggning: mjuka, runda och aldrig mindre än en pixel, så att
+// tusentals stjärnor långt bort smälter ihop till ett jämnt sken i stället för att flimra.
 
 import * as THREE from 'three'
-import { noise2, seeded } from './space3d'
-import { STAR_KINDS, type StarKind } from './cosmos'
+import { seeded } from './space3d'
+import type { StarKind } from './cosmos'
+import { billboard } from './earth3d'
 
-const gaussOf = (rand: () => number) => () => (rand() + rand() + rand() - 1.5) / 1.5
+/* ---------- Gemensamt ---------- */
 
-/** Stjärnor långt bort, jämnt över himlen. */
-export function starfield(count: number, radius: number, seed: number, glow: THREE.Texture) {
-  const rand = seeded(seed)
-  const pos = new Float32Array(count * 3)
-  const col = new Float32Array(count * 3)
-  const c = new THREE.Color()
-  for (let i = 0; i < count; i++) {
-    const v = new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).normalize().multiplyScalar(radius * (0.8 + rand() * 0.4))
-    pos.set([v.x, v.y, v.z], i * 3)
-    c.set(rand() < 0.75 ? '#dfe6ff' : rand() < 0.5 ? '#ffe2b8' : '#b8ccff').multiplyScalar(0.35 + 0.65 * rand() ** 2)
-    col.set([c.r, c.g, c.b], i * 3)
+/** Pixlar per världsenhet på avståndet 1 (sätts när fönstret ändrar storlek). */
+export const pointScale = { value: 900 }
+/** Skärmens pixeltäthet. */
+export const pixelRatio = { value: 1 }
+/** Tid i sekunder, för det som rör sig. */
+export const cosmosTime = { value: 0 }
+
+const gaussOf = (rand: () => number) => () => (rand() + rand() + rand() + rand() - 2) / 1.15
+
+export const NOISE = /* glsl */ `
+  float hash31(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.zyx + 31.32);
+    return fract((p.x + p.y) * p.z);
   }
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 3))
-  return new THREE.Points(
-    geo,
-    new THREE.PointsMaterial({ size: radius * 0.006, map: glow, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
-  )
+  float vnoise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(mix(hash31(i), hash31(i + vec3(1, 0, 0)), f.x), mix(hash31(i + vec3(0, 1, 0)), hash31(i + vec3(1, 1, 0)), f.x), f.y),
+      mix(mix(hash31(i + vec3(0, 0, 1)), hash31(i + vec3(1, 0, 1)), f.x), mix(hash31(i + vec3(0, 1, 1)), hash31(i + vec3(1, 1, 1)), f.x), f.y),
+      f.z);
+  }
+  float fbm(vec3 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 5; i++) {
+      v += a * vnoise(p);
+      p = p * 2.03 + 17.1;
+      a *= 0.5;
+    }
+    return v;
+  }`
+
+/** Stjärnfärger efter spektralklass, med ungefär den fördelning man ser på himlen. */
+const STAR_COLORS: [number, string][] = [
+  [0.05, '#9cb2ff'],
+  [0.11, '#c0d1ff'],
+  [0.2, '#e9eeff'],
+  [0.27, '#fff2e2'],
+  [0.23, '#ffdcb5'],
+  [0.14, '#ffc488'],
+]
+function starColor(rand: () => number, out: THREE.Color) {
+  let r = rand()
+  for (const [w, c] of STAR_COLORS) {
+    if ((r -= w) <= 0) return out.set(c)
+  }
+  return out.set(STAR_COLORS[STAR_COLORS.length - 1][1])
 }
 
-/** Mjuk, rökig moln-textur för nebulosor (vit med genomskinliga kanter; färgen sätts på materialet). */
-let smoke: THREE.Texture | null = null
-export function smokeTexture(): THREE.Texture {
-  if (smoke) return smoke
-  const size = 256
+const pointFragment = /* glsl */ `
+  varying vec3 vColor;
+  void main() {
+    vec2 p = gl_PointCoord * 2.0 - 1.0;
+    float r2 = dot(p, p);
+    if (r2 > 1.0) discard;
+    float a = exp(-r2 * 7.0) + exp(-r2 * 1.8) * 0.07;
+    a *= 1.0 - smoothstep(0.8, 1.0, r2);
+    gl_FragColor = vec4(vColor * a, 1.0);
+  }`
+
+/**
+ * Material för stjärnor i rummet: storleken i världens enheter, men aldrig under `min` pixlar.
+ * Mindre stjärnor blir svagare i stället, så att ljuset blir rätt.
+ */
+export function starPoints(opts: { min?: number; max?: number; near?: number; blending?: THREE.Blending; fragment?: string } = {}) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uScale: pointScale, uPx: pixelRatio, uMin: { value: opts.min ?? 1.15 }, uMax: { value: opts.max ?? 26 }, uNear: { value: opts.near ?? 0 } },
+    vertexShader: /* glsl */ `
+      attribute vec3 color;
+      attribute float aSize;
+      uniform float uScale;
+      uniform float uPx;
+      uniform float uMin;
+      uniform float uMax;
+      varying vec3 vColor;
+      uniform float uNear;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mv;
+        float px = aSize * uScale / max(-mv.z, 1e-5);
+        float s = clamp(px, uMin * uPx, uMax * uPx);
+        gl_PointSize = s;
+        // Stjärnor alldeles intill kameran tonas bort (annars blir de stora, suddiga prickar)
+        vColor = color * min(1.0, (px * px) / (s * s)) * smoothstep(uNear * 0.3, uNear, -mv.z);
+      }`,
+    fragmentShader: opts.fragment ?? pointFragment,
+    transparent: true,
+    depthWrite: false,
+    blending: opts.blending ?? THREE.AdditiveBlending,
+  })
+}
+
+function pointsGeo(pos: number[], col: number[], size: number[]) {
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
+  geo.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1))
+  return geo
+}
+
+/* ---------- Himlen: Vintergatan och stjärnorna, oändligt långt bort ---------- */
+
+export interface Sky {
+  /** Följer kameran (så att himlen alltid är oändligt långt bort). */
+  group: THREE.Group
+  update(camera: THREE.Camera): void
+  dispose(): void
+}
+
+/**
+ * Himlen bakas en gång till en bild (Vintergatans band med stoftmoln, stjärnmoln och rosa nebulosor),
+ * och stjärnorna ritas ovanpå med verkliga färger och ljusstyrkor. `galaxyNormal` = bandets lutning,
+ * `galaxyCenter` = riktningen mot Vintergatans ljusa mitt.
+ */
+export function buildSky(renderer: THREE.WebGLRenderer, galaxyNormal: THREE.Vector3, galaxyCenter: THREE.Vector3): Sky {
+  const N = galaxyNormal.clone().normalize()
+  const C = galaxyCenter.clone().addScaledVector(N, -galaxyCenter.dot(N)).normalize()
+  const B = new THREE.Vector3().crossVectors(N, C)
+  const W = renderer.capabilities.maxTextureSize >= 4096 ? 2048 : 1024
+  const target = new THREE.WebGLRenderTarget(W, W / 2, { type: THREE.HalfFloatType, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter })
+  target.texture.wrapS = THREE.RepeatWrapping
+  {
+    const quad = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.ShaderMaterial({
+        uniforms: { uN: { value: N }, uC: { value: C }, uB: { value: B } },
+        vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+        fragmentShader: /* glsl */ `
+          uniform vec3 uN;
+          uniform vec3 uC;
+          uniform vec3 uB;
+          varying vec2 vUv;
+          ${NOISE}
+          void main() {
+            float lon = (vUv.x - 0.5) * 6.2831853;
+            float lat = (vUv.y - 0.5) * 3.1415927;
+            vec3 d = vec3(cos(lat) * cos(lon), sin(lat), cos(lat) * sin(lon));
+            float b = asin(clamp(dot(d, uN), -1.0, 1.0));
+            float l = atan(dot(d, uB), dot(d, uC));
+            float cl = cos(l);
+            float width = 0.07 + 0.08 * smoothstep(-0.2, 1.0, cl);
+            float disk = exp(-pow(b / width, 2.0));
+            float wide = exp(-pow(b / (width * 3.2), 2.0)) * 0.22;
+            float bulge = exp(-(b * b / 0.025 + l * l / 0.08));
+            float clouds = fbm(d * 6.0);
+            float clumps = smoothstep(0.3, 0.85, fbm(d * 15.0 + 3.0));
+            float lum = (disk * (0.25 + clouds) + wide * 0.6 + bulge * 1.4) * (0.6 + 0.7 * clumps);
+            // Stoftet: mörka stråk tätt längs bandet, tydligast mot mitten (som Stora riftet)
+            float dn = fbm(d * 9.0 + 11.0) * 0.65 + fbm(d * 28.0) * 0.35;
+            float dust = smoothstep(0.42, 0.68, dn) * exp(-pow((b - 0.012) / (width * 0.6), 2.0)) * (0.45 + 0.55 * smoothstep(-0.5, 0.8, cl));
+            lum *= 1.0 - 0.88 * dust;
+            vec3 col = mix(vec3(0.6, 0.69, 1.0), vec3(1.0, 0.8, 0.58), clamp(smoothstep(0.2, 1.0, cl) * 0.65 + bulge * 0.6, 0.0, 1.0)) * lum;
+            float neb = smoothstep(0.6, 0.78, fbm(d * 20.0 + 5.0)) * disk * (1.0 - dust);
+            col += vec3(1.0, 0.28, 0.42) * neb * 0.35;
+            col += vec3(0.01, 0.012, 0.022);
+            gl_FragColor = vec4(col * 0.11, 1.0);
+          }`,
+        depthTest: false,
+        depthWrite: false,
+      }),
+    )
+    const scene = new THREE.Scene()
+    scene.add(quad)
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+    const prev = renderer.getRenderTarget()
+    renderer.setRenderTarget(target)
+    renderer.render(scene, cam)
+    renderer.setRenderTarget(prev)
+    quad.geometry.dispose()
+    quad.material.dispose()
+  }
+
+  const group = new THREE.Group()
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(2500, 64, 32),
+    new THREE.ShaderMaterial({
+      uniforms: { uMap: { value: target.texture } },
+      vertexShader: /* glsl */ `
+        varying vec3 vDir;
+        void main() {
+          vDir = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform sampler2D uMap;
+        varying vec3 vDir;
+        void main() {
+          vec3 d = normalize(vDir);
+          vec2 uv = vec2(atan(d.z, d.x) / 6.2831853 + 0.5, asin(clamp(d.y, -1.0, 1.0)) / 3.1415927 + 0.5);
+          gl_FragColor = vec4(texture2D(uMap, uv).rgb, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+      side: THREE.BackSide,
+      depthTest: false,
+      depthWrite: false,
+    }),
+  )
+  dome.renderOrder = -20
+  dome.frustumCulled = false
+  group.add(dome)
+
+  // Stjärnorna: jämnt över himlen, tätare längs Vintergatan, och de ljusaste med strålar
+  const rand = seeded(1977)
+  const gauss = gaussOf(rand)
+  const c = new THREE.Color()
+  const dir = new THREE.Vector3()
+  const R = 2000
+  const make = (count: number, plane: boolean, bright: [number, number]) => {
+    const pos: number[] = []
+    const col: number[] = []
+    const size: number[] = []
+    for (let i = 0; i < count; i++) {
+      if (plane) {
+        const l = rand() * Math.PI * 2
+        const b = gauss() * 0.13
+        dir.copy(C).multiplyScalar(Math.cos(l) * Math.cos(b)).addScaledVector(B, Math.sin(l) * Math.cos(b)).addScaledVector(N, Math.sin(b))
+      } else dir.set(gauss(), gauss(), gauss()).normalize()
+      pos.push(dir.x * R, dir.y * R, dir.z * R)
+      const k = Math.pow(rand(), bright[1])
+      starColor(rand, c).multiplyScalar(bright[0] * (0.18 + 1.9 * k))
+      col.push(c.r, c.g, c.b)
+      // Storleken i pixlar (vid pixeltäthet 1) räknas om till "världens enheter" på avståndet R
+      size.push(((1.1 + 2.4 * k) * R) / pointScale.value)
+    }
+    return pointsGeo(pos, col, size)
+  }
+  const skyPoints = (geo: THREE.BufferGeometry, fragment?: string) => {
+    // Himlens stjärnor har fast storlek i pixlar: avståndet är alltid detsamma
+    const mat = starPoints({ min: 1.2, max: 30, fragment })
+    const p = new THREE.Points(geo, mat)
+    p.frustumCulled = false
+    p.renderOrder = -19
+    return p
+  }
+  group.add(skyPoints(make(7000, false, [1, 4.2])))
+  group.add(skyPoints(make(6500, true, [0.8, 5.5])))
+  // De ljusaste: större, med svaga diffraktionsstrålar som på ett fotografi
+  const brightGeo = (() => {
+    const pos: number[] = []
+    const col: number[] = []
+    const size: number[] = []
+    for (let i = 0; i < 70; i++) {
+      dir.set(gauss(), gauss(), gauss()).normalize()
+      pos.push(dir.x * R, dir.y * R, dir.z * R)
+      starColor(rand, c).multiplyScalar(1.6 + rand() * 2.2)
+      col.push(c.r, c.g, c.b)
+      size.push(((11 + rand() * 9) * R) / pointScale.value)
+    }
+    return pointsGeo(pos, col, size)
+  })()
+  group.add(
+    skyPoints(
+      brightGeo,
+      /* glsl */ `
+      varying vec3 vColor;
+      void main() {
+        vec2 p = gl_PointCoord * 2.0 - 1.0;
+        float r2 = dot(p, p);
+        float core = exp(-r2 * 60.0) * 1.4 + exp(-r2 * 9.0) * 0.18;
+        float spikes = (exp(-abs(p.x) * 34.0) * exp(-abs(p.y) * 3.4) + exp(-abs(p.y) * 34.0) * exp(-abs(p.x) * 3.4)) * 0.35;
+        float a = (core + spikes) * (1.0 - smoothstep(0.85, 1.0, max(abs(p.x), abs(p.y))));
+        gl_FragColor = vec4(vColor * a, 1.0);
+      }`,
+    ),
+  )
+  return {
+    group,
+    update(camera) {
+      group.position.copy(camera.position)
+    },
+    dispose() {
+      target.dispose()
+    },
+  }
+}
+
+/* ---------- Avlägsna galaxer: små suddiga fläckar långt bort, så att universum känns stort ---------- */
+
+function farGalaxyTexture(seed: number, kind: 'spiral' | 'elliptical' | 'edge'): THREE.Texture {
+  const size = 128
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = size
   const ctx = canvas.getContext('2d')!
-  const img = ctx.createImageData(size, size)
-  const n = noise2(4711)
-  const m = noise2(815)
-  for (let y = 0; y < size; y++)
-    for (let x = 0; x < size; x++) {
-      const dx = x / size - 0.5
-      const dy = y / size - 0.5
-      const r = Math.hypot(dx, dy) * 2
-      const edge = Math.max(0, 1 - r) ** 1.6
-      const v = n(x / 22 + m(x / 40, y / 40) * 3, y / 22) * 0.75 + m(x / 9, y / 9) * 0.25
-      const a = Math.max(0, v - 0.38) * 2.4 * edge
-      const i = (y * size + x) * 4
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255
-      img.data[i + 3] = Math.min(255, a * 255)
-    }
-  ctx.putImageData(img, 0, 0)
-  smoke = new THREE.CanvasTexture(canvas)
-  smoke.colorSpace = THREE.SRGBColorSpace
-  return smoke
-}
-
-/** Ett moln av rök i bakgrunden (nebulosa). */
-export function nebula(pos: THREE.Vector3, scale: number, color: string, opacity: number) {
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTexture(), color, transparent: true, opacity, depthWrite: false }))
-  s.position.copy(pos)
-  s.scale.setScalar(scale)
-  s.material.rotation = pos.x * 1.7 + pos.y
-  return s
-}
-
-export interface SpiralOptions {
-  seed: number
-  /** Galaxens radie. */
-  radius: number
-  count: number
-  /** Färg nära kärnan och längst ut. */
-  inner: string
-  outer: string
-  /** Punktstorlek. */
-  size: number
-  /** Hur många varv armarna vrider sig (radianer från kärnan till kanten). */
-  twist?: number
-  glow: THREE.Texture
-}
-
-/** En spiralgalax med två armar, en tät kärna och ett varmt sken i mitten. */
-export function buildSpiral(o: SpiralOptions) {
-  const rand = seeded(o.seed)
+  const rand = seeded(seed)
   const gauss = gaussOf(rand)
-  const twist = o.twist ?? 4.6
-  const group = new THREE.Group()
-  const inner = new THREE.Color(o.inner)
-  const outer = new THREE.Color(o.outer)
-  const c = new THREE.Color()
-  const layer = (count: number, size: number, scatter: number, bright: number) => {
-    const pos = new Float32Array(count * 3)
-    const col = new Float32Array(count * 3)
-    for (let i = 0; i < count; i++) {
-      const s = Math.pow(rand(), 0.72)
+  ctx.translate(size / 2, size / 2)
+  ctx.rotate(rand() * Math.PI)
+  const tilt = kind === 'edge' ? 0.14 : kind === 'elliptical' ? 0.55 + rand() * 0.4 : 0.35 + rand() * 0.6
+  ctx.scale(1, tilt)
+  const core = ctx.createRadialGradient(0, 0, 0, 0, 0, size * (kind === 'elliptical' ? 0.42 : 0.22))
+  core.addColorStop(0, 'rgba(255,236,210,0.95)')
+  core.addColorStop(0.35, 'rgba(255,214,170,0.35)')
+  core.addColorStop(1, 'rgba(255,200,150,0)')
+  ctx.fillStyle = core
+  ctx.fillRect(-size, -size, size * 2, size * 2)
+  if (kind !== 'elliptical') {
+    for (let i = 0; i < 900; i++) {
+      const s = Math.pow(rand(), 0.7)
       const arm = rand() < 0.5 ? 0 : Math.PI
-      const angle = arm + s * twist + gauss() * (0.32 - 0.12 * s) * scatter
-      const r = o.radius * (0.06 + 0.94 * s) + gauss() * o.radius * 0.05 * scatter
-      pos.set([Math.cos(angle) * r, gauss() * o.radius * (0.05 - 0.035 * s), Math.sin(angle) * r], i * 3)
-      c.copy(inner).lerp(outer, Math.min(1, s * 1.2)).multiplyScalar(bright * (0.4 + 0.6 * rand()))
-      col.set([c.r, c.g, c.b], i * 3)
+      const a = arm + s * 5 + gauss() * 0.35
+      const r = s * size * 0.46
+      const blue = rand() < 0.7
+      ctx.fillStyle = blue ? `rgba(180,200,255,${0.25 + rand() * 0.3})` : `rgba(255,150,190,${0.3 + rand() * 0.3})`
+      ctx.fillRect(Math.cos(a) * r, Math.sin(a) * r, 1.4, 1.4)
     }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-    geo.setAttribute('color', new THREE.BufferAttribute(col, 3))
-    const points = new THREE.Points(
-      geo,
-      new THREE.PointsMaterial({ size, map: o.glow, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
-    )
-    group.add(points)
-    return points
   }
-  layer(o.count, o.size, 2.2, 0.55)
-  layer(Math.round(o.count * 0.22), o.size * 1.8, 0.8, 0.95)
-  // Kärnans bula
-  const bulge = Math.round(o.count * 0.25)
-  const pos = new Float32Array(bulge * 3)
-  for (let i = 0; i < bulge; i++) {
-    const r = Math.abs(gauss()) * o.radius * 0.28
-    const a = rand() * Math.PI * 2
-    pos.set([Math.cos(a) * r, gauss() * o.radius * 0.07, Math.sin(a) * r], i * 3)
-  }
-  const bulgeGeo = new THREE.BufferGeometry()
-  bulgeGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-  group.add(
-    new THREE.Points(
-      bulgeGeo,
-      new THREE.PointsMaterial({ size: o.size * 1.1, color: inner, map: o.glow, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }),
-    ),
-  )
-  const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: o.glow, color: inner, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }))
-  core.scale.setScalar(o.radius * 0.75)
-  group.add(core)
-  return { group, core }
+  const t = new THREE.CanvasTexture(canvas)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
 }
 
-/** Jordens yta, ritad en gång (stadsljusen räknas fram i skuggningen, se buildEarth). */
-let earthTex: { day: THREE.Texture } | null = null
-function earthTextures() {
-  if (earthTex) return earthTex
-  const W = 1536
-  const H = 768
-  const land = noise2(2026)
-  const detail = noise2(1102)
-  const cloud = noise2(77)
-  // Sömlös runt hela klotet: nära kanten blandas mönstret med det som börjar på andra sidan.
-  const seamless = (fn: (u: number, v: number) => number) => (u: number, v: number) => {
-    const k = Math.max(0, (u - 0.85) / 0.15)
-    return fn(u, v) * (1 - k) + fn(u - 1, v) * k
-  }
-  const height = seamless((u, v) => land(u * 4, v * 4) + (detail(u * 14, v * 14) - 0.5) * 0.18 - 0.47)
-  const fine = seamless((u, v) => detail(u * 30, v * 30))
-  const dryness = seamless((u, v) => detail(u * 6 + 3, v * 6))
-  const clouds = seamless((u, v) => cloud(u * 9 + v * 2, v * 7))
-  const day = document.createElement('canvas')
-  day.width = W
-  day.height = H
-  const ctx = day.getContext('2d')!
-  const img = ctx.createImageData(W, H)
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) {
-      const u = x / W
-      const v = y / H
-      const lat = Math.abs(v - 0.5) * 2
-      // Mjuk kustlinje: blanda hav och land över ett smalt band
-      const k0 = Math.max(0, Math.min(1, height(u, v) / 0.012 + 0.5))
-      const d = fine(u, v)
-      const dry = dryness(u, v)
-      let r = 10 + 10 * d + (60 + 70 * dry + 20 * d - 10 - 10 * d) * k0
-      let g = 30 + 18 * d + (74 + 40 * dry + 18 * d - 30 - 18 * d) * k0
-      let b = 62 + 26 * d + (44 + 20 * dry - 62 - 26 * d) * k0
-      if (lat > 0.94) [r, g, b] = [200, 208, 218]
-      const cl = clouds(u, v)
-      const k = Math.max(0, Math.min(1, (cl - 0.56) * 3.2))
-      const i = (y * W + x) * 4
-      img.data[i] = r + (245 - r) * k
-      img.data[i + 1] = g + (248 - g) * k
-      img.data[i + 2] = b + (252 - b) * k
-      img.data[i + 3] = 255
-    }
-  ctx.putImageData(img, 0, 0)
-
-  const dayTex = new THREE.CanvasTexture(day)
-  dayTex.colorSpace = THREE.SRGBColorSpace
-  dayTex.anisotropy = 4
-  earthTex = { day: dayTex }
-  return earthTex
-}
-
-/**
- * Jorden: dagsidan lyses upp av solen, på nattsidan lyser städerna, och runt kanten en tunn atmosfär
- * som glöder orange där solen går upp.
- */
-export function buildEarth(radius: number) {
-  const tex = earthTextures()
+/** Ett trettiotal avlägsna galaxer i alla riktningar (utom där våra egna galaxer ligger). */
+export function farGalaxies(avoid: THREE.Vector3[]) {
   const group = new THREE.Group()
-  const geo = new THREE.SphereGeometry(radius, 128, 96)
-  // Bara solen lyser upp Jorden (Lambert tar inget ljus från miljön), så att nattsidan blir mörk som i rymden.
-  const surface = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex.day }))
-  group.add(surface)
-  const sunDir = { value: new THREE.Vector3(0, 0, -1) }
-  const vertex = `
-    varying vec2 vUv;
-    varying vec3 vN;
-    varying vec3 vPos;
-    varying vec3 vObj;
-    void main() {
-      vUv = uv;
-      vObj = position;
-      vN = normalize(mat3(modelMatrix) * normal);
-      vec4 w = modelMatrix * vec4(position, 1.0);
-      vPos = w.xyz;
-      gl_Position = projectionMatrix * viewMatrix * w;
-    }`
-  // Stadsljus på nattsidan: små ljuspunkter i kluster på land, räknade i skuggningen så att de
-  // är skarpa hur nära man än kommer.
-  const lights = new THREE.Mesh(
-    geo,
-    new THREE.ShaderMaterial({
-      uniforms: { day: { value: tex.day }, sunDir },
-      vertexShader: vertex,
-      fragmentShader: `
-        uniform sampler2D day;
-        uniform vec3 sunDir;
-        varying vec2 vUv;
-        varying vec3 vN;
-        varying vec3 vObj;
-        float hash(vec3 p) {
-          p = fract(p * 0.3183099 + 0.1);
-          p *= 17.0;
-          return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-        }
-        // Mjukt brus: var städerna ligger tätt
-        float vnoise(vec3 p) {
-          vec3 i = floor(p);
-          vec3 f = fract(p);
-          f = f * f * (3.0 - 2.0 * f);
-          return mix(
-            mix(mix(hash(i), hash(i + vec3(1.0, 0.0, 0.0)), f.x), mix(hash(i + vec3(0.0, 1.0, 0.0)), hash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
-            mix(mix(hash(i + vec3(0.0, 0.0, 1.0)), hash(i + vec3(1.0, 0.0, 1.0)), f.x), mix(hash(i + vec3(0.0, 1.0, 1.0)), hash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
-            f.z);
-        }
-        void main() {
-          float night = smoothstep(0.1, -0.22, dot(normalize(vN), sunDir));
-          vec3 c = texture2D(day, vUv).rgb;
-          float land = smoothstep(0.02, 0.07, c.g - c.b);
-          vec3 dir = normalize(vObj);
-          float region = smoothstep(0.5, 0.8, vnoise(dir * 7.0) * 0.6 + vnoise(dir * 23.0) * 0.4);
-          vec3 q = dir * 260.0;
-          vec3 cell = floor(q);
-          float h = hash(cell);
-          float on = step(0.985 - region * 0.35, h);
-          // Punkten ligger lite olika i varje ruta, så att det inte blir ett rutnät
-          vec3 jitter = vec3(hash(cell + 7.1), hash(cell + 3.3), hash(cell + 5.7)) - 0.5;
-          float d = length(fract(q) - 0.5 - jitter * 0.5);
-          // Mindre än en pixel: ett jämnt sken i stället för flimmer
-          float px = fwidth(q.x) + fwidth(q.y);
-          float sharp = smoothstep(1.4, 0.5, px);
-          float dotLight = smoothstep(0.32, 0.0, d) * on * sharp + region * 0.05 * (1.0 - sharp);
-          vec3 col = vec3(1.0, 0.72, 0.38) * (dotLight * 2.0 + region * region * 0.05) * land * night;
-          gl_FragColor = vec4(col, 1.0);
-          #include <colorspace_fragment>
-        }`,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    }),
-  )
-  lights.scale.setScalar(1.0015)
-  group.add(lights)
-  const atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(radius * 1.022, 128, 96),
-    new THREE.ShaderMaterial({
-      uniforms: { sunDir },
-      vertexShader: vertex,
-      fragmentShader: `
-        uniform vec3 sunDir;
-        varying vec3 vN;
-        varying vec3 vPos;
-        void main() {
-          vec3 n = normalize(vN);
-          float facing = max(dot(n, normalize(cameraPosition - vPos)), 0.0);
-          float fres = pow(1.0 - facing, 4.5);
-          float day = dot(n, sunDir);
-          float lit = smoothstep(-0.45, 0.25, day);
-          vec3 col = mix(vec3(1.0, 0.48, 0.2), vec3(0.38, 0.62, 1.0), smoothstep(-0.08, 0.5, day));
-          gl_FragColor = vec4(col * fres * lit * 1.5, 1.0);
-          #include <colorspace_fragment>
-        }`,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    }),
-  )
-  group.add(atmosphere)
+  const textures = Array.from({ length: 6 }, (_, i) => farGalaxyTexture(500 + i, i < 3 ? 'spiral' : i < 5 ? 'elliptical' : 'edge'))
+  const rand = seeded(31337)
+  const gauss = gaussOf(rand)
+  const dir = new THREE.Vector3()
+  let placed = 0
+  for (let k = 0; k < 120 && placed < 34; k++) {
+    dir.set(gauss(), gauss(), gauss()).normalize()
+    if (avoid.some((a) => a.clone().normalize().dot(dir) > 0.93)) continue
+    const dist = 650 + rand() * 750
+    const s = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: textures[placed % textures.length], color: '#ffffff', transparent: true, opacity: 0.35 + rand() * 0.4, depthWrite: false, blending: THREE.AdditiveBlending }),
+    )
+    s.position.copy(dir).multiplyScalar(dist)
+    s.scale.setScalar(12 + rand() * 30)
+    s.material.rotation = rand() * Math.PI
+    group.add(s)
+    placed++
+  }
   return {
     group,
-    /** Riktningen mot solen (från Jordens mitt). */
-    setSun(dir: THREE.Vector3) {
-      sunDir.value.copy(dir).normalize()
-    },
-    update(now: number) {
-      surface.rotation.y = lights.rotation.y = now / 240000
+    dispose() {
+      textures.forEach((t) => t.dispose())
+      group.children.forEach((s) => (s as THREE.Sprite).material.dispose())
     },
   }
 }
 
-/** Storlek på stjärnans kärna per klass. */
-const STAR_SIZE: Record<StarKind, number> = { proto: 0.035, red: 0.05, orange: 0.07, yellow: 0.095, blue: 0.13 }
+/* ---------- Spiralgalaxerna ---------- */
+
+export interface GalaxyLook {
+  seed: number
+  radius: number
+  arms: number
+  /** Hur mycket armarna vrider sig från kärnan ut till kanten (radianer). */
+  twist: number
+  count: number
+  /** Kärnans gamla, varma stjärnor. */
+  core: string
+  /** De unga, heta stjärnorna i armarna. */
+  young: string
+  /** Hur mycket rosa stjärnbildningsområden (0–1). */
+  nebulae: number
+  /** Hur mycket mörkt stoft längs armarna (0–1). */
+  dust: number
+}
+
+export interface Galaxy {
+  group: THREE.Group
+  /** Kärnans sken (kan döljas när ett svart hål sitter där). */
+  core: THREE.Object3D
+  /** Var en arm ligger: andel ut från mitten (0–1) → punkt i galaxens skiva. */
+  armPoint(t: number, arm: number, out?: THREE.Vector3): THREE.Vector3
+  dispose(): void
+}
 
 /**
- * En vana som stjärna: protostjärnan är ett rött gasmoln som drar ihop sig kring en svag kärna,
- * de andra en glödande stjärna – större och vitare ju bättre vanan sitter. Gul och blå får strålar.
+ * En spiralgalax av tiotusentals stjärnor: en tät, varm kärna, en gammal skiva, blåvita unga stjärnor
+ * i armarna med rosa stjärnbildningsområden, mörka stoftstråk på armarnas insida och ett mjukt sken
+ * av allt ljus som är för svagt för att synas som enskilda stjärnor.
  */
-export function buildHabitStar(kind: StarKind, seed: number, tex: { glow: THREE.Texture; sun: THREE.Texture; rays: THREE.Texture }) {
+export function buildGalaxy(o: GalaxyLook): Galaxy {
+  const rand = seeded(o.seed)
+  const gauss = gaussOf(rand)
+  const R = o.radius
   const group = new THREE.Group()
-  const color = new THREE.Color(STAR_KINDS[kind].color)
-  const size = STAR_SIZE[kind]
-  const additive = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending } as const
-  let cloud: THREE.Points | null = null
+  const coreC = new THREE.Color(o.core)
+  const youngC = new THREE.Color(o.young)
+  const c = new THREE.Color()
+  const armAngle = (s: number, arm: number) => (arm * Math.PI * 2) / o.arms + s * o.twist
+  const armPoint = (t: number, arm: number, out = new THREE.Vector3()) => {
+    const a = armAngle(t, arm)
+    const r = R * (0.08 + 0.92 * t)
+    return out.set(Math.cos(a) * r, 0, Math.sin(a) * r)
+  }
+  const pos: number[] = []
+  const col: number[] = []
+  const size: number[] = []
+  const push = (x: number, y: number, z: number, color: THREE.Color, s: number) => {
+    pos.push(x, y, z)
+    col.push(color.r, color.g, color.b)
+    size.push(s)
+  }
+  // Kärnans bula
+  for (let i = 0; i < o.count * 0.16; i++) {
+    const r = Math.abs(gauss()) * R * 0.15
+    const v = new THREE.Vector3(gauss(), gauss() * 0.55, gauss()).normalize().multiplyScalar(r)
+    c.copy(coreC).lerp(new THREE.Color('#fff4e4'), rand() * 0.4).multiplyScalar(0.35 + 0.6 * rand())
+    push(v.x, v.y, v.z, c, R * 0.005 * (0.6 + rand()))
+  }
+  // Den gamla skivan: jämnt mellan armarna, tätast in mot mitten
+  for (let i = 0; i < o.count * 0.36; i++) {
+    const r = -Math.log(1 - rand() * 0.97) * R * 0.28
+    const a = rand() * Math.PI * 2
+    c.copy(coreC).lerp(new THREE.Color('#fff7ee'), 0.5).multiplyScalar(0.12 + 0.26 * rand())
+    push(Math.cos(a) * r, gauss() * R * 0.014, Math.sin(a) * r, c, R * 0.004 * (0.6 + rand()))
+  }
+  // Armarna: unga blåvita stjärnor, breda och luddiga, med enstaka ljusa klungor
+  for (let i = 0; i < o.count * 0.4; i++) {
+    const s = Math.pow(rand(), 0.8)
+    const arm = Math.floor(rand() * o.arms)
+    const spread = 0.42 * (1 - 0.45 * s)
+    const a = armAngle(s, arm) + gauss() * spread
+    const r = R * (0.08 + 0.92 * s) + gauss() * R * 0.06
+    const bright = rand() < 0.04 ? 2.2 : 0.35 + 1.0 * Math.pow(rand(), 2)
+    c.copy(youngC).lerp(new THREE.Color('#ffffff'), rand() * 0.5).multiplyScalar(bright * (1 - 0.35 * s))
+    push(Math.cos(a) * r, gauss() * R * 0.012, Math.sin(a) * r, c, R * 0.004 * (0.6 + rand()))
+  }
+  // Rosa stjärnbildningsområden längs armarnas framkant
+  const nebC = [new THREE.Color('#ff6f9c'), new THREE.Color('#ff92b4'), new THREE.Color('#ffb0c8')]
+  for (let k = 0; k < 34 * o.nebulae; k++) {
+    const s = 0.2 + rand() * 0.7
+    const arm = Math.floor(rand() * o.arms)
+    const a = armAngle(s, arm) + 0.06 + gauss() * 0.16
+    const r = R * (0.08 + 0.92 * s)
+    const cx = Math.cos(a) * r
+    const cz = Math.sin(a) * r
+    for (let j = 0; j < 14; j++) {
+      c.copy(nebC[j % 3]).multiplyScalar(0.5 + rand() * 0.9)
+      push(cx + gauss() * R * 0.012, gauss() * R * 0.004, cz + gauss() * R * 0.012, c, R * 0.006 * (0.6 + rand()))
+    }
+  }
+  const material = starPoints({ min: 1.05, max: 3.2, near: 2.4 })
+  const stars = new THREE.Points(pointsGeo(pos, col, size), material)
+  stars.frustumCulled = false
+  group.add(stars)
+
+  // Stoftet: mörka, trådiga stråk längs armarnas insida som skymmer stjärnorna bakom (ritas efter dem)
+  let dust: THREE.Mesh | null = null
+  if (o.dust > 0) {
+    dust = new THREE.Mesh(
+      new THREE.PlaneGeometry(R * 2.3, R * 2.3),
+      new THREE.ShaderMaterial({
+        uniforms: { uArms: { value: o.arms }, uTwist: { value: o.twist }, uAmount: { value: o.dust }, uSeed: { value: (o.seed % 31) * 1.7 } },
+        vertexShader: `varying vec2 vP; void main() { vP = position.xy / ${(R * 1.15).toFixed(3)}; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+        fragmentShader: /* glsl */ `
+          uniform float uArms;
+          uniform float uTwist;
+          uniform float uAmount;
+          uniform float uSeed;
+          varying vec2 vP;
+          ${NOISE}
+          void main() {
+            float r = length(vP) * 1.15;
+            float a = atan(-vP.y, vP.x);
+            float s = clamp((r - 0.08) / 0.92, 0.0, 1.0);
+            // Vinkeln till närmaste arm, och stoftet strax innanför den
+            float phase = uArms * (a - s * uTwist) / 6.2831853;
+            float d = (fract(phase + 0.5) - 0.5) * 6.2831853 / uArms;
+            float lane = exp(-pow((d + 0.15) / 0.07, 2.0));
+            float threads = smoothstep(0.38, 0.72, fbm(vec3(vP * 9.0, uSeed)));
+            float alpha = lane * threads * smoothstep(0.1, 0.25, r) * (1.0 - smoothstep(0.7, 0.95, r));
+            gl_FragColor = vec4(0.04, 0.028, 0.02, alpha * 0.55 * uAmount);
+          }`,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    )
+    dust.rotation.x = -Math.PI / 2
+    dust.renderOrder = 3
+    group.add(dust)
+  }
+
+  // Det mjuka skenet i skivan: ljuset från alla stjärnor som är för svaga för att synas en och en
+  const haze = new THREE.Mesh(
+    new THREE.PlaneGeometry(R * 2.3, R * 2.3),
+    new THREE.ShaderMaterial({
+      uniforms: { uCore: { value: coreC }, uYoung: { value: youngC }, uArms: { value: o.arms }, uTwist: { value: o.twist } },
+      vertexShader: `varying vec2 vP; void main() { vP = position.xy / ${(R * 1.15).toFixed(3)}; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uCore;
+        uniform vec3 uYoung;
+        uniform float uArms;
+        uniform float uTwist;
+        varying vec2 vP;
+        void main() {
+          float r = length(vP) * 1.15;
+          // Planet är vridet ner i skivan (lokal y = −z), så vinkeln spegelvänds för att stämma med stjärnorna
+          float a = atan(-vP.y, vP.x);
+          float s = clamp((r - 0.08) / 0.92, 0.0, 1.0);
+          float arms = pow(0.5 + 0.5 * cos(uArms * (a - s * uTwist)), 1.6);
+          float disk = exp(-r / 0.3) * (0.3 + 1.1 * arms * smoothstep(0.04, 0.22, r));
+          float bulge = exp(-r * r / 0.02) * 2.6;
+          vec3 col = mix(uCore, uYoung, smoothstep(0.08, 0.55, r)) * disk + uCore * bulge;
+          col *= 1.0 - smoothstep(0.8, 1.0, r);
+          gl_FragColor = vec4(col * 0.42, 1.0);
+        }`,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    }),
+  )
+  haze.rotation.x = -Math.PI / 2
+  haze.renderOrder = -1
+  group.add(haze)
+
+  // Kärnans sken
+  const core = billboard(
+    /* glsl */ `
+      uniform vec3 uColor;
+      varying vec2 vP;
+      void main() {
+        float r = length(vP);
+        float g = exp(-r * 16.0) * 3.2 + exp(-r * 5.0) * 0.55;
+        g *= 1.0 - smoothstep(0.7, 1.0, r);
+        gl_FragColor = vec4(uColor * g, 1.0);
+      }`,
+    { uColor: { value: coreC.clone().lerp(new THREE.Color('#ffffff'), 0.3) } },
+  )
+  core.material.uniforms.uSize.value = R * 0.6
+  group.add(core)
+
+  return {
+    group,
+    core,
+    armPoint,
+    dispose() {
+      material.dispose()
+      if (dust) (dust.material as THREE.Material).dispose()
+    },
+  }
+}
+
+/* ---------- En stjärna per vana ---------- */
+
+/** Storlek, färg (efter yttemperatur) och hur starkt varje klass lyser. */
+const LOOK: Record<StarKind, { r: number; color: string; heat: number; corona: number; spikes: number }> = {
+  proto: { r: 0.018, color: '#ff7a48', heat: 0.95, corona: 5, spikes: 0 },
+  red: { r: 0.032, color: '#ff6c3a', heat: 1.05, corona: 4.2, spikes: 0 },
+  orange: { r: 0.044, color: '#ffa24f', heat: 1.15, corona: 4.6, spikes: 0.25 },
+  yellow: { r: 0.06, color: '#ffe5ad', heat: 1.3, corona: 5, spikes: 0.5 },
+  blue: { r: 0.085, color: '#a9c2ff', heat: 1.45, corona: 5.6, spikes: 0.9 },
+}
+
+const photosphere = (color: THREE.Color, heat: number, seed: number) =>
+  new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: color }, uHeat: { value: heat }, uSeed: { value: seed % 97 }, uTime: cosmosTime },
+    vertexShader: /* glsl */ `
+      varying vec3 vObj;
+      varying vec3 vN;
+      varying vec3 vPos;
+      void main() {
+        vObj = position;
+        vN = normalize(mat3(modelMatrix) * normal);
+        vec4 w = modelMatrix * vec4(position, 1.0);
+        vPos = w.xyz;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uColor;
+      uniform float uHeat;
+      uniform float uSeed;
+      uniform float uTime;
+      varying vec3 vObj;
+      varying vec3 vN;
+      varying vec3 vPos;
+      ${NOISE}
+      void main() {
+        vec3 V = normalize(cameraPosition - vPos);
+        float mu = max(dot(normalize(vN), V), 0.0);
+        // Randmörkning: kanten är svalare och mörkare, som på solen
+        float limb = 0.3 + 0.7 * pow(mu, 0.55);
+        vec3 p = normalize(vObj) * 11.0 + uSeed;
+        float gran = fbm(p + vec3(uTime * 0.045, uTime * 0.02, 0.0));
+        float cells = 0.72 + 0.56 * gran;
+        float spots = smoothstep(0.66, 0.74, fbm(normalize(vObj) * 3.0 + uSeed + 40.0)) * 0.45;
+        vec3 col = mix(uColor * vec3(1.0, 0.7, 0.5), uColor, pow(mu, 0.35)) * limb * cells * (1.0 - spots) * uHeat;
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  })
+
+export interface HabitStar {
+  group: THREE.Group
+  /** Ungefärlig storlek (för kameran och för att träffa med fingret). */
+  size: number
+  dispose(): void
+}
+
+/**
+ * En vana som stjärna. Protostjärnan föds i ett moln av stoft, med en glödande skiva runt sig och
+ * jetstrålar ut från polerna. De andra är riktiga stjärnor: kokande yta (granulering), mörkare kant,
+ * en korona med strålar runt och – för de hetaste – diffraktionsstrålar.
+ */
+export function buildHabitStar(kind: StarKind, seed: number): HabitStar {
+  const look = LOOK[kind]
+  const color = new THREE.Color(look.color)
+  const group = new THREE.Group()
+  const disposables: { dispose(): void }[] = []
+  const core = new THREE.Mesh(new THREE.SphereGeometry(look.r, 48, 32), photosphere(color, look.heat, seed))
+  disposables.push(core.geometry, core.material)
+  group.add(core)
+
+  // Koronan: ett sken med strålar som långsamt ändrar sig
+  const corona = billboard(
+    /* glsl */ `
+      uniform vec3 uColor;
+      uniform float uHeat;
+      uniform float uCore;
+      uniform float uTime;
+      uniform float uSeed;
+      varying vec2 vP;
+      ${NOISE}
+      void main() {
+        float r = length(vP);
+        float a = atan(vP.y, vP.x);
+        float rr = max(r - uCore, 0.0) / (1.0 - uCore);
+        float streak = 0.5 + 0.6 * vnoise(vec3(cos(a) * 3.0, sin(a) * 3.0, uTime * 0.06 + uSeed)) + 0.3 * vnoise(vec3(cos(a) * 9.0, sin(a) * 9.0, uTime * 0.1));
+        float g = exp(-rr * 10.0 / streak) * 1.5 + exp(-rr * 3.4) * 0.28 + exp(-rr * 1.3) * 0.05;
+        g *= 1.0 - smoothstep(0.82, 1.0, r);
+        gl_FragColor = vec4(uColor * g * uHeat * 0.55, 1.0);
+      }`,
+    { uColor: { value: color }, uHeat: { value: look.heat }, uCore: { value: 1 / look.corona }, uTime: cosmosTime, uSeed: { value: (seed % 50) / 7 } },
+  )
+  corona.material.uniforms.uSize.value = look.r * look.corona
+  disposables.push(corona.geometry, corona.material)
+  group.add(corona)
+
+  // Syns som en ljus punkt även på långt håll (från galaxen)
+  const far = new THREE.Points(pointsGeo([0, 0, 0], [color.r * look.heat * 2, color.g * look.heat * 2, color.b * look.heat * 2], [look.r * 7]), starPoints({ min: 3.2, max: 9 }))
+  far.frustumCulled = false
+  disposables.push(far.geometry, far.material)
+  group.add(far)
+
+  if (look.spikes > 0) {
+    const spikes = billboard(
+      /* glsl */ `
+        uniform vec3 uColor;
+        uniform float uAmount;
+        varying vec2 vP;
+        void main() {
+          vec2 p = vP;
+          float s = exp(-abs(p.y) * 90.0) * exp(-abs(p.x) * 3.2) + exp(-abs(p.x) * 90.0) * exp(-abs(p.y) * 3.2);
+          vec2 q = mat2(0.7071, -0.7071, 0.7071, 0.7071) * p;
+          s += (exp(-abs(q.y) * 160.0) * exp(-abs(q.x) * 6.0) + exp(-abs(q.x) * 160.0) * exp(-abs(q.y) * 6.0)) * 0.35;
+          gl_FragColor = vec4(uColor * s * uAmount * 0.6, 1.0);
+        }`,
+      { uColor: { value: color.clone().lerp(new THREE.Color('#ffffff'), 0.5) }, uAmount: { value: look.spikes } },
+    )
+    spikes.material.uniforms.uSize.value = look.r * 7
+    disposables.push(spikes.geometry, spikes.material)
+    group.add(spikes)
+  }
+
   if (kind === 'proto') {
     const rand = seeded(seed)
     const gauss = gaussOf(rand)
-    const n = 700
-    const pos = new Float32Array(n * 3)
-    const col = new Float32Array(n * 3)
+    // Stoftmolnet runt den nyfödda stjärnan
+    const pos: number[] = []
+    const col: number[] = []
+    const size: number[] = []
     const c = new THREE.Color()
-    for (let i = 0; i < n; i++) {
-      const r = 0.03 + Math.pow(rand(), 0.7) * 0.28
-      const a = rand() * Math.PI * 2 + r * 6
-      pos.set([Math.cos(a) * r, gauss() * 0.03, Math.sin(a) * r], i * 3)
-      c.set(rand() < 0.6 ? '#ff7d6a' : rand() < 0.5 ? '#c76bd6' : '#ffb38a').multiplyScalar(0.25 + 0.6 * rand())
-      col.set([c.r, c.g, c.b], i * 3)
+    for (let i = 0; i < 900; i++) {
+      const r = 0.04 + Math.pow(rand(), 0.65) * 0.24
+      const a = rand() * Math.PI * 2 + r * 7
+      pos.push(Math.cos(a) * r, gauss() * 0.05 * (0.4 + r * 3), Math.sin(a) * r)
+      c.set(rand() < 0.55 ? '#c8553e' : rand() < 0.5 ? '#9a4a8c' : '#ff9a6a').multiplyScalar(0.12 + 0.4 * rand() * (1 - r * 2.5))
+      col.push(c.r, c.g, c.b)
+      size.push(0.012 + rand() * 0.02)
     }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-    geo.setAttribute('color', new THREE.BufferAttribute(col, 3))
-    cloud = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.022, map: tex.glow, vertexColors: true, ...additive }))
+    const cloud = new THREE.Points(pointsGeo(pos, col, size), starPoints({ min: 1.2, max: 40 }))
     cloud.rotation.x = 0.35
+    cloud.frustumCulled = false
+    disposables.push(cloud.geometry, cloud.material)
     group.add(cloud)
+    // Den glödande skivan av gas och stoft som faller in mot stjärnan
+    const diskMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: cosmosTime },
+      vertexShader: `varying vec2 vP; void main() { vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: /* glsl */ `
+        uniform float uTime;
+        varying vec2 vP;
+        ${NOISE}
+        void main() {
+          float r = length(vP);
+          float a = atan(vP.y, vP.x);
+          float bands = vnoise(vec3(r * 70.0, cos(a - uTime * 0.25 / max(r, 0.03)) * 2.0, sin(a - uTime * 0.25 / max(r, 0.03)) * 2.0));
+          float heat = exp(-(r - 0.026) / 0.03);
+          vec3 col = mix(vec3(0.5, 0.12, 0.05), vec3(1.0, 0.62, 0.3), clamp(heat, 0.0, 1.0)) * (0.35 + 0.8 * bands) * (heat * 2.0 + 0.15);
+          col *= smoothstep(0.022, 0.03, r) * (1.0 - smoothstep(0.13, 0.17, r));
+          gl_FragColor = vec4(col, 1.0);
+        }`,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    })
+    const disk = new THREE.Mesh(new THREE.RingGeometry(0.02, 0.17, 96, 1), diskMat)
+    disk.rotation.x = -Math.PI / 2 + 0.35
+    disposables.push(disk.geometry, diskMat)
+    group.add(disk)
+    // Jetstrålarna ut från polerna, med ljusa knutar som rör sig utåt
+    const jetMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: cosmosTime },
+      vertexShader: `varying vec2 vP; void main() { vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: /* glsl */ `
+        uniform float uTime;
+        varying vec2 vP;
+        void main() {
+          float y = abs(vP.y);
+          float w = 0.004 + y * 0.03;
+          float beam = exp(-pow(vP.x / w, 2.0)) * smoothstep(0.03, 0.06, y) * exp(-y * 5.0);
+          float knots = 0.55 + 0.45 * sin(y * 55.0 - uTime * 2.2);
+          gl_FragColor = vec4(vec3(0.55, 0.72, 1.0) * beam * knots * 1.1, 1.0);
+        }`,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    })
+    const jetGeo = new THREE.PlaneGeometry(0.08, 0.52)
+    for (let i = 0; i < 2; i++) {
+      const jet = new THREE.Mesh(jetGeo, jetMat)
+      jet.rotation.set(0.35, (i * Math.PI) / 2, 0)
+      group.add(jet)
+    }
+    disposables.push(jetGeo, jetMat)
   }
-  // Den blå jätten är het och vit-blå; de andra har solens gula granulering, tonad i sin färg.
-  const core = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 32, 20),
-    new THREE.MeshBasicMaterial(kind === 'blue' ? { color: '#dfe9ff' } : { map: tex.sun, color: color.clone().lerp(new THREE.Color('#ffffff'), 0.35) }),
-  )
-  core.scale.setScalar(size)
-  group.add(core)
-  const corona = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex.glow, color, opacity: kind === 'proto' ? 0.55 : 0.95, ...additive }))
-  corona.scale.setScalar(size * (kind === 'proto' ? 6 : 9))
-  group.add(corona)
-  let rays: THREE.Sprite | null = null
-  if (kind === 'yellow' || kind === 'blue') {
-    rays = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex.rays, color, opacity: 0.5, ...additive }))
-    rays.scale.setScalar(size * 10)
-    group.add(rays)
-  }
-  const phase = (seed % 100) / 16
   return {
     group,
-    /** Ungefärlig storlek, för kameran. */
-    size: kind === 'proto' ? 0.3 : size * 5,
-    update(now: number) {
-      const pulse = 1 + 0.05 * Math.sin(now / 900 + phase)
-      corona.scale.setScalar(size * (kind === 'proto' ? 6 : 9) * pulse)
-      core.rotation.y = now / 6000
-      if (rays) rays.material.rotation = now / 20000 + phase
-      if (cloud) cloud.rotation.y = now / 9000 + phase
-    },
+    size: kind === 'proto' ? 0.28 : look.r * look.corona,
+    dispose: () => disposables.forEach((d) => d.dispose()),
   }
+}
+
+/** En tunn ring som alltid är lika stor på skärmen: markerar var ett solsystem ligger i galaxen. */
+export function screenRing(color: THREE.Color) {
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: color }, uPx: { value: 21 }, uScale: pointScale, uPr: pixelRatio, uFade: { value: 1 } },
+      vertexShader: /* glsl */ `
+        uniform float uPx;
+        uniform float uScale;
+        uniform float uPr;
+        varying vec2 vP;
+        void main() {
+          vP = position.xy;
+          vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          mv.xy += position.xy * uPx * uPr * -mv.z / uScale;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uColor;
+        uniform float uFade;
+        varying vec2 vP;
+        void main() {
+          float r = length(vP);
+          float ring = smoothstep(0.06, 0.0, abs(r - 0.84)) * 0.5 + exp(-r * r * 6.0) * 0.04;
+          gl_FragColor = vec4(uColor * ring * uFade, 1.0);
+        }`,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  )
+  mesh.frustumCulled = false
+  return mesh
 }

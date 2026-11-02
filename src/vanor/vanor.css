@@ -3384,10 +3384,11 @@
   flex-direction: column;
   align-items: center;
   min-width: 44px;
-  padding: 6px 10px;
-  background: transparent;
+  padding: 5px 10px 6px;
+  background: rgb(4 7 18 / 0.42);
   border: 0;
   border-radius: 12px;
+  backdrop-filter: blur(6px);
   color: #fff;
   opacity: 0;
   text-align: center;
@@ -3472,6 +3473,139 @@
 .cosmos-view .gv-base.gv-scroll {
   max-height: 40vh;
   overflow-y: auto;
+}
+
+/* Fritt universum: hemknapp, etiketter för Jorden, stjärnor och astronauter, panelen som går att dölja */
+.cosmos-view .cv-home svg {
+  display: block;
+}
+
+.cosmos-view .cv-label.earth b {
+  color: #9fd2ff;
+}
+
+.cosmos-view .cv-label.star b,
+.cosmos-view .cv-label.crew b {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+.cosmos-view .cv-label.crew {
+  padding: 4px 8px;
+  background: none;
+  backdrop-filter: none;
+}
+
+.cosmos-view .cv-label.crew b {
+  padding: 2px 8px;
+  background: rgb(8 12 26 / 0.7);
+  border: 1px solid rgb(127 224 255 / 0.35);
+  border-radius: 999px;
+  color: #dff6ff;
+  font-weight: 700;
+}
+
+.cosmos-view .cv-label.site b {
+  color: #ffd28a;
+  letter-spacing: 0.08em;
+}
+
+.cosmos-view .cv-home-bottom {
+  isolation: isolate;
+  gap: 8px;
+}
+
+/* Texten längst ner släpper igenom fingret till bilden (dra och nyp fungerar ända ner); knapparna gör det inte */
+.cosmos-view .gv-bottom {
+  pointer-events: none;
+}
+
+.cosmos-view .gv-bottom button,
+.cosmos-view .gv-bottom input,
+.cosmos-view .gv-bottom .gv-months,
+.cosmos-view .gv-bottom .cv-periods,
+.cosmos-view .gv-bottom .gv-time {
+  pointer-events: auto;
+}
+
+/* Mörk ton bakom texten längst ner, så att den syns mot en solbelyst Jord */
+.cosmos-view .cv-home-bottom::before {
+  position: absolute;
+  z-index: -1;
+  right: -16px;
+  bottom: calc(-1 * max(20px, env(safe-area-inset-bottom)));
+  left: -16px;
+  height: calc(100% + 90px);
+  background: linear-gradient(0deg, rgb(2 3 9 / 0.78), rgb(2 3 9 / 0.45) 55%, rgb(2 3 9 / 0));
+  content: '';
+  pointer-events: none;
+}
+
+.cosmos-view .cv-home-bottom .cv-next {
+  align-self: center;
+  margin-top: 0;
+}
+
+.cosmos-view .cv-home-bottom .cv-sub {
+  margin: 0;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.9);
+}
+
+.cosmos-view .cv-base-wrap {
+  position: absolute;
+  right: 16px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cosmos-view .cv-base-wrap .gv-panel {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  width: 100%;
+}
+
+.cosmos-view .cv-hide,
+.cosmos-view .cv-show {
+  min-height: 40px;
+  padding: 6px 16px;
+  background: rgb(10 14 30 / 0.85);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 999px;
+  color: #dfe4f7;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.cosmos-view .cv-hide {
+  align-self: flex-end;
+  margin-bottom: 8px;
+}
+
+.cosmos-view .cv-show span {
+  margin-left: 6px;
+  color: #7fe0ff;
+}
+
+.cosmos-view .cv-credit {
+  margin: 0;
+  color: #6f7aa3;
+  font-size: 0.72rem;
+}
+
+.cosmos-view .cv-failed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+  max-width: 320px;
+  padding: 24px;
+  text-align: center;
 }
 
 @media (max-width: 380px) {
