@@ -172,8 +172,8 @@ export function buildEarth(renderer: THREE.WebGLRenderer, radius: number, yaw: n
           // Havsglitter: solen speglas i vattnet
           vec3 H = normalize(V + uSun);
           float nh = max(dot(n, H), 0.0);
-          float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, V), 0.0), 5.0);
-          float glint = (pow(nh, 500.0) * 7.0 + pow(nh, 70.0) * 0.45) * (0.35 + fres);
+          float fres = 0.02 + 0.98 * pow(max(1.0 - max(dot(n, V), 0.0), 0.0), 5.0);
+          float glint = (pow(max(nh, 0.0), 500.0) * 7.0 + pow(max(nh, 0.0), 70.0) * 0.45) * (0.35 + fres);
           col += tint * glint * (1.0 - land) * (1.0 - smoothstep(0.2, 0.7, cloudHere)) * smoothstep(0.0, 0.12, mu) * shade;
           // Natten: stadsljusen (sparade med gamma), lite dämpade under molnen. På nära håll delas
           // bildens suddiga ljus upp i små ljuspunkter, så att städerna inte blir till kladd.
@@ -187,7 +187,7 @@ export function buildEarth(renderer: THREE.WebGLRenderer, radius: number, yaw: n
           // Atmosfären mot kanten
           float edge = 1.0 - max(dot(n, V), 0.0);
           vec3 sky = skyTint(mu);
-          col = mix(col, sky * 1.1, pow(edge, 2.6) * 0.7) + sky * 0.035;
+          col = mix(col, sky * 1.1, pow(max(edge, 0.0), 2.6) * 0.7) + sky * 0.035;
           // Innan bilderna har laddats: ett mörkblått klot
           col = mix(vec3(0.01, 0.02, 0.05) * (0.25 + max(mu, 0.0)), col, uReady);
           gl_FragColor = vec4(col, 1.0);
@@ -236,7 +236,7 @@ export function buildEarth(renderer: THREE.WebGLRenderer, radius: number, yaw: n
           float lit = smoothstep(-0.1, 0.2, mu);
           vec3 col = sunTint(mu) * (max(mu, 0.0) * 0.9 + 0.1 * lit) * 2.15 * lump;
           col += vec3(0.008, 0.011, 0.02) * (1.0 - lit);
-          col = mix(col, skyTint(mu) * 1.1, pow(1.0 - ndv, 3.0) * 0.5);
+          col = mix(col, skyTint(mu) * 1.1, pow(max(1.0 - ndv, 0.0), 3.0) * 0.5);
           // På natten syns molnen knappt, och stadsljusen lyser igenom
           a *= mix(0.45, 1.0, lit) * uReady;
           gl_FragColor = vec4(col, a);
@@ -282,7 +282,7 @@ export function buildEarth(renderer: THREE.WebGLRenderer, radius: number, yaw: n
           float g = max(dot(rd, uSun), 0.0);
           // Rött och orange där ljuset går genom skymningen, vitare där kanten redan är i sol
           vec3 fwd = mix(vec3(1.0, 0.55, 0.3), vec3(0.85, 0.9, 1.0), smoothstep(0.0, 0.35, muC));
-          col += fwd * (pow(g, 26.0) * 0.6 + pow(g, 160.0) * 5.0) * smoothstep(-0.45, 0.05, muC);
+          col += fwd * (pow(max(g, 0.0), 26.0) * 0.6 + pow(max(g, 0.0), 160.0) * 5.0) * smoothstep(-0.45, 0.05, muC);
           // Svagt luftsken på nattsidan
           col += vec3(0.03, 0.09, 0.07) * (1.0 - lit) * 0.5;
           gl_FragColor = vec4(col * dens * 1.7, 1.0);
@@ -400,7 +400,7 @@ export function buildSun(): Sun {
       varying vec2 vP;
       void main() {
         float r = length(vP);
-        float a = atan(vP.y, vP.x) + uTime * 0.02;
+        float a = atan(vP.y, ((vP.x) + 1e-6 * step(abs(vP.x), 1e-6))) + uTime * 0.02;
         float spikes = pow(abs(cos(a * 3.0)), 260.0) * 1.0 + pow(abs(cos(a * 8.0 + 0.4)), 900.0) * 0.3;
         float fall = exp(-r * 8.0);
         float streak = exp(-abs(vP.y) * 140.0) * exp(-abs(vP.x) * 2.2) * 0.9;

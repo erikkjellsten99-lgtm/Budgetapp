@@ -14,6 +14,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import type { DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { onDataChange } from '../db'
@@ -809,6 +810,19 @@ function createCore(mount: HTMLDivElement, hooks: CoreHooks): Core {
   composer.setPixelRatio(dpr)
   composer.setSize(mount.clientWidth, mount.clientHeight)
   composer.addPass(new RenderPass(scene, camera))
+  // Skydd: vissa grafikkort (t.ex. Mac) kan ge en ogiltig pixel (NaN/oändligt). Glöden skulle smeta ut den
+  // till stora svarta rutor, så ogiltiga pixlar blir svarta och för starka värden får ett tak innan glöden.
+  composer.addPass(new ShaderPass({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `
+      uniform sampler2D tDiffuse; varying vec2 vUv;
+      void main() {
+        vec4 c = texture2D(tDiffuse, vUv);
+        bool bad = any(isnan(c)) || any(isinf(c)) || !(abs(c.r) + abs(c.g) + abs(c.b) < 1.0e6);
+        gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : vec4(clamp(c.rgb, 0.0, 64.0), clamp(c.a, 0.0, 1.0));
+      }`,
+  }))
   const bloom = new UnrealBloomPass(new THREE.Vector2(mount.clientWidth, mount.clientHeight), 0.5, 0.5, 0.95)
   bloom.enabled = hdr
   composer.addPass(bloom)
@@ -1153,7 +1167,7 @@ function createCore(mount: HTMLDivElement, hooks: CoreHooks): Core {
   }
   frame = requestAnimationFrame(tick)
   // För skärmdumpar och felsökning under utveckling
-  if (import.meta.env.DEV) (window as unknown as { __cosmos?: unknown }).__cosmos = { fly, rig, camera, renderer }
+  if (import.meta.env.DEV) (window as unknown as { __cosmos?: unknown }).__cosmos = { fly, rig, camera, renderer, scene, composer }
 
   return {
     renderer,
