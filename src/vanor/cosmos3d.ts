@@ -151,18 +151,18 @@ export function buildSky(renderer: THREE.WebGLRenderer, galaxyNormal: THREE.Vect
             float lat = (vUv.y - 0.5) * 3.1415927;
             vec3 d = vec3(cos(lat) * cos(lon), sin(lat), cos(lat) * sin(lon));
             float b = asin(clamp(dot(d, uN), -1.0, 1.0));
-            float l = atan(dot(d, uB), dot(d, uC));
+            float l = atan(dot(d, uB), ((dot(d, uC)) + 1e-6 * step(abs(dot(d, uC)), 1e-6)));
             float cl = cos(l);
             float width = 0.07 + 0.08 * smoothstep(-0.2, 1.0, cl);
-            float disk = exp(-pow(b / width, 2.0));
-            float wide = exp(-pow(b / (width * 3.2), 2.0)) * 0.22;
+            float disk = exp(-((b / width) * (b / width)));
+            float wide = exp(-((b / (width * 3.2)) * (b / (width * 3.2)))) * 0.22;
             float bulge = exp(-(b * b / 0.025 + l * l / 0.08));
             float clouds = fbm(d * 6.0);
             float clumps = smoothstep(0.3, 0.85, fbm(d * 15.0 + 3.0));
             float lum = (disk * (0.25 + clouds) + wide * 0.6 + bulge * 1.4) * (0.6 + 0.7 * clumps);
             // Stoftet: mörka stråk tätt längs bandet, tydligast mot mitten (som Stora riftet)
             float dn = fbm(d * 9.0 + 11.0) * 0.65 + fbm(d * 28.0) * 0.35;
-            float dust = smoothstep(0.42, 0.68, dn) * exp(-pow((b - 0.012) / (width * 0.6), 2.0)) * (0.45 + 0.55 * smoothstep(-0.5, 0.8, cl));
+            float dust = smoothstep(0.42, 0.68, dn) * exp(-(((b - 0.012) / (width * 0.6)) * ((b - 0.012) / (width * 0.6)))) * (0.45 + 0.55 * smoothstep(-0.5, 0.8, cl));
             lum *= 1.0 - 0.88 * dust;
             vec3 col = mix(vec3(0.6, 0.69, 1.0), vec3(1.0, 0.8, 0.58), clamp(smoothstep(0.2, 1.0, cl) * 0.65 + bulge * 0.6, 0.0, 1.0)) * lum;
             float neb = smoothstep(0.6, 0.78, fbm(d * 20.0 + 5.0)) * disk * (1.0 - dust);
@@ -201,7 +201,7 @@ export function buildSky(renderer: THREE.WebGLRenderer, galaxyNormal: THREE.Vect
         varying vec3 vDir;
         void main() {
           vec3 d = normalize(vDir);
-          vec2 uv = vec2(atan(d.z, d.x) / 6.2831853 + 0.5, asin(clamp(d.y, -1.0, 1.0)) / 3.1415927 + 0.5);
+          vec2 uv = vec2(atan(d.z, ((d.x) + 1e-6 * step(abs(d.x), 1e-6))) / 6.2831853 + 0.5, asin(clamp(d.y, -1.0, 1.0)) / 3.1415927 + 0.5);
           gl_FragColor = vec4(texture2D(uMap, uv).rgb, 1.0);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
@@ -471,12 +471,12 @@ export function buildGalaxy(o: GalaxyLook): Galaxy {
           ${NOISE}
           void main() {
             float r = length(vP) * 1.15;
-            float a = atan(-vP.y, vP.x);
+            float a = atan(-vP.y, ((vP.x) + 1e-6 * step(abs(vP.x), 1e-6)));
             float s = clamp((r - 0.08) / 0.92, 0.0, 1.0);
             // Vinkeln till närmaste arm, och stoftet strax innanför den
             float phase = uArms * (a - s * uTwist) / 6.2831853;
             float d = (fract(phase + 0.5) - 0.5) * 6.2831853 / uArms;
-            float lane = exp(-pow((d + 0.15) / 0.07, 2.0));
+            float lane = exp(-(((d + 0.15) / 0.07) * ((d + 0.15) / 0.07)));
             float threads = smoothstep(0.38, 0.72, fbm(vec3(vP * 9.0, uSeed)));
             float alpha = lane * threads * smoothstep(0.1, 0.25, r) * (1.0 - smoothstep(0.7, 0.95, r));
             gl_FragColor = vec4(0.04, 0.028, 0.02, alpha * 0.55 * uAmount);
@@ -506,9 +506,9 @@ export function buildGalaxy(o: GalaxyLook): Galaxy {
         void main() {
           float r = length(vP) * 1.15;
           // Planet är vridet ner i skivan (lokal y = −z), så vinkeln spegelvänds för att stämma med stjärnorna
-          float a = atan(-vP.y, vP.x);
+          float a = atan(-vP.y, ((vP.x) + 1e-6 * step(abs(vP.x), 1e-6)));
           float s = clamp((r - 0.08) / 0.92, 0.0, 1.0);
-          float arms = pow(0.5 + 0.5 * cos(uArms * (a - s * uTwist)), 1.6);
+          float arms = pow(max(0.5 + 0.5 * cos(uArms * (a - s * uTwist)), 0.0), 1.6);
           float disk = exp(-r / 0.3) * (0.3 + 1.1 * arms * smoothstep(0.04, 0.22, r));
           float bulge = exp(-r * r / 0.02) * 2.6;
           vec3 col = mix(uCore, uYoung, smoothstep(0.08, 0.55, r)) * disk + uCore * bulge;
@@ -590,12 +590,12 @@ const photosphere = (color: THREE.Color, heat: number, seed: number) =>
         vec3 V = normalize(cameraPosition - vPos);
         float mu = max(dot(normalize(vN), V), 0.0);
         // Randmörkning: kanten är svalare och mörkare, som på solen
-        float limb = 0.3 + 0.7 * pow(mu, 0.55);
+        float limb = 0.3 + 0.7 * pow(max(mu, 0.0), 0.55);
         vec3 p = normalize(vObj) * 11.0 + uSeed;
         float gran = fbm(p + vec3(uTime * 0.045, uTime * 0.02, 0.0));
         float cells = 0.72 + 0.56 * gran;
         float spots = smoothstep(0.66, 0.74, fbm(normalize(vObj) * 3.0 + uSeed + 40.0)) * 0.45;
-        vec3 col = mix(uColor * vec3(1.0, 0.7, 0.5), uColor, pow(mu, 0.35)) * limb * cells * (1.0 - spots) * uHeat;
+        vec3 col = mix(uColor * vec3(1.0, 0.7, 0.5), uColor, pow(max(mu, 0.0), 0.35)) * limb * cells * (1.0 - spots) * uHeat;
         gl_FragColor = vec4(col, 1.0);
       }`,
   })
@@ -633,7 +633,7 @@ export function buildHabitStar(kind: StarKind, seed: number): HabitStar {
       ${NOISE}
       void main() {
         float r = length(vP);
-        float a = atan(vP.y, vP.x);
+        float a = atan(vP.y, ((vP.x) + 1e-6 * step(abs(vP.x), 1e-6)));
         float rr = max(r - uCore, 0.0) / (1.0 - uCore);
         float streak = 0.5 + 0.6 * vnoise(vec3(cos(a) * 3.0, sin(a) * 3.0, uTime * 0.06 + uSeed)) + 0.3 * vnoise(vec3(cos(a) * 9.0, sin(a) * 9.0, uTime * 0.1));
         float g = exp(-rr * 10.0 / streak) * 1.5 + exp(-rr * 3.4) * 0.28 + exp(-rr * 1.3) * 0.05;
@@ -703,7 +703,7 @@ export function buildHabitStar(kind: StarKind, seed: number): HabitStar {
         ${NOISE}
         void main() {
           float r = length(vP);
-          float a = atan(vP.y, vP.x);
+          float a = atan(vP.y, ((vP.x) + 1e-6 * step(abs(vP.x), 1e-6)));
           float bands = vnoise(vec3(r * 70.0, cos(a - uTime * 0.25 / max(r, 0.03)) * 2.0, sin(a - uTime * 0.25 / max(r, 0.03)) * 2.0));
           float heat = exp(-(r - 0.026) / 0.03);
           vec3 col = mix(vec3(0.5, 0.12, 0.05), vec3(1.0, 0.62, 0.3), clamp(heat, 0.0, 1.0)) * (0.35 + 0.8 * bands) * (heat * 2.0 + 0.15);
@@ -729,7 +729,7 @@ export function buildHabitStar(kind: StarKind, seed: number): HabitStar {
         void main() {
           float y = abs(vP.y);
           float w = 0.004 + y * 0.03;
-          float beam = exp(-pow(vP.x / w, 2.0)) * smoothstep(0.03, 0.06, y) * exp(-y * 5.0);
+          float beam = exp(-((vP.x / w) * (vP.x / w))) * smoothstep(0.03, 0.06, y) * exp(-y * 5.0);
           float knots = 0.55 + 0.45 * sin(y * 55.0 - uTime * 2.2);
           gl_FragColor = vec4(vec3(0.55, 0.72, 1.0) * beam * knots * 1.1, 1.0);
         }`,
