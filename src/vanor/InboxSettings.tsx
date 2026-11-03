@@ -121,13 +121,14 @@ export default function InboxSettings() {
                   Öppna <b>Genvägar</b>, tryck <b>+</b> och döp genvägen till <b>Till Groundwork</b>.
                 </li>
                 <li>
-                  Lägg till <b>Hitta påminnelser</b>. Lägg till filter: <b>Lista</b> är <b>Groundwork</b>, och{' '}
-                  <b>Är slutförd</b> är <b>inte</b> vald.
+                  Sök efter åtgärden <b>Sök efter påminnelser</b> och lägg till den. Tryck <b>Lägg till filter</b>: <b>Lista</b> är{' '}
+                  <b>Groundwork</b>. Lägg till ett filter till: <b>Är inte klart</b>.
                 </li>
                 <li>
-                  Lägg till <b>Upprepa med varje</b> (den tar påminnelserna). Inuti: lägg till <b>Text</b> och skriv{' '}
-                  <b>Upprepningsobjekt</b>, sedan <code> | </code>, sedan <b>Upprepningsobjekt</b> igen. Tryck på det sista och välj{' '}
-                  <b>Förfallodatum</b>, datumformat <b>ISO 8601</b> med <b>Inkludera tid</b> på.
+                  Lägg till <b>Upprepa med varje</b> (den tar påminnelserna). Lägg till <b>Text</b> och dra in den mellan{' '}
+                  <b>Upprepa</b> och <b>Avsluta upprepning</b>. Skriv i den: <b>Upprepa objekt</b>, sedan ett lodrätt streck{' '}
+                  <code>|</code> (tangentbordet: 123 → #+=), sedan <b>Upprepa objekt</b> igen. Tryck på det sista och välj{' '}
+                  <b>Klardatum</b>.
                 </li>
                 <li>
                   Under <b>Avsluta upprepning</b>: lägg till <b>Hämta innehåll från URL</b>. Klistra in adressen ovan. Tryck på pilen:{' '}
