@@ -4,11 +4,14 @@
 //   ersätter den gamla. Bara en hash av nyckeln sparas (tabellen inbox_tokens).
 // - POST  (från genvägen, "Authorization: Bearer <nyckel>"): JSON { rader: "Titel | datum\n..." }.
 //   Varje rad blir en sak att göra. Samma påminnelse läggs bara in en gång (se parse.ts).
+// - POST  (från Siri-genvägen "Ny uppgift"): JSON { sak: "Ringa mamma imorgon klockan 18" }.
+//   Dag och tid plockas ut ur meningen (spoken.ts). Svaret är en kort text som Siri läser upp.
 //
 // Funktionen kontrollerar själv vem som anropar (verify_jwt är av).
 
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4'
-import { itemId, parseLines, stockholmToday } from './parse.ts'
+import { itemId, parseLines, stockholmToday, type InboxItem } from './parse.ts'
+import { confirmText, parseSpoken } from './spoken.ts'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
@@ -19,6 +22,9 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
+
+const say = (text: string, status = 200) =>
+  new Response(text, { status, headers: { ...CORS, 'Content-Type': 'text/plain; charset=utf-8' } })
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -50,41 +56,48 @@ async function receive(req: Request) {
   const { data: owner } = await admin.from('inbox_tokens').select('user_id').eq('token_hash', await sha256(token)).maybeSingle()
   if (!owner) return json({ error: 'Nyckeln gäller inte längre. Skapa en ny i Groundwork → Vanor → Mina vanor.' }, 401)
 
-  let text = ''
   const type = req.headers.get('content-type') ?? ''
-  if (type.includes('json')) {
-    const body = await req.json().catch(() => ({}))
-    const value = body?.rader ?? body?.text ?? ''
-    text = Array.isArray(value) ? value.join('\n') : String(value)
-  } else {
-    text = await req.text()
+  const body = type.includes('json') ? await req.json().catch(() => ({})) : { rader: await req.text() }
+  const today = stockholmToday()
+
+  // Från Siri: en enda sak med dag och tid i meningen
+  if (typeof body?.sak === 'string') {
+    const item = parseSpoken(body.sak.slice(0, 500), today)
+    if (!item) return say('Jag hörde ingen uppgift. Försök igen.', 400)
+    const added = await save(owner.user_id, [item])
+    if (added < 0) return say('Det gick inte att spara. Försök igen.', 500)
+    return say(confirmText(item, today, added > 0))
   }
+
+  const value = body?.rader ?? body?.text ?? ''
+  const text = Array.isArray(value) ? value.join('\n') : String(value)
   if (text.length > 100_000) return json({ error: 'För mycket text på en gång.' }, 413)
 
-  const items = parseLines(text, stockholmToday())
+  const items = parseLines(text, today)
   if (!items.length) return json({ added: 0, message: 'Inga nya påminnelser.' })
+  const added = await save(owner.user_id, items)
+  if (added < 0) return json({ error: 'Kunde inte spara. Försök igen.' }, 500)
+  return json({ added, message: added ? `${added} ny${added === 1 ? '' : 'a'} i Groundwork.` : 'Inga nya påminnelser.' })
+}
 
+/** Lägger in saker under Att göra. Finns de redan rörs de inte. Svarar antal nya, eller -1 vid fel. */
+async function save(userId: string, items: InboxItem[]): Promise<number> {
   const now = Date.now()
   const rows = await Promise.all(
     items.map(async (item, i) => {
       const id = await itemId(item)
-      return {
-        user_id: owner.user_id,
-        store: 'tasks',
-        id,
-        data: { id, ...item, created: now + i },
-        deleted: false,
-        client_ts: now,
-      }
+      return { user_id: userId, store: 'tasks', id, data: { id, ...item, created: now + i }, deleted: false, client_ts: now }
     }),
   )
-  const { data: inserted, error } = await admin
+  const { data, error } = await admin
     .from('personal_records')
     .upsert(rows, { onConflict: 'user_id,store,id', ignoreDuplicates: true })
     .select('id')
-  if (error) return json({ error: 'Kunde inte spara. Försök igen.' }, 500)
-  const added = inserted?.length ?? 0
-  return json({ added, message: added ? `${added} ny${added === 1 ? '' : 'a'} i Groundwork.` : 'Inga nya påminnelser.' })
+  if (error) {
+    console.error('inbox save', error)
+    return -1
+  }
+  return data?.length ?? 0
 }
 
 Deno.serve(async (req) => {
