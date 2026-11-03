@@ -1561,6 +1561,71 @@
   margin: 8px 0 0;
 }
 
+/* Från iPhones Påminnelser (i Mina vanor) */
+.vanor .inbox-settings {
+  margin-top: 4px;
+}
+
+.vanor .inbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vanor .inbox-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.vanor .inbox-copy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 4px 4px 4px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.vanor .inbox-copy code {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  user-select: all;
+}
+
+.vanor .inbox-copy .text-btn {
+  flex: none;
+}
+
+.vanor .inbox-steps summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vanor .inbox-steps ol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 12px;
+  padding-left: 20px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.vanor .inbox-steps code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.8rem;
+}
+
 .vanor .section-hint {
   margin: -4px 0 2px;
   color: var(--muted);

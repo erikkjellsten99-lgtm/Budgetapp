@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import ManageHabits from './ManageHabits';
 import PushSettings from './PushSettings';
+import InboxSettings from './InboxSettings';
 import ThemePicker from '../ThemePicker';
 import { START_HABITS } from './defaults';
 import { todayKey } from './dates';
@@ -41,6 +42,7 @@ export default function HabitSheet({ habits, onClose }: Props) {
         </div>
 
         {!empty && <PushSettings habits={habits} />}
+        {!empty && <InboxSettings />}
         <ImportFromOldApp />
         {empty && <StartPack />}
         <ManageHabits all={habits} />
