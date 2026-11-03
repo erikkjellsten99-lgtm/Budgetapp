@@ -1,6 +1,7 @@
 // Dagens citat i Vanor, på engelska. Samma citat hela dagen, nytt vid midnatt.
-// Bara riktiga citat där källan är känd (verk och kapitel inom parentes), i vanliga engelska översättningar.
-// Inga egna peppande rader och inga vanliga felattribueringar (t.ex. "We first make our habits…").
+// Motiverande citat från mentala coacher och före detta militärer (Erik vill ha den stilen).
+// Bara citat där personen och källan är kända (bok eller tal inom parentes).
+// Inga egna peppande rader och inga vanliga felattribueringar från nätet.
 
 import type { DateKey } from './dates';
 
@@ -11,38 +12,41 @@ export interface Quote {
 }
 
 export const QUOTES: Quote[] = [
-  { text: 'We are what we repeatedly do. Excellence, then, is not an act, but a habit.', by: 'Will Durant, on Aristotle' },
-  { text: 'We become just by doing just acts, temperate by doing temperate acts, brave by doing brave acts.', by: 'Aristotle (Nicomachean Ethics II.1)' },
-  { text: 'One swallow does not make a summer, nor does one day.', by: 'Aristotle (Nicomachean Ethics I.7)' },
-  { text: 'Every habit and faculty is maintained and increased by the corresponding actions.', by: 'Epictetus (Discourses 2.18)' },
-  { text: 'If you wish to be a writer, write.', by: 'Epictetus (Discourses 2.18)' },
-  { text: 'No great thing is created suddenly.', by: 'Epictetus (Discourses 1.15)' },
-  { text: 'First say to yourself what you would be; and then do what you have to do.', by: 'Epictetus (Discourses 3.23)' },
-  { text: 'Men are disturbed not by things, but by the views which they take of things.', by: 'Epictetus (Enchiridion 5)' },
-  { text: 'The impediment to action advances action. What stands in the way becomes the way.', by: 'Marcus Aurelius (Meditations 5.20)' },
-  { text: 'Waste no more time arguing about what a good man should be. Be one.', by: 'Marcus Aurelius (Meditations 10.16)' },
-  { text: 'Such as are your habitual thoughts, such also will be the character of your mind.', by: 'Marcus Aurelius (Meditations 5.16)' },
-  { text: 'Very little is needed to make a happy life; it is all within yourself, in your way of thinking.', by: 'Marcus Aurelius (Meditations 7.67)' },
-  { text: 'We suffer more often in imagination than in reality.', by: 'Seneca (Letters 13)' },
-  { text: 'While we are postponing, life speeds by.', by: 'Seneca (Letters 1)' },
-  { text: 'If a man knows not to which port he sails, no wind is favorable.', by: 'Seneca (Letters 71)' },
-  { text: 'It is not that we have a short time to live, but that we waste a lot of it.', by: 'Seneca (On the Shortness of Life)' },
-  { text: 'It is not because things are difficult that we do not dare; it is because we do not dare that they are difficult.', by: 'Seneca (Letters 104)' },
-  { text: 'As long as you live, keep learning how to live.', by: 'Seneca (Letters 76)' },
-  { text: 'Habit creates, as it were, a second nature.', by: 'Cicero (De Finibus V.74)' },
-  { text: 'Dripping water hollows out stone.', by: 'Ovid (Epistulae ex Ponto IV.10)' },
-  { text: 'A journey of a thousand miles begins with a single step.', by: 'Laozi (Tao Te Ching 64)' },
-  { text: 'Deal with the difficult while it is still easy.', by: 'Laozi (Tao Te Ching 63)' },
-  { text: 'Mastering others is strength. Mastering yourself is true power.', by: 'Laozi (Tao Te Ching 33)' },
-  { text: 'No man ever steps in the same river twice.', by: 'Heraclitus' },
-  { text: 'An ounce of prevention is worth a pound of cure.', by: 'Benjamin Franklin' },
-  { text: 'Never suffer an exception to occur till the new habit is securely rooted in your life.', by: 'William James (The Principles of Psychology)' },
-  { text: 'Seize the very first possible opportunity to act on every resolution you make.', by: 'William James (The Principles of Psychology)' },
+  // David Goggins, f.d. Navy SEAL
+  { text: "Who's gonna carry the boats?", by: 'David Goggins, ex-Navy SEAL' },
   {
-    text: 'I know of no more encouraging fact than the unquestionable ability of man to elevate his life by a conscious endeavor.',
-    by: 'Henry David Thoreau (Walden)',
+    text: 'You are in danger of living a life so comfortable and soft that you will die without ever realizing your true potential.',
+    by: "David Goggins (Can't Hurt Me)",
   },
-  { text: 'How we spend our days is, of course, how we spend our lives.', by: 'Annie Dillard (The Writing Life)' },
+  { text: "When you think you're done, you're only at 40 percent of what you're capable of.", by: 'David Goggins (the 40% rule)' },
+  { text: 'Stay hard.', by: 'David Goggins, ex-Navy SEAL' },
+  // Jocko Willink, f.d. Navy SEAL
+  { text: 'Discipline equals freedom.', by: 'Jocko Willink, ex-Navy SEAL' },
+  { text: "Don't count on motivation. Count on discipline.", by: 'Jocko Willink (Discipline Equals Freedom)' },
+  { text: 'When things are going bad… just look at the issue and say: “Good.”', by: 'Jocko Willink, ex-Navy SEAL' },
+  { text: 'There are no bad teams, only bad leaders.', by: 'Jocko Willink & Leif Babin (Extreme Ownership)' },
+  { text: 'Get after it.', by: 'Jocko Willink, ex-Navy SEAL' },
+  // William H. McRaven, f.d. amiral, Navy SEAL
+  { text: 'If you want to change the world, start off by making your bed.', by: 'Admiral William H. McRaven (Make Your Bed)' },
+  {
+    text: 'If you make your bed every morning you will have accomplished the first task of the day.',
+    by: 'Admiral William H. McRaven (Make Your Bed)',
+  },
+  { text: 'The only easy day was yesterday.', by: 'U.S. Navy SEALs (motto)' },
+  // Coacher och talare
+  { text: 'Motivation is what gets you started. Habit is what keeps you going.', by: 'Jim Rohn' },
+  { text: 'Discipline is the bridge between goals and accomplishment.', by: 'Jim Rohn' },
+  {
+    text: "People often say that motivation doesn't last. Well, neither does bathing – that's why we recommend it daily.",
+    by: 'Zig Ziglar',
+  },
+  { text: 'Where focus goes, energy flows.', by: 'Tony Robbins' },
+  {
+    text: "It's not about the goal. It's about growing to become the person that can accomplish that goal.",
+    by: 'Tony Robbins',
+  },
+  { text: "You're never going to feel like it.", by: 'Mel Robbins (The 5 Second Rule)' },
+  { text: "When you want to succeed as bad as you want to breathe, then you'll be successful.", by: 'Eric Thomas' },
 ];
 
 /** Antal dagar sedan 1970-01-01 för ett datum (UTC, så sommartid inte flyttar något). */
