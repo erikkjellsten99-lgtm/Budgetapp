@@ -64,9 +64,10 @@ async function receive(req: Request) {
   if (typeof body?.sak === 'string') {
     const item = parseSpoken(body.sak.slice(0, 500), today)
     if (!item) return say('Jag hörde ingen uppgift. Försök igen.', 400)
-    const added = await save(owner.user_id, [item])
+    // Det du säger till Siri läggs alltid in, även om samma sak tagits bort tidigare (eget id varje gång)
+    const added = await save(owner.user_id, [item], `-${Date.now().toString(36)}`)
     if (added < 0) return say('Det gick inte att spara. Försök igen.', 500)
-    return say(confirmText(item, today, added > 0))
+    return say(confirmText(item, today, true))
   }
 
   const value = body?.rader ?? body?.text ?? ''
@@ -81,11 +82,11 @@ async function receive(req: Request) {
 }
 
 /** Lägger in saker under Att göra. Finns de redan rörs de inte. Svarar antal nya, eller -1 vid fel. */
-async function save(userId: string, items: InboxItem[]): Promise<number> {
+async function save(userId: string, items: InboxItem[], idSuffix = ''): Promise<number> {
   const now = Date.now()
   const rows = await Promise.all(
     items.map(async (item, i) => {
-      const id = await itemId(item)
+      const id = (await itemId(item)) + idSuffix
       return { user_id: userId, store: 'tasks', id, data: { id, ...item, created: now + i }, deleted: false, client_ts: now }
     }),
   )
