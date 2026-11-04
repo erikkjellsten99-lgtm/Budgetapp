@@ -1,3 +1,4 @@
+import type { AutoRule } from '../../supabase/functions/inbox/health'
 import { addDays, weekStart, weekday, type DateKey } from './dates'
 
 export interface Habit {
@@ -30,6 +31,8 @@ export interface Habit {
   ramp?: Ramp
   /** Livsområde, t.ex. "Träning" – blir ett solsystem i galaxen. Saknas = Övrigt. Se areas.ts. */
   area?: string
+  /** Bockas automatiskt när ett mått från Apple Hälsa når gränsen, t.ex. steg ≥ 10 000 (servern bockar). */
+  auto?: AutoRule
 }
 
 export interface Ramp {

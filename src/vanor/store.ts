@@ -9,15 +9,17 @@ import { todayKey, type DateKey } from './dates';
 import { sameName, type Habit, type Log, type Ramp } from './habits';
 import type { Task } from './tasks';
 import { cleanArea } from './areas';
+import { METRICS, RULE_METRICS, type AutoRule, type HealthDay } from '../../supabase/functions/inbox/health';
 
 const DB_NAME = 'vanor';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 /**
  * Allt som synkas privat till kontot. Träningspassen (workouts, version 2) används inte längre i appen,
  * men ligger kvar så att inget som loggats försvinner. Att göra-sakerna (tasks) finns sedan version 3.
+ * Hälsodata från Apple Hälsa (health, en post per dag) finns sedan version 4 och skrivs av servern.
  */
-export const HABIT_STORES = ['habits', 'checks', 'pauses', 'workouts', 'tasks'] as const;
+export const HABIT_STORES = ['habits', 'checks', 'pauses', 'workouts', 'tasks', 'health'] as const;
 export type HabitStore = (typeof HABIT_STORES)[number];
 
 /** En bockning: vanan var klar den dagen. `min` = bara minimiversionen gjordes. */
@@ -38,6 +40,8 @@ export interface HabitData {
   checks: Check[];
   pauses: Pause[];
   tasks: Task[];
+  /** Hälsodata per dag från Apple Hälsa (genvägen "Hälsa till Groundwork"). */
+  health: HealthDay[];
 }
 
 export interface OutboxEntry {
@@ -52,7 +56,7 @@ export interface OutboxEntry {
 
 const checkKey = (date: DateKey, habitId: string) => `${date}|${habitId}`;
 const idOf = (store: HabitStore, record: Record<string, unknown>) =>
-  String(store === 'checks' ? record.key : store === 'pauses' ? record.date : record.id);
+  String(store === 'checks' ? record.key : store === 'pauses' || store === 'health' ? record.date : record.id);
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
@@ -73,6 +77,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (event.oldVersion < 3) {
         db.createObjectStore('tasks', { keyPath: 'id' });
+      }
+      if (event.oldVersion < 4) {
+        db.createObjectStore('health', { keyPath: 'date' });
       }
     };
     request.onsuccess = () => {
@@ -138,14 +145,16 @@ async function change(puts: { store: HabitStore; record: object }[], deletes: { 
 }
 
 export async function loadHabitData(): Promise<HabitData> {
-  const [habits, checks, pauses, tasks] = await Promise.all([
+  const [habits, checks, pauses, tasks, health] = await Promise.all([
     getAll<Habit>('habits'),
     getAll<Check>('checks'),
     getAll<Pause>('pauses'),
     getAll<Task>('tasks'),
+    getAll<HealthDay>('health'),
   ]);
   habits.sort((a, b) => a.order - b.order);
-  return { habits, checks, pauses, tasks };
+  health.sort((a, b) => a.date.localeCompare(b.date));
+  return { habits, checks, pauses, tasks, health };
 }
 
 export function toLog(checks: Check[]): Log {
@@ -251,6 +260,13 @@ async function updateRecord(id: string, update: (h: Habit) => Habit) {
 }
 
 /** Ändra namn, mål, minimiversion, påminnelse och vilka vanor den görs efter. */
+/** En regel från Apple Hälsa med ett känt mått och en rimlig gräns, eller undefined. */
+function cleanAuto(rule: AutoRule | null): AutoRule | undefined {
+  if (!rule || !RULE_METRICS.includes(rule.metric) || !Number.isFinite(rule.min) || rule.min <= 0) return undefined;
+  const decimals = METRICS[rule.metric].decimals + 1;
+  return { metric: rule.metric, min: Math.min(1e6, Math.round(rule.min * 10 ** decimals) / 10 ** decimals) };
+}
+
 /** En gradvis ökning med rimliga värden, eller undefined om den är tom eller trasig. */
 function cleanRamp(r: Ramp | null): Ramp | undefined {
   if (!r) return undefined;
@@ -274,6 +290,8 @@ export function updateHabit(
     ramp?: Ramp | null;
     /** Område (solsystem i galaxen). Tom = Övrigt, undefined = lämna som det är. */
     area?: string;
+    /** Bockas automatiskt från Apple Hälsa. null = av, undefined = lämna som det är. */
+    auto?: AutoRule | null;
   },
 ) {
   return updateRecord(id, (h) => {
@@ -289,6 +307,7 @@ export function updateHabit(
       days: planned,
       ramp: changes.ramp === undefined ? h.ramp : cleanRamp(changes.ramp),
       area: changes.area === undefined ? h.area : cleanArea(changes.area),
+      auto: changes.auto === undefined ? h.auto : cleanAuto(changes.auto),
       // Med planerade dagar gäller påminnelsen de dagarna, annars de valda påminnelsedagarna.
       remindDays: !remind || planned ? undefined : changes.remind === undefined ? h.remindDays : cleanDays(changes.remindDays),
     };

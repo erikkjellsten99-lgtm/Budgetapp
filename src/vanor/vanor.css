@@ -3830,3 +3830,179 @@
     font-size: 1.6rem;
   }
 }
+
+/* Hälsa idag: siffror från Apple Hälsa, med 7 dagar som små staplar */
+.vanor .health-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.vanor .health-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.vanor .health-head h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.05rem;
+}
+
+.vanor .health-time {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.vanor .health-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vanor .health-tile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+  padding: 12px;
+  background: var(--sunk);
+  border-radius: 14px;
+}
+
+.vanor .health-tile.reached {
+  box-shadow: inset 0 0 0 1.5px var(--done);
+}
+
+.vanor .ht-label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.vanor .ht-value {
+  grid-column: 1 / -1;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.vanor .ht-goal {
+  grid-column: 1 / -1;
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.vanor .health-tile.reached .ht-goal {
+  color: var(--done);
+  font-weight: 700;
+}
+
+.vanor .ht-goal.muted {
+  color: var(--muted);
+}
+
+.vanor .ht-bars {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 18px;
+}
+
+.vanor .ht-bars i {
+  width: 4px;
+  min-height: 2px;
+  background: var(--line);
+  border-radius: 2px;
+}
+
+.vanor .ht-bars i.last {
+  background: var(--ink);
+  opacity: 0.7;
+}
+
+.vanor .ht-bars i.met {
+  background: var(--done);
+  opacity: 1;
+}
+
+.vanor .ht-bars i.empty {
+  opacity: 0.4;
+}
+
+/* Regel från Apple Hälsa i Ändra vana */
+.vanor .auto-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.vanor .auto-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.vanor .auto-row select,
+.vanor .auto-row input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.vanor .auto-row input[aria-invalid='true'] {
+  border-color: var(--flame);
+}
+
+.vanor .auto-row small {
+  font-size: 0.72rem;
+}
+
+/* Tabellen med nycklar för hälsogenvägen */
+.vanor .health-fields {
+  width: 100%;
+  margin: 4px 0 12px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.vanor .health-fields th {
+  padding: 6px 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.vanor .health-fields td {
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+
+.vanor .health-fields code {
+  font-family: var(--mono);
+}

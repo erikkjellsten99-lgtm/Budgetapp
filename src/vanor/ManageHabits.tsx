@@ -4,6 +4,7 @@ import { NAME_MAX, goalText, habitPlan, nameError, remindText, sameName, type Ha
 import { addHabit, removeHabit, restoreHabit, updateHabit } from './store'
 import { todayKey } from './dates'
 import { AREAS, NO_AREA, guessArea } from './areas'
+import { METRICS, RULE_METRICS, formatGoal, guessRule, type HealthMetric } from '../../supabase/functions/inbox/health'
 
 /** Lägg till, ändra, ta bort och lägg tillbaka vanor. Visas i Inställningar. */
 export default function ManageHabits({ all }: { all: Habit[] }) {
@@ -32,6 +33,7 @@ export default function ManageHabits({ all }: { all: Habit[] }) {
                       {h.after.some((id) => active.some((a) => a.id === id)) ? ` · ${goalText(h.goal)}` : ''}
                       {h.minimum ? ` · minimum ${h.minimum}` : ''}
                       {h.remind ? ` · påminnelse ${remindText(h)}` : ''}
+                      {h.auto ? ` · från Hälsa: ${formatGoal(h.auto.metric, h.auto.min)}` : ''}
                       {` · ${h.area || 'inget område'}`}
                     </span>
                   </div>
@@ -440,6 +442,72 @@ function RampField({ idPrefix, on, setOn, from, setFrom, step, setStep, max, set
   )
 }
 
+/** Bockas automatiskt från Apple Hälsa: välj mått och gräns, t.ex. steg minst 10 000. */
+function AutoField({ idPrefix, on, setOn, metric, setMetric, min, setMin }: {
+  idPrefix: string
+  on: boolean
+  setOn: (v: boolean) => void
+  metric: HealthMetric
+  setMetric: (m: HealthMetric) => void
+  min: string
+  setMin: (v: string) => void
+}) {
+  const info = METRICS[metric]
+  const value = Number(min.replace(',', '.'))
+  const valid = Number.isFinite(value) && value > 0
+  return (
+    <div className="field">
+      <label className="push-toggle">
+        <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
+        <span>
+          <b>Bocka automatiskt från Apple Hälsa</b>
+          <small>Vanan bockas när måttet når gränsen. Kräver genvägen Hälsa till Groundwork.</small>
+        </span>
+      </label>
+      {on && (
+        <>
+          <div className="auto-row">
+            <label>
+              <span>Mått</span>
+              <select
+                id={`${idPrefix}-auto-metric`}
+                value={metric}
+                onChange={(e) => {
+                  const next = e.target.value as HealthMetric
+                  setMetric(next)
+                  setMin(String(METRICS[next].rule!.default))
+                }}
+              >
+                {RULE_METRICS.map((m) => (
+                  <option key={m} value={m}>
+                    {METRICS[m].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Minst</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step={info.rule!.step}
+                value={min}
+                aria-invalid={!valid}
+                onChange={(e) => setMin(e.target.value)}
+              />
+              <small>{info.unit}</small>
+            </label>
+          </div>
+          <small className="field-help">
+            {valid ? `Vanan bockas en dag du når ${formatGoal(metric, value)}.` : 'Fyll i en gräns större än 0.'}
+          </small>
+        </>
+      )}
+    </div>
+  )
+}
+
 /** Område: blir vanans solsystem i galaxen (Hälsa). */
 function AreaField({ idPrefix, value, onChange }: { idPrefix: string; value: string; onChange: (v: string) => void }) {
   return (
@@ -477,6 +545,11 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
   const [rampMax, setRampMax] = useState(String(habit.ramp?.max ?? 20))
   // Saknar vanan område föreslås ett utifrån namnet (sparas när du trycker Spara).
   const [area, setArea] = useState(habit.area ?? guessArea(habit.name) ?? '')
+  // Regel från Apple Hälsa: förvald utifrån namnet (t.ex. "10k steg"), men av tills du slår på den.
+  const suggested = habit.auto ?? guessRule(habit.name) ?? { metric: 'steps' as HealthMetric, min: METRICS.steps.rule!.default }
+  const [autoOn, setAutoOn] = useState(!!habit.auto)
+  const [autoMetric, setAutoMetric] = useState<HealthMetric>(suggested.metric)
+  const [autoMin, setAutoMin] = useState(String(suggested.min))
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const error = nameError(name, active, habit.id)
@@ -485,12 +558,15 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
     e.preventDefault()
     const from = Number(rampFrom)
     const rampBad = rampOn && !(from >= 1 && Number(rampStep) >= 1 && Number(rampMax) >= from)
-    if (busy || error || rampBad || (remind && !days.length && !remindDays.length)) return
+    const autoValue = Number(autoMin.replace(',', '.'))
+    const autoBad = autoOn && !(Number.isFinite(autoValue) && autoValue > 0)
+    if (busy || error || rampBad || autoBad || (remind && !days.length && !remindDays.length)) return
     setBusy(true)
     // Ändras startlängden börjar ökningen om från idag, annars fortsätter den där den är.
     const start = habit.ramp && habit.ramp.from === from ? habit.ramp.start : todayKey()
     const ramp = rampOn ? { start, from, step: Number(rampStep), max: Number(rampMax), unit: 'min' } : null
-    await updateHabit(habit.id, { name, goal, minimum, after, remind, remindDays, days, ramp, area })
+    const auto = autoOn ? { metric: autoMetric, min: autoValue } : null
+    await updateHabit(habit.id, { name, goal, minimum, after, remind, remindDays, days, ramp, area, auto })
     onDone()
   }
 
@@ -533,6 +609,15 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
           max={rampMax}
           setMax={setRampMax}
           start={habit.ramp ? shortDay(habit.ramp.start) : undefined}
+        />
+        <AutoField
+          idPrefix={`edit-${habit.id}`}
+          on={autoOn}
+          setOn={setAutoOn}
+          metric={autoMetric}
+          setMetric={setAutoMetric}
+          min={autoMin}
+          setMin={setAutoMin}
         />
         <AreaField idPrefix={`edit-${habit.id}`} value={area} onChange={setArea} />
         {confirm ? (

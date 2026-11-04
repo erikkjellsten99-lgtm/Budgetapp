@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import DaysSheet from './DaysSheet'
 import ProgressCard from './ProgressCard'
+import HealthCard from './HealthCard'
+import { formatProgress } from '../../supabase/functions/inbox/health'
 import TaskSheet from './TaskSheet'
 import { doneToday, dueTasks, upcomingTasks, whenText, type Task } from './tasks'
 import HabitSheet from './HabitSheet'
@@ -73,6 +75,7 @@ export default function Vanor() {
   const pausedToday = paused.has(today)
   // Kopplingar till borttagna vanor räknas inte (annars skulle t.ex. Stretching aldrig komma upp).
   const names = new Map(habits.map((h) => [h.id, h.name]))
+  const healthToday = data.health.find((d) => d.date === today)
   const rows = habits.map((h) => {
     const habit = { ...h, after: h.after.filter((id) => names.has(id)) }
     const info = todayInfo(habit, log, today, paused)
@@ -80,6 +83,15 @@ export default function Vanor() {
     if (habit.after.length && !info.done && !info.due && !pausedToday && info.count < info.goal) {
       const after = habit.after.map((id) => names.get(id)).join(' eller ')
       info.pills.unshift({ kind: 'plain', text: `Kommer upp när du bockat ${after}` })
+    }
+    // Bockas från Apple Hälsa: visa hur långt det är kvar (servern bockar när gränsen nås).
+    if (habit.auto && !info.done) {
+      const { metric, min } = habit.auto
+      const value = healthToday?.values[metric]
+      info.pills.push({
+        kind: 'plain',
+        text: value === undefined ? 'Bockas från Hälsa' : `Hälsa: ${formatProgress(metric, value, min)}`,
+      })
     }
     return { habit, info, plan: habitPlan(habit, (id) => names.get(id)) }
   })
@@ -177,6 +189,8 @@ export default function Vanor() {
           tasks={data.tasks}
           mustToday={[...tasksDue.map((t) => t.title), ...must.map((r) => r.habit.name)]}
         />}
+
+      <HealthCard health={data.health} habits={habits} today={today} />
 
       {pausedToday && (
         <div className="pause-banner" role="status">
