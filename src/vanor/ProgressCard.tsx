@@ -327,6 +327,13 @@ const RAYS = [
  * och blir starkare ju närmare målet du kommer, medan stjärnorna och städernas ljus bleknar.
  * Samma bildspråk som månadens solsystem och 3D-galaxen.
  */
+/** Blandar två hex-färger, t = 0 → a, t = 1 → b. */
+function mix(a: string, b: string, t: number): string {
+  const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
+  const [x, y] = [p(a), p(b)]
+  return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('')
+}
+
 function SunScene({ share, target, done }: { share: number; target: number; done: boolean }) {
   const pulse = useRisePulse(target)
   const arrived = done && share >= target - 0.001
@@ -369,11 +376,19 @@ function SunScene({ share, target, done }: { share: number; target: number; done
           <stop offset="0.5" stopColor="#fff3d6" stopOpacity="1" />
           <stop offset="1" stopColor="#fff3d6" stopOpacity="0" />
         </linearGradient>
-        <radialGradient id="sr-ground" cx={cx} cy={horizon} r="300" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#1c1a2e" />
-          <stop offset="0.35" stopColor="#0a0e1d" />
-          <stop offset="1" stopColor="#03050b" />
+        {/* Jordens yta: mörk nattsida vid låg sol, upplyst hav och land när solen står högt */}
+        <radialGradient id="sr-ground" cx={cx} cy={horizon} r={220 + 220 * s} gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor={mix('#1c1a2e', '#3d6a8f', s)} />
+          <stop offset="0.35" stopColor={mix('#0a0e1d', '#1d3a5a', s)} />
+          <stop offset="1" stopColor={mix('#03050b', '#07101f', s)} />
         </radialGradient>
+        {/* Gryningsskugga: kanterna längst från solen förblir mörka, mindre ju högre solen står */}
+        <linearGradient id="sr-night" x1="0" x2={W} y1="0" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#000" stopOpacity={0.75 - 0.45 * s} />
+          <stop offset={cx / W - 0.25} stopColor="#000" stopOpacity="0" />
+          <stop offset={cx / W + 0.22} stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity={0.75 - 0.45 * s} />
+        </linearGradient>
         {/* Atmosfärens band: varmt nära solen, blått längre bort */}
         <linearGradient id="sr-limb-warm" x1="0" x2={W} y1="0" y2="0" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#ff8a4a" stopOpacity="0" />
@@ -400,7 +415,7 @@ function SunScene({ share, target, done }: { share: number; target: number; done
         <clipPath id="sr-planet">
           <circle cx={cx} cy={planetY} r={R} />
         </clipPath>
-        <radialGradient id="sr-lit" cx={cx} cy={horizon} r="150" gradientTransform={`translate(${cx} ${horizon}) scale(1 0.35) translate(${-cx} ${-horizon})`} gradientUnits="userSpaceOnUse">
+        <radialGradient id="sr-lit" cx={cx} cy={horizon} r={110 + 260 * s} gradientTransform={`translate(${cx} ${horizon}) scale(1 ${0.3 + 0.35 * s}) translate(${-cx} ${-horizon})`} gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#fff" />
           <stop offset="1" stopColor="#000" />
         </radialGradient>
@@ -456,8 +471,10 @@ function SunScene({ share, target, done }: { share: number; target: number; done
           ))}
         </g>
         <g mask="url(#sr-lit-mask)">
-          <rect className="sr-fade sr-drift" x={-80} y={horizon - 4} width={W + 160} height={H - horizon + 4} filter="url(#sr-clouds)" opacity={0.2 + 0.5 * s} />
+          <rect y={horizon - 4} width={W} height={H - horizon + 4} fill="#2f6f8f" opacity={0.08 + 0.32 * s} />
+          <rect className="sr-fade sr-drift" x={-80} y={horizon - 4} width={W + 160} height={H - horizon + 4} filter="url(#sr-clouds)" opacity={0.12 + 0.78 * s} />
         </g>
+        <rect y={horizon - 4} width={W} height={H - horizon + 4} fill="url(#sr-night)" />
         <ellipse className="sr-fade" cx={cx} cy={horizon + 5} rx={26 + 20 * s} ry="2.6" fill="#ffd9a0" filter="url(#sr-soft)" opacity={0.15 + 0.45 * s} />
       </g>
 
