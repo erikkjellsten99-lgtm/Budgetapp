@@ -182,17 +182,20 @@ export default function InboxSettings() {
                   Öppna <b>Genvägar</b>, tryck <b>+</b> och döp genvägen till <b>Hälsa till Groundwork</b>.
                 </li>
                 <li>
-                  Sök efter <b>hälsodata</b> och lägg till <b>Sök efter hälsodata</b>. Tryck på typen och välj t.ex. <b>Steg</b>. Lägg
-                  till filtret <b>Startdatum är idag</b>. Finns <b>Gruppera efter</b>, välj <b>Dag</b>.
+                  Sök efter <b>hälso</b> och lägg till <b>Sök efter hälsoprov</b>. Tryck på typen och välj t.ex. <b>Steg</b>. Ändra
+                  filtret till <b>Startdatum är idag</b> och <b>Gruppera efter</b> till <b>Dag</b>. Stäng av <b>Ifyllning saknas</b> och
+                  låt <b>Gräns</b> vara av. Har du Apple Watch: <b>Lägg till filter</b> → <b>Källa</b> → din klocka, annars räknas stegen
+                  dubbelt (både telefonen och klockan). Första gången frågar iPhone om Genvägar får läsa Hälsa: tryck <b>Fortsätt</b>.
                 </li>
                 <li>Gör likadant för varje sak du vill skicka (tabellen nedan). Börja gärna med steg och lägg till fler sedan.</li>
                 <li>
                   Lägg till <b>Hämta innehåll från URL</b> sist: adressen ovan, <b>Metod</b> POST, rubriken <b>Authorization</b> med
-                  värdet ovan, <b>Brödtext</b> JSON. Lägg till ett fält <b>Text</b> per sak, med nyckeln i tabellen och värdet från
-                  rätt <b>Hälsodata</b> (tryck <b>Välj variabel</b>).
+                  värdet ovan, <b>Text i begäran</b> JSON. Lägg till ett fält <b>Text</b> per sak, med nyckeln i tabellen och värdet från
+                  rätt <b>Hälsoprover</b> (tryck <b>Välj variabel</b>).
                 </li>
                 <li>
-                  Lägg till <b>Visa resultat</b> och tryck ▶. Du ser t.ex. <code>"Hälsa sparad: 8 432 steg."</code>
+                  Lägg till <b>Visa resultat</b> och tryck ▶ (välj <b>Tillåt alltid</b>). Du ser t.ex.{' '}
+                  <code>"Hälsa sparad: 8 432 steg."</code>
                 </li>
                 <li>
                   Gör det automatiskt: <b>Automatisering</b> → <b>Tidpunkt på dagen</b>, t.ex. 21:30, <b>Kör omedelbart</b>, välj{' '}
@@ -222,8 +225,7 @@ export default function InboxSettings() {
                 </tbody>
               </table>
               <p className="push-note">
-                Sömn: välj filtret <b>Slutdatum är idag</b> i stället, så räknas natten som just tog slut. Vikt och puls: sortera på
-                senaste först med gränsen 1. iPhone låser hälsodatan när telefonen är låst, så välj en tid då du brukar ha den i
+                Sömn: välj filtret <b>Slutdatum är idag</b> i stället, så räknas natten som just tog slut. iPhone låser hälsodatan när telefonen är låst, så välj en tid då du brukar ha den i
                 handen, eller säg "Hej Siri, hälsa till Groundwork". Siffrorna sparas privat på ditt konto.
               </p>
             </details>
