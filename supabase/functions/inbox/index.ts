@@ -6,12 +6,15 @@
 //   Varje rad blir en sak att göra. Samma påminnelse läggs bara in en gång (se parse.ts).
 // - POST  (från Siri-genvägen "Ny uppgift"): JSON { sak: "Ringa mamma imorgon klockan 18" }.
 //   Dag och tid plockas ut ur meningen (spoken.ts). Svaret är en kort text som Siri läser upp.
+// - POST  (från genvägen "Hälsa till Groundwork"): JSON { steg: "8 432", traning: "34 min", … }, valfritt datum.
+//   Sparas som dagens hälsodata och bockar vanor vars regel är uppfylld (health.ts).
 //
 // Funktionen kontrollerar själv vem som anropar (verify_jwt är av).
 
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4'
 import { itemId, parseLines, stockholmToday, type InboxItem } from './parse.ts'
 import { confirmText, parseSpoken } from './spoken.ts'
+import { formatHealth, isHealthBody, metRules, METRIC_KEYS, parseHealthBody, type HealthDay } from './health.ts'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
@@ -60,6 +63,9 @@ async function receive(req: Request) {
   const body = type.includes('json') ? await req.json().catch(() => ({})) : { rader: await req.text() }
   const today = stockholmToday()
 
+  // Från Apple Hälsa: dagens siffror, och vanor som bockas automatiskt
+  if (body && typeof body === 'object' && isHealthBody(body)) return say(await saveHealth(owner.user_id, body, today))
+
   // Från Siri: en enda sak med dag och tid i meningen
   if (typeof body?.sak === 'string') {
     const item = parseSpoken(body.sak.slice(0, 500), today)
@@ -99,6 +105,58 @@ async function save(userId: string, items: InboxItem[], idSuffix = ''): Promise<
     return -1
   }
   return data?.length ?? 0
+}
+
+/** Sparar dagens hälsodata (slås ihop med det som redan finns den dagen) och bockar vanor med uppfylld regel. */
+async function saveHealth(userId: string, body: Record<string, unknown>, today: string): Promise<string> {
+  const date = typeof body.datum === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.datum.trim()) ? body.datum.trim() : today
+  const values = parseHealthBody(body)
+  if (!Object.keys(values).length) return 'Inga siffror kom fram från Hälsa. Kontrollera genvägen.'
+
+  const { data: existing } = await admin
+    .from('personal_records')
+    .select('data, deleted')
+    .eq('user_id', userId)
+    .eq('store', 'health')
+    .eq('id', date)
+    .maybeSingle()
+  const before = existing && !existing.deleted ? ((existing.data as HealthDay | null)?.values ?? {}) : {}
+  const day: HealthDay = { date, updated: Date.now(), values: { ...before, ...values } }
+  const { error } = await admin
+    .from('personal_records')
+    .upsert({ user_id: userId, store: 'health', id: date, data: day, deleted: false, client_ts: day.updated }, { onConflict: 'user_id,store,id' })
+  if (error) {
+    console.error('inbox health', error)
+    return 'Det gick inte att spara hälsodatan. Försök igen.'
+  }
+
+  // Vanor med regel: lägg till dagens bock om den inte redan finns. En bock du tagit bort själv kommer inte tillbaka.
+  const { data: habitRows } = await admin
+    .from('personal_records')
+    .select('data')
+    .eq('user_id', userId)
+    .eq('store', 'habits')
+    .eq('deleted', false)
+    .limit(500)
+  const habits = (habitRows ?? []).map((r) => r.data as { id: string; name: string; archived?: boolean; created?: string; auto?: { metric: (typeof METRIC_KEYS)[number]; min: number } })
+  const met = metRules(habits, day.values, date)
+  let checked: string[] = []
+  if (met.length) {
+    const now = Date.now()
+    const rows = met.map((habitId) => {
+      const key = `${date}|${habitId}`
+      return { user_id: userId, store: 'checks', id: key, data: { key, date, habitId }, deleted: false, client_ts: now }
+    })
+    const { data: inserted } = await admin
+      .from('personal_records')
+      .upsert(rows, { onConflict: 'user_id,store,id', ignoreDuplicates: true })
+      .select('id')
+    const newIds = new Set((inserted ?? []).map((r) => String(r.id).split('|')[1]))
+    checked = habits.filter((h) => newIds.has(h.id)).map((h) => h.name)
+  }
+
+  const shown = METRIC_KEYS.filter((m) => values[m] !== undefined).map((m) => formatHealth(m, values[m]!))
+  return `Hälsa sparad: ${shown.join(' · ')}.${checked.length ? ` Bockat: ${checked.join(', ')}.` : ''}`
 }
 
 Deno.serve(async (req) => {

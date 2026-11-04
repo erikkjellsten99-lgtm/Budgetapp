@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { getSyncState, supabase } from '../sync'
+import { METRIC_KEYS, METRICS } from '../../supabase/functions/inbox/health'
 
-// Påminnelser från iPhone: en genväg i appen Genvägar skickar listan "Groundwork" i Påminnelser
-// till Vanor → Att göra (Supabase-funktionen "inbox"). Här skapas nyckeln och genvägen förklaras.
+// Koppla iPhone: genvägar i appen Genvägar skickar till Groundwork (Supabase-funktionen "inbox") med en
+// personlig nyckel – listan "Groundwork" i Påminnelser, saker du säger till Siri och siffror från Apple Hälsa.
+// Här skapas nyckeln och de tre genvägarna förklaras.
 
 export const INBOX_URL = 'https://gnmbtioxwgzdooswpwxy.supabase.co/functions/v1/inbox'
 const STORAGE_KEY = 'vanor-inbox-nyckel'
@@ -54,7 +56,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
   )
 }
 
-/** Koppla iPhones Påminnelser till Vanor. */
+/** Koppla iPhone (Påminnelser, Siri och Apple Hälsa) till Vanor. */
 export default function InboxSettings() {
   const loggedIn = getSyncState().status !== 'utloggad'
   const [key, setKey] = useState<string | null>(readKey)
@@ -90,17 +92,18 @@ export default function InboxSettings() {
 
   return (
     <section className="push-settings inbox-settings" aria-labelledby="inbox-title">
-      <h3 id="inbox-title">Från iPhones Påminnelser</h3>
+      <h3 id="inbox-title">Koppla iPhone</h3>
       <div className="push-card">
         <p className="push-lead">
-          Skriv i listan <b>Groundwork</b> i appen Påminnelser, så hamnar sakerna under <b>Att göra</b> här, med datum och tid.
+          Påminnelser, Siri och Apple Hälsa kan skicka till Groundwork: saker hamnar under <b>Att göra</b>, och vanor kan bockas
+          automatiskt från t.ex. dina steg.
         </p>
 
         {!loggedIn ? (
           <p className="push-note">Du behöver vara inloggad (personikonen uppe till höger).</p>
         ) : !key ? (
           <button type="button" className="primary" disabled={busy} onClick={createKey}>
-            {busy ? 'Skapar …' : 'Koppla Påminnelser'}
+            {busy ? 'Skapar …' : 'Koppla iPhone'}
           </button>
         ) : (
           <>
@@ -112,7 +115,7 @@ export default function InboxSettings() {
             <p className="push-note">Nyckeln är personlig. Dela den inte, den kan lägga in saker hos dig.</p>
 
             <details className="inbox-steps">
-              <summary>Så gör du genvägen (5 min, en gång)</summary>
+              <summary>Påminnelser → Att göra</summary>
               <ol>
                 <li>
                   Öppna <b>Påminnelser</b> och skapa en lista som heter <b>Groundwork</b>.
@@ -149,11 +152,87 @@ export default function InboxSettings() {
               </p>
             </details>
 
+            <details className="inbox-steps">
+              <summary>Siri: "Ny uppgift"</summary>
+              <ol>
+                <li>
+                  Gör en kopia av genvägen ovan (håll fingret på den → <b>Duplicera</b>) och döp den till <b>Ny uppgift</b>.
+                </li>
+                <li>
+                  Ta bort allt utom <b>Hämta innehåll från URL</b>. Lägg till <b>Be om Text</b> överst med frågan{' '}
+                  <b>Vad ska du göra?</b> och stäng av <b>Tillåt flera rader</b>.
+                </li>
+                <li>
+                  I <b>Hämta innehåll från URL</b>: byt fältet <code>rader</code> mot <code>sak</code> med värdet <b>Angiven inmatning</b>.
+                </li>
+                <li>
+                  Lägg till <b>Visa resultat</b> sist. Säg sedan <b>"Hej Siri, ny uppgift"</b> och t.ex. "ringa mamma imorgon klockan 18".
+                </li>
+              </ol>
+              <p className="push-note">
+                Siri förstår idag, i morgon, veckodagar, datum som "25 november" och tider som "klockan 18" eller "17.30". Döp inte
+                genvägen till bara "Groundwork", då blandar Siri ihop dem.
+              </p>
+            </details>
+
+            <details className="inbox-steps">
+              <summary>Apple Hälsa → vanor och siffror</summary>
+              <ol>
+                <li>
+                  Öppna <b>Genvägar</b>, tryck <b>+</b> och döp genvägen till <b>Hälsa till Groundwork</b>.
+                </li>
+                <li>
+                  Sök efter <b>hälsodata</b> och lägg till <b>Sök efter hälsodata</b>. Tryck på typen och välj t.ex. <b>Steg</b>. Lägg
+                  till filtret <b>Startdatum är idag</b>. Finns <b>Gruppera efter</b>, välj <b>Dag</b>.
+                </li>
+                <li>Gör likadant för varje sak du vill skicka (tabellen nedan). Börja gärna med steg och lägg till fler sedan.</li>
+                <li>
+                  Lägg till <b>Hämta innehåll från URL</b> sist: adressen ovan, <b>Metod</b> POST, rubriken <b>Authorization</b> med
+                  värdet ovan, <b>Brödtext</b> JSON. Lägg till ett fält <b>Text</b> per sak, med nyckeln i tabellen och värdet från
+                  rätt <b>Hälsodata</b> (tryck <b>Välj variabel</b>).
+                </li>
+                <li>
+                  Lägg till <b>Visa resultat</b> och tryck ▶. Du ser t.ex. <code>"Hälsa sparad: 8 432 steg."</code>
+                </li>
+                <li>
+                  Gör det automatiskt: <b>Automatisering</b> → <b>Tidpunkt på dagen</b>, t.ex. 21:30, <b>Kör omedelbart</b>, välj{' '}
+                  <b>Hälsa till Groundwork</b>.
+                </li>
+                <li>
+                  Bocka vanor automatiskt: tryck <b>Ändra</b> på en vana i listan nedan och slå på{' '}
+                  <b>Bocka automatiskt från Apple Hälsa</b>, t.ex. steg minst 10 000.
+                </li>
+              </ol>
+              <table className="health-fields">
+                <thead>
+                  <tr>
+                    <th scope="col">I Hälsa</th>
+                    <th scope="col">Nyckel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {METRIC_KEYS.map((m) => (
+                    <tr key={m}>
+                      <td>{METRICS[m].health}</td>
+                      <td>
+                        <code>{METRICS[m].field}</code>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="push-note">
+                Sömn: välj filtret <b>Slutdatum är idag</b> i stället, så räknas natten som just tog slut. Vikt och puls: sortera på
+                senaste först med gränsen 1. iPhone låser hälsodatan när telefonen är låst, så välj en tid då du brukar ha den i
+                handen, eller säg "Hej Siri, hälsa till Groundwork". Siffrorna sparas privat på ditt konto.
+              </p>
+            </details>
+
             <div className="push-actions">
               {confirmNew ? (
                 <>
                   <button type="button" className="text-btn" disabled={busy} onClick={createKey}>
-                    Ja, skapa ny (den gamla slutar gälla)
+                    Ja, skapa ny (alla genvägar måste få den nya)
                   </button>
                   <button type="button" className="text-btn quiet" onClick={() => setConfirmNew(false)}>
                     Avbryt
