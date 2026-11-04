@@ -78,7 +78,11 @@ const toNumber = (s: string) => Number(s.replace(/[   ]/g, '').replace(',', '
 function minutes(line: string, plain: 'min' | 'h' | 's'): number | null {
   const l = line.toLowerCase()
   const clock = /(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(l)
-  if (clock) return Number(clock[1]) * 60 + Number(clock[2]) + Number(clock[3] ?? 0) / 60
+  if (clock) {
+    // Genvägars Tidslängd skrivs som m:ss ("3:00" = 3 min) eller h:mm:ss. Sömn "7:30" är h:mm.
+    if (plain === 's' && clock[3] === undefined) return Number(clock[1]) + Number(clock[2]) / 60
+    return Number(clock[1]) * 60 + Number(clock[2]) + Number(clock[3] ?? 0) / 60
+  }
   const h = /(\d+(?:[.,]\d+)?)\s*(?:h|tim|timmar|timme|hr|hours?)(?![a-zåäö])/.exec(l)
   const m = /(\d+(?:[.,]\d+)?)\s*(?:min|minuter|minut|m)(?![a-zåäö])/.exec(l)
   const s = /(\d+(?:[.,]\d+)?)\s*(?:s|sek|sekunder|sec)(?![a-zåäö])/.exec(l)
