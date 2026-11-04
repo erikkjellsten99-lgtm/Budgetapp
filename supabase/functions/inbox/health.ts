@@ -149,6 +149,34 @@ function lineValue(line: string, metric: HealthMetric): number | null {
   return value
 }
 
+// Sömnfaser som klockan skriver till Hälsa (svenska och engelska namn)
+const ASLEEP = /kärna|core|djup|deep|rem|sover|asleep|sömn|unspecified/i
+const IN_BED = /i säng|in bed|inbed/i
+const AWAKE = /vaken|awake/i
+
+/**
+ * Sömn från genvägen som en rad per mätning med fas och tid, t.ex. "Kärna | 45:00", "Djup | 1:02:00", "Vaken | 3:00".
+ * Tiden är Genvägars Tidslängd (m:ss eller h:mm:ss, eller sekunder). Vaken räknas inte. Finns faser (klockan)
+ * räknas bara de, annars "I säng" (bara telefonen). Null om inga rader har en fas.
+ */
+function sleepFromStages(lines: string[]): number | null {
+  let asleep = 0
+  let inBed = 0
+  let staged = false
+  for (const line of lines) {
+    const kind = AWAKE.test(line) ? 'awake' : IN_BED.test(line) ? 'bed' : ASLEEP.test(line) ? 'asleep' : null
+    if (!kind) continue
+    staged = true
+    const time = line.replace(AWAKE, ' ').replace(IN_BED, ' ').replace(ASLEEP, ' ').replace(/[|]/g, ' ')
+    const mins = minutes(time, 's')
+    if (mins === null) continue
+    if (kind === 'asleep') asleep += mins
+    if (kind === 'bed') inBed += mins
+  }
+  if (!staged) return null
+  return (asleep || inBed) / 60
+}
+
 /**
  * Tolkar ett fält från genvägen. Flera rader (en per mätning) läggs ihop för steg, distans m.m.,
  * och för vikt och puls gäller den första raden (genvägen sorterar senaste först).
@@ -158,6 +186,10 @@ export function parseHealthValue(raw: unknown, metric: HealthMetric): number | n
   // En siffra (t.ex. Tidslängd som tal) tolkas som text utan enhet, så att sekunder blir minuter
   if (typeof raw === 'number') raw = Number.isFinite(raw) && raw >= 0 ? String(raw) : ''
   const lines = (Array.isArray(raw) ? raw.map(String) : String(raw).split(/\r?\n/)).map((l) => l.trim()).filter(Boolean)
+  if (metric === 'sleepH') {
+    const staged = sleepFromStages(lines)
+    if (staged !== null) return round(staged, METRICS.sleepH.decimals + 1)
+  }
   const values = lines.map((l) => lineValue(l, metric)).filter((v): v is number => v !== null && Number.isFinite(v) && v >= 0)
   if (!values.length) return null
   const value = METRICS[metric].kind === 'sum' ? values.reduce((a, b) => a + b, 0) : values[0]

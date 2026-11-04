@@ -43,6 +43,14 @@ describe('hälsodata från genvägen', () => {
     expect(parseHealthValue('27000', 'sleepH')).toBe(7.5)
   })
 
+  it('sömn med faser från klockan: vaken räknas inte, i säng bara utan faser', () => {
+    const night = ['Kärna | 1:30:00', 'Djup | 45:00', 'REM | 50:00', 'Vaken | 4:00', 'Kärna | 2:55:00', 'I säng | 8:10:00']
+    expect(parseHealthValue(night.join('\n'), 'sleepH')).toBe(6)
+    expect(parseHealthValue(['Core | 2700', 'Deep | 1800', 'Awake | 300'], 'sleepH')).toBe(1.25)
+    expect(parseHealthValue('I säng | 7:30:00\nVaken | 10:00', 'sleepH')).toBe(7.5)
+    expect(parseHealthValue('Kärna | 7:30', 'sleepH')).toBe(0.13)
+  })
+
   it('hoppar över tomt och skräp', () => {
     expect(parseHealthValue('', 'steps')).toBeNull()
     expect(parseHealthValue('inga data', 'steps')).toBeNull()

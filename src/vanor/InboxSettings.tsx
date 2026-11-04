@@ -225,7 +225,10 @@ export default function InboxSettings() {
                 </tbody>
               </table>
               <p className="push-note">
-                Sömn: välj filtret <b>Slutdatum är idag</b> i stället, så räknas natten som just tog slut. iPhone låser hälsodatan när telefonen är låst, så välj en tid då du brukar ha den i
+                Sömn: sök efter <b>Sömnanalys</b> med <b>Slutdatum är idag</b> (natten som just tog slut) och <b>Gruppera efter</b>{' '}
+                <b>Ingen</b>. Lägg till <b>Upprepa med varje</b> och i den en <b>Text</b>: <b>Upprepa objekt</b> → <b>Värde</b>, ett{' '}
+                <code>|</code>, <b>Upprepa objekt</b> → <b>Tidslängd</b>. Fältet <code>somn</code> får <b>Upprepningsresultat</b>. Då räknas
+                bara tiden du sov, inte vaken tid. iPhone låser hälsodatan när telefonen är låst, så välj en tid då du brukar ha den i
                 handen, eller säg "Hej Siri, hälsa till Groundwork". Siffrorna sparas privat på ditt konto.
               </p>
             </details>
