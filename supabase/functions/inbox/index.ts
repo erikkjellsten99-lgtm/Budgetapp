@@ -14,7 +14,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4'
 import { itemId, parseLines, stockholmToday, type InboxItem } from './parse.ts'
 import { confirmText, parseSpoken } from './spoken.ts'
-import { formatHealth, isHealthBody, metRules, METRIC_KEYS, parseHealthBody, type HealthDay } from './health.ts'
+import { formatHealth, isHealthBody, metRules, METRIC_KEYS, parseHealthBody, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
@@ -138,14 +138,38 @@ async function saveHealth(userId: string, body: Record<string, unknown>, today: 
     .eq('store', 'habits')
     .eq('deleted', false)
     .limit(500)
-  const habits = (habitRows ?? []).map((r) => r.data as { id: string; name: string; archived?: boolean; created?: string; auto?: { metric: (typeof METRIC_KEYS)[number]; min: number } })
-  const met = metRules(habits, day.values, date)
+  const habits = (habitRows ?? []).map(
+    (r) => r.data as { id: string; name: string; archived?: boolean; created?: string; minimum?: string; auto?: AutoRule; ramp?: RampInfo },
+  )
+  // Regler som följer ökningen behöver veta hur många dagar som gjorts i ökningen före idag
+  const following = habits.filter((h) => h.auto?.follow && h.ramp)
+  const doneCount = new Map<string, number>()
+  if (following.length) {
+    const earliest = following.reduce((min, h) => (h.ramp!.start < min ? h.ramp!.start : min), date)
+    const { data: past } = await admin
+      .from('personal_records')
+      .select('data')
+      .eq('user_id', userId)
+      .eq('store', 'checks')
+      .eq('deleted', false)
+      .in('data->>habitId', following.map((h) => h.id))
+      .gte('data->>date', earliest)
+      .lt('data->>date', date)
+      .limit(5000)
+    for (const row of past ?? []) {
+      const c = row.data as { habitId: string; date: string }
+      const h = following.find((x) => x.id === c.habitId)
+      if (h && c.date >= h.ramp!.start) doneCount.set(c.habitId, (doneCount.get(c.habitId) ?? 0) + 1)
+    }
+  }
+  const met = metRules(habits, day.values, date, (id) => doneCount.get(id) ?? 0)
   let checked: string[] = []
   if (met.length) {
     const now = Date.now()
-    const rows = met.map((habitId) => {
+    const rows = met.map(({ id: habitId, min }) => {
       const key = `${date}|${habitId}`
-      return { user_id: userId, store: 'checks', id: key, data: { key, date, habitId }, deleted: false, client_ts: now }
+      const data = min ? { key, date, habitId, min: true } : { key, date, habitId }
+      return { user_id: userId, store: 'checks', id: key, data, deleted: false, client_ts: now }
     })
     const { data: inserted } = await admin
       .from('personal_records')

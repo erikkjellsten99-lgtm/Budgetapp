@@ -61,8 +61,18 @@ describe('hälsodata från genvägen', () => {
       { id: 'gammal', archived: true, auto: { metric: 'steps' as const, min: 1 } },
       { id: 'ny', created: '2026-11-10', auto: { metric: 'steps' as const, min: 1 } },
     ]
-    expect(metRules(habits, { steps: 10432, mindfulMin: 8 }, '2026-11-04')).toEqual(['steg'])
-    expect(metRules(habits, { steps: 9999, mindfulMin: 10 }, '2026-11-04')).toEqual(['med'])
+    expect(metRules(habits, { steps: 10432, mindfulMin: 8 }, '2026-11-04')).toEqual([{ id: 'steg', min: false }])
+    expect(metRules(habits, { steps: 9999, mindfulMin: 10 }, '2026-11-04')).toEqual([{ id: 'med', min: false }])
+  })
+
+  it('gränsen kan följa vanans ökning, och minimiversionen ger en minimibock', () => {
+    const med = [{ id: 'med', minimum: '2 min', ramp: { start: '2026-11-01', from: 3, step: 1, max: 20 }, auto: { metric: 'mindfulMin' as const, min: 2, follow: true } }]
+    // 4 gjorda dagar före idag → 7 min idag
+    expect(metRules(med, { mindfulMin: 7 }, '2026-11-06', () => 4)).toEqual([{ id: 'med', min: false }])
+    expect(metRules(med, { mindfulMin: 5 }, '2026-11-06', () => 4)).toEqual([{ id: 'med', min: true }])
+    expect(metRules(med, { mindfulMin: 1 }, '2026-11-06', () => 4)).toEqual([])
+    // Taket
+    expect(metRules(med, { mindfulMin: 20 }, '2026-11-06', () => 50)).toEqual([{ id: 'med', min: false }])
   })
 
   it('visar svenska tal och föreslår regler', () => {

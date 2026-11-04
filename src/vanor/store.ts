@@ -264,7 +264,8 @@ async function updateRecord(id: string, update: (h: Habit) => Habit) {
 function cleanAuto(rule: AutoRule | null): AutoRule | undefined {
   if (!rule || !RULE_METRICS.includes(rule.metric) || !Number.isFinite(rule.min) || rule.min <= 0) return undefined;
   const decimals = METRICS[rule.metric].decimals + 1;
-  return { metric: rule.metric, min: Math.min(1e6, Math.round(rule.min * 10 ** decimals) / 10 ** decimals) };
+  const min = Math.min(1e6, Math.round(rule.min * 10 ** decimals) / 10 ** decimals);
+  return rule.follow ? { metric: rule.metric, min, follow: true } : { metric: rule.metric, min };
 }
 
 /** En gradvis ökning med rimliga värden, eller undefined om den är tom eller trasig. */
