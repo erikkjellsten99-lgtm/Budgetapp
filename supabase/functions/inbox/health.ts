@@ -120,7 +120,8 @@ function lineValue(line: string, metric: HealthMetric): number | null {
  */
 export function parseHealthValue(raw: unknown, metric: HealthMetric): number | null {
   if (raw === null || raw === undefined) return null
-  if (typeof raw === 'number') return Number.isFinite(raw) && raw >= 0 ? raw : null
+  // En siffra (t.ex. Tidslängd som tal) tolkas som text utan enhet, så att sekunder blir minuter
+  if (typeof raw === 'number') raw = Number.isFinite(raw) && raw >= 0 ? String(raw) : ''
   const lines = (Array.isArray(raw) ? raw.map(String) : String(raw).split(/\r?\n/)).map((l) => l.trim()).filter(Boolean)
   const values = lines.map((l) => lineValue(l, metric)).filter((v): v is number => v !== null && Number.isFinite(v) && v >= 0)
   if (!values.length) return null
