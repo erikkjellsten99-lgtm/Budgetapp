@@ -2939,6 +2939,82 @@
   opacity: 0.5;
 }
 
+/* Levande solsystem i månadskortet */
+.vanor .ws-hero.space .gx-back {
+  pointer-events: none;
+}
+
+.vanor .ws-hero.space.alive .gx-twinkle {
+  animation: gx-twinkle 5s ease-in-out infinite;
+}
+
+.vanor .ws-hero.space.alive .gx-corona {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gx-corona 6s ease-in-out infinite;
+}
+
+.vanor .ws-hero.space.alive .gx-rays {
+  animation: gx-rays 5s ease-in-out infinite;
+}
+
+/* Kometerna drar förbi då och då: syns en stund, glider en bit och tonas bort */
+.vanor .ws-hero.space.alive .gx-comet {
+  opacity: 0;
+  animation: gx-comet 12s ease-in-out infinite;
+}
+
+@keyframes gx-twinkle {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes gx-corona {
+  50% {
+    transform: scale(1.08);
+    opacity: 0.8;
+  }
+}
+
+@keyframes gx-rays {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes gx-comet {
+  0% {
+    opacity: 0;
+    transform: translate(14px, -6px);
+  }
+  12% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 1;
+    transform: translate(-6px, 3px);
+  }
+  55%,
+  100% {
+    opacity: 0;
+    transform: translate(-14px, 6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vanor .ws-hero.space.alive .gx-twinkle,
+  .vanor .ws-hero.space.alive .gx-corona,
+  .vanor .ws-hero.space.alive .gx-rays {
+    animation: none;
+  }
+
+  .vanor .ws-hero.space.alive .gx-comet {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 /* Bara planeterna tar emot tryck – solens sken, stjärnor och kometer ligger annars i vägen */
 .vanor .galaxy * {
   pointer-events: none;

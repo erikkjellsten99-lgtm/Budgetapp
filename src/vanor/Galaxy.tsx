@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState, type ComponentType, type KeyboardEvent } from 'react'
+import { lazy, Suspense, useMemo, useState, type ComponentType, type CSSProperties, type KeyboardEvent } from 'react'
+import { useGlide, usePhase, useVisible } from './motion'
 import { isoWeek, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { planetColor, planetKind } from './planets'
@@ -106,6 +107,8 @@ export function GalaxyScene({
   satellites = 0,
   picked = null,
   onPick,
+  phase = 0,
+  grow = 1,
 }: {
   score: MonthScore
   /** En planet per vana, samma som i 3D-galaxen. */
@@ -117,6 +120,10 @@ export function GalaxyScene({
   satellites?: number
   picked?: string | null
   onPick?: (planet: MonthPlanet) => void
+  /** Tid i sekunder: planeter och satelliter går runt solen. 0 = stillbild. */
+  phase?: number
+  /** 0–1: planeterna glider ut på sina banor och växer när kortet visas. */
+  grow?: number
 }) {
   const W = small ? 120 : 360
   const H = small ? 72 : 168
@@ -145,7 +152,7 @@ export function GalaxyScene({
   // Satelliter på en egen yttre bana: en per avklarad Att göra-sak (högst 16 syns).
   const outerRx = (36 + Math.max(1, bodies.length) * Math.min(25, 150 / Math.max(1, bodies.length)) + 10) * k
   const satList = Array.from({ length: Math.min(16, satellites) }, (_, i) => {
-    const a = ((i * 360) / Math.min(16, satellites) + 18) * (Math.PI / 180)
+    const a = ((i * 360) / Math.min(16, satellites) + 18 + phase * 2.2) * (Math.PI / 180)
     const x = cx + outerRx * Math.cos(a)
     const y = cy + outerRx * 0.3 * Math.sin(a)
     // Lutning längs banan
@@ -176,12 +183,15 @@ export function GalaxyScene({
   const planets = bodies.map((body, i) => {
     const rx = (36 + i * step) * k
     const ry = rx * 0.3
-    // Fasta vinklar som sprider planeterna och håller dem innanför bilden.
-    const angle = ORBIT_ANGLES[i % ORBIT_ANGLES.length] * (Math.PI / 180)
-    const x = cx + rx * Math.cos(angle)
-    const y = cy + ry * Math.sin(angle)
+    // Startvinklar som sprider planeterna. Inre planeter går fortare runt solen än yttre (som i verkligheten).
+    const angle = (ORBIT_ANGLES[i % ORBIT_ANGLES.length] + phase * (7 / (1 + i * 0.55))) * (Math.PI / 180)
+    const out = 0.3 + 0.7 * grow
+    const x = cx + rx * out * Math.cos(angle)
+    const y = cy + ry * out * Math.sin(angle)
     const behind = Math.sin(angle) < 0
-    const size = body.checks > 0 ? (2.8 + 8 * body.share) * (small ? 0.55 : 1) * (behind ? 0.88 : 1) : 0
+    // 0 längst bak, 1 längst fram: planeten blir lite mindre och mörkare på baksidan
+    const depth = (Math.sin(angle) + 1) / 2
+    const size = body.checks > 0 ? (2.8 + 8 * body.share) * (small ? 0.55 : 1) * (0.84 + 0.16 * depth) * grow : 0
     const color = planetColor(i)
     return { body, i, rx, ry, x, y, behind, size, type: { light: color, dark: shade(color, 0.8), kind: planetKind(i) } }
   })
@@ -204,6 +214,8 @@ export function GalaxyScene({
     picked === p.body.id && <circle className="gx-picked" cx={p.x} cy={p.y} r={r + 4.5} />
 
   const planet = (p: (typeof planets)[number]) => {
+    // Medan planeten växer fram är den för liten för att ritas med alla lager
+    if (p.size > 0 && p.size < 0.6) return <g key={p.body.id} />
     if (!p.size) {
       return (
         <g key={p.body.id} {...pickable(p)}>
@@ -228,7 +240,7 @@ export function GalaxyScene({
     const tilt = -12
     const textured = !small && r > 3
     return (
-      <g key={p.body.id} opacity={p.behind && !perfect ? 0.88 : 1} {...pickable(p)}>
+      <g key={p.body.id} opacity={perfect ? 1 : 0.8 + 0.2 * ((p.y - cy) / (p.ry || 1) + 1) / 2} {...pickable(p)}>
         {hit(p)}
         {/* Perfekt vecka: planeten lyser upp med ett eget sken. */}
         {perfect && <circle cx={p.x} cy={p.y} r={r * 3.2 + 4} fill={`url(#gx-perfect-${id})`} />}
@@ -285,14 +297,7 @@ export function GalaxyScene({
     )
   }
 
-  return (
-    <svg
-      className={small ? 'galaxy small' : 'galaxy'}
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden={onPick && !small ? undefined : true}
-      aria-label={onPick && !small ? 'Månadens solsystem: en planet per vana' : undefined}
-    >
+  const defs = (
       <defs>
         <radialGradient id={`gx-bg-${id}`} cx="0.62" cy="0.5" r="0.85">
           <stop offset="0" stopColor="#0d1326" />
@@ -383,6 +388,13 @@ export function GalaxyScene({
           <stop offset="1" stopColor="#000" stopOpacity="0.55" />
         </radialGradient>
       </defs>
+  )
+
+  // Bakgrunden (rymd, nebulosa, stjärnor, kometer, banor) ändras inte när planeterna rör sig,
+  // så den ritas i en egen bild och behöver inte ritas om varje bildruta.
+  const backdrop = (
+    <>
+
 
       <rect width={W} height={H} fill={`url(#gx-bg-${id})`} />
       {/* Nebulosan växer fram med månadens procent. */}
@@ -392,14 +404,19 @@ export function GalaxyScene({
         <circle key={`f${i}`} cx={s.x} cy={s.y} r={s.r} fill={i % 7 === 0 ? '#ffe3c4' : i % 5 === 0 ? '#c4d6ff' : '#e6ebff'} opacity={s.o} />
       ))}
       {earned.map((s, i) => (
-        <g key={`e${i}`} opacity={s.o}>
+        <g
+          key={`e${i}`}
+          className={i % 4 === 0 ? 'gx-twinkle' : undefined}
+          style={i % 4 === 0 ? ({ animationDelay: `${(i * 0.53) % 5}s` } as CSSProperties) : undefined}
+          opacity={s.o}
+        >
           <circle cx={s.x} cy={s.y} r={s.r * 3.2} fill={`url(#gx-star-${s.hot ? 'hot' : 'warm'}-${id})`} />
           <circle cx={s.x} cy={s.y} r={s.r * 0.7} fill={s.hot ? '#eef3ff' : '#fffdf6'} />
         </g>
       ))}
 
       {cometList.map((c, i) => (
-        <g key={`c${i}`} className="gx-comet">
+        <g key={`c${i}`} className="gx-comet" style={{ animationDelay: `${i * 3.7}s` } as CSSProperties}>
           <defs>
             <linearGradient id={`gx-comet-${id}-${i}`} gradientUnits="userSpaceOnUse" x1={c.x} y1={c.y} x2={c.tx} y2={c.ty}>
               <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
@@ -416,11 +433,16 @@ export function GalaxyScene({
       {planets.map((p) => (
         <ellipse key={`o${p.i}`} className={picked === p.body.id ? 'gx-orbit picked' : 'gx-orbit'} cx={cx} cy={cy} rx={p.rx} ry={p.ry} />
       ))}
+    </>
+  )
+  const foreground = (
+    <>
       {planets.filter((p) => p.behind).map(planet)}
 
       {/* Solen, samma som veckans soluppgång: mjukt sken, varm korona, tunna strålar och en bländande kärna */}
-      <circle cx={cx} cy={cy} r={(small ? 20 : 58) * (0.7 + 0.3 * progress)} fill={`url(#gx-corona-${id})`} />
+      <circle className="gx-corona" cx={cx} cy={cy} r={(small ? 20 : 58) * (0.7 + 0.3 * progress)} fill={`url(#gx-corona-${id})`} />
       <circle cx={cx} cy={cy} r={small ? 12 : 30} fill={`url(#gx-bloom-${id})`} />
+      <g className="gx-rays">
       {SUN_RAYS.map((ray) => (
         <rect
           key={ray.angle}
@@ -433,6 +455,7 @@ export function GalaxyScene({
           transform={`rotate(${ray.angle} ${cx} ${cy})`}
         />
       ))}
+      </g>
       <circle cx={cx} cy={cy} r={small ? 2.6 : 6} fill="#fffdf6" />
 
       {satList.length > 0 && <ellipse className="gx-orbit sat" cx={cx} cy={cy} rx={outerRx} ry={outerRx * 0.3} />}
@@ -440,7 +463,43 @@ export function GalaxyScene({
       {planets.filter((p) => !p.behind).map(planet)}
       {satList.filter((sat) => !sat.behind).map(satellite)}
       <rect width={W} height={H} fill={`url(#gx-vignette-${id})`} pointerEvents="none" />
-    </svg>
+    </>
+  )
+  const label = onPick && !small ? 'Månadens solsystem: en planet per vana' : undefined
+  const staticBack = useMemo(
+    () => (
+      <svg className="galaxy gx-back" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        {defs}
+        {backdrop}
+      </svg>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id, progress, score.checks, comets, satellites, picked, bodies.length, small],
+  )
+
+  if (small) {
+    return (
+      <svg className="galaxy small" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        {defs}
+        {backdrop}
+        {foreground}
+      </svg>
+    )
+  }
+  return (
+    <>
+      {staticBack}
+      <svg
+        className="galaxy gx-fg"
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden={label ? undefined : true}
+        aria-label={label}
+      >
+        {defs}
+        {foreground}
+      </svg>
+    </>
   )
 }
 
@@ -548,15 +607,22 @@ export function MonthView({ habits, log, paused, today, tasks }: { habits: Habit
   const best = archive.length >= 2 ? archive.reduce((a, b) => (b.pct > a.pct ? b : a)) : null
   const headingForBest = best !== null && forecast.projected !== null && forecast.projected > best.pct
   const diff = lastComparable && forecast.projected !== null ? forecast.projected - last.pct : null
+  // Levande bild: planeterna glider ut och kretsar när kortet syns, och står still när en planet är vald
+  const [heroRef, visible] = useVisible<HTMLDivElement>()
+  const grow = useGlide(1, visible, 1600)
+  const pctShown = useGlide(score.pct, visible)
+  const phase = usePhase(visible && !picked)
 
   return (
     <>
-      <div className="ws-hero space">
+      <div ref={heroRef} className="ws-hero space alive">
         <div className="ws-text">
           <span className="ws-label" id="sun-title">
             {title}
           </span>
-          <b className="ws-big">{score.pct}&nbsp;%</b>
+          <b className="ws-big" aria-label={`${score.pct} procent`}>
+            {Math.round(pctShown)}&nbsp;%
+          </b>
           <span className="ws-sub">av månadens mål</span>
           <button type="button" className="gx-open" onClick={() => setGalaxyOpen(true)}>
             Öppna din galax <span aria-hidden="true">›</span>
@@ -569,6 +635,8 @@ export function MonthView({ habits, log, paused, today, tasks }: { habits: Habit
           satellites={satellites.length}
           picked={picked?.id ?? null}
           onPick={(planet) => setPickedId((cur) => (cur === planet.id ? null : planet.id))}
+          phase={phase}
+          grow={grow}
         />
         {!picked && <span className="gx-tap-hint">Tryck på en planet för vanan</span>}
       </div>

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
+import { useState, type CSSProperties } from 'react'
+import { useGlide, useRisePulse, useVisible } from './motion'
 import { addDays, isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { MonthView } from './Galaxy'
@@ -240,78 +241,6 @@ const CITIES = (() => {
     return { x: cluster ? 40 + (rand() - 0.5) * 60 + (rand() < 0.5 ? 0 : 230) : x, y: 117 + rand() * 30, r: 0.25 + rand() * 0.45, o: 0.3 + rand() * 0.6 }
   })
 })()
-
-const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-
-/**
- * Glider mjukt mot målvärdet: från 0 när kortet visas, och från förra värdet när det ändras (t.ex. en ny bock).
- * Med "reducerad rörelse" i telefonen hoppar värdet direkt.
- */
-function useGlide(target: number, active: boolean, ms = 1400): number {
-  const [value, setValue] = useState(() => (reducedMotion() ? target : 0))
-  const current = useRef(value)
-  useEffect(() => {
-    if (!active && !reducedMotion()) {
-      // Dold flik: börja om från horisonten nästa gång kortet syns
-      current.current = 0
-      setValue(0)
-      return
-    }
-    if (reducedMotion()) {
-      current.current = target
-      setValue(target)
-      return
-    }
-    const from = current.current
-    if (from === target) return
-    const start = performance.now()
-    const duration = from === 0 ? ms : ms * 0.6
-    let frame = 0
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / duration)
-      const eased = 1 - Math.pow(1 - t, 3)
-      current.current = from + (target - from) * eased
-      setValue(current.current)
-      if (t < 1) frame = requestAnimationFrame(step)
-    }
-    frame = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(frame)
-  }, [target, active, ms])
-  return value
-}
-
-/** Sant när elementet syns på skärmen (Vanor-fliken ligger laddad i bakgrunden). */
-function useVisible<T extends Element>(): [RefObject<T | null>, boolean] {
-  const ref = useRef<T>(null)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el || typeof IntersectionObserver === 'undefined') {
-      setVisible(true)
-      return
-    }
-    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.3 })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-  return [ref, visible]
-}
-
-/** Sant en kort stund när värdet ökar efter första visningen (ljuspulsen när du bockar). */
-function useRisePulse(value: number): boolean {
-  const last = useRef(value)
-  const [pulse, setPulse] = useState(false)
-  useEffect(() => {
-    if (value > last.current && !reducedMotion()) {
-      setPulse(true)
-      const t = setTimeout(() => setPulse(false), 1200)
-      last.current = value
-      return () => clearTimeout(t)
-    }
-    last.current = value
-  }, [value])
-  return pulse
-}
 
 /** Solens strålar: tunna, avsmalnande streck som från en kameralins. */
 const RAYS = [
