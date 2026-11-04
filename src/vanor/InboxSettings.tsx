@@ -183,8 +183,9 @@ export default function InboxSettings() {
                 </li>
                 <li>
                   Sök efter <b>hälso</b> och lägg till <b>Sök efter hälsoprov</b>. Tryck på typen och välj t.ex. <b>Steg</b>. Ändra
-                  filtret till <b>Startdatum är idag</b> och <b>Gruppera efter</b> till <b>Dag</b>. Första gången frågar iPhone om
-                  Genvägar får läsa Hälsa: tryck <b>Fortsätt</b>.
+                  filtret till <b>Startdatum är idag</b>, <b>Gruppera efter</b> till <b>Dag</b>, <b>Sortera efter</b> till{' '}
+                  <b>Startdatum</b> (senaste först) och slå på <b>Gräns 1</b>. Stäng av <b>Ifyllning saknas</b>. Annars kan gårdagen
+                  räknas med. Första gången frågar iPhone om Genvägar får läsa Hälsa: tryck <b>Fortsätt</b>.
                 </li>
                 <li>Gör likadant för varje sak du vill skicka (tabellen nedan). Börja gärna med steg och lägg till fler sedan.</li>
                 <li>
@@ -224,8 +225,7 @@ export default function InboxSettings() {
                 </tbody>
               </table>
               <p className="push-note">
-                Sömn: välj filtret <b>Slutdatum är idag</b> i stället, så räknas natten som just tog slut. Vikt och puls: sortera på
-                senaste först med gränsen 1. iPhone låser hälsodatan när telefonen är låst, så välj en tid då du brukar ha den i
+                Sömn: välj filtret <b>Slutdatum är idag</b> i stället, så räknas natten som just tog slut. iPhone låser hälsodatan när telefonen är låst, så välj en tid då du brukar ha den i
                 handen, eller säg "Hej Siri, hälsa till Groundwork". Siffrorna sparas privat på ditt konto.
               </p>
             </details>
