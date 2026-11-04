@@ -443,7 +443,7 @@ function RampField({ idPrefix, on, setOn, from, setFrom, step, setStep, max, set
 }
 
 /** Bockas automatiskt från Apple Hälsa: välj mått och gräns, t.ex. steg minst 10 000. */
-function AutoField({ idPrefix, on, setOn, metric, setMetric, min, setMin }: {
+function AutoField({ idPrefix, on, setOn, metric, setMetric, min, setMin, canFollow, follow, setFollow }: {
   idPrefix: string
   on: boolean
   setOn: (v: boolean) => void
@@ -451,6 +451,10 @@ function AutoField({ idPrefix, on, setOn, metric, setMetric, min, setMin }: {
   setMetric: (m: HealthMetric) => void
   min: string
   setMin: (v: string) => void
+  /** Vanan ökar gradvis och måttet är minuter: gränsen kan följa ökningen. */
+  canFollow: boolean
+  follow: boolean
+  setFollow: (v: boolean) => void
 }) {
   const info = METRICS[metric]
   const value = Number(min.replace(',', '.'))
@@ -499,8 +503,21 @@ function AutoField({ idPrefix, on, setOn, metric, setMetric, min, setMin }: {
               <small>{info.unit}</small>
             </label>
           </div>
+          {canFollow && (
+            <label className="push-toggle">
+              <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />
+              <span>
+                <b>Följ ökningen</b>
+                <small>Gränsen blir dagens längd, t.ex. 9 min idag och 10 i morgon. Minimiversionen ger en minimibock.</small>
+              </span>
+            </label>
+          )}
           <small className="field-help">
-            {valid ? `Vanan bockas en dag du når ${formatGoal(metric, value)}.` : 'Fyll i en gräns större än 0.'}
+            {canFollow && follow
+              ? 'Vanan bockas när du når dagens längd i ökningen.'
+              : valid
+                ? `Vanan bockas en dag du når ${formatGoal(metric, value)}.`
+                : 'Fyll i en gräns större än 0.'}
           </small>
         </>
       )}
@@ -550,6 +567,7 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
   const [autoOn, setAutoOn] = useState(!!habit.auto)
   const [autoMetric, setAutoMetric] = useState<HealthMetric>(suggested.metric)
   const [autoMin, setAutoMin] = useState(String(suggested.min))
+  const [autoFollow, setAutoFollow] = useState(habit.auto ? !!habit.auto.follow : !!habit.ramp)
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const error = nameError(name, active, habit.id)
@@ -565,7 +583,8 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
     // Ändras startlängden börjar ökningen om från idag, annars fortsätter den där den är.
     const start = habit.ramp && habit.ramp.from === from ? habit.ramp.start : todayKey()
     const ramp = rampOn ? { start, from, step: Number(rampStep), max: Number(rampMax), unit: 'min' } : null
-    const auto = autoOn ? { metric: autoMetric, min: autoValue } : null
+    const canFollow = rampOn && METRICS[autoMetric].unit === 'min'
+    const auto = autoOn ? { metric: autoMetric, min: autoValue, ...(canFollow && autoFollow ? { follow: true } : {}) } : null
     await updateHabit(habit.id, { name, goal, minimum, after, remind, remindDays, days, ramp, area, auto })
     onDone()
   }
@@ -618,6 +637,9 @@ function EditHabit({ habit, active, onDone }: { habit: Habit; active: Habit[]; o
           setMetric={setAutoMetric}
           min={autoMin}
           setMin={setAutoMin}
+          canFollow={rampOn && METRICS[autoMetric].unit === 'min'}
+          follow={autoFollow}
+          setFollow={setAutoFollow}
         />
         <AreaField idPrefix={`edit-${habit.id}`} value={area} onChange={setArea} />
         {confirm ? (

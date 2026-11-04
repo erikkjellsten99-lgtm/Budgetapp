@@ -10,7 +10,18 @@ const clock = (ms: number) => new Date(ms).toLocaleTimeString('sv-SE', { hour: '
  * Visas bara när genvägen har skickat något de senaste två dagarna. Har en vana en regel för måttet
  * visas hur långt det är kvar till gränsen.
  */
-export default function HealthCard({ health, habits, today }: { health: HealthDay[]; habits: Habit[]; today: DateKey }) {
+export default function HealthCard({
+  health,
+  habits,
+  today,
+  goalOf,
+}: {
+  health: HealthDay[]
+  habits: Habit[]
+  today: DateKey
+  /** Dagens gräns för en vana med regel (kan följa vanans ökning). */
+  goalOf: (h: Habit) => number
+}) {
   const byDate = new Map(health.map((d) => [d.date, d]))
   const latest = byDate.get(today) ?? byDate.get(addDays(today, -1))
   if (!latest || !Object.keys(latest.values).length) return null
@@ -18,7 +29,7 @@ export default function HealthCard({ health, habits, today }: { health: HealthDa
   const isToday = latest.date === today
   const week = Array.from({ length: 7 }, (_, i) => addDays(latest.date, i - 6))
   const goals = new Map<HealthMetric, { min: number; name: string }>()
-  for (const h of habits) if (h.auto && !h.archived) goals.set(h.auto.metric, { min: h.auto.min, name: h.name })
+  for (const h of habits) if (h.auto && !h.archived) goals.set(h.auto.metric, { min: goalOf(h), name: h.name })
   const shown = METRIC_KEYS.filter((m) => latest.values[m] !== undefined)
 
   return (

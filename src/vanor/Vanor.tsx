@@ -86,7 +86,8 @@ export default function Vanor() {
     }
     // Bockas från Apple Hälsa: visa hur långt det är kvar (servern bockar när gränsen nås).
     if (habit.auto && !info.done) {
-      const { metric, min } = habit.auto
+      const { metric } = habit.auto
+      const min = autoGoal(habit, log, today)
       const value = healthToday?.values[metric]
       info.pills.push({
         kind: 'plain',
@@ -190,7 +191,7 @@ export default function Vanor() {
           mustToday={[...tasksDue.map((t) => t.title), ...must.map((r) => r.habit.name)]}
         />}
 
-      <HealthCard health={data.health} habits={habits} today={today} />
+      <HealthCard health={data.health} habits={habits} today={today} goalOf={(h) => autoGoal(h, log, today)} />
 
       {pausedToday && (
         <div className="pause-banner" role="status">
@@ -475,6 +476,12 @@ function TaskRow({ task, today, onOpen }: { task: Task; today: DateKey; onOpen: 
       </button>
     </li>
   )
+}
+
+/** Gränsen för en vana som bockas från Hälsa idag: följer ökningen om regeln säger det, annars fast. */
+function autoGoal(habit: Habit, log: ReturnType<typeof toLog>, today: DateKey): number {
+  const rule = habit.auto!
+  return rule.follow && habit.ramp ? (rampToday(habit, log, today) ?? rule.min) : rule.min
 }
 
 /** Dagens citat. Tryck för att bläddra till ett annat; nästa dag börjar det om. */

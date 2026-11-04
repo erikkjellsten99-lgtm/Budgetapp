@@ -68,6 +68,37 @@ export interface HealthDay {
 export interface AutoRule {
   metric: HealthMetric
   min: number
+  /** Gränsen följer vanans gradvisa ökning (t.ex. meditation +1 min per dag) i stället för att vara fast. */
+  follow?: boolean
+}
+
+/** En vanas gradvisa ökning (samma fält som Ramp i appen). */
+export interface RampInfo {
+  start: string
+  from: number
+  step: number
+  max: number
+}
+
+/** Dagens längd i en ökning: start + steg för varje gjord dag före idag, upp till taket (samma som rampToday i appen). */
+export const rampLength = (r: RampInfo, doneBefore: number) => Math.min(r.max, r.from + r.step * doneBefore)
+
+/** Första talet i en minimiversion, t.ex. "2 min" → 2. */
+export function minimumAmount(text: string | undefined): number | null {
+  const m = text ? NUMBER.exec(text) : null
+  return m ? toNumber(m[0]) : null
+}
+
+/** Vad en vana med regel behöver idag: hel gräns och ev. minimiversion. */
+export function ruleTarget(
+  habit: { auto?: AutoRule; ramp?: RampInfo; minimum?: string },
+  doneBefore: number,
+): { full: number; minimum: number | null } | null {
+  const rule = habit.auto
+  if (!rule) return null
+  const full = rule.follow && habit.ramp ? rampLength(habit.ramp, doneBefore) : rule.min
+  const min = rule.follow ? minimumAmount(habit.minimum) : null
+  return { full, minimum: min !== null && min < full ? min : null }
 }
 
 // Siffror som "8 432", "8 432", "5,2", "1.5" och "12"
@@ -150,19 +181,26 @@ export function parseHealthBody(body: Record<string, unknown>): Partial<Record<H
 /** Skickade genvägen hälsodata? (minst ett känt fält) */
 export const isHealthBody = (body: Record<string, unknown>) => METRIC_KEYS.some((m) => METRICS[m].field in body)
 
-/** Vanor (id) vars regel är uppfylld av dagens värden. Borttagna vanor och vanor som inte fanns än räknas inte. */
+/**
+ * Vanor vars regel är uppfylld av dagens värden: 'full' när gränsen nås, 'min' när bara minimiversionen nås.
+ * Borttagna vanor och vanor som inte fanns än räknas inte. `doneBefore` = gjorda dagar i ökningen före idag.
+ */
 export function metRules(
-  habits: { id: string; archived?: boolean; created?: string; auto?: AutoRule }[],
+  habits: { id: string; archived?: boolean; created?: string; auto?: AutoRule; ramp?: RampInfo; minimum?: string }[],
   values: Partial<Record<HealthMetric, number>>,
   date: string,
-): string[] {
-  return habits
-    .filter((h) => !h.archived && h.auto && (!h.created || h.created <= date))
-    .filter((h) => {
-      const v = values[h.auto!.metric]
-      return v !== undefined && v >= h.auto!.min
-    })
-    .map((h) => h.id)
+  doneBefore: (habitId: string) => number = () => 0,
+): { id: string; min: boolean }[] {
+  const out: { id: string; min: boolean }[] = []
+  for (const h of habits) {
+    if (h.archived || !h.auto || (h.created && h.created > date)) continue
+    const v = values[h.auto.metric]
+    const target = ruleTarget(h, doneBefore(h.id))
+    if (v === undefined || !target) continue
+    if (v >= target.full) out.push({ id: h.id, min: false })
+    else if (target.minimum !== null && v >= target.minimum) out.push({ id: h.id, min: true })
+  }
+  return out
 }
 
 /** "8 432 steg", "5,2 km", "7 h 12 min", "34 min" – svenska siffror. */
