@@ -1175,6 +1175,12 @@
   transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Soluppgången rör sig själv (positionen drivs av JS), så ingen extra övergång där */
+.vanor .ws-scene.alive .ws-sun,
+.vanor .ws-scene.alive .sr-fade {
+  transition: none;
+}
+
 .vanor .ws-sun.full .ws-halo {
   animation: ws-breathe 3.2s ease-in-out infinite;
   transform-box: fill-box;
@@ -2693,6 +2699,76 @@
 .vanor .ws-scene.sunrise .ws-rail-dot {
   fill: #0b1022;
   stroke: #ffc46b;
+}
+
+/* Levande soluppgång: strålar som andas, stjärnor som blinkar, dis som glider, puls vid ny bock, sken vid 100 % */
+.vanor .ws-scene.alive .ws-rays {
+  animation: ws-rays 5s ease-in-out infinite;
+}
+
+.vanor .ws-scene.alive .sr-twinkle {
+  animation: ws-twinkle 4s ease-in-out infinite;
+}
+
+.vanor .ws-scene.alive .sr-drift {
+  animation: ws-drift 40s ease-in-out infinite alternate;
+}
+
+.vanor .ws-scene.pulse .ws-halo {
+  animation: ws-pulse 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.vanor .ws-scene .ws-flash {
+  opacity: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: ws-flash 2.2s ease-out 1;
+}
+
+@keyframes ws-rays {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes ws-twinkle {
+  50% {
+    opacity: 0.15;
+  }
+}
+
+@keyframes ws-drift {
+  to {
+    transform: translateX(70px);
+  }
+}
+
+@keyframes ws-pulse {
+  30% {
+    transform: scale(1.6);
+    filter: brightness(1.4);
+  }
+}
+
+@keyframes ws-flash {
+  20% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vanor .ws-scene.alive .ws-rays,
+  .vanor .ws-scene.alive .sr-twinkle,
+  .vanor .ws-scene.alive .sr-drift,
+  .vanor .ws-scene.pulse .ws-halo,
+  .vanor .ws-scene .ws-flash {
+    animation: none;
+  }
 }
 
 /* Förklaringar: "Så funkar bilden" i månadsvyn och "Så funkar din galax" i 3D */
