@@ -32,6 +32,15 @@ describe('hälsodata från genvägen', () => {
     expect(parseHealthValue('7,5', 'sleepH')).toBe(7.5)
     expect(parseHealthValue('34', 'exerciseMin')).toBe(34)
     expect(parseHealthValue('600 s', 'mindfulMin')).toBe(10)
+    // Genvägars Tidslängd skickar sekunder utan enhet
+    expect(parseHealthValue('180', 'mindfulMin')).toBe(3)
+    expect(parseHealthValue(180, 'mindfulMin')).toBe(3)
+    expect(parseHealthValue('3:00', 'mindfulMin')).toBe(3)
+    expect(parseHealthValue('0:05:30', 'mindfulMin')).toBe(5.5)
+    expect(parseHealthValue('7:30', 'sleepH')).toBe(7.5)
+    expect(parseHealthValue('180\n420', 'mindfulMin')).toBe(10)
+    expect(parseHealthValue('12 min', 'mindfulMin')).toBe(12)
+    expect(parseHealthValue('27000', 'sleepH')).toBe(7.5)
   })
 
   it('hoppar över tomt och skräp', () => {

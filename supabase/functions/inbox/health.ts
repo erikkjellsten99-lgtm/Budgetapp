@@ -28,8 +28,11 @@ interface MetricInfo {
   unit: string
   /** sum = flera mätningar under dagen läggs ihop, latest = senaste mätningen gäller. */
   kind: 'sum' | 'latest'
-  /** Hur värdet är skrivet utan enhet: tid i minuter eller timmar, annars en vanlig siffra. */
-  duration?: 'min' | 'h'
+  /**
+   * Värdet är en tid. Skrivs den utan enhet gäller: 'min' = minuter, 'h' = timmar (över 24 = sekunder),
+   * 's' = sekunder (Genvägars "Tidslängd" för mindfulness är sekunder, t.ex. 180 = 3 min).
+   */
+  duration?: 'min' | 'h' | 's'
   /** Kan bocka en vana automatiskt (t.ex. 10 000 steg). Vikt och puls är bara siffror att se. */
   rule?: { default: number; step: number }
   decimals: number
@@ -43,7 +46,7 @@ export const METRICS: Record<HealthMetric, MetricInfo> = {
   standHours: { field: 'sta', label: 'Ståtimmar', health: 'Ståtimmar', unit: 'h', kind: 'sum', rule: { default: 12, step: 1 }, decimals: 0 },
   flights: { field: 'trappor', label: 'Trappor', health: 'Våningar uppför trappor', unit: 'våningar', kind: 'sum', rule: { default: 10, step: 1 }, decimals: 0 },
   sleepH: { field: 'somn', label: 'Sömn', health: 'Sömn', unit: 'h', kind: 'sum', duration: 'h', rule: { default: 7, step: 0.5 }, decimals: 1 },
-  mindfulMin: { field: 'mindfulness', label: 'Mindfulness', health: 'Mindfulnessminuter', unit: 'min', kind: 'sum', duration: 'min', rule: { default: 10, step: 5 }, decimals: 0 },
+  mindfulMin: { field: 'mindfulness', label: 'Mindfulness', health: 'Mindfulnessminuter', unit: 'min', kind: 'sum', duration: 's', rule: { default: 10, step: 5 }, decimals: 0 },
   waterL: { field: 'vatten', label: 'Vatten', health: 'Vatten', unit: 'l', kind: 'sum', rule: { default: 2, step: 0.25 }, decimals: 1 },
   weightKg: { field: 'vikt', label: 'Vikt', health: 'Vikt', unit: 'kg', kind: 'latest', decimals: 1 },
   restingHr: { field: 'vilopuls', label: 'Vilopuls', health: 'Vilopuls', unit: 'slag/min', kind: 'latest', decimals: 0 },
@@ -72,17 +75,25 @@ const NUMBER = /\d{1,3}(?:[   ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?/
 const toNumber = (s: string) => Number(s.replace(/[   ]/g, '').replace(',', '.'))
 
 /** Tid i minuter ur t.ex. "7 h 32 min", "7 tim 32 min", "7:32", "452 min", "27120 s" eller "7,5 h". */
-function minutes(line: string, plain: 'min' | 'h'): number | null {
+function minutes(line: string, plain: 'min' | 'h' | 's'): number | null {
   const l = line.toLowerCase()
   const clock = /(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(l)
-  if (clock) return Number(clock[1]) * 60 + Number(clock[2]) + Number(clock[3] ?? 0) / 60
+  if (clock) {
+    // Genvägars Tidslängd skrivs som m:ss ("3:00" = 3 min) eller h:mm:ss. Sömn "7:30" är h:mm.
+    if (plain === 's' && clock[3] === undefined) return Number(clock[1]) + Number(clock[2]) / 60
+    return Number(clock[1]) * 60 + Number(clock[2]) + Number(clock[3] ?? 0) / 60
+  }
   const h = /(\d+(?:[.,]\d+)?)\s*(?:h|tim|timmar|timme|hr|hours?)(?![a-zåäö])/.exec(l)
   const m = /(\d+(?:[.,]\d+)?)\s*(?:min|minuter|minut|m)(?![a-zåäö])/.exec(l)
   const s = /(\d+(?:[.,]\d+)?)\s*(?:s|sek|sekunder|sec)(?![a-zåäö])/.exec(l)
   if (h || m || s) return (h ? toNumber(h[1]) * 60 : 0) + (m ? toNumber(m[1]) : 0) + (s ? toNumber(s[1]) / 60 : 0)
   const n = NUMBER.exec(l)
   if (!n) return null
-  return plain === 'h' ? toNumber(n[0]) * 60 : toNumber(n[0])
+  const v = toNumber(n[0])
+  if (plain === 's') return v / 60
+  // Sömn utan enhet: upp till 24 är timmar, mer än så är sekunder (Genvägars Tidslängd)
+  if (plain === 'h') return v > 24 ? v / 60 : v * 60
+  return v
 }
 
 /** Ett värde ur en rad, i måttets enhet. Null om raden inte innehåller någon siffra. */
@@ -90,7 +101,7 @@ function lineValue(line: string, metric: HealthMetric): number | null {
   const info = METRICS[metric]
   if (info.duration) {
     const mins = minutes(line, info.duration)
-    return mins === null ? null : info.duration === 'h' ? mins / 60 : mins
+    return mins === null ? null : metric === 'sleepH' ? mins / 60 : mins
   }
   const n = NUMBER.exec(line)
   if (!n) return null
@@ -113,7 +124,8 @@ function lineValue(line: string, metric: HealthMetric): number | null {
  */
 export function parseHealthValue(raw: unknown, metric: HealthMetric): number | null {
   if (raw === null || raw === undefined) return null
-  if (typeof raw === 'number') return Number.isFinite(raw) && raw >= 0 ? raw : null
+  // En siffra (t.ex. Tidslängd som tal) tolkas som text utan enhet, så att sekunder blir minuter
+  if (typeof raw === 'number') raw = Number.isFinite(raw) && raw >= 0 ? String(raw) : ''
   const lines = (Array.isArray(raw) ? raw.map(String) : String(raw).split(/\r?\n/)).map((l) => l.trim()).filter(Boolean)
   const values = lines.map((l) => lineValue(l, metric)).filter((v): v is number => v !== null && Number.isFinite(v) && v >= 0)
   if (!values.length) return null
