@@ -3944,6 +3944,138 @@
   opacity: 0.4;
 }
 
+/* Sömn som i Hälsa: total, poäng, tider och faser */
+.vanor .sleep-tile {
+  --stage-awake: #f08c5a;
+  --stage-rem: #5ec8f0;
+  --stage-core: #3d7cf0;
+  --stage-deep: #5a3fc8;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--sunk);
+  border-radius: 14px;
+}
+
+.vanor .sleep-tile.reached {
+  box-shadow: inset 0 0 0 1.5px var(--done);
+}
+
+.vanor .sleep-tile.reached .ht-goal:not(.muted) {
+  color: var(--done);
+  font-weight: 700;
+}
+
+.vanor .sleep-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vanor .sleep-top > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vanor .sleep-total {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.vanor .sleep-times {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vanor .sleep-score {
+  --p: 0;
+  flex: none;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, var(--sunk) 82%, transparent 83%),
+    conic-gradient(var(--stage-rem) calc(var(--p) * 1%), var(--line) 0);
+  text-align: center;
+  line-height: 1.05;
+}
+
+.vanor .sleep-score b {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vanor .sleep-score span {
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.vanor .sleep-score small {
+  color: var(--muted);
+  font-size: 0.55rem;
+}
+
+.vanor .sleep-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.vanor .sleep-bar i {
+  flex-basis: 0;
+  min-width: 3px;
+}
+
+.vanor .sleep-tile .awake { background: var(--stage-awake); }
+.vanor .sleep-tile .rem { background: var(--stage-rem); }
+.vanor .sleep-tile .core { background: var(--stage-core); }
+.vanor .sleep-tile .deep { background: var(--stage-deep); }
+
+.vanor .sleep-stages {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vanor .sleep-stages li {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  align-items: center;
+  gap: 0 5px;
+  font-size: 0.72rem;
+}
+
+.vanor .sleep-stages li i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.vanor .sleep-stages li span {
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.vanor .sleep-stages li b {
+  grid-column: 2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* Regel från Apple Hälsa i Ändra vana */
 .vanor .auto-row {
   display: grid;

@@ -12,6 +12,16 @@ export type HealthMetric =
   | 'standHours'
   | 'flights'
   | 'sleepH'
+  | 'sleepScore'
+  | 'inBedH'
+  | 'sleepDeepH'
+  | 'sleepCoreH'
+  | 'sleepRemH'
+  | 'sleepAwakeMin'
+  | 'sleepWakes'
+  | 'bedtime'
+  | 'wakeTime'
+  | 'respRate'
   | 'mindfulMin'
   | 'waterL'
   | 'weightKg'
@@ -26,8 +36,12 @@ interface MetricInfo {
   /** Ungefär vad det heter i Hälsa/Genvägar, för instruktionerna. */
   health: string
   unit: string
-  /** sum = flera mätningar under dagen läggs ihop, latest = senaste mätningen gäller. */
-  kind: 'sum' | 'latest'
+  /** sum = flera mätningar under dagen läggs ihop, latest = senaste mätningen gäller, avg = medelvärde. */
+  kind: 'sum' | 'latest' | 'avg'
+  /** Räknas fram ur sömnfältet (somn) i stället för att ha ett eget fält i genvägen. */
+  derived?: true
+  /** Ett klockslag i timmar (23,5 = 23:30; efter midnatt räknas läggtid som 24+). */
+  clock?: true
   /**
    * Värdet är en tid. Skrivs den utan enhet gäller: 'min' = minuter, 'h' = timmar (över 24 = sekunder),
    * 's' = sekunder (Genvägars "Tidslängd" för mindfulness är sekunder, t.ex. 180 = 3 min).
@@ -46,6 +60,16 @@ export const METRICS: Record<HealthMetric, MetricInfo> = {
   standHours: { field: 'sta', label: 'Ståtimmar', health: 'Ståtimmar', unit: 'h', kind: 'sum', rule: { default: 12, step: 1 }, decimals: 0 },
   flights: { field: 'trappor', label: 'Trappor', health: 'Våningar uppför trappor', unit: 'våningar', kind: 'sum', rule: { default: 10, step: 1 }, decimals: 0 },
   sleepH: { field: 'somn', label: 'Sömn', health: 'Sömn', unit: 'h', kind: 'sum', duration: 'h', rule: { default: 7, step: 0.5 }, decimals: 1 },
+  sleepScore: { field: 'somnpoang', label: 'Sömnpoäng', health: 'Sömnpoäng (skrivs in från klockan)', unit: 'p', kind: 'latest', decimals: 0 },
+  inBedH: { field: 'somn', derived: true, label: 'I säng', health: 'Sömn', unit: 'h', kind: 'sum', duration: 'h', decimals: 1 },
+  sleepDeepH: { field: 'somn', derived: true, label: 'Djup', health: 'Sömn', unit: 'h', kind: 'sum', duration: 'h', decimals: 1 },
+  sleepCoreH: { field: 'somn', derived: true, label: 'Kärna', health: 'Sömn', unit: 'h', kind: 'sum', duration: 'h', decimals: 1 },
+  sleepRemH: { field: 'somn', derived: true, label: 'REM', health: 'Sömn', unit: 'h', kind: 'sum', duration: 'h', decimals: 1 },
+  sleepAwakeMin: { field: 'somn', derived: true, label: 'Vaken', health: 'Sömn', unit: 'min', kind: 'sum', decimals: 0 },
+  sleepWakes: { field: 'somn', derived: true, label: 'Uppvaknanden', health: 'Sömn', unit: 'ggr', kind: 'sum', decimals: 0 },
+  bedtime: { field: 'somn', derived: true, clock: true, label: 'Somnade', health: 'Sömn', unit: 'kl', kind: 'latest', decimals: 2 },
+  wakeTime: { field: 'somn', derived: true, clock: true, label: 'Vaknade', health: 'Sömn', unit: 'kl', kind: 'latest', decimals: 2 },
+  respRate: { field: 'andning', label: 'Andning', health: 'Andningsfrekvens', unit: 'andetag/min', kind: 'avg', decimals: 1 },
   mindfulMin: { field: 'mindfulness', label: 'Mindfulness', health: 'Mindfulnessminuter', unit: 'min', kind: 'sum', duration: 's', rule: { default: 10, step: 5 }, decimals: 0 },
   waterL: { field: 'vatten', label: 'Vatten', health: 'Vatten', unit: 'l', kind: 'sum', rule: { default: 2, step: 0.25 }, decimals: 1 },
   weightKg: { field: 'vikt', label: 'Vikt', health: 'Vikt', unit: 'kg', kind: 'latest', decimals: 1 },
@@ -55,6 +79,10 @@ export const METRICS: Record<HealthMetric, MetricInfo> = {
 
 export const METRIC_KEYS = Object.keys(METRICS) as HealthMetric[]
 export const RULE_METRICS = METRIC_KEYS.filter((m) => METRICS[m].rule)
+/** Mått med eget fält i genvägen (de som räknas fram ur sömnen har inget). */
+export const FIELD_METRICS = METRIC_KEYS.filter((m) => !METRICS[m].derived)
+/** Allt om sömnen, visas tillsammans i appen. */
+export const SLEEP_METRICS: HealthMetric[] = ['sleepH', 'sleepScore', 'inBedH', 'sleepDeepH', 'sleepCoreH', 'sleepRemH', 'sleepAwakeMin', 'sleepWakes', 'bedtime', 'wakeTime', 'respRate']
 
 /** Hälsodata för en dag, som den sparas (en post per datum). */
 export interface HealthDay {
@@ -150,31 +178,97 @@ function lineValue(line: string, metric: HealthMetric): number | null {
 }
 
 // Sömnfaser som klockan skriver till Hälsa (svenska och engelska namn)
-const ASLEEP = /kärna|core|djup|deep|rem|sover|asleep|sömn|unspecified/i
-const IN_BED = /i säng|in bed|inbed/i
 const AWAKE = /vaken|awake/i
+const IN_BED = /i säng|in bed|inbed/i
+const DEEP = /djup|deep/i
+const CORE = /kärna|core/i
+const REM = /(?<![a-zåäö])rem(?![a-zåäö])/i
+const ASLEEP = /sover|asleep|sömn|unspecified/i
+const ISO_TIME = /(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})?/g
+
+type SleepKind = 'awake' | 'bed' | 'deep' | 'core' | 'rem' | 'asleep'
+
+function sleepKind(line: string): SleepKind | null {
+  if (AWAKE.test(line)) return 'awake'
+  if (IN_BED.test(line)) return 'bed'
+  if (DEEP.test(line)) return 'deep'
+  if (CORE.test(line)) return 'core'
+  if (REM.test(line)) return 'rem'
+  if (ASLEEP.test(line)) return 'asleep'
+  return null
+}
+
+interface SleepPart {
+  kind: SleepKind
+  mins: number
+  /** Start i ms och som klockslag (timmar, lokal tid ur texten). Saknas utan datum på raden. */
+  start?: number
+  clock?: number
+}
 
 /**
- * Sömn från genvägen som en rad per mätning med fas och tid, t.ex. "Kärna | 45:00", "Djup | 1:02:00", "Vaken | 3:00".
- * Tiden är Genvägars Tidslängd (m:ss eller h:mm:ss, eller sekunder). Vaken räknas inte. Finns faser (klockan)
- * räknas bara de, annars "I säng" (bara telefonen). Null om inga rader har en fas.
+ * Sömn från genvägen: en rad per mätning med fas och tid, t.ex. "Kärna | 2026-11-04T01:10:00+01:00 | 2026-11-04T01:55:00+01:00"
+ * (fas, start, slut) eller "Kärna | 45:00" (fas och Genvägars Tidslängd). Ger total sömn, faserna, vaken tid,
+ * uppvaknanden, i säng och när du somnade och vaknade. Vaken räknas inte som sömn. Finns faser (klockan)
+ * räknas de, annars "I säng" (bara telefonen). Null om inga rader har en fas.
  */
-function sleepFromStages(lines: string[]): number | null {
-  let asleep = 0
-  let inBed = 0
-  let staged = false
+export function parseSleep(raw: unknown): Partial<Record<HealthMetric, number>> | null {
+  if (raw === null || raw === undefined) return null
+  const lines = (Array.isArray(raw) ? raw.map(String) : String(raw).split(/\r?\n/)).map((l) => l.trim()).filter(Boolean)
+  const parts: SleepPart[] = []
   for (const line of lines) {
-    const kind = AWAKE.test(line) ? 'awake' : IN_BED.test(line) ? 'bed' : ASLEEP.test(line) ? 'asleep' : null
+    const kind = sleepKind(line)
     if (!kind) continue
-    staged = true
-    const time = line.replace(AWAKE, ' ').replace(IN_BED, ' ').replace(ASLEEP, ' ').replace(/[|]/g, ' ')
-    const mins = minutes(time, 's')
-    if (mins === null) continue
-    if (kind === 'asleep') asleep += mins
-    if (kind === 'bed') inBed += mins
+    const stamps = [...line.matchAll(ISO_TIME)]
+    let rest = line
+    for (const m of stamps) rest = rest.replace(m[0], ' ')
+    rest = rest.replace(/[|]/g, ' ').replace(/[a-zåäö]+/gi, (w) => (/^(h|tim|timmar|timme|min|minuter|minut|m|s|sek|sekunder|sec)$/i.test(w) ? w : ' '))
+    const ms = stamps.map((m) => Date.parse(`${m[1]}T${m[2]}:${m[3]}:${m[4] ?? '00'}${m[5] ? (m[5] === 'Z' ? 'Z' : m[5].length === 5 ? `${m[5].slice(0, 3)}:${m[5].slice(3)}` : m[5]) : 'Z'}`))
+    let mins: number | null = null
+    if (stamps.length >= 2 && Number.isFinite(ms[0]) && Number.isFinite(ms[1])) mins = (ms[1] - ms[0]) / 60000
+    else if (/\d/.test(rest)) mins = minutes(rest, 's')
+    if (mins === null || !Number.isFinite(mins) || mins < 0 || mins > 24 * 60) continue
+    const part: SleepPart = { kind, mins }
+    if (stamps.length && Number.isFinite(ms[0])) {
+      part.start = ms[0]
+      part.clock = Number(stamps[0][2]) + Number(stamps[0][3]) / 60
+    }
+    parts.push(part)
   }
-  if (!staged) return null
-  return (asleep || inBed) / 60
+  if (!parts.length) return null
+
+  const sum = (kinds: SleepKind[]) => parts.filter((p) => kinds.includes(p.kind)).reduce((a, p) => a + p.mins, 0)
+  const asleepKinds: SleepKind[] = ['deep', 'core', 'rem', 'asleep']
+  const asleep = sum(asleepKinds)
+  const inBed = sum(['bed'])
+  const out: Partial<Record<HealthMetric, number>> = {}
+  const set = (metric: HealthMetric, value: number) => {
+    out[metric] = round(value, METRICS[metric].decimals + 1)
+  }
+  if (asleep || inBed) set('sleepH', (asleep || inBed) / 60)
+  if (inBed) set('inBedH', inBed / 60)
+  if (asleep) {
+    set('sleepDeepH', sum(['deep']) / 60)
+    set('sleepCoreH', sum(['core']) / 60)
+    set('sleepRemH', sum(['rem']) / 60)
+  }
+  const awakeParts = parts.filter((p) => p.kind === 'awake')
+  if (awakeParts.length || asleep) set('sleepAwakeMin', sum(['awake']))
+
+  // Klockslag: när första sömnfasen började och den sista slutade
+  const timed = parts.filter((p) => asleepKinds.includes(p.kind) && p.start !== undefined) as Required<SleepPart>[]
+  const pool = timed.length ? timed : (parts.filter((p) => p.kind === 'bed' && p.start !== undefined) as Required<SleepPart>[])
+  if (pool.length) {
+    const first = pool.reduce((a, p) => (p.start < a.start ? p : a))
+    const last = pool.reduce((a, p) => (p.start + p.mins * 60000 > a.start + a.mins * 60000 ? p : a))
+    set('bedtime', first.clock < 15 ? first.clock + 24 : first.clock)
+    set('wakeTime', (last.clock + last.mins / 60) % 24)
+    // Uppvaknanden = vakna perioder mellan insomning och uppvaknande (inte den sista när du går upp)
+    const sleepStart = first.start
+    const sleepEnd = last.start + last.mins * 60000
+    set('sleepWakes', awakeParts.filter((p) => p.start !== undefined && p.start > sleepStart && p.start + p.mins * 60000 < sleepEnd).length)
+  }
+  return out
 }
 
 /**
@@ -187,12 +281,14 @@ export function parseHealthValue(raw: unknown, metric: HealthMetric): number | n
   if (typeof raw === 'number') raw = Number.isFinite(raw) && raw >= 0 ? String(raw) : ''
   const lines = (Array.isArray(raw) ? raw.map(String) : String(raw).split(/\r?\n/)).map((l) => l.trim()).filter(Boolean)
   if (metric === 'sleepH') {
-    const staged = sleepFromStages(lines)
-    if (staged !== null) return round(staged, METRICS.sleepH.decimals + 1)
+    const sleep = parseSleep(lines)
+    if (sleep?.sleepH !== undefined) return sleep.sleepH
   }
   const values = lines.map((l) => lineValue(l, metric)).filter((v): v is number => v !== null && Number.isFinite(v) && v >= 0)
   if (!values.length) return null
-  const value = METRICS[metric].kind === 'sum' ? values.reduce((a, b) => a + b, 0) : values[0]
+  const kind = METRICS[metric].kind
+  const total = values.reduce((a, b) => a + b, 0)
+  const value = kind === 'sum' ? total : kind === 'avg' ? total / values.length : values[0]
   return round(value, METRICS[metric].decimals + 1)
 }
 
@@ -201,12 +297,14 @@ const round = (n: number, decimals: number) => Math.round(n * 10 ** decimals) / 
 /** Läser alla mått ur det genvägen skickade. Fält som saknas eller inte går att tolka hoppas över. */
 export function parseHealthBody(body: Record<string, unknown>): Partial<Record<HealthMetric, number>> {
   const out: Partial<Record<HealthMetric, number>> = {}
-  for (const metric of METRIC_KEYS) {
+  for (const metric of FIELD_METRICS) {
     const field = METRICS[metric].field
     if (!(field in body)) continue
     const value = parseHealthValue(body[field], metric)
     if (value !== null) out[metric] = value
   }
+  // Sömn med faser och tider ger fler mått än bara total sömn
+  if ('somn' in body) Object.assign(out, parseSleep(body.somn) ?? {})
   return out
 }
 
@@ -239,7 +337,11 @@ export function metRules(
 export function formatHealth(metric: HealthMetric, value: number): string {
   const info = METRICS[metric]
   const num = (n: number, d: number) => n.toLocaleString('sv-SE', { maximumFractionDigits: d, minimumFractionDigits: 0 })
-  if (metric === 'sleepH') {
+  if (info.clock) {
+    const total = Math.round((((value % 24) + 24) % 24) * 60) % (24 * 60)
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+  }
+  if (info.duration === 'h') {
     const total = Math.round(value * 60)
     const h = Math.floor(total / 60)
     const m = total % 60
@@ -276,4 +378,48 @@ export function guessRule(name: string): AutoRule | null {
   if (/vatten|dricka/.test(n)) return { metric: 'waterL', min: 2 }
   if (/gym|träning|träna|löp|spring|cykl|simn/.test(n)) return { metric: 'exerciseMin', min: 30 }
   return null
+}
+
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
+
+/** Apples nivåer för sömnpoäng. */
+export function sleepRating(score: number): string {
+  if (score >= 96) return 'Mycket hög'
+  if (score >= 81) return 'Hög'
+  if (score >= 61) return 'OK'
+  if (score >= 41) return 'Låg'
+  return 'Mycket låg'
+}
+
+export interface SleepScore {
+  score: number
+  /** Poäng per del: längd (av 50), läggtid (av 30, null utan minst 3 tidigare nätter), avbrott (av 20). */
+  duration: number
+  bedtime: number | null
+  interruptions: number
+}
+
+/**
+ * Uppskattad sömnpoäng 0–100 enligt samma delar som Apple använder: längd 50 p, regelbunden läggtid 30 p
+ * (jämfört med upp till 13 tidigare nätter) och avbrott 20 p. Apples exakta formel är inte offentlig, så det
+ * här är en uppskattning. `pastBedtimes` = när du somnade tidigare nätter (som i måttet bedtime).
+ */
+export function estimateSleepScore(values: Partial<Record<HealthMetric, number>>, pastBedtimes: number[]): SleepScore | null {
+  const hours = values.sleepH
+  if (hours === undefined || hours <= 0) return null
+  // Längd: full poäng från 7,5 h, inget under 4 h
+  const duration = 50 * clamp01((hours - 4) / 3.5)
+  // Läggtid: full poäng inom 30 min från ditt snitt, inget vid 2,5 h ifrån
+  const past = pastBedtimes.slice(-13)
+  let bedtime: number | null = null
+  if (values.bedtime !== undefined && past.length >= 3) {
+    const mean = past.reduce((a, b) => a + b, 0) / past.length
+    bedtime = 30 * clamp01(1 - (Math.abs(values.bedtime - mean) - 0.5) / 2)
+  }
+  // Avbrott: vaken tid och antal uppvaknanden (de 3 första är vanliga och kostar inget)
+  const awake = values.sleepAwakeMin ?? 0
+  const wakes = values.sleepWakes ?? 0
+  const interruptions = Math.max(0, 20 * clamp01(1 - awake / 60) - Math.max(0, wakes - 3))
+  const raw = bedtime === null ? ((duration + interruptions) / 70) * 100 : duration + bedtime + interruptions
+  return { score: Math.round(raw), duration: Math.round(duration), bedtime: bedtime === null ? null : Math.round(bedtime), interruptions: Math.round(interruptions) }
 }
