@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { addDays, isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { MonthView } from './Galaxy'
@@ -67,11 +67,15 @@ export default function ProgressCard({ habits, log, paused, today, tasks, mustTo
   const before = full[full.length - 2]
   const trends = habitTrends(habits, log, paused, today)
   const pct = current.pct ?? 0
+  const [cardRef, visible] = useVisible<HTMLElement>()
+  const shown = useGlide(current.pct === null ? 0 : pct, visible)
   const left = Math.max(0, current.goal - current.done)
   const paused_ = current.pct === null
   // Förra veckan visas bara om vanorna fanns större delen av den – annars blir jämförelsen missvisande (t.ex. 0 %).
   const fullGoal = habits.reduce((sum, h) => sum + Math.min(7, h.goal), 0)
   const showLast = !!last && last.goal >= fullGoal * 0.6
+  // Pilen jämför förra veckan med veckan innan – bara när även den veckan var fullständig
+  const compareBefore = !!before && before.pct !== null && before.goal >= fullGoal * 0.6
 
   // Staplarna: alltid 8 veckor, så att rytmen är densamma. Veckor innan vanorna fanns (eller där de
   // bara fanns en del av veckan) visas som tomma platser i stället för ett missvisande 0 %.
@@ -95,7 +99,7 @@ export default function ProgressCard({ habits, log, paused, today, tasks, mustTo
         : `Inget måste idag. ${left} ${left === 1 ? 'gång' : 'gånger'} kvar på veckan, och du har tid.`
 
   return (
-    <section className="week-sun" aria-labelledby="sun-title" style={{ '--warm': Math.min(1, pct / 100) } as CSSProperties}>
+    <section ref={cardRef} className="week-sun" aria-labelledby="sun-title" style={{ '--warm': Math.min(1, pct / 100) } as CSSProperties}>
       <div className="ws-switch" role="tablist" aria-label="Vecka eller månad">
         {(
           [
@@ -125,10 +129,10 @@ export default function ProgressCard({ habits, log, paused, today, tasks, mustTo
           <span className="ws-label" id="sun-title">
             Vecka {isoWeek(today)}
           </span>
-          <b className="ws-big">{paused_ ? '–' : `${pct}\u00a0%`}</b>
+          <b className="ws-big" aria-label={paused_ ? 'Pausad' : `${pct} procent`}>{paused_ ? '–' : `${Math.round(shown)}\u00a0%`}</b>
           <span className="ws-sub">av veckomålen</span>
         </div>
-        <SunScene share={pct / 100} done={left === 0 && !paused_} />
+        <SunScene share={shown / 100} target={pct / 100} done={left === 0 && !paused_} />
       </div>
 
       <div className="ws-foot">
@@ -137,7 +141,7 @@ export default function ProgressCard({ habits, log, paused, today, tasks, mustTo
           <div className="ws-last">
             <span>Förra veckan</span>
             <b>{last.pct}&nbsp;%</b>
-            {before && <Change value={change(last.pct, before.pct)} unit="" />}
+            {compareBefore && <Change value={change(last.pct, before!.pct)} unit="" />}
           </div>
         )}
       </div>
@@ -237,6 +241,78 @@ const CITIES = (() => {
   })
 })()
 
+const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+/**
+ * Glider mjukt mot målvärdet: från 0 när kortet visas, och från förra värdet när det ändras (t.ex. en ny bock).
+ * Med "reducerad rörelse" i telefonen hoppar värdet direkt.
+ */
+function useGlide(target: number, active: boolean, ms = 1400): number {
+  const [value, setValue] = useState(() => (reducedMotion() ? target : 0))
+  const current = useRef(value)
+  useEffect(() => {
+    if (!active && !reducedMotion()) {
+      // Dold flik: börja om från horisonten nästa gång kortet syns
+      current.current = 0
+      setValue(0)
+      return
+    }
+    if (reducedMotion()) {
+      current.current = target
+      setValue(target)
+      return
+    }
+    const from = current.current
+    if (from === target) return
+    const start = performance.now()
+    const duration = from === 0 ? ms : ms * 0.6
+    let frame = 0
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration)
+      const eased = 1 - Math.pow(1 - t, 3)
+      current.current = from + (target - from) * eased
+      setValue(current.current)
+      if (t < 1) frame = requestAnimationFrame(step)
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [target, active, ms])
+  return value
+}
+
+/** Sant när elementet syns på skärmen (Vanor-fliken ligger laddad i bakgrunden). */
+function useVisible<T extends Element>(): [RefObject<T | null>, boolean] {
+  const ref = useRef<T>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setVisible(true)
+      return
+    }
+    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.3 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  return [ref, visible]
+}
+
+/** Sant en kort stund när värdet ökar efter första visningen (ljuspulsen när du bockar). */
+function useRisePulse(value: number): boolean {
+  const last = useRef(value)
+  const [pulse, setPulse] = useState(false)
+  useEffect(() => {
+    if (value > last.current && !reducedMotion()) {
+      setPulse(true)
+      const t = setTimeout(() => setPulse(false), 1200)
+      last.current = value
+      return () => clearTimeout(t)
+    }
+    last.current = value
+  }, [value])
+  return pulse
+}
+
 /** Solens strålar: tunna, avsmalnande streck som från en kameralins. */
 const RAYS = [
   { angle: 0, len: 62, w: 1.1, o: 0.55 },
@@ -251,7 +327,16 @@ const RAYS = [
  * och blir starkare ju närmare målet du kommer, medan stjärnorna och städernas ljus bleknar.
  * Samma bildspråk som månadens solsystem och 3D-galaxen.
  */
-function SunScene({ share, done }: { share: number; done: boolean }) {
+/** Blandar två hex-färger, t = 0 → a, t = 1 → b. */
+function mix(a: string, b: string, t: number): string {
+  const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
+  const [x, y] = [p(a), p(b)]
+  return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('')
+}
+
+function SunScene({ share, target, done }: { share: number; target: number; done: boolean }) {
+  const pulse = useRisePulse(target)
+  const arrived = done && share >= target - 0.001
   const W = 360
   const H = 150
   const horizon = 112 // planetens horisont där solen står
@@ -266,7 +351,7 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
   const near = (x: number) => Math.max(0, 1 - Math.abs(x - cx) / 120) // 1 nära solen, 0 långt bort
 
   return (
-    <svg className="ws-scene sunrise" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <svg className={['ws-scene', 'sunrise', 'alive', pulse && 'pulse', arrived && 'arrived'].filter(Boolean).join(' ')} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <defs>
         <linearGradient id="sr-space" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#020309" />
@@ -291,11 +376,19 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
           <stop offset="0.5" stopColor="#fff3d6" stopOpacity="1" />
           <stop offset="1" stopColor="#fff3d6" stopOpacity="0" />
         </linearGradient>
-        <radialGradient id="sr-ground" cx={cx} cy={horizon} r="300" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#1c1a2e" />
-          <stop offset="0.35" stopColor="#0a0e1d" />
-          <stop offset="1" stopColor="#03050b" />
+        {/* Jordens yta: mörk nattsida vid låg sol, upplyst hav och land när solen står högt */}
+        <radialGradient id="sr-ground" cx={cx} cy={horizon} r={220 + 220 * s} gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor={mix('#1c1a2e', '#3d6a8f', s)} />
+          <stop offset="0.35" stopColor={mix('#0a0e1d', '#1d3a5a', s)} />
+          <stop offset="1" stopColor={mix('#03050b', '#07101f', s)} />
         </radialGradient>
+        {/* Gryningsskugga: kanterna längst från solen förblir mörka, mindre ju högre solen står */}
+        <linearGradient id="sr-night" x1="0" x2={W} y1="0" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#000" stopOpacity={0.75 - 0.45 * s} />
+          <stop offset={cx / W - 0.25} stopColor="#000" stopOpacity="0" />
+          <stop offset={cx / W + 0.22} stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity={0.75 - 0.45 * s} />
+        </linearGradient>
         {/* Atmosfärens band: varmt nära solen, blått längre bort */}
         <linearGradient id="sr-limb-warm" x1="0" x2={W} y1="0" y2="0" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#ff8a4a" stopOpacity="0" />
@@ -322,7 +415,7 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
         <clipPath id="sr-planet">
           <circle cx={cx} cy={planetY} r={R} />
         </clipPath>
-        <radialGradient id="sr-lit" cx={cx} cy={horizon} r="150" gradientTransform={`translate(${cx} ${horizon}) scale(1 0.35) translate(${-cx} ${-horizon})`} gradientUnits="userSpaceOnUse">
+        <radialGradient id="sr-lit" cx={cx} cy={horizon} r={110 + 260 * s} gradientTransform={`translate(${cx} ${horizon}) scale(1 ${0.3 + 0.35 * s}) translate(${-cx} ${-horizon})`} gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#fff" />
           <stop offset="1" stopColor="#000" />
         </radialGradient>
@@ -335,7 +428,16 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
       <rect width={W} height={H} fill="url(#sr-space)" />
       <g className="sr-fade" opacity={1 - 0.7 * s}>
         {STARS.map((st, i) => (
-          <circle key={i} cx={st.x} cy={st.y} r={st.r} fill="#dfe6ff" opacity={st.o * (1 - 0.8 * near(st.x) * s)} />
+          <circle
+            key={i}
+            className={i % 7 === 0 ? 'sr-twinkle' : undefined}
+            style={i % 7 === 0 ? ({ animationDelay: `${(i * 0.37) % 4}s` } as CSSProperties) : undefined}
+            cx={st.x}
+            cy={st.y}
+            r={st.r}
+            fill="#dfe6ff"
+            opacity={st.o * (1 - 0.8 * near(st.x) * s)}
+          />
         ))}
       </g>
       <rect className="sr-fade" width={W} height={H} fill="url(#sr-scatter)" opacity={0.3 + 0.7 * s} />
@@ -343,6 +445,7 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
       {/* Solen: bländande kärna, mjukt sken och tunna strålar */}
       <g className={done ? 'ws-sun full' : 'ws-sun'} style={{ transform: `translate(${cx}px, ${y}px)` }}>
         <circle className="ws-halo" r={30 + 16 * s} fill="url(#sr-bloom)" />
+        <g className="ws-rays">
         {RAYS.map((ray) => (
           <rect
             key={ray.angle}
@@ -355,6 +458,7 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
             transform={`rotate(${ray.angle})`}
           />
         ))}
+        </g>
         <circle r="6.5" fill="#fffdf6" />
       </g>
 
@@ -367,8 +471,10 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
           ))}
         </g>
         <g mask="url(#sr-lit-mask)">
-          <rect className="sr-fade" y={horizon - 4} width={W} height={H - horizon + 4} filter="url(#sr-clouds)" opacity={0.2 + 0.5 * s} />
+          <rect y={horizon - 4} width={W} height={H - horizon + 4} fill="#2f6f8f" opacity={0.08 + 0.32 * s} />
+          <rect className="sr-fade sr-drift" x={-80} y={horizon - 4} width={W + 160} height={H - horizon + 4} filter="url(#sr-clouds)" opacity={0.12 + 0.78 * s} />
         </g>
+        <rect y={horizon - 4} width={W} height={H - horizon + 4} fill="url(#sr-night)" />
         <ellipse className="sr-fade" cx={cx} cy={horizon + 5} rx={26 + 20 * s} ry="2.6" fill="#ffd9a0" filter="url(#sr-soft)" opacity={0.15 + 0.45 * s} />
       </g>
 
@@ -392,6 +498,9 @@ function SunScene({ share, done }: { share: number; done: boolean }) {
       <line className="ws-rail" x1={rail} x2={rail} y1={topY} y2={horizon + 5} />
       {s > 0 && <line className="ws-rail-fill" x1={rail} x2={rail} y1={y} y2={horizon + 5} />}
       {s > 0 && <circle className="ws-rail-dot" cx={rail} cy={y} r="3" />}
+
+      {/* Veckan i hamn: ett kort ljussken över hela bilden */}
+      {arrived && <rect className="ws-flash" width={W} height={H} fill="url(#sr-bloom)" />}
     </svg>
   )
 }
