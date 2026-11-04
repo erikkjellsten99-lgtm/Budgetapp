@@ -182,17 +182,19 @@ export default function InboxSettings() {
                   Öppna <b>Genvägar</b>, tryck <b>+</b> och döp genvägen till <b>Hälsa till Groundwork</b>.
                 </li>
                 <li>
-                  Sök efter <b>hälsodata</b> och lägg till <b>Sök efter hälsodata</b>. Tryck på typen och välj t.ex. <b>Steg</b>. Lägg
-                  till filtret <b>Startdatum är idag</b>. Finns <b>Gruppera efter</b>, välj <b>Dag</b>.
+                  Sök efter <b>hälso</b> och lägg till <b>Sök efter hälsoprov</b>. Tryck på typen och välj t.ex. <b>Steg</b>. Ändra
+                  filtret till <b>Startdatum är idag</b> och <b>Gruppera efter</b> till <b>Dag</b>. Första gången frågar iPhone om
+                  Genvägar får läsa Hälsa: tryck <b>Fortsätt</b>.
                 </li>
                 <li>Gör likadant för varje sak du vill skicka (tabellen nedan). Börja gärna med steg och lägg till fler sedan.</li>
                 <li>
                   Lägg till <b>Hämta innehåll från URL</b> sist: adressen ovan, <b>Metod</b> POST, rubriken <b>Authorization</b> med
-                  värdet ovan, <b>Brödtext</b> JSON. Lägg till ett fält <b>Text</b> per sak, med nyckeln i tabellen och värdet från
-                  rätt <b>Hälsodata</b> (tryck <b>Välj variabel</b>).
+                  värdet ovan, <b>Text i begäran</b> JSON. Lägg till ett fält <b>Text</b> per sak, med nyckeln i tabellen och värdet från
+                  rätt <b>Hälsoprover</b> (tryck <b>Välj variabel</b>).
                 </li>
                 <li>
-                  Lägg till <b>Visa resultat</b> och tryck ▶. Du ser t.ex. <code>"Hälsa sparad: 8 432 steg."</code>
+                  Lägg till <b>Visa resultat</b> och tryck ▶ (välj <b>Tillåt alltid</b>). Du ser t.ex.{' '}
+                  <code>"Hälsa sparad: 8 432 steg."</code>
                 </li>
                 <li>
                   Gör det automatiskt: <b>Automatisering</b> → <b>Tidpunkt på dagen</b>, t.ex. 21:30, <b>Kör omedelbart</b>, välj{' '}
