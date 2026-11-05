@@ -41,7 +41,7 @@ export default function HealthCard({
   const goals = new Map<HealthMetric, { min: number; name: string }>()
   for (const h of habits) if (h.auto && !h.archived) goals.set(h.auto.metric, { min: goalOf(h), name: h.name })
   const shown = METRIC_KEYS.filter((m) => latest.values[m] !== undefined && !SLEEP_METRICS.includes(m))
-  const groups = GROUPS.map((g) => ({ title: g.title, metrics: shown.filter((m) => g.metrics.includes(m)) })).filter((g) => g.metrics.length)
+  const groups = GROUPS.map((g) => ({ title: g.title, hue: g.hue, metrics: shown.filter((m) => g.metrics.includes(m)) })).filter((g) => g.metrics.length)
   const pastBedtimes = health
     .filter((d) => d.date < latest.date && d.date >= addDays(latest.date, -13) && d.values.bedtime !== undefined)
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -55,41 +55,54 @@ export default function HealthCard({
       </div>
       <SleepTile values={latest.values} stages={latest.stages} pastBedtimes={pastBedtimes} goal={goals.get('sleepH')} />
       {groups.map((g) => (
-        <section key={g.title} className="hm-group" aria-label={g.title}>
-          <header className="hm-head">
-            <span className="hm-kicker">{g.title}</span>
-            <span className="hm-days" aria-hidden="true">
-              7 dagar
-            </span>
-          </header>
-          <div className="hm-grid">
+        <section key={g.title} className={`hm-group ${g.hue}`} aria-label={g.title}>
+          <h4 className="hm-head">
+            <GroupIcon hue={g.hue} />
+            {g.title}
+          </h4>
+          <ul className="hm-list">
             {g.metrics.map((metric) => (
-              <Instrument
+              <MetricRow
                 key={metric}
                 metric={metric}
                 value={latest.values[metric]!}
                 goal={goals.get(metric)}
-                week={week}
                 series={week.map((date) => byDate.get(date)?.values[metric])}
                 trend={vsAverage(metric, latest.values[metric]!, health, latest.date)}
               />
             ))}
-          </div>
+          </ul>
         </section>
       ))}
     </section>
   )
 }
 
-/** Måtten i grupper, i den ordning de visas. */
-const GROUPS: { title: string; metrics: HealthMetric[] }[] = [
-  { title: 'Aktivitet', metrics: ['steps', 'distanceKm', 'activeKcal', 'exerciseMin', 'workouts', 'standHours', 'flights'] },
-  { title: 'Hjärta och kondition', metrics: ['vo2Max', 'restingHr', 'hrvMs', 'hrRecovery', 'walkingHr', 'spo2'] },
-  { title: 'Kropp och återhämtning', metrics: ['weightKg', 'bodyFat', 'wristTemp', 'waterL', 'mindfulMin'] },
+/** Måtten i grupper, i den ordning de visas. Varje grupp har en egen färg (hue) och ikon. */
+const GROUPS: { title: string; hue: Hue; metrics: HealthMetric[] }[] = [
+  { title: 'Aktivitet', hue: 'move', metrics: ['steps', 'distanceKm', 'activeKcal', 'exerciseMin', 'workouts', 'standHours', 'flights'] },
+  { title: 'Hjärta och kondition', hue: 'heart', metrics: ['vo2Max', 'restingHr', 'hrvMs', 'hrRecovery', 'walkingHr', 'spo2'] },
+  { title: 'Kropp och återhämtning', hue: 'body', metrics: ['weightKg', 'bodyFat', 'wristTemp', 'waterL', 'mindfulMin'] },
 ]
 
-const DAY_LETTERS = ['S', 'M', 'T', 'O', 'T', 'F', 'L']
-const dayLetter = (date: DateKey) => DAY_LETTERS[new Date(`${date}T12:00:00Z`).getUTCDay()]
+type Hue = 'move' | 'heart' | 'body' | 'sleep'
+
+/** Enkel ikon per grupp: en blixt för rörelse, ett hjärta, ett löv och en måne för sömnen. */
+function GroupIcon({ hue }: { hue: Hue }) {
+  const path = {
+    move: 'M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z',
+    heart: 'M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2Z',
+    body: 'M5 19c0-8 5-13 14-14-1 9-6 14-14 14Zm0 0 7-7',
+    sleep: 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z',
+  }[hue]
+  return (
+    <span className="hm-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="14" height="14">
+        <path d={path} />
+      </svg>
+    </span>
+  )
+}
 
 /** "37,6 ml/kg/min" → ["37,6", "ml/kg/min"], så att siffran kan vara stor och enheten liten. */
 function splitValue(metric: HealthMetric, value: number): [string, string] {
@@ -120,74 +133,96 @@ function vsAverage(metric: HealthMetric, value: number, health: HealthDay[], dat
   if (past.length < 3) return null
   const diff = value - past.reduce((a, b) => a + b, 0) / past.length
   const step = 10 ** -METRICS[metric].decimals
-  if (Math.abs(diff) < step / 2) return { dir: 'flat', text: 'som ditt snitt' }
-  return { dir: diff > 0 ? 'up' : 'down', text: `${diff > 0 ? '+' : '\u2212'}${splitValue(metric, Math.abs(diff))[0]} mot snitt` }
+  if (Math.abs(diff) < step / 2) return { dir: 'flat', text: 'Som vanligt' }
+  return { dir: diff > 0 ? 'up' : 'down', text: `${splitValue(metric, Math.abs(diff))[0]} ${diff > 0 ? 'högre' : 'lägre'} än vanligt` }
 }
 
-/** Ett mått: etikett, stor siffra, mål eller trend och de senaste 7 dagarna som staplar med veckodag. */
-function Instrument({
+/**
+ * Ett mått som en rad: namn och en kort mening till vänster, siffran till höger. Mått med mål får en ring
+ * (som i Aktivitet), andra en mjuk kurva över de senaste 7 dagarna.
+ */
+function MetricRow({
   metric,
   value,
   goal,
-  week,
   series,
   trend,
 }: {
   metric: HealthMetric
   value: number
   goal?: { min: number; name: string }
-  week: DateKey[]
   series: (number | undefined)[]
   trend: Trend | null
 }) {
   const [num, unit] = splitValue(metric, value)
   const reached = goal ? value >= goal.min : false
-  const known = series.filter((v): v is number => v !== undefined)
-  const hi = Math.max(goal?.min ?? 0, ...known) || 1
-  const lo = Math.min(...known)
-  // Summor (steg, pass) från noll. Puls, VO₂ max m.m. ändras lite från dag till dag, så de visas mellan
-  // veckans lägsta och högsta värde – annars blir alla staplar lika höga.
-  const barHeight = (v: number) =>
-    METRICS[metric].kind === 'sum' ? Math.max(10, (v / hi) * 100) : hi === lo ? 60 : 25 + ((v - lo) / (hi - lo)) * 75
-  const progress = goal ? Math.min(100, Math.round((value / goal.min) * 100)) : 0
+  const note = goal
+    ? reached
+      ? `${goal.name} klart`
+      : `${splitValue(metric, Math.max(0, goal.min - value))[0]} kvar till ${goal.name}`
+    : trend?.text
   return (
-    <div className={reached ? 'hm-item reached' : 'hm-item'}>
-      <span className="hm-label">{METRICS[metric].label}</span>
+    <li className={reached ? 'hm-row reached' : 'hm-row'}>
+      <span className="hm-text">
+        <span className="hm-name">{METRICS[metric].label}</span>
+        {note && <span className="hm-note">{note}</span>}
+      </span>
+      {goal ? <Ring part={value / goal.min} /> : <Spark series={series} />}
       <span className="hm-value">
         <b>{num}</b>
-        {unit && <u>{unit}</u>}
+        {unit && <small>{unit}</small>}
       </span>
-      {goal ? (
-        <span className="hm-goal">
-          <span className="hm-progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${goal.name}: ${progress} %`}>
-            <i style={{ width: `${progress}%` }} />
-          </span>
-          <span className="hm-goal-text">
-            {reached ? `\u2713 ${goal.name}` : `${splitValue(metric, Math.max(0, goal.min - value))[0]} kvar till ${goal.name}`}
-          </span>
-        </span>
-      ) : (
-        trend && (
-          <span className={`hm-trend ${trend.dir}`}>
-            <i aria-hidden="true">{trend.dir === 'up' ? '\u25b2' : trend.dir === 'down' ? '\u25bc' : '\u25cf'}</i>
-            {trend.text}
-          </span>
-        )
-      )}
-      <span className="hm-week" aria-hidden="true">
-        {series.map((v, i) => (
-          <span key={week[i]} className="hm-day">
-            <i
-              className={[v === undefined && 'empty', goal && v !== undefined && v >= goal.min && 'met', i === 6 && 'today']
-                .filter(Boolean)
-                .join(' ') || undefined}
-              style={{ height: `${v === undefined ? 0 : barHeight(v)}%` }}
-            />
-            <small>{dayLetter(week[i])}</small>
-          </span>
-        ))}
-      </span>
-    </div>
+    </li>
+  )
+}
+
+/** Hur långt mot målet, som en ring. Full ring när målet är nått. */
+function Ring({ part }: { part: number }) {
+  const r = 15
+  const c = 2 * Math.PI * r
+  const p = Math.max(0, Math.min(1, part))
+  return (
+    <svg className="hm-ring" viewBox="0 0 36 36" width="36" height="36" role="img" aria-label={`${Math.round(p * 100)} % av målet`}>
+      <circle className="track" cx="18" cy="18" r={r} />
+      <circle className="fill" cx="18" cy="18" r={r} strokeDasharray={`${p * c} ${c}`} transform="rotate(-90 18 18)" />
+    </svg>
+  )
+}
+
+/** De senaste 7 dagarna som en mjuk kurva, idag som en prick. */
+function Spark({ series }: { series: (number | undefined)[] }) {
+  const W = 72
+  const H = 28
+  const known = series.filter((v): v is number => v !== undefined)
+  if (known.length < 2) return <span className="hm-spark empty" aria-hidden="true" />
+  const lo = Math.min(...known)
+  const hi = Math.max(...known)
+  const x = (i: number) => (i / (series.length - 1)) * (W - 6) + 3
+  const y = (v: number) => (hi === lo ? H / 2 : H - 4 - ((v - lo) / (hi - lo)) * (H - 8))
+  // Dagar utan värde hoppas över, så att kurvan går obruten mellan dagarna som finns
+  const points = series.flatMap((v, i) => (v === undefined ? [] : [[x(i), y(v)] as const]))
+  // Mjuk linje genom punkterna (kardinal-spline)
+  let d = ''
+  for (let i = 0; i < points.length; i++) {
+    const pt = points[i]
+    const prev = points[i - 1]
+    if (!prev) {
+      d += `M${pt[0].toFixed(1)} ${pt[1].toFixed(1)}`
+      continue
+    }
+    const before = points[i - 2] ?? prev
+    const after = points[i + 1] ?? pt
+    const c1 = [prev[0] + (pt[0] - before[0]) / 6, prev[1] + (pt[1] - before[1]) / 6]
+    const c2 = [pt[0] - (after[0] - prev[0]) / 6, pt[1] - (after[1] - prev[1]) / 6]
+    d += `C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${pt[0].toFixed(1)} ${pt[1].toFixed(1)}`
+  }
+  // Pricken bara när idag har ett värde
+  const last = series[series.length - 1] !== undefined ? points[points.length - 1] : null
+  return (
+    <svg className="hm-spark" viewBox={`0 0 ${W} ${H}`} width={W} height={H} aria-hidden="true">
+      <path d={d} />
+      {last && <circle cx={last[0]} cy={last[1]} r="3" />}
+    </svg>
   )
 }
 
@@ -250,7 +285,10 @@ function SleepTile({
   return (
     <div className={reached ? 'sleep-tile reached' : 'sleep-tile'}>
       <div className="sleep-head">
-        <span className="sleep-kicker">Sömn</span>
+        <span className="sleep-kicker">
+          <GroupIcon hue="sleep" />
+          Sömn
+        </span>
         {hasTimes && (
           <span className="sleep-range">
             {formatHealth('bedtime', values.bedtime!)} → {formatHealth('wakeTime', values.wakeTime!)}
