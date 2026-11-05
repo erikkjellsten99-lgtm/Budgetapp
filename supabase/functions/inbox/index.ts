@@ -14,7 +14,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4'
 import { itemId, parseLines, stockholmToday, type InboxItem } from './parse.ts'
 import { confirmText, parseSpoken } from './spoken.ts'
-import { FIELD_METRICS, formatHealth, isHealthBody, metRules, parseHealthBody, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
+import { FIELD_METRICS, formatHealth, isHealthBody, metRules, parseHealthBody, parseSleepStages, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
@@ -120,8 +120,13 @@ async function saveHealth(userId: string, body: Record<string, unknown>, today: 
     .eq('store', 'health')
     .eq('id', date)
     .maybeSingle()
-  const before = existing && !existing.deleted ? ((existing.data as HealthDay | null)?.values ?? {}) : {}
+  const old = existing && !existing.deleted ? (existing.data as HealthDay | null) : null
+  const before = old?.values ?? {}
+  const stages = 'somn' in body ? parseSleepStages(body.somn) : []
   const day: HealthDay = { date, updated: Date.now(), values: { ...before, ...values } }
+  // Faserna för sömndiagrammet: nya om de kom med, annars behålls de som redan finns
+  const keep = stages.length ? stages : old?.stages
+  if (keep?.length) day.stages = keep
   const { error } = await admin
     .from('personal_records')
     .upsert({ user_id: userId, store: 'health', id: date, data: day, deleted: false, client_ts: day.updated }, { onConflict: 'user_id,store,id' })

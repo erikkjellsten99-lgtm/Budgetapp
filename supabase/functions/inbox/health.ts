@@ -90,6 +90,15 @@ export interface HealthDay {
   /** När den senast uppdaterades (ms). */
   updated: number
   values: Partial<Record<HealthMetric, number>>
+  /** Nattens faser i tidsordning, för sömndiagrammet. Saknas om genvägen bara skickade tider utan start och slut. */
+  stages?: SleepStage[]
+}
+
+/** En sömnfas: k = fas, s och e = start och slut i ms. */
+export interface SleepStage {
+  k: 'awake' | 'rem' | 'core' | 'deep' | 'asleep'
+  s: number
+  e: number
 }
 
 /** En vana som bockas automatiskt när måttet når gränsen, t.ex. steg ≥ 10 000. */
@@ -201,19 +210,15 @@ function sleepKind(line: string): SleepKind | null {
 interface SleepPart {
   kind: SleepKind
   mins: number
-  /** Start i ms och som klockslag (timmar, lokal tid ur texten). Saknas utan datum på raden. */
+  /** Start och slut i ms, och starten som klockslag (timmar, lokal tid ur texten). Saknas utan datum på raden. */
   start?: number
+  end?: number
   clock?: number
 }
 
-/**
- * Sömn från genvägen: en rad per mätning med fas och tid, t.ex. "Kärna | 2026-11-04T01:10:00+01:00 | 2026-11-04T01:55:00+01:00"
- * (fas, start, slut) eller "Kärna | 45:00" (fas och Genvägars Tidslängd). Ger total sömn, faserna, vaken tid,
- * uppvaknanden, i säng och när du somnade och vaknade. Vaken räknas inte som sömn. Finns faser (klockan)
- * räknas de, annars "I säng" (bara telefonen). Null om inga rader har en fas.
- */
-export function parseSleep(raw: unknown): Partial<Record<HealthMetric, number>> | null {
-  if (raw === null || raw === undefined) return null
+/** Läser raderna ("Kärna | start | slut" eller "Kärna | 45:00") till faser. Rader utan fas eller tid hoppas över. */
+function readSleepParts(raw: unknown): SleepPart[] {
+  if (raw === null || raw === undefined) return []
   const lines = (Array.isArray(raw) ? raw.map(String) : String(raw).split(/\r?\n/)).map((l) => l.trim()).filter(Boolean)
   const parts: SleepPart[] = []
   for (const line of lines) {
@@ -231,10 +236,32 @@ export function parseSleep(raw: unknown): Partial<Record<HealthMetric, number>> 
     const part: SleepPart = { kind, mins }
     if (stamps.length && Number.isFinite(ms[0])) {
       part.start = ms[0]
+      part.end = stamps.length >= 2 && Number.isFinite(ms[1]) ? ms[1] : ms[0] + mins * 60000
       part.clock = Number(stamps[0][2]) + Number(stamps[0][3]) / 60
     }
     parts.push(part)
   }
+  return parts
+}
+
+/** Nattens faser med start och slut i tidsordning, för sömndiagrammet. "I säng" och rader utan tider tas inte med. */
+export function parseSleepStages(raw: unknown): SleepStage[] {
+  const out: SleepStage[] = []
+  for (const p of readSleepParts(raw)) {
+    if (p.kind === 'bed' || p.start === undefined || p.end === undefined || p.end <= p.start) continue
+    out.push({ k: p.kind, s: p.start, e: p.end })
+  }
+  return out.sort((x, y) => x.s - y.s)
+}
+
+/**
+ * Sömn från genvägen: en rad per mätning med fas och tid, t.ex. "Kärna | 2026-11-04T01:10:00+01:00 | 2026-11-04T01:55:00+01:00"
+ * (fas, start, slut) eller "Kärna | 45:00" (fas och Genvägars Tidslängd). Ger total sömn, faserna, vaken tid,
+ * uppvaknanden, i säng och när du somnade och vaknade. Vaken räknas inte som sömn. Finns faser (klockan)
+ * räknas de, annars "I säng" (bara telefonen). Null om inga rader har en fas.
+ */
+export function parseSleep(raw: unknown): Partial<Record<HealthMetric, number>> | null {
+  const parts = readSleepParts(raw)
   if (!parts.length) return null
 
   const sum = (kinds: SleepKind[]) => parts.filter((p) => kinds.includes(p.kind)).reduce((a, p) => a + p.mins, 0)

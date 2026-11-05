@@ -9,6 +9,7 @@ import {
   sleepRating,
   type HealthDay,
   type HealthMetric,
+  type SleepStage,
 } from '../../supabase/functions/inbox/health'
 
 /** Klockslag "21:30" för när siffrorna kom. */
@@ -51,7 +52,7 @@ export default function HealthCard({
         <h3 id="health-title">Hälsa {isToday ? 'idag' : 'i går'}</h3>
         <span className="health-time">Från Apple Hälsa · {clock(latest.updated)}</span>
       </div>
-      <SleepTile values={latest.values} pastBedtimes={pastBedtimes} goal={goals.get('sleepH')} />
+      <SleepTile values={latest.values} stages={latest.stages} pastBedtimes={pastBedtimes} goal={goals.get('sleepH')} />
       <ul className="health-tiles">
         {shown.map((metric) => {
           const value = latest.values[metric]!
@@ -116,10 +117,12 @@ const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0)
 /** Natten som ett mätinstrument: total tid, poängskala, fasstapel med tidsaxel och en tabell med nyckeltal. */
 function SleepTile({
   values,
+  stages: night,
   pastBedtimes,
   goal,
 }: {
   values: HealthDay['values']
+  stages?: SleepStage[]
   pastBedtimes: number[]
   goal?: { min: number; name: string }
 }) {
@@ -206,21 +209,25 @@ function SleepTile({
         </div>
       )}
 
-      {total > 0 && (
-        <div className="sleep-stagebox">
-          <div className="sleep-bar" role="img" aria-label="Sömnfaser">
-            {stages.map((st) =>
-              minutes(st.metric) > 0 ? <i key={st.metric} className={st.cls} style={{ flexGrow: minutes(st.metric) }} /> : null,
+      {night && night.length > 1 ? (
+        <Hypnogram stages={night} />
+      ) : (
+        total > 0 && (
+          <div className="sleep-stagebox">
+            <div className="sleep-bar" role="img" aria-label="Sömnfaser">
+              {stages.map((st) =>
+                minutes(st.metric) > 0 ? <i key={st.metric} className={st.cls} style={{ flexGrow: minutes(st.metric) }} /> : null,
+              )}
+            </div>
+            {hasTimes && mid !== undefined && (
+              <div className="sleep-axis" aria-hidden="true">
+                <span>{formatHealth('bedtime', values.bedtime!)}</span>
+                <span>{formatHealth('bedtime', mid)}</span>
+                <span>{formatHealth('wakeTime', values.wakeTime!)}</span>
+              </div>
             )}
           </div>
-          {hasTimes && mid !== undefined && (
-            <div className="sleep-axis" aria-hidden="true">
-              <span>{formatHealth('bedtime', values.bedtime!)}</span>
-              <span>{formatHealth('bedtime', mid)}</span>
-              <span>{formatHealth('wakeTime', values.wakeTime!)}</span>
-            </div>
-          )}
-        </div>
+        )
       )}
 
       {stages.length > 0 && (
@@ -270,6 +277,86 @@ function SleepTile({
           )}
         </dl>
       )}
+    </div>
+  )
+}
+
+const HYPNO_ROWS: { k: SleepStage['k'][]; label: string; cls: string }[] = [
+  { k: ['awake'], label: 'Vaken', cls: 'awake' },
+  { k: ['rem'], label: 'REM', cls: 'rem' },
+  { k: ['core', 'asleep'], label: 'Kärna', cls: 'core' },
+  { k: ['deep'], label: 'Djup', cls: 'deep' },
+]
+
+const HOUR = 3_600_000
+const clockOf = (ms: number) => new Date(ms).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+
+/** Sömndiagram: fas på höjden, tid på bredden, som trappsteg över natten. */
+function Hypnogram({ stages }: { stages: SleepStage[] }) {
+  const t0 = stages[0].s
+  const t1 = stages[stages.length - 1].e
+  const span = Math.max(1, t1 - t0)
+  const W = 1000
+  const ROW = 24
+  const x = (ms: number) => ((ms - t0) / span) * W
+  const rowOf = (k: SleepStage['k']) => Math.max(0, HYPNO_ROWS.findIndex((r) => r.k.includes(k)))
+  const ticks: number[] = []
+  for (let t = Math.ceil(t0 / HOUR) * HOUR; t < t1; t += HOUR) ticks.push(t)
+  // Bara var annan timme om natten är lång, så att etiketterna inte krockar
+  const step = ticks.length > 9 ? 2 : 1
+  const shown = ticks.filter((_, i) => i % step === 0)
+
+  return (
+    <div className="sleep-hypno">
+      <div className="hy-labels" aria-hidden="true">
+        {HYPNO_ROWS.map((r) => (
+          <span key={r.label} className={r.cls}>
+            {r.label}
+          </span>
+        ))}
+      </div>
+      <div className="hy-plot">
+        <svg viewBox={`0 0 ${W} ${ROW * HYPNO_ROWS.length}`} preserveAspectRatio="none" role="img" aria-label="Sömndiagram över natten">
+          {HYPNO_ROWS.map((r, i) => (
+            <line key={r.label} className="hy-grid" x1="0" x2={W} y1={i * ROW + ROW / 2} y2={i * ROW + ROW / 2} vectorEffect="non-scaling-stroke" />
+          ))}
+          {shown.map((t) => (
+            <line key={t} className="hy-tick" x1={x(t)} x2={x(t)} y1="0" y2={ROW * HYPNO_ROWS.length} vectorEffect="non-scaling-stroke" />
+          ))}
+          {stages.slice(1).map((st, i) => {
+            const prev = stages[i]
+            const a = rowOf(prev.k)
+            const b = rowOf(st.k)
+            return a === b ? null : (
+              <line
+                key={`c${st.s}`}
+                className="hy-link"
+                x1={x(st.s)}
+                x2={x(st.s)}
+                y1={a * ROW + ROW / 2}
+                y2={b * ROW + ROW / 2}
+                vectorEffect="non-scaling-stroke"
+              />
+            )
+          })}
+          {stages.map((st) => {
+            const row = rowOf(st.k)
+            const w = Math.max(2, x(st.e) - x(st.s))
+            return (
+              <rect key={`${st.s}-${st.k}`} className={HYPNO_ROWS[row].cls} x={x(st.s)} y={row * ROW + 5} width={w} height={ROW - 10} rx="3">
+                <title>{`${HYPNO_ROWS[row].label} ${clockOf(st.s)}–${clockOf(st.e)} (${Math.round((st.e - st.s) / 60000)} min)`}</title>
+              </rect>
+            )
+          })}
+        </svg>
+        <div className="hy-axis" aria-hidden="true">
+          {shown.map((t) => (
+            <span key={t} style={{ left: `${((t - t0) / span) * 100}%` }}>
+              {new Date(t).toLocaleTimeString('sv-SE', { hour: '2-digit' })}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
