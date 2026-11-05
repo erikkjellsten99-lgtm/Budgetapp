@@ -3862,87 +3862,214 @@
   font-size: 0.78rem;
 }
 
-.vanor .health-tiles {
+/* Övriga mått i grupper, samma tekniska stil som sömnkortet */
+.vanor .hm-group {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px 14px;
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.vanor .hm-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.vanor .hm-kicker {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.vanor .hm-days {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+}
+
+.vanor .hm-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.vanor .health-tile {
+.vanor .hm-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 2px 8px;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 4px;
   min-width: 0;
-  padding: 12px;
-  background: var(--sunk);
-  border-radius: 14px;
+  padding: 12px 12px 0 0;
 }
 
-.vanor .health-tile.reached {
-  box-shadow: inset 0 0 0 1.5px var(--done);
+/* Linjer mellan måtten, som i en tabell */
+.vanor .hm-item:nth-child(even) {
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
 }
 
-.vanor .ht-label {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 650;
+.vanor .hm-item:nth-child(n + 3) {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
-.vanor .ht-value {
+.vanor .hm-item:last-child:nth-child(odd) {
   grid-column: 1 / -1;
-  font-size: 1.15rem;
-  font-variant-numeric: tabular-nums;
+  padding-right: 0;
+}
+
+.vanor .hm-label {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.vanor .ht-goal {
-  grid-column: 1 / -1;
-  color: var(--ink);
-  font-size: 0.72rem;
-  line-height: 1.3;
-}
-
-.vanor .health-tile.reached .ht-goal {
-  color: var(--done);
-  font-weight: 700;
-}
-
-.vanor .ht-goal.muted {
-  color: var(--muted);
-}
-
-.vanor .ht-bars {
-  grid-column: 2;
-  grid-row: 1;
+.vanor .hm-value {
   display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 18px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 4px;
+  min-width: 0;
 }
 
-.vanor .ht-bars i {
-  width: 4px;
-  min-height: 2px;
+.vanor .hm-value b {
+  font-family: var(--mono);
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.vanor .hm-value u {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.vanor .hm-goal {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+
+.vanor .hm-progress {
+  height: 4px;
+  overflow: hidden;
   background: var(--line);
   border-radius: 2px;
 }
 
-.vanor .ht-bars i.last {
+.vanor .hm-progress i {
+  display: block;
+  height: 100%;
   background: var(--ink);
-  opacity: 0.7;
+  opacity: 0.75;
+  border-radius: 2px;
 }
 
-.vanor .ht-bars i.met {
+.vanor .hm-item.reached .hm-progress i {
   background: var(--done);
   opacity: 1;
 }
 
-.vanor .ht-bars i.empty {
-  opacity: 0.4;
+.vanor .hm-goal-text {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.vanor .hm-item.reached .hm-goal-text {
+  color: var(--done);
+  font-weight: 700;
+}
+
+.vanor .hm-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: start;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+}
+
+.vanor .hm-trend i {
+  font-size: 0.5rem;
+  font-style: normal;
+}
+
+/* 7 dagar som staplar med veckodag, idag markerad */
+.vanor .hm-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  max-width: 180px;
+  margin-top: 4px;
+}
+
+.vanor .hm-day {
+  display: grid;
+  grid-template-rows: 22px auto;
+  justify-items: center;
+  gap: 3px;
+}
+
+.vanor .hm-day i {
+  align-self: end;
+  width: 100%;
+  max-width: 10px;
+  background: var(--line);
+  border-radius: 2px;
+}
+
+.vanor .hm-day i.met {
+  background: var(--done);
+  opacity: 0.55;
+}
+
+.vanor .hm-day i.today {
+  background: var(--ink);
+  opacity: 0.8;
+}
+
+.vanor .hm-day i.today.met {
+  background: var(--done);
+  opacity: 1;
+}
+
+/* Saknad dag: en liten punkt i stället för en stapel */
+.vanor .hm-day i.empty {
+  width: 3px;
+  height: 3px !important;
+  background: var(--line);
+  border-radius: 50%;
+}
+
+.vanor .hm-day small {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  line-height: 1;
+}
+
+.vanor .hm-day:last-child small {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 /* Sömn som mätinstrument: total, poängskala, fasstapel med tidsaxel, tabeller */

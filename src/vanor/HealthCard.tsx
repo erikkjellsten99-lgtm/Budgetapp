@@ -41,6 +41,7 @@ export default function HealthCard({
   const goals = new Map<HealthMetric, { min: number; name: string }>()
   for (const h of habits) if (h.auto && !h.archived) goals.set(h.auto.metric, { min: goalOf(h), name: h.name })
   const shown = METRIC_KEYS.filter((m) => latest.values[m] !== undefined && !SLEEP_METRICS.includes(m))
+  const groups = GROUPS.map((g) => ({ title: g.title, metrics: shown.filter((m) => g.metrics.includes(m)) })).filter((g) => g.metrics.length)
   const pastBedtimes = health
     .filter((d) => d.date < latest.date && d.date >= addDays(latest.date, -13) && d.values.bedtime !== undefined)
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -53,60 +54,141 @@ export default function HealthCard({
         <span className="health-time">Från Apple Hälsa · {clock(latest.updated)}</span>
       </div>
       <SleepTile values={latest.values} stages={latest.stages} pastBedtimes={pastBedtimes} goal={goals.get('sleepH')} />
-      <ul className="health-tiles">
-        {shown.map((metric) => {
-          const value = latest.values[metric]!
-          const goal = goals.get(metric)
-          const series = week.map((date) => byDate.get(date)?.values[metric])
-          const max = Math.max(goal?.min ?? 0, ...series.map((v) => v ?? 0)) || 1
-          const reached = goal ? value >= goal.min : false
-          return (
-            <li key={metric} className={reached ? 'health-tile reached' : 'health-tile'}>
-              <span className="ht-label">{METRICS[metric].label}</span>
-              <b className="ht-value">{formatHealth(metric, value)}</b>
-              {goal ? (
-                <span className="ht-goal">
-                  {reached ? `✓ ${goal.name}` : `${formatHealth(metric, Math.max(0, goal.min - value))} kvar till ${goal.name}`}
-                </span>
-              ) : (
-                <span className="ht-goal muted">{vsAverage(metric, value, health, latest.date) ?? '7 dagar'}</span>
-              )}
-              <span className="ht-bars" aria-hidden="true">
-                {series.map((v, i) => (
-                  <i
-                    key={week[i]}
-                    className={[v === undefined && 'empty', goal && v !== undefined && v >= goal.min && 'met', i === 6 && 'last']
-                      .filter(Boolean)
-                      .join(' ') || undefined}
-                    style={{ height: `${v === undefined ? 8 : Math.max(8, (v / max) * 100)}%` }}
-                  />
-                ))}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
+      {groups.map((g) => (
+        <section key={g.title} className="hm-group" aria-label={g.title}>
+          <header className="hm-head">
+            <span className="hm-kicker">{g.title}</span>
+            <span className="hm-days" aria-hidden="true">
+              7 dagar
+            </span>
+          </header>
+          <div className="hm-grid">
+            {g.metrics.map((metric) => (
+              <Instrument
+                key={metric}
+                metric={metric}
+                value={latest.values[metric]!}
+                goal={goals.get(metric)}
+                week={week}
+                series={week.map((date) => byDate.get(date)?.values[metric])}
+                trend={vsAverage(metric, latest.values[metric]!, health, latest.date)}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </section>
   )
 }
 
+/** Måtten i grupper, i den ordning de visas. */
+const GROUPS: { title: string; metrics: HealthMetric[] }[] = [
+  { title: 'Aktivitet', metrics: ['steps', 'distanceKm', 'activeKcal', 'exerciseMin', 'workouts', 'standHours', 'flights'] },
+  { title: 'Hjärta och kondition', metrics: ['vo2Max', 'restingHr', 'hrvMs', 'hrRecovery', 'walkingHr', 'spo2'] },
+  { title: 'Kropp och återhämtning', metrics: ['weightKg', 'bodyFat', 'wristTemp', 'waterL', 'mindfulMin'] },
+]
+
+const DAY_LETTERS = ['S', 'M', 'T', 'O', 'T', 'F', 'L']
+const dayLetter = (date: DateKey) => DAY_LETTERS[new Date(`${date}T12:00:00Z`).getUTCDay()]
+
+/** "37,6 ml/kg/min" → ["37,6", "ml/kg/min"], så att siffran kan vara stor och enheten liten. */
+function splitValue(metric: HealthMetric, value: number): [string, string] {
+  const text = formatHealth(metric, value)
+  const at = text.lastIndexOf('\u00a0')
+  if (at < 0) return [text, '']
+  const unit = text.slice(at + 1)
+  // "679 steg" under rubriken Steg: enheten säger inget nytt
+  return [text.slice(0, at), unit === METRICS[metric].label.toLowerCase() ? '' : unit]
+}
+
+interface Trend {
+  dir: 'up' | 'down' | 'flat'
+  text: string
+}
+
 /**
- * Jämförelse mot ditt eget snitt de 14 dagarna före, t.ex. "+0,3 °C mot ditt snitt". Hälsa visar själv
+ * Jämförelse mot ditt eget snitt de 14 dagarna före, t.ex. "+0,3 °C". Hälsa visar själv
  * handledstemperatur som avvikelse, och för puls, HRV och VO₂ max är trenden mer intressant än siffran.
- * Null när det finns färre än 3 tidigare dagar.
+ * Null när det finns färre än 3 tidigare dagar, och för summor som steg (de växer under dagen).
  */
-function vsAverage(metric: HealthMetric, value: number, health: HealthDay[], date: DateKey): string | null {
+function vsAverage(metric: HealthMetric, value: number, health: HealthDay[], date: DateKey): Trend | null {
+  if (METRICS[metric].kind === 'sum') return null
   const from = addDays(date, -14)
   const past = health
     .filter((d) => d.date < date && d.date >= from && d.values[metric] !== undefined)
     .map((d) => d.values[metric]!)
-  // Summor som steg växer under dagen, så de jämförs inte mot ett helt dygns snitt
-  if (METRICS[metric].kind === 'sum') return null
   if (past.length < 3) return null
   const diff = value - past.reduce((a, b) => a + b, 0) / past.length
   const step = 10 ** -METRICS[metric].decimals
-  if (Math.abs(diff) < step / 2) return 'Som ditt snitt'
-  return `${diff > 0 ? '+' : '\u2212'}${formatHealth(metric, Math.abs(diff))} mot ditt snitt`
+  if (Math.abs(diff) < step / 2) return { dir: 'flat', text: 'som ditt snitt' }
+  return { dir: diff > 0 ? 'up' : 'down', text: `${diff > 0 ? '+' : '\u2212'}${splitValue(metric, Math.abs(diff))[0]} mot snitt` }
+}
+
+/** Ett mått: etikett, stor siffra, mål eller trend och de senaste 7 dagarna som staplar med veckodag. */
+function Instrument({
+  metric,
+  value,
+  goal,
+  week,
+  series,
+  trend,
+}: {
+  metric: HealthMetric
+  value: number
+  goal?: { min: number; name: string }
+  week: DateKey[]
+  series: (number | undefined)[]
+  trend: Trend | null
+}) {
+  const [num, unit] = splitValue(metric, value)
+  const reached = goal ? value >= goal.min : false
+  const known = series.filter((v): v is number => v !== undefined)
+  const hi = Math.max(goal?.min ?? 0, ...known) || 1
+  const lo = Math.min(...known)
+  // Summor (steg, pass) från noll. Puls, VO₂ max m.m. ändras lite från dag till dag, så de visas mellan
+  // veckans lägsta och högsta värde – annars blir alla staplar lika höga.
+  const barHeight = (v: number) =>
+    METRICS[metric].kind === 'sum' ? Math.max(10, (v / hi) * 100) : hi === lo ? 60 : 25 + ((v - lo) / (hi - lo)) * 75
+  const progress = goal ? Math.min(100, Math.round((value / goal.min) * 100)) : 0
+  return (
+    <div className={reached ? 'hm-item reached' : 'hm-item'}>
+      <span className="hm-label">{METRICS[metric].label}</span>
+      <span className="hm-value">
+        <b>{num}</b>
+        {unit && <u>{unit}</u>}
+      </span>
+      {goal ? (
+        <span className="hm-goal">
+          <span className="hm-progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${goal.name}: ${progress} %`}>
+            <i style={{ width: `${progress}%` }} />
+          </span>
+          <span className="hm-goal-text">
+            {reached ? `\u2713 ${goal.name}` : `${splitValue(metric, Math.max(0, goal.min - value))[0]} kvar till ${goal.name}`}
+          </span>
+        </span>
+      ) : (
+        trend && (
+          <span className={`hm-trend ${trend.dir}`}>
+            <i aria-hidden="true">{trend.dir === 'up' ? '\u25b2' : trend.dir === 'down' ? '\u25bc' : '\u25cf'}</i>
+            {trend.text}
+          </span>
+        )
+      )}
+      <span className="hm-week" aria-hidden="true">
+        {series.map((v, i) => (
+          <span key={week[i]} className="hm-day">
+            <i
+              className={[v === undefined && 'empty', goal && v !== undefined && v >= goal.min && 'met', i === 6 && 'today']
+                .filter(Boolean)
+                .join(' ') || undefined}
+              style={{ height: `${v === undefined ? 0 : barHeight(v)}%` }}
+            />
+            <small>{dayLetter(week[i])}</small>
+          </span>
+        ))}
+      </span>
+    </div>
+  )
 }
 
 const STAGES: { metric: HealthMetric; label: string; cls: string }[] = [
