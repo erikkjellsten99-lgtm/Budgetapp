@@ -5,6 +5,7 @@ import type { Habit, Log, Paused } from './habits'
 import { planetColor, planetKind } from './planets'
 import { monthSatellites } from './space'
 import type { Task } from './tasks'
+import type { HealthDay } from '../../supabase/functions/inbox/health'
 import { monthForecast, monthName, monthPlanets, monthScore, previousMonth, weekHabits, type MonthPlanet, type MonthScore } from './progress'
 
 /**
@@ -12,7 +13,7 @@ import { monthForecast, monthName, monthPlanets, monthScore, previousMonth, week
  * Inspirerade av riktiga planeter, så att bilden känns som rymden och inte som en tecknad bild.
  */
 // 3D-galaxen laddas först när den öppnas, så att resten av appen förblir snabb.
-type GalaxyProps = { habits: Habit[]; log: Log; paused: Paused; today: DateKey; tasks: Task[]; onClose: () => void }
+type GalaxyProps = { habits: Habit[]; log: Log; paused: Paused; today: DateKey; tasks: Task[]; health: HealthDay[]; onClose: () => void }
 
 const RELOAD_KEY = 'vanor-galax-omladdad'
 /** Sätts innan sidan laddas om, så att galaxen öppnas direkt igen efteråt. */
@@ -575,7 +576,7 @@ function HabitDetails({
 }
 
 /** Månadsvyn i kortet: galaxen, procent och tidigare månader. */
-export function MonthView({ habits, log, paused, today, tasks }: { habits: Habit[]; log: Log; paused: Paused; today: DateKey; tasks: Task[] }) {
+export function MonthView({ habits, log, paused, today, tasks, health }: { habits: Habit[]; log: Log; paused: Paused; today: DateKey; tasks: Task[]; health: HealthDay[] }) {
   const score = monthScore(habits, log, paused, today)
   const bodies = monthPlanets(habits, log, paused, today, score.month)
   const built = bodies.filter((p) => p.share >= 0.8).length
@@ -685,7 +686,7 @@ export function MonthView({ habits, log, paused, today, tasks }: { habits: Habit
       )}
       {galaxyOpen && (
         <Suspense fallback={<div className="galaxy-view loading">Laddar galaxen …</div>}>
-          <CosmosView habits={habits} log={log} paused={paused} today={today} tasks={tasks} onClose={() => setGalaxyOpen(false)} />
+          <CosmosView habits={habits} log={log} paused={paused} today={today} tasks={tasks} health={health} onClose={() => setGalaxyOpen(false)} />
         </Suspense>
       )}
       <div className="ws-foot gx-foot">

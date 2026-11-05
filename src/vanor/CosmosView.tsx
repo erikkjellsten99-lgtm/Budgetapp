@@ -47,6 +47,11 @@ import {
   type GalaxySpot,
 } from './universe'
 import { BasePanel, EconomyPanel, TimeSlider, capital, kr, type EcoId } from './CosmosPanels'
+import { galaxyVitals, type Vitals } from './vitals'
+import { buildVitals } from './vitals3d'
+import { VITAL_IDS, VitalsPanel, type VitalId } from './VitalsPanel'
+import { formatHealth } from '../../supabase/functions/inbox/health'
+import type { HealthDay } from '../../supabase/functions/inbox/health'
 
 interface Props {
   habits: Habit[]
@@ -55,6 +60,8 @@ interface Props {
   today: DateKey
   /** Att göra-saker: de avklarade den här månaden blir satelliter runt Jorden. */
   tasks: Task[]
+  /** Hälsodatan från Apple Hälsa: pulsen, sömnen och stegen i Hälsogalaxen. */
+  health: HealthDay[]
   onClose: () => void
 }
 
@@ -173,6 +180,16 @@ function CosmosGuide({ onClose }: { onClose: () => void }) {
           </dt>
           <dd>Skulderna är ett svart hål som krymper, sparmålet en planet som föds, budgeten ett månsystem och önskningarna kometer.</dd>
         </div>
+        <div>
+          <dt>
+            <i className="gv-ico pulse" aria-hidden="true" />
+            Hälsodata
+          </dt>
+          <dd>
+            Från Apple Hälsa: Hälsogalaxens kärna slår i din vilopuls och lyser efter konditionen, nattens sömn är en nebulosa med ett färgband per
+            fas, dagens steg en ring runt galaxen som sluts vid målet och varje träningspass en meteor.
+          </dd>
+        </div>
       </dl>
       <p className="gv-guide-how">
         Dra för att snurra runt. Nyp (eller scrolla) för att zooma mot det du pekar på, och flytta bilden med två fingrar. Tryck på något för att
@@ -186,7 +203,33 @@ function CosmosGuide({ onClose }: { onClose: () => void }) {
   )
 }
 
-export default function CosmosView({ habits, log, paused, today, tasks, onClose }: Props) {
+/** Hälsodatan som knappar längst ner i Hälsogalaxen, som ekonomins knappar i Ekonomigalaxen. */
+function VitalChips({ vitals, onOpen }: { vitals: Vitals; onOpen: (id: VitalId) => void }) {
+  return (
+    <div className="gv-months" role="list">
+      {vitals.pulse && (
+        <button type="button" role="listitem" className="gv-month gv-pulse-chip" onClick={() => onOpen('vital:pulse')}>
+          <span>Puls</span>
+          <b>{formatHealth('restingHr', vitals.pulse.bpm)}</b>
+        </button>
+      )}
+      {vitals.sleep && (
+        <button type="button" role="listitem" className="gv-month gv-sleep-chip" onClick={() => onOpen('vital:sleep')}>
+          <span>Sömn</span>
+          <b>{formatHealth('sleepH', vitals.sleep.hours)}</b>
+        </button>
+      )}
+      {vitals.steps && (
+        <button type="button" role="listitem" className="gv-month gv-steps-chip" onClick={() => onOpen('vital:steps')}>
+          <span>Steg</span>
+          <b>{formatHealth('steps', vitals.steps.value)}</b>
+        </button>
+      )}
+    </div>
+  )
+}
+
+export default function CosmosView({ habits, log, paused, today, tasks, health, onClose }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const labelEls = useRef(new Map<string, HTMLElement>())
   const coreRef = useRef<Core | null>(null)
@@ -201,6 +244,7 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
   const [period, setPeriod] = useState<Period>('now')
   const [starSel, setStarSel] = useState<string | null>(null)
   const [eco, setEco] = useState<EcoId | null>(null)
+  const [vital, setVital] = useState<VitalId | null>(null)
   const [crewSel, setCrewSel] = useState<number | null>(null)
   const [baseOpen, setBaseOpen] = useState(true)
   const [future, setFuture] = useState(0)
@@ -249,10 +293,13 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
     }
   }, [])
 
+  // Hälsodatan från Apple Hälsa (samma som kortet Hälsa idag): kärnan, sömnnebulosan och stegringen.
+  const vitals = useMemo(() => galaxyVitals(health, habits, today), [health, habits, today])
+
   // Panelen täcker nedre delen: bilden tittar ner när något är valt.
   const area = areaOfKey(level)
   const panelShown = useRef(false)
-  panelShown.current = (level === 'economy' && eco !== null) || (level === 'base' && (baseOpen || crewSel !== null)) || (area !== null && starSel !== null)
+  panelShown.current = (level === 'economy' && eco !== null) || (level === 'health' && vital !== null) || (level === 'base' && (baseOpen || crewSel !== null)) || (area !== null && starSel !== null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -269,6 +316,7 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
     if (coreRef.current?.rig.flying) return
     if (!level.startsWith('system:')) setStarSel(null)
     if (level !== 'economy') setEco(null)
+    if (level !== 'health') setVital(null)
     if (level !== 'base') {
       setCrewSel(null)
       setBaseOpen(true)
@@ -315,6 +363,7 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
     const content = buildContent(core, {
       systems,
       economy,
+      vitals,
       built,
       nextModule,
       crew,
@@ -329,13 +378,14 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
       content.dispose()
       applyFutureRef.current = null
     }
-  }, [score, systems, economy, built, nextModule, crew, satCount, today])
+  }, [score, systems, economy, vitals, built, nextModule, crew, satCount, today])
 
   /* ---------- Tryck på något (i bilden eller på en etikett) ---------- */
   const fly = (id: string) => coreRef.current?.fly(id)
   const pick = (id: string) => {
     if (id === 'earth' || id === 'base' || id === 'health' || id === 'economy') {
       setEco(null)
+      setVital(null)
       setStarSel(null)
       setCrewSel(null)
       fly(id)
@@ -358,6 +408,7 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
       setBaseOpen(false)
       fly(id)
     } else if (id === 'hole' || id === 'save' || id === 'moons' || id === 'wish' || id === 'worth') openEco(id)
+    else if ((VITAL_IDS as string[]).includes(id)) openVital(id as VitalId)
   }
   pickRef.current = pick
 
@@ -365,6 +416,12 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
     setEco(id)
     fly(id === 'wish' || id === 'worth' ? 'economy' : id)
   }
+  const openVital = (id: VitalId) => {
+    setStarSel(null)
+    setVital(id)
+    if (levelRef.current !== 'health') fly('health')
+  }
+  const closeVital = () => setVital(null)
   const closeEco = () => {
     setEco(null)
     fly('economy')
@@ -372,12 +429,14 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
   const back = () => {
     setStarSel(null)
     setEco(null)
+    setVital(null)
     setCrewSel(null)
     fly(area ? 'health' : 'earth')
   }
   const home = () => {
     setStarSel(null)
     setEco(null)
+    setVital(null)
     setCrewSel(null)
     fly('earth')
   }
@@ -428,6 +487,11 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
           },
         ]
       : []),
+    ...(vitals?.pulse ? [{ id: 'vital:pulse', title: 'Puls', sub: formatHealth('restingHr', vitals.pulse.bpm), tone: 'vital pulse' }] : []),
+    ...(vitals?.sleep
+      ? [{ id: 'vital:sleep', title: 'Sömn', sub: `${formatHealth('sleepH', vitals.sleep.hours)}${vitals.sleep.score !== null ? ` · ${vitals.sleep.score} p` : ''}`, tone: 'vital sleep' }]
+      : []),
+    ...(vitals?.steps ? [{ id: 'vital:steps', title: 'Steg', sub: `${Math.round(vitals.steps.part * 100)} % av målet`, tone: 'vital steps' }] : []),
     ...(economy
       ? [
           ...(economy.debtLeft > 0 || economy.debtMax > 0 ? [{ id: 'hole', title: 'Skulder', sub: economy.debtLeft > 0 ? kr(economy.debtLeft) : 'Skuldfria' }] : []),
@@ -611,9 +675,11 @@ export default function CosmosView({ habits, log, paused, today, tasks, onClose 
         </div>
       </section>
     )
+  else if (level === 'health' && vital && vitals) bottom = <VitalsPanel id={vital} vitals={vitals} onBack={closeVital} />
   else if (level === 'health' || area)
     bottom = (
       <div className="gv-bottom">
+        {level === 'health' && vitals && <VitalChips vitals={vitals} onOpen={openVital} />}
         <p className="gv-hint">
           {period === 'now' ? 'Stjärnorna visar de senaste veckorna.' : `Stjärnorna visar ${monthName(period, today)}.`}{' '}
           {area ? 'Tryck på en stjärna för detaljer.' : 'Tryck på ett solsystem för att flyga dit.'}
@@ -1231,6 +1297,8 @@ function createCore(mount: HTMLDivElement, hooks: CoreHooks): Core {
 interface ContentData {
   systems: ReturnType<typeof areaSystems>
   economy: Economy | null
+  /** Hälsodatan i Hälsogalaxen, eller null när ingen har kommit från genvägen de senaste dagarna. */
+  vitals: Vitals | null
   built: Set<ModuleKind>
   nextModule: ModuleKind | null
   crew: Crew
@@ -1358,6 +1426,21 @@ function buildContent(core: Core, d: ContentData): Content {
     }
     return best
   })
+
+  /* ----- Hälsodatan i Hälsogalaxen: pulsen i kärnan, sömnnebulosan, stegringen och meteorerna ----- */
+  if (d.vitals) {
+    const vit = buildVitals(d.vitals, HEALTH.radius, core.health.core, core.glow)
+    core.healthGroup.add(vit.group)
+    disposers.push(() => vit.dispose())
+    updates.push((now) => vit.update(now))
+    const place = (id: VitalId, local: THREE.Vector3, dy: number) => {
+      const world = inGalaxy(HEALTH, local)
+      anchors.set(id, { pos: (o) => o.copy(world), near: 2.5, far: HEALTH.radius * 3.4, dy, hit: 44 })
+    }
+    if (d.vitals.pulse) place('vital:pulse', vit.spots.pulse, -26)
+    if (d.vitals.sleep) place('vital:sleep', vit.spots.sleep, 14)
+    if (d.vitals.steps) place('vital:steps', vit.spots.steps, 14)
+  }
 
   /* ----- Ekonomigalaxen ----- */
   const economy = d.economy

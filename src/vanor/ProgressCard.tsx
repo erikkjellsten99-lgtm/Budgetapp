@@ -4,6 +4,7 @@ import { addDays, isoWeek, weekStart, type DateKey } from './dates'
 import type { Habit, Log, Paused } from './habits'
 import { MonthView } from './Galaxy'
 import type { Task } from './tasks'
+import type { HealthDay } from '../../supabase/functions/inbox/health'
 import { change, habitTrends, weeklyScores } from './progress'
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   today: DateKey
   /** Att göra-saker: de avklarade blir satelliter i galaxen. */
   tasks: Task[]
+  /** Hälsodatan från Apple Hälsa: visas i Hälsogalaxen. */
+  health: HealthDay[]
   /** Det som måste göras idag och inte är gjort än (namn), för beskedet under solen. */
   mustToday: string[]
 }
@@ -50,7 +53,7 @@ function Change({ value, unit = '%-enheter' }: { value: number | null; unit?: st
  * Under står vad som är viktigt idag, i samma anda som listan (Prioritera idag / Kan vänta).
  * Tryck för att se staplarna vecka för vecka och procent per vana.
  */
-export default function ProgressCard({ habits, log, paused, today, tasks, mustToday }: Props) {
+export default function ProgressCard({ habits, log, paused, today, tasks, health, mustToday }: Props) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<View>(savedView)
   const chooseView = (next: View) => {
@@ -122,7 +125,7 @@ export default function ProgressCard({ habits, log, paused, today, tasks, mustTo
       </div>
 
       {view === 'month' ? (
-        <MonthView habits={habits} log={log} paused={paused} today={today} tasks={tasks} />
+        <MonthView habits={habits} log={log} paused={paused} today={today} tasks={tasks} health={health} />
       ) : (
       <>
       <div className="ws-hero space sunrise">
