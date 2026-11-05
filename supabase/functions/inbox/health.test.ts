@@ -156,3 +156,37 @@ describe('sömndiagrammets faser', () => {
     expect(parseSleepStages(undefined)).toEqual([])
   })
 })
+
+describe('fler hälsomått', () => {
+  it('läser VO₂ max, pulsmått, kroppsfett, syresättning och handledstemperatur', () => {
+    const v = parseHealthBody({
+      vo2max: '46,3 ml/kg/min',
+      pulsatervh: '28 slag/min\n31 slag/min',
+      gangpuls: '98 slag/min\n102 slag/min',
+      kroppsfett: '0,184',
+      syre: '97 %\n95 %',
+      handled: '35,6 °C',
+    })
+    expect(v.vo2Max).toBe(46.3)
+    expect(v.hrRecovery).toBe(28)
+    expect(v.walkingHr).toBe(100)
+    expect(v.bodyFat).toBe(18.4)
+    expect(v.spo2).toBe(96)
+    expect(v.wristTemp).toBe(35.6)
+    expect(formatHealth('vo2Max', 46.3)).toBe('46,3\u00a0ml/kg/min')
+    expect(formatHealth('bodyFat', 18.4)).toBe('18,4\u00a0%')
+  })
+
+  it('räknar träningspass (en rad per pass) och kan bocka en vana', () => {
+    expect(parseHealthBody({ pass: 'Styrketräning | 52 min\nLöpning | 31 min' }).workouts).toBe(2)
+    expect(parseHealthBody({ pass: '' }).workouts).toBeUndefined()
+    // Genvägens Antal skickar en siffra
+    expect(parseHealthBody({ pass: 2 }).workouts).toBe(2)
+    expect(parseHealthBody({ pass: '0' }).workouts).toBe(0)
+    expect(isHealthBody({ vo2max: '45' })).toBe(true)
+    const gym = [{ id: 'gym', auto: { metric: 'workouts' as const, min: 1 } }]
+    expect(metRules(gym, { workouts: 1 }, '2026-11-05')).toEqual([{ id: 'gym', min: false }])
+    expect(metRules(gym, {}, '2026-11-05')).toEqual([])
+    expect(formatGoal('workouts', 1)).toBe('1\u00a0träningspass')
+  })
+})
