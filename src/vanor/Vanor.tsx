@@ -188,6 +188,7 @@ export default function Vanor() {
           paused={paused}
           today={today}
           tasks={data.tasks}
+          health={data.health}
           mustToday={[...tasksDue.map((t) => t.title), ...must.map((r) => r.habit.name)]}
         />}
 

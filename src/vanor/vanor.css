@@ -2894,6 +2894,11 @@
   border: 2px solid #ffd28a;
 }
 
+.galaxy-view .gv-ico.pulse {
+  background: radial-gradient(circle, #ffd3df 0 20%, rgb(255 111 150 / 0.75) 42%, transparent 72%);
+  box-shadow: 0 0 0 2px rgb(255 160 99 / 0.6);
+}
+
 .galaxy-view .gv-ico.planet {
   background: radial-gradient(circle at 35% 35%, #bcd6ff, #3a5aa8 60%, #0d1530);
 }
@@ -4571,4 +4576,65 @@
 .vanor .sleep-tile .sleep-axis,
 .vanor .sleep-tile .hy-axis {
   font-family: var(--body);
+}
+
+/* Hälsodatan i Hälsogalaxen: etiketter, knappar och panelen i fasernas och ringarnas färger */
+.cosmos-view .cv-label.vital b {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+.cosmos-view .cv-label.vital.pulse b {
+  color: #ff9db8;
+}
+
+.cosmos-view .cv-label.vital.sleep b {
+  color: #9fd8f5;
+}
+
+.cosmos-view .cv-label.vital.steps b {
+  color: #ffc08f;
+}
+
+.galaxy-view .gv-pulse-chip {
+  border-color: rgb(255 111 150 / 0.55);
+}
+
+.galaxy-view .gv-sleep-chip {
+  border-color: rgb(94 200 240 / 0.55);
+}
+
+.galaxy-view .gv-steps-chip {
+  border-color: rgb(255 160 99 / 0.55);
+}
+
+.galaxy-view .gv-vitals .gv-big {
+  font-size: 1.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.galaxy-view .gv-label.gv-pulse {
+  color: #ff9db8;
+}
+
+.galaxy-view .gv-label.gv-sleep {
+  color: #9fd8f5;
+}
+
+.galaxy-view .gv-label.gv-steps {
+  color: #ffc08f;
+}
+
+.galaxy-view .gv-stagebar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  margin: 2px 0 4px;
+  overflow: hidden;
+  border-radius: 5px;
+}
+
+.galaxy-view .gv-stagebar i {
+  min-width: 2px;
 }
