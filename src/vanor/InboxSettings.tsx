@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { getSyncState, supabase } from '../sync'
-import { METRIC_KEYS, METRICS } from '../../supabase/functions/inbox/health'
+import { FIELD_METRICS, METRICS } from '../../supabase/functions/inbox/health'
 
 // Koppla iPhone: genvägar i appen Genvägar skickar till Groundwork (Supabase-funktionen "inbox") med en
 // personlig nyckel – listan "Groundwork" i Påminnelser, saker du säger till Siri och siffror från Apple Hälsa.
@@ -214,7 +214,7 @@ export default function InboxSettings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {METRIC_KEYS.map((m) => (
+                  {FIELD_METRICS.map((m) => (
                     <tr key={m}>
                       <td>{METRICS[m].health}</td>
                       <td>
@@ -225,7 +225,14 @@ export default function InboxSettings() {
                 </tbody>
               </table>
               <p className="push-note">
-                Sömn: välj filtret <b>Slutdatum är idag</b> i stället, så räknas natten som just tog slut. iPhone låser hälsodatan när telefonen är låst, så välj en tid då du brukar ha den i
+                Sömn (allt som i Hälsa): sök efter <b>Sömnanalys</b> med <b>Slutdatum är idag</b> och <b>Gruppera efter</b>{' '}
+                <b>Ingen</b>. Lägg till <b>Upprepa med varje</b> och i den en <b>Text</b>: <b>Upprepa objekt</b> → <b>Värde</b>,{' '}
+                <code>|</code>, <b>Upprepa objekt</b> → <b>Startdatum</b>, <code>|</code>, <b>Upprepa objekt</b> → <b>Slutdatum</b>.
+                Tryck på varje datum och välj formatet <b>ISO 8601</b> med tid. Fältet <code>somn</code> får{' '}
+                <b>Upprepningsresultat</b>. Då får du faser, vaken tid, när du somnade och vaknade och en uppskattad sömnpoäng.
+                Klockans egen sömnpoäng finns inte i Hälsa: vill du ha den, lägg till <b>Be om inmatning</b> (Nummer) och skicka den
+                som <code>somnpoang</code>.{' '}
+                iPhone låser hälsodatan när telefonen är låst, så välj en tid då du brukar ha den i
                 handen, eller säg "Hej Siri, hälsa till Groundwork". Siffrorna sparas privat på ditt konto.
               </p>
             </details>

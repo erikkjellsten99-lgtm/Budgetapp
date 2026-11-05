@@ -14,7 +14,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4'
 import { itemId, parseLines, stockholmToday, type InboxItem } from './parse.ts'
 import { confirmText, parseSpoken } from './spoken.ts'
-import { formatHealth, isHealthBody, metRules, METRIC_KEYS, parseHealthBody, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
+import { FIELD_METRICS, formatHealth, isHealthBody, metRules, parseHealthBody, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
@@ -179,7 +179,7 @@ async function saveHealth(userId: string, body: Record<string, unknown>, today: 
     checked = habits.filter((h) => newIds.has(h.id)).map((h) => h.name)
   }
 
-  const shown = METRIC_KEYS.filter((m) => values[m] !== undefined).map((m) => formatHealth(m, values[m]!))
+  const shown = FIELD_METRICS.filter((m) => values[m] !== undefined).map((m) => formatHealth(m, values[m]!))
   return `Hälsa sparad: ${shown.join(' · ')}.${checked.length ? ` Bockat: ${checked.join(', ')}.` : ''}`
 }
 

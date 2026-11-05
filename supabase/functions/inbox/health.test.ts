@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatGoal, formatHealth, formatProgress, guessRule, isHealthBody, metRules, parseHealthBody, parseHealthValue } from './health'
+import { formatGoal, formatHealth, formatProgress, guessRule, isHealthBody, metRules, parseHealthBody, parseHealthValue, estimateSleepScore, sleepRating } from './health'
 
 describe('hälsodata från genvägen', () => {
   it('läser siffror med svenska tusental och decimaler', () => {
@@ -41,6 +41,14 @@ describe('hälsodata från genvägen', () => {
     expect(parseHealthValue('180\n420', 'mindfulMin')).toBe(10)
     expect(parseHealthValue('12 min', 'mindfulMin')).toBe(12)
     expect(parseHealthValue('27000', 'sleepH')).toBe(7.5)
+  })
+
+  it('sömn med faser från klockan: vaken räknas inte, i säng bara utan faser', () => {
+    const night = ['Kärna | 1:30:00', 'Djup | 45:00', 'REM | 50:00', 'Vaken | 4:00', 'Kärna | 2:55:00', 'I säng | 8:10:00']
+    expect(parseHealthValue(night.join('\n'), 'sleepH')).toBe(6)
+    expect(parseHealthValue(['Core | 2700', 'Deep | 1800', 'Awake | 300'], 'sleepH')).toBe(1.25)
+    expect(parseHealthValue('I säng | 7:30:00\nVaken | 10:00', 'sleepH')).toBe(7.5)
+    expect(parseHealthValue('Kärna | 7:30', 'sleepH')).toBe(0.13)
   })
 
   it('hoppar över tomt och skräp', () => {
@@ -87,5 +95,47 @@ describe('hälsodata från genvägen', () => {
     expect(guessRule('8 000 steg')).toEqual({ metric: 'steps', min: 8000 })
     expect(guessRule('Meditation')).toEqual({ metric: 'mindfulMin', min: 10 })
     expect(guessRule('Läsa')).toBeNull()
+  })
+})
+
+describe('hela sömnen', () => {
+  const night = [
+    'I säng | 2026-11-03T22:50:00+01:00 | 2026-11-04T06:55:00+01:00',
+    'Kärna | 2026-11-03T23:10:00+01:00 | 2026-11-04T00:40:00+01:00',
+    'Djup | 2026-11-04T00:40:00+01:00 | 2026-11-04T01:25:00+01:00',
+    'Vaken | 2026-11-04T01:25:00+01:00 | 2026-11-04T01:29:00+01:00',
+    'REM | 2026-11-04T01:29:00+01:00 | 2026-11-04T02:19:00+01:00',
+    'Kärna | 2026-11-04T02:19:00+01:00 | 2026-11-04T06:40:00+01:00',
+    'Vaken | 2026-11-04T06:40:00+01:00 | 2026-11-04T06:48:00+01:00',
+  ].join('\n')
+
+  it('faser, vaken, i säng och klockslag', () => {
+    const v = parseHealthBody({ somn: night })
+    expect(v.sleepH).toBe(7.43)
+    expect(v.sleepDeepH).toBe(0.75)
+    expect(v.sleepRemH).toBe(0.83)
+    expect(v.sleepAwakeMin).toBe(12)
+    expect(v.sleepWakes).toBe(1)
+    expect(v.inBedH).toBe(8.08)
+    expect(formatHealth('bedtime', v.bedtime!)).toBe('23:10')
+    expect(formatHealth('wakeTime', v.wakeTime!)).toBe('06:40')
+    expect(formatHealth('inBedH', v.inBedH!)).toBe('8 h 5 min')
+  })
+
+  it('efter midnatt räknas läggtid som 24+, andning blir medelvärde, sömnpoäng skrivs in', () => {
+    const v = parseHealthBody({ somn: 'Kärna | 2026-11-04T00:30:00+01:00 | 2026-11-04T07:00:00+01:00', andning: '14\n16', somnpoang: '82' })
+    expect(v.bedtime).toBe(24.5)
+    expect(v.respRate).toBe(15)
+    expect(v.sleepScore).toBe(82)
+  })
+
+  it('uppskattad sömnpoäng', () => {
+    const v = parseHealthBody({ somn: night })
+    const s = estimateSleepScore(v, [23, 23.25, 22.9, 23.4])!
+    expect(s.bedtime).toBe(30)
+    expect(s.score).toBeGreaterThan(85)
+    expect(sleepRating(s.score)).toMatch(/Hög/)
+    expect(estimateSleepScore({ sleepH: 5 }, [])!.bedtime).toBeNull()
+    expect(estimateSleepScore({}, [])).toBeNull()
   })
 })
