@@ -323,8 +323,11 @@ export function parseHealthValue(raw: unknown, metric: HealthMetric): number | n
   // En siffra (t.ex. Tidslängd som tal) tolkas som text utan enhet, så att sekunder blir minuter
   if (typeof raw === 'number') raw = Number.isFinite(raw) && raw >= 0 ? String(raw) : ''
   const lines = (Array.isArray(raw) ? raw.map(String) : String(raw).split(/\r?\n/)).map((l) => l.trim()).filter(Boolean)
-  // Träningspass: en rad per pass, vilken text som helst
-  if (metric === 'workouts') return lines.length ? lines.length : null
+  // Träningspass: en rad per pass (vilken text som helst), eller ett antal om genvägen skickar bara en siffra
+  if (metric === 'workouts') {
+    if (lines.length === 1 && /^\d+$/.test(lines[0])) return Number(lines[0])
+    return lines.length ? lines.length : null
+  }
   if (metric === 'sleepH') {
     const sleep = parseSleep(lines)
     if (sleep?.sleepH !== undefined) return sleep.sleepH

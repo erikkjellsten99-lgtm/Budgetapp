@@ -180,6 +180,9 @@ describe('fler hälsomått', () => {
   it('räknar träningspass (en rad per pass) och kan bocka en vana', () => {
     expect(parseHealthBody({ pass: 'Styrketräning | 52 min\nLöpning | 31 min' }).workouts).toBe(2)
     expect(parseHealthBody({ pass: '' }).workouts).toBeUndefined()
+    // Genvägens Antal skickar en siffra
+    expect(parseHealthBody({ pass: 2 }).workouts).toBe(2)
+    expect(parseHealthBody({ pass: '0' }).workouts).toBe(0)
     expect(isHealthBody({ vo2max: '45' })).toBe(true)
     const gym = [{ id: 'gym', auto: { metric: 'workouts' as const, min: 1 } }]
     expect(metRules(gym, { workouts: 1 }, '2026-11-05')).toEqual([{ id: 'gym', min: false }])

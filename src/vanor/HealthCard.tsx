@@ -69,7 +69,7 @@ export default function HealthCard({
                   {reached ? `✓ ${goal.name}` : `${formatHealth(metric, Math.max(0, goal.min - value))} kvar till ${goal.name}`}
                 </span>
               ) : (
-                <span className="ht-goal muted">7 dagar</span>
+                <span className="ht-goal muted">{vsAverage(metric, value, health, latest.date) ?? '7 dagar'}</span>
               )}
               <span className="ht-bars" aria-hidden="true">
                 {series.map((v, i) => (
@@ -88,6 +88,25 @@ export default function HealthCard({
       </ul>
     </section>
   )
+}
+
+/**
+ * Jämförelse mot ditt eget snitt de 14 dagarna före, t.ex. "+0,3 °C mot ditt snitt". Hälsa visar själv
+ * handledstemperatur som avvikelse, och för puls, HRV och VO₂ max är trenden mer intressant än siffran.
+ * Null när det finns färre än 3 tidigare dagar.
+ */
+function vsAverage(metric: HealthMetric, value: number, health: HealthDay[], date: DateKey): string | null {
+  const from = addDays(date, -14)
+  const past = health
+    .filter((d) => d.date < date && d.date >= from && d.values[metric] !== undefined)
+    .map((d) => d.values[metric]!)
+  // Summor som steg växer under dagen, så de jämförs inte mot ett helt dygns snitt
+  if (METRICS[metric].kind === 'sum') return null
+  if (past.length < 3) return null
+  const diff = value - past.reduce((a, b) => a + b, 0) / past.length
+  const step = 10 ** -METRICS[metric].decimals
+  if (Math.abs(diff) < step / 2) return 'Som ditt snitt'
+  return `${diff > 0 ? '+' : '\u2212'}${formatHealth(metric, Math.abs(diff))} mot ditt snitt`
 }
 
 const STAGES: { metric: HealthMetric; label: string; cls: string }[] = [
