@@ -27,6 +27,13 @@ export type HealthMetric =
   | 'weightKg'
   | 'restingHr'
   | 'hrvMs'
+  | 'vo2Max'
+  | 'hrRecovery'
+  | 'walkingHr'
+  | 'spo2'
+  | 'bodyFat'
+  | 'wristTemp'
+  | 'workouts'
 
 interface MetricInfo {
   /** Fältets namn i genvägen (enkla bokstäver, så att det är lätt att skriva). */
@@ -75,6 +82,13 @@ export const METRICS: Record<HealthMetric, MetricInfo> = {
   weightKg: { field: 'vikt', label: 'Vikt', health: 'Vikt', unit: 'kg', kind: 'latest', decimals: 1 },
   restingHr: { field: 'vilopuls', label: 'Vilopuls', health: 'Vilopuls', unit: 'slag/min', kind: 'latest', decimals: 0 },
   hrvMs: { field: 'hrv', label: 'Pulsvariabilitet', health: 'Pulsvariabilitet', unit: 'ms', kind: 'latest', decimals: 0 },
+  vo2Max: { field: 'vo2max', label: 'VO₂ max', health: 'Syreupptagningsförmåga', unit: 'ml/kg/min', kind: 'latest', decimals: 1 },
+  hrRecovery: { field: 'pulsatervh', label: 'Pulsåterhämtning', health: 'Hjärtfrekvens, återhämtning', unit: 'slag/min', kind: 'latest', decimals: 0 },
+  walkingHr: { field: 'gangpuls', label: 'Gångpuls', health: 'Gångpuls, snitt', unit: 'slag/min', kind: 'avg', decimals: 0 },
+  spo2: { field: 'syre', label: 'Syresättning', health: 'Syremättnad', unit: '%', kind: 'avg', decimals: 0 },
+  bodyFat: { field: 'kroppsfett', label: 'Kroppsfett', health: 'Kroppsfettprocent', unit: '%', kind: 'latest', decimals: 1 },
+  wristTemp: { field: 'handled', label: 'Handledstemp.', health: 'Handledstemperatur under sömn', unit: '°C', kind: 'latest', decimals: 1 },
+  workouts: { field: 'pass', label: 'Träningspass', health: 'Träningspass (ett per rad)', unit: 'träningspass', kind: 'sum', rule: { default: 1, step: 1 }, decimals: 0 },
 }
 
 export const METRIC_KEYS = Object.keys(METRICS) as HealthMetric[]
@@ -183,6 +197,8 @@ function lineValue(line: string, metric: HealthMetric): number | null {
   if (metric === 'waterL' && /^cl/.test(unit)) value /= 100
   if (metric === 'weightKg' && /^(?:lb|lbs|pund)/.test(unit)) value *= 0.4536
   if (metric === 'standHours' && /^min/.test(unit)) value /= 60
+  // Procent kan komma som andel (0,97) i stället för 97
+  if ((metric === 'spo2' || metric === 'bodyFat') && value > 0 && value <= 1) value *= 100
   return value
 }
 
@@ -307,6 +323,8 @@ export function parseHealthValue(raw: unknown, metric: HealthMetric): number | n
   // En siffra (t.ex. Tidslängd som tal) tolkas som text utan enhet, så att sekunder blir minuter
   if (typeof raw === 'number') raw = Number.isFinite(raw) && raw >= 0 ? String(raw) : ''
   const lines = (Array.isArray(raw) ? raw.map(String) : String(raw).split(/\r?\n/)).map((l) => l.trim()).filter(Boolean)
+  // Träningspass: en rad per pass, vilken text som helst
+  if (metric === 'workouts') return lines.length ? lines.length : null
   if (metric === 'sleepH') {
     const sleep = parseSleep(lines)
     if (sleep?.sleepH !== undefined) return sleep.sleepH

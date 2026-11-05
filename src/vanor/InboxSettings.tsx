@@ -225,6 +225,13 @@ export default function InboxSettings() {
                 </tbody>
               </table>
               <p className="push-note">
+                Nyare mått som VO₂ max, pulsåterhämtning, gångpuls, syresättning, kroppsfett och handledstemperatur läggs till som
+                vanliga fält: <b>Hitta Hälsoprover</b> (sortera Senaste först, Gräns 1, eller Startdatum är idag för gångpuls och
+                syresättning) och skicka <b>Hälsoprover</b> under nyckeln i tabellen. Visas bara om klockan har mätt dem. För{' '}
+                <code>pass</code>: <b>Hitta träningspass</b> med Startdatum är idag, skicka dem som en text med en rad per pass. En
+                vana kan sedan bockas automatiskt när antalet pass är minst 1.
+              </p>
+              <p className="push-note">
                 Sömn (allt som i Hälsa): sök efter <b>Sömnanalys</b> med <b>Slutdatum är idag</b> och <b>Gruppera efter</b>{' '}
                 <b>Ingen</b>. Lägg till <b>Upprepa med varje</b> och i den en <b>Text</b>: <b>Upprepa objekt</b> → <b>Värde</b>,{' '}
                 <code>|</code>, <b>Upprepa objekt</b> → <b>Startdatum</b>, <code>|</code>, <b>Upprepa objekt</b> → <b>Slutdatum</b>.
