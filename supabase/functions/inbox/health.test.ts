@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatGoal, formatHealth, formatProgress, guessRule, isHealthBody, metRules, parseHealthBody, parseHealthValue, estimateSleepScore, sleepRating } from './health'
+import { formatGoal, formatHealth, formatProgress, guessRule, isHealthBody, metRules, parseHealthBody, parseHealthValue, estimateSleepScore, sleepRating, parseSleepStages } from './health'
 
 describe('hälsodata från genvägen', () => {
   it('läser siffror med svenska tusental och decimaler', () => {
@@ -137,5 +137,22 @@ describe('hela sömnen', () => {
     expect(sleepRating(s.score)).toMatch(/Hög/)
     expect(estimateSleepScore({ sleepH: 5 }, [])!.bedtime).toBeNull()
     expect(estimateSleepScore({}, [])).toBeNull()
+  })
+})
+
+describe('sömndiagrammets faser', () => {
+  it('faser med start och slut i tidsordning, utan i säng och utan tider', () => {
+    const lines = [
+      'Deep | 2026-11-05T00:24:48+01:00 | 2026-11-05T01:04:00+01:00',
+      'I säng | 2026-11-04T23:50:00+01:00 | 2026-11-05T07:00:00+01:00',
+      'Core | 2026-11-04T23:59:41+01:00 | 2026-11-05T00:24:48+01:00',
+      'Awake | 2026-11-05T01:04:00+01:00 | 2026-11-05T01:09:00+01:00',
+      'Kärna | 45:00',
+    ].join('\n')
+    const st = parseSleepStages(lines)
+    expect(st.map((s) => s.k)).toEqual(['core', 'deep', 'awake'])
+    expect(st[0].e).toBe(st[1].s)
+    expect(parseSleepStages('Kärna | 45:00')).toEqual([])
+    expect(parseSleepStages(undefined)).toEqual([])
   })
 })

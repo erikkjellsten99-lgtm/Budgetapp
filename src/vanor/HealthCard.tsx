@@ -9,6 +9,7 @@ import {
   sleepRating,
   type HealthDay,
   type HealthMetric,
+  type SleepStage,
 } from '../../supabase/functions/inbox/health'
 
 /** Klockslag "21:30" för när siffrorna kom. */
@@ -51,15 +52,8 @@ export default function HealthCard({
         <h3 id="health-title">Hälsa {isToday ? 'idag' : 'i går'}</h3>
         <span className="health-time">Från Apple Hälsa · {clock(latest.updated)}</span>
       </div>
-      <SleepTile values={latest.values} pastBedtimes={pastBedtimes} goal={goals.get('sleepH')} />
+      <SleepTile values={latest.values} stages={latest.stages} pastBedtimes={pastBedtimes} goal={goals.get('sleepH')} />
       <ul className="health-tiles">
-        {latest.values.respRate !== undefined && (
-          <li className="health-tile">
-            <span className="ht-label">Andning i sömnen</span>
-            <b className="ht-value">{latest.values.respRate.toLocaleString('sv-SE', { maximumFractionDigits: 1 })} /min</b>
-            <span className="ht-goal muted">Medel under natten</span>
-          </li>
-        )}
         {shown.map((metric) => {
           const value = latest.values[metric]!
           const goal = goals.get(metric)
@@ -103,13 +97,32 @@ const STAGES: { metric: HealthMetric; label: string; cls: string }[] = [
   { metric: 'sleepDeepH', label: 'Djup', cls: 'deep' },
 ]
 
-/** Natten som i Hälsa: total sömn, sömnpoäng, tider, faser som en stapel och tid i säng. */
+/** Apples nivåer för sömnpoäng: början, längd och namn. */
+const ZONES = [
+  { from: 0, to: 41, label: 'Mycket låg' },
+  { from: 41, to: 61, label: 'Låg' },
+  { from: 61, to: 81, label: 'OK' },
+  { from: 81, to: 96, label: 'Hög' },
+  { from: 96, to: 100, label: 'Mycket hög' },
+]
+
+/** 6,88 h → { h: 6, m: 53 } */
+function splitHours(hours: number) {
+  const total = Math.round(hours * 60)
+  return { h: Math.floor(total / 60), m: total % 60 }
+}
+
+const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0)
+
+/** Natten som ett mätinstrument: total tid, poängskala, fasstapel med tidsaxel och en tabell med nyckeltal. */
 function SleepTile({
   values,
+  stages: night,
   pastBedtimes,
   goal,
 }: {
   values: HealthDay['values']
+  stages?: SleepStage[]
   pastBedtimes: number[]
   goal?: { min: number; name: string }
 }) {
@@ -117,28 +130,41 @@ function SleepTile({
   if (hours === undefined) return null
   const estimate = estimateSleepScore(values, pastBedtimes)
   const score = values.sleepScore ?? estimate?.score
-  const stageMin = (m: HealthMetric) => {
+  const fromWatch = values.sleepScore !== undefined
+  const minutes = (m: HealthMetric) => {
     const v = values[m]
     return v === undefined ? 0 : m === 'sleepAwakeMin' ? v : v * 60
   }
-  const stages = STAGES.filter((s) => values[s.metric] !== undefined)
-  const total = stages.reduce((a, s) => a + stageMin(s.metric), 0)
+  const stages = STAGES.filter((st) => values[st.metric] !== undefined)
+  const total = stages.reduce((a, st) => a + minutes(st.metric), 0)
+  const asleepMin = minutes('sleepRemH') + minutes('sleepCoreH') + minutes('sleepDeepH')
   const reached = goal ? hours >= goal.min : false
+  const { h, m } = splitHours(hours)
+
+  const hasTimes = values.bedtime !== undefined && values.wakeTime !== undefined
+  const span = hasTimes ? (((values.wakeTime! - values.bedtime!) % 24) + 24) % 24 : 0
+  const efficiency = span > 0 ? Math.min(100, Math.round((hours / span) * 100)) : undefined
+  const mid = hasTimes ? values.bedtime! + span / 2 : undefined
 
   return (
     <div className={reached ? 'sleep-tile reached' : 'sleep-tile'}>
-      <div className="sleep-top">
-        <div>
-          <span className="ht-label">Sömn</span>
-          <b className="sleep-total">{formatHealth('sleepH', hours)}</b>
-          {values.bedtime !== undefined && values.wakeTime !== undefined && (
-            <span className="sleep-times">
-              {formatHealth('bedtime', values.bedtime)} – {formatHealth('wakeTime', values.wakeTime)}
-              {values.inBedH !== undefined && ` · ${formatHealth('inBedH', values.inBedH)} i säng`}
-            </span>
-          )}
+      <div className="sleep-head">
+        <span className="sleep-kicker">Sömn</span>
+        {hasTimes && (
+          <span className="sleep-range">
+            {formatHealth('bedtime', values.bedtime!)} → {formatHealth('wakeTime', values.wakeTime!)}
+          </span>
+        )}
+      </div>
+
+      <div className="sleep-main">
+        <div className="sleep-big">
+          <b>{h}</b>
+          <u>h</u>
+          <b>{String(m).padStart(2, '0')}</b>
+          <u>min</u>
           {goal && (
-            <span className="ht-goal">
+            <span className="sleep-goal">
               {reached ? `✓ ${goal.name}` : `${formatHealth('sleepH', Math.max(0, goal.min - hours))} kvar till ${goal.name}`}
             </span>
           )}
@@ -146,44 +172,191 @@ function SleepTile({
         {score !== undefined && (
           <div
             className="sleep-score"
-            style={{ ['--p' as string]: `${score}` }}
             title={
-              values.sleepScore !== undefined
+              fromWatch
                 ? 'Sömnpoäng från klockan'
                 : estimate
                   ? `Uppskattad: längd ${estimate.duration}/50, läggtid ${estimate.bedtime ?? '–'}/30, avbrott ${estimate.interruptions}/20`
                   : undefined
             }
           >
-            <b>{score}</b>
-            <span>{sleepRating(score)}</span>
-            <small>{values.sleepScore !== undefined ? 'Klockan' : 'Uppskattad'}</small>
+            <span className="sleep-score-num">
+              <b>{score}</b>
+              <small>/100</small>
+            </span>
+            <span className="sleep-score-rating">{sleepRating(score)}</span>
+            <span className={fromWatch ? 'sleep-chip watch' : 'sleep-chip'}>{fromWatch ? 'Klockan' : 'Uppskattad'}</span>
           </div>
         )}
       </div>
-      {total > 0 && (
-        <>
-          <div className="sleep-bar" role="img" aria-label="Sömnfaser">
-            {stages.map((s) =>
-              stageMin(s.metric) > 0 ? <i key={s.metric} className={s.cls} style={{ flexGrow: stageMin(s.metric) }} /> : null,
+
+      {score !== undefined && (
+        <div className="sleep-gauge" role="img" aria-label={`Sömnpoäng ${score} av 100, ${sleepRating(score)}`}>
+          <div className="sleep-zones">
+            {ZONES.map((z) => {
+              const fill = Math.min(1, Math.max(0, (score - z.from) / (z.to - z.from)))
+              return <i key={z.label} style={{ flexGrow: z.to - z.from, ['--f' as string]: fill }} />
+            })}
+          </div>
+          <span className="sleep-marker" style={{ left: `${Math.min(100, score)}%` }} />
+          <div className="sleep-scale" aria-hidden="true">
+            {[0, 40, 60, 80, 95].map((t) => (
+              <span key={t} style={{ left: `${t}%` }}>
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {night && night.length > 1 ? (
+        <Hypnogram stages={night} />
+      ) : (
+        total > 0 && (
+          <div className="sleep-stagebox">
+            <div className="sleep-bar" role="img" aria-label="Sömnfaser">
+              {stages.map((st) =>
+                minutes(st.metric) > 0 ? <i key={st.metric} className={st.cls} style={{ flexGrow: minutes(st.metric) }} /> : null,
+              )}
+            </div>
+            {hasTimes && mid !== undefined && (
+              <div className="sleep-axis" aria-hidden="true">
+                <span>{formatHealth('bedtime', values.bedtime!)}</span>
+                <span>{formatHealth('bedtime', mid)}</span>
+                <span>{formatHealth('wakeTime', values.wakeTime!)}</span>
+              </div>
             )}
           </div>
-          <ul className="sleep-stages">
-            {stages.map((s) => (
-              <li key={s.metric}>
-                <i className={s.cls} aria-hidden="true" />
-                <span>{s.label}</span>
-                <b>{formatHealth(s.metric, values[s.metric]!)}</b>
-              </li>
-            ))}
-          </ul>
-          {values.sleepWakes !== undefined && (
-            <span className="ht-goal muted">
-              {values.sleepWakes === 0 ? 'Inga uppvaknanden' : `${values.sleepWakes} uppvaknande${values.sleepWakes === 1 ? '' : 'n'}`}
-            </span>
-          )}
-        </>
+        )
       )}
+
+      {stages.length > 0 && (
+        <dl className="sleep-stages">
+          {stages.map((st) => {
+            const isAwake = st.metric === 'sleepAwakeMin'
+            const v = formatHealth(st.metric, values[st.metric]!)
+            return (
+              <div key={st.metric} className={st.cls}>
+                <dt>
+                  <i aria-hidden="true" />
+                  {st.label}
+                </dt>
+                <dd>{v}</dd>
+                <dd className="sub">{isAwake ? (values.sleepWakes ? `${values.sleepWakes}×` : '–') : `${pct(minutes(st.metric), asleepMin)} %`}</dd>
+              </div>
+            )
+          })}
+        </dl>
+      )}
+
+      {(efficiency !== undefined || values.sleepWakes !== undefined || values.inBedH !== undefined || values.respRate !== undefined) && (
+        <dl className="sleep-facts">
+          {efficiency !== undefined && (
+            <div>
+              <dt>Effektivitet</dt>
+              <dd>{efficiency} %</dd>
+            </div>
+          )}
+          {values.sleepWakes !== undefined && (
+            <div>
+              <dt>Uppvaknanden</dt>
+              <dd>{values.sleepWakes}</dd>
+            </div>
+          )}
+          {values.inBedH !== undefined && (
+            <div>
+              <dt>I säng</dt>
+              <dd>{formatHealth('inBedH', values.inBedH)}</dd>
+            </div>
+          )}
+          {values.respRate !== undefined && (
+            <div>
+              <dt>Andning</dt>
+              <dd>{values.respRate.toLocaleString('sv-SE', { maximumFractionDigits: 1 })} /min</dd>
+            </div>
+          )}
+        </dl>
+      )}
+    </div>
+  )
+}
+
+const HYPNO_ROWS: { k: SleepStage['k'][]; label: string; cls: string }[] = [
+  { k: ['awake'], label: 'Vaken', cls: 'awake' },
+  { k: ['rem'], label: 'REM', cls: 'rem' },
+  { k: ['core', 'asleep'], label: 'Kärna', cls: 'core' },
+  { k: ['deep'], label: 'Djup', cls: 'deep' },
+]
+
+const HOUR = 3_600_000
+const clockOf = (ms: number) => new Date(ms).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+
+/** Sömndiagram: fas på höjden, tid på bredden, som trappsteg över natten. */
+function Hypnogram({ stages }: { stages: SleepStage[] }) {
+  const t0 = stages[0].s
+  const t1 = stages[stages.length - 1].e
+  const span = Math.max(1, t1 - t0)
+  const W = 1000
+  const ROW = 24
+  const x = (ms: number) => ((ms - t0) / span) * W
+  const rowOf = (k: SleepStage['k']) => Math.max(0, HYPNO_ROWS.findIndex((r) => r.k.includes(k)))
+  const ticks: number[] = []
+  for (let t = Math.ceil(t0 / HOUR) * HOUR; t < t1; t += HOUR) ticks.push(t)
+  // Bara var annan timme om natten är lång, så att etiketterna inte krockar
+  const step = ticks.length > 9 ? 2 : 1
+  const shown = ticks.filter((_, i) => i % step === 0)
+
+  return (
+    <div className="sleep-hypno">
+      <div className="hy-labels" aria-hidden="true">
+        {HYPNO_ROWS.map((r) => (
+          <span key={r.label} className={r.cls}>
+            {r.label}
+          </span>
+        ))}
+      </div>
+      <div className="hy-plot">
+        <svg viewBox={`0 0 ${W} ${ROW * HYPNO_ROWS.length}`} preserveAspectRatio="none" role="img" aria-label="Sömndiagram över natten">
+          {HYPNO_ROWS.map((r, i) => (
+            <line key={r.label} className="hy-grid" x1="0" x2={W} y1={i * ROW + ROW / 2} y2={i * ROW + ROW / 2} vectorEffect="non-scaling-stroke" />
+          ))}
+          {shown.map((t) => (
+            <line key={t} className="hy-tick" x1={x(t)} x2={x(t)} y1="0" y2={ROW * HYPNO_ROWS.length} vectorEffect="non-scaling-stroke" />
+          ))}
+          {stages.slice(1).map((st, i) => {
+            const prev = stages[i]
+            const a = rowOf(prev.k)
+            const b = rowOf(st.k)
+            return a === b ? null : (
+              <line
+                key={`c${st.s}`}
+                className="hy-link"
+                x1={x(st.s)}
+                x2={x(st.s)}
+                y1={a * ROW + ROW / 2}
+                y2={b * ROW + ROW / 2}
+                vectorEffect="non-scaling-stroke"
+              />
+            )
+          })}
+          {stages.map((st) => {
+            const row = rowOf(st.k)
+            const w = Math.max(2, x(st.e) - x(st.s))
+            return (
+              <rect key={`${st.s}-${st.k}`} className={HYPNO_ROWS[row].cls} x={x(st.s)} y={row * ROW + 5} width={w} height={ROW - 10} rx="3">
+                <title>{`${HYPNO_ROWS[row].label} ${clockOf(st.s)}–${clockOf(st.e)} (${Math.round((st.e - st.s) / 60000)} min)`}</title>
+              </rect>
+            )
+          })}
+        </svg>
+        <div className="hy-axis" aria-hidden="true">
+          {shown.map((t) => (
+            <span key={t} style={{ left: `${((t - t0) / span) * 100}%` }}>
+              {new Date(t).toLocaleTimeString('sv-SE', { hour: '2-digit' })}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

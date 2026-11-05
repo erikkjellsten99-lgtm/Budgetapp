@@ -3833,6 +3833,7 @@
 
 /* Hälsa idag: siffror från Apple Hälsa, med 7 dagar som små staplar */
 .vanor .health-card {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -3944,136 +3945,396 @@
   opacity: 0.4;
 }
 
-/* Sömn som i Hälsa: total, poäng, tider och faser */
+/* Sömn som mätinstrument: total, poängskala, fasstapel med tidsaxel, tabeller */
 .vanor .sleep-tile {
   --stage-awake: #f08c5a;
   --stage-rem: #5ec8f0;
   --stage-core: #3d7cf0;
-  --stage-deep: #5a3fc8;
+  --stage-deep: #6a4fe0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
+  gap: 14px;
+  padding: 14px 16px 16px;
   background: var(--sunk);
+  border: 1px solid var(--line);
   border-radius: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .vanor .sleep-tile.reached {
   box-shadow: inset 0 0 0 1.5px var(--done);
 }
 
-.vanor .sleep-tile.reached .ht-goal:not(.muted) {
-  color: var(--done);
-  font-weight: 700;
+.vanor .sleep-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
 }
 
-.vanor .sleep-top {
+.vanor .sleep-kicker {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.vanor .sleep-range {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+.vanor .sleep-main {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
 }
 
-.vanor .sleep-top > div:first-child {
+.vanor .sleep-big {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 4px;
   min-width: 0;
 }
 
-.vanor .sleep-total {
-  font-size: 1.5rem;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.15;
+.vanor .sleep-big b {
+  font-family: var(--mono);
+  font-size: 2.1rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
 }
 
-.vanor .sleep-times {
+.vanor .sleep-big u {
+  margin-right: 6px;
   color: var(--muted);
+  font-family: var(--mono);
   font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
+  text-decoration: none;
 }
 
-.vanor .sleep-score {
-  --p: 0;
-  flex: none;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  width: 84px;
-  height: 84px;
-  border-radius: 50%;
-  background:
-    radial-gradient(closest-side, var(--sunk) 82%, transparent 83%),
-    conic-gradient(var(--stage-rem) calc(var(--p) * 1%), var(--line) 0);
-  text-align: center;
-  line-height: 1.05;
+.vanor .sleep-goal {
+  flex-basis: 100%;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 0.72rem;
 }
 
-.vanor .sleep-score b {
-  font-size: 1.35rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.vanor .sleep-score span {
-  font-size: 0.66rem;
+.vanor .sleep-tile.reached .sleep-goal {
+  color: var(--done);
   font-weight: 700;
 }
 
-.vanor .sleep-score small {
+.vanor .sleep-score {
+  flex: none;
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+}
+
+.vanor .sleep-score-num {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.vanor .sleep-score-num b {
+  font-family: var(--mono);
+  font-size: 2.1rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.vanor .sleep-score-num small {
   color: var(--muted);
-  font-size: 0.55rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+}
+
+.vanor .sleep-score-rating {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.vanor .sleep-chip {
+  padding: 1px 6px;
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.vanor .sleep-chip.watch {
+  color: var(--stage-rem);
+  border-color: currentColor;
+}
+
+/* Poängskala med Apples fem nivåer */
+.vanor .sleep-gauge {
+  position: relative;
+  padding-bottom: 14px;
+}
+
+.vanor .sleep-zones {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+}
+
+.vanor .sleep-zones i {
+  flex-basis: 0;
+  background: linear-gradient(90deg, var(--stage-rem) calc(var(--f, 0) * 100%), var(--line) 0);
+  border-radius: 2px;
+}
+
+.vanor .sleep-marker {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  margin-left: -1px;
+  background: var(--ink);
+  border-radius: 1px;
+}
+
+.vanor .sleep-scale {
+  position: absolute;
+  inset: 12px 0 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+}
+
+.vanor .sleep-scale span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.vanor .sleep-scale span:first-child {
+  transform: none;
+}
+
+/* Fasstapel med tidsaxel */
+.vanor .sleep-stagebox {
+  display: grid;
+  gap: 5px;
 }
 
 .vanor .sleep-bar {
   display: flex;
   gap: 2px;
-  height: 12px;
-  overflow: hidden;
-  border-radius: 6px;
+  height: 14px;
 }
 
 .vanor .sleep-bar i {
   flex-basis: 0;
   min-width: 3px;
-}
-
-.vanor .sleep-tile .awake { background: var(--stage-awake); }
-.vanor .sleep-tile .rem { background: var(--stage-rem); }
-.vanor .sleep-tile .core { background: var(--stage-core); }
-.vanor .sleep-tile .deep { background: var(--stage-deep); }
-
-.vanor .sleep-stages {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.vanor .sleep-stages li {
-  display: grid;
-  grid-template-columns: 8px minmax(0, 1fr);
-  align-items: center;
-  gap: 0 5px;
-  font-size: 0.72rem;
-}
-
-.vanor .sleep-stages li i {
-  width: 8px;
-  height: 8px;
   border-radius: 2px;
 }
 
-.vanor .sleep-stages li span {
+.vanor .sleep-tile .awake { --c: var(--stage-awake); }
+.vanor .sleep-tile .rem { --c: var(--stage-rem); }
+.vanor .sleep-tile .core { --c: var(--stage-core); }
+.vanor .sleep-tile .deep { --c: var(--stage-deep); }
+.vanor .sleep-bar i { background: var(--c); }
+
+.vanor .sleep-axis {
+  display: flex;
+  justify-content: space-between;
   color: var(--muted);
-  font-weight: 650;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  border-top: 1px solid var(--line);
+  padding-top: 3px;
 }
 
-.vanor .sleep-stages li b {
-  grid-column: 2;
-  font-variant-numeric: tabular-nums;
+/* Sömndiagram (hypnogram) */
+.vanor .sleep-hypno {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 0 8px;
+  align-items: start;
+}
+
+.vanor .hy-labels {
+  display: grid;
+  grid-template-rows: repeat(4, 24px);
+}
+
+.vanor .hy-labels span {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.vanor .hy-plot {
+  position: relative;
+  padding-bottom: 16px;
+}
+
+.vanor .hy-plot svg {
+  display: block;
+  width: 100%;
+  height: 96px;
+  overflow: visible;
+}
+
+.vanor .hy-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.vanor .hy-tick {
+  stroke: var(--line);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.vanor .hy-link {
+  stroke: var(--muted);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.vanor .hy-plot rect.awake { fill: var(--stage-awake); }
+.vanor .hy-plot rect.rem { fill: var(--stage-rem); }
+.vanor .hy-plot rect.core { fill: var(--stage-core); }
+.vanor .hy-plot rect.deep { fill: var(--stage-deep); }
+
+.vanor .hy-axis {
+  position: absolute;
+  inset: auto 0 0;
+  height: 14px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+}
+
+.vanor .hy-axis span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+/* Tabell över faserna */
+.vanor .sleep-stages {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+
+.vanor .sleep-stages > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 8px 0 0;
+}
+
+.vanor .sleep-stages > div + div {
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
+}
+
+.vanor .sleep-stages dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.vanor .sleep-stages dt i {
+  width: 7px;
+  height: 7px;
+  background: var(--c);
+  border-radius: 2px;
+}
+
+.vanor .sleep-stages dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 600;
   white-space: nowrap;
+}
+
+.vanor .sleep-stages dd.sub {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+/* Smalt kort: faserna i två kolumner så att tiderna inte krockar */
+@container (max-width: 520px) {
+  .vanor .sleep-stages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vanor .sleep-stages > div {
+    padding: 8px 8px 8px 0;
+  }
+
+  .vanor .sleep-stages > div + div {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .vanor .sleep-stages > div:nth-child(even) {
+    padding-left: 12px;
+    border-left: 1px solid var(--line);
+  }
+
+  .vanor .sleep-stages > div:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+}
+
+/* Nyckeltal */
+.vanor .sleep-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.vanor .sleep-facts > div {
+  display: grid;
+  gap: 1px;
+}
+
+.vanor .sleep-facts dt {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vanor .sleep-facts dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 /* Regel från Apple Hälsa i Ändra vana */
