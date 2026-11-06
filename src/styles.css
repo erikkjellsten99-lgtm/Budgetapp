@@ -2305,8 +2305,7 @@ main > div > h2 + .hint {
   border-radius: 50%;
 }
 
-.jarvis-mic svg,
-.jarvis-close svg {
+.jarvis-mic svg {
   width: 1.2rem;
   height: 1.2rem;
   fill: none;
@@ -2316,116 +2315,335 @@ main > div > h2 + .hint {
   stroke-linejoin: round;
 }
 
-.jarvis-sheet {
-  position: fixed;
-  z-index: 30;
-  inset: 0;
+/* Jarvis-fliken. Alltid mörk, som en skärm i en cockpit, i både ljust och mörkt läge. */
+.jarvis-screen {
+  --j-bg: #050912;
+  --j-panel: rgb(14 24 42 / 85%);
+  --j-text: #e6f1ff;
+  --j-muted: #9fb3cf;
+  --j-line: rgb(92 200 255 / 28%);
+  --j-accent: #5cc8ff;
+  --j-glow: rgb(92 200 255 / 45%);
+  --j-error: #ffb4a8;
+
+  position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
-  color: var(--text);
+  min-height: calc(100dvh - 9.5rem);
+  margin: -0.6rem -1.25rem 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 30%, #0c1a33 0%, var(--j-bg) 62%);
+  color: var(--j-text);
+  border-radius: 0;
 }
 
-.jarvis-head {
+@media (max-width: 639px) {
+  .jarvis-screen {
+    margin: -0.6rem -1rem 0;
+  }
+}
+
+@media (min-width: 640px) {
+  .jarvis-screen {
+    margin: 0;
+    min-height: min(46rem, calc(100dvh - 8rem));
+    border: 1px solid var(--j-line);
+    border-radius: 20px;
+  }
+}
+
+.jarvis-screen.full {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+
+body.jarvis-locked {
+  overflow: hidden;
+}
+
+.jarvis-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgb(230 241 255 / 70%) 50%, transparent 51%),
+    radial-gradient(1px 1px at 78% 12%, rgb(230 241 255 / 55%) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 64% 38%, rgb(230 241 255 / 60%) 50%, transparent 51%),
+    radial-gradient(1px 1px at 28% 62%, rgb(230 241 255 / 45%) 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 70%, rgb(230 241 255 / 50%) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 44% 86%, rgb(230 241 255 / 40%) 50%, transparent 51%),
+    linear-gradient(rgb(92 200 255 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(92 200 255 / 4%) 1px, transparent 1px);
+  background-size: auto, auto, auto, auto, auto, auto, 25px 25px, 25px 25px;
+}
+
+.jarvis-top {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  width: min(100%, 44rem);
-  margin: 0 auto;
-  padding: max(1rem, env(safe-area-inset-top)) 1rem 0.8rem;
+  padding: 0.9rem 1rem 0.4rem;
 }
 
-.jarvis-head h2 {
+.jarvis-top-title {
+  flex: 1;
+  text-align: center;
+}
+
+.jarvis-top-title h2 {
   margin: 0;
-  font-size: 1.25rem;
-}
-
-.jarvis-sub {
-  margin: 0.1rem 0 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
+  color: var(--j-text);
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
-.jarvis-close {
+.jarvis-top-title p {
+  margin: 0.15rem 0 0;
+  color: var(--j-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jarvis-icon-button {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
+  min-height: 0;
   padding: 0;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: transparent;
+  border: 1px solid var(--j-line);
+  border-radius: 50%;
+  color: var(--j-muted);
 }
 
-.jarvis-messages {
+.jarvis-icon-button.on {
+  border-color: var(--j-accent);
+  color: var(--j-accent);
+}
+
+.jarvis-icon-button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.jarvis-icon-spacer {
+  width: 2.75rem;
+}
+
+.jarvis-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1rem 0.5rem;
+}
+
+.jarvis-core {
+  position: relative;
+  width: 12rem;
+  height: 12rem;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--j-accent);
+}
+
+.jarvis-core:disabled {
+  cursor: progress;
+}
+
+.jarvis-core .ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.jarvis-core .r1 {
+  inset: 0;
+  border: 1px solid var(--j-line);
+}
+
+.jarvis-core .r2 {
+  inset: 14%;
+  border: 1.5px dashed rgb(92 200 255 / 45%);
+  animation: jarvis-spin 40s linear infinite;
+}
+
+.jarvis-core .r3 {
+  inset: 27%;
+  border: 2px solid var(--j-accent);
+  background: radial-gradient(circle, #10284a 0%, #081428 70%);
+  box-shadow: 0 0 30px var(--j-glow), inset 0 0 18px rgb(92 200 255 / 25%);
+}
+
+.jarvis-core .core-inner {
+  position: absolute;
+  inset: 27%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.jarvis-core .core-inner svg {
+  width: 1.8rem;
+  height: 1.8rem;
+  fill: none;
+  stroke: var(--j-accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.core-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+}
+
+.mode-listening .jarvis-core .r1 {
+  border-color: var(--j-accent);
+  animation: jarvis-pulse 1.2s ease-out infinite;
+}
+
+.mode-listening .jarvis-core .r3 {
+  box-shadow: 0 0 55px var(--j-glow), inset 0 0 24px rgb(92 200 255 / 40%);
+}
+
+.mode-thinking .jarvis-core .r2 {
+  animation-duration: 1.6s;
+}
+
+.mode-speaking .jarvis-core .r3 {
+  animation: jarvis-breathe 0.9s ease-in-out infinite;
+}
+
+@keyframes jarvis-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes jarvis-pulse {
+  0% {
+    transform: scale(0.92);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+}
+
+@keyframes jarvis-breathe {
+  50% {
+    box-shadow: 0 0 70px var(--j-glow), inset 0 0 30px rgb(92 200 255 / 45%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jarvis-core .ring {
+    animation: none !important;
+  }
+}
+
+.jarvis-status {
+  margin: 0;
+  color: var(--j-accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.jarvis-heard {
+  max-width: 30rem;
+  margin: 0;
+  color: var(--j-text);
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.jarvis-error {
+  max-width: 30rem;
+  margin: 0;
+  color: var(--j-error);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.jarvis-answers {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 1rem;
-  width: min(100%, 44rem);
+  gap: 0.75rem;
+  width: min(100%, 40rem);
+  min-height: 4rem;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.5rem 1rem 1rem;
   overflow-y: auto;
-  border-top: 1px solid var(--border);
 }
 
-.jarvis-empty {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.jarvis-pair {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.jarvis-question {
-  align-self: flex-end;
-  max-width: 80%;
-  margin: 0;
-  padding: 0.6rem 0.9rem;
-  background: var(--accent-soft);
-  border-radius: 14px 14px 4px 14px;
-  overflow-wrap: anywhere;
-}
-
-.jarvis-reply {
+.jarvis-latest,
+.jarvis-earlier {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  max-width: 92%;
-  padding: 0.8rem 0.9rem;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 4px 14px 14px 14px;
+  padding: 0.9rem 1rem;
+  background: var(--j-panel);
+  border: 1px solid var(--j-line);
+  border-radius: 14px;
 }
 
-.jarvis-reply p {
+.jarvis-earlier {
+  opacity: 0.72;
+}
+
+.jarvis-q {
   margin: 0;
+  color: var(--j-muted);
+  font-size: 0.82rem;
+}
+
+.jarvis-a {
+  margin: 0;
+  font-size: 1.05rem;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
 }
 
-.jarvis-reply.failed p,
-.jarvis-wait {
-  color: var(--muted);
+.jarvis-latest .jarvis-a {
+  font-size: 1.15rem;
 }
 
-.jarvis-foot {
+.jarvis-bottom {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
-  width: min(100%, 44rem);
+  gap: 0.6rem;
+  width: min(100%, 40rem);
   margin: 0 auto;
-  padding: 0.7rem 1rem max(1rem, env(safe-area-inset-bottom));
-  border-top: 1px solid var(--border);
+  padding: 0.6rem 1rem 1rem;
 }
 
 .jarvis-examples {
@@ -2439,8 +2657,21 @@ main > div > h2 + .hint {
   flex: none;
   min-height: 2.75rem;
   padding: 0.4rem 0.85rem;
+  background: transparent;
+  border: 1px solid var(--j-line);
   border-radius: 999px;
+  color: var(--j-text);
   font-size: 0.86rem;
+}
+
+.jarvis-type {
+  align-self: center;
+  min-height: 2.75rem;
+  background: transparent;
+  border: 0;
+  color: var(--j-muted);
+  font-size: 0.9rem;
+  text-decoration: underline;
 }
 
 .jarvis-form {
@@ -2457,12 +2688,26 @@ main > div > h2 + .hint {
 .jarvis-field input {
   width: 100%;
   min-height: 3rem;
+  background: var(--j-panel);
+  border: 1px solid var(--j-accent);
+  color: var(--j-text);
   font-size: 1rem;
 }
 
-.jarvis-send {
+.jarvis-field input::placeholder {
+  color: var(--j-muted);
+}
+
+.jarvis-screen .jarvis-send {
   flex: none;
   min-height: 3rem;
+  background: var(--j-accent);
+  border-color: var(--j-accent);
+  color: #04121f;
+}
+
+.jarvis-screen .jarvis-send:disabled {
+  opacity: 0.45;
 }
 
 /* Underflikarna i Ekonomi (App.tsx) */

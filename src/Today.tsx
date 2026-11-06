@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import Jarvis from './Jarvis';
+import { JarvisButton } from './Jarvis';
 import { loadFacts } from './jarvis';
 import { onDataChange } from './db';
 import { onHabitChange } from './vanor/store';
 import { longDate } from './vanor/dates';
 import type { SummaryFacts } from '../supabase/functions/inbox/summary';
 
-type Target = 'overview' | 'goal' | 'vanor';
+type Target = 'overview' | 'goal' | 'vanor' | 'jarvis';
 
 function greeting(hour: number): string {
   if (hour < 5) return 'God natt';
@@ -58,7 +58,7 @@ export default function Today({ active, onOpen }: { active: boolean; onOpen: (ta
         <h2>{greeting(hour)}</h2>
       </div>
 
-      <Jarvis />
+      <JarvisButton onOpen={() => onOpen('jarvis')} />
 
       {failed && !facts && (
         <div className="card today-error" role="alert">

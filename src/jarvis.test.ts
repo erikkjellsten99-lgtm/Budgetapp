@@ -33,6 +33,6 @@ describe('Fråga Jarvis i appen', () => {
   });
 
   it('tom fråga ger exempel', async () => {
-    expect(await ask('')).toMatch(/^Det förstår jag inte än/);
+    expect(await ask('')).toMatch(/^Fråga till exempel/);
   });
 });

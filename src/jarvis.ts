@@ -8,7 +8,7 @@ import { loadHabitData, toLog } from './vanor/store';
 import { todayKey } from './vanor/dates';
 import { prioritizeToday } from '../supabase/functions/inbox/priority';
 import { summaryFacts, type SummaryFacts } from '../supabase/functions/inbox/summary';
-import { answer, EXAMPLES } from '../supabase/functions/inbox/ask';
+import { answer, EXAMPLES, type AskOptions } from '../supabase/functions/inbox/ask';
 
 export { EXAMPLES };
 
@@ -39,6 +39,6 @@ export async function loadFacts(now = new Date()): Promise<SummaryFacts> {
 }
 
 /** Svaret på en fråga, med de siffror som ligger i appen just nu. */
-export async function ask(question: string): Promise<string> {
-  return answer(question, await loadFacts());
+export async function ask(question: string, options: AskOptions = {}): Promise<string> {
+  return answer(question, await loadFacts(), options);
 }
