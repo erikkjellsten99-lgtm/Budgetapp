@@ -153,8 +153,8 @@ export function ruleTarget(
 }
 
 // Siffror som "8 432", "8 432", "5,2", "1.5" och "12"
-const NUMBER = /\d{1,3}(?:[   ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?/
-const toNumber = (s: string) => Number(s.replace(/[   ]/g, '').replace(',', '.'))
+const NUMBER = /\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?/
+const toNumber = (s: string) => Number(s.replace(/[ \u00a0\u202f]/g, '').replace(',', '.'))
 
 /** Tid i minuter ur t.ex. "7 h 32 min", "7 tim 32 min", "7:32", "452 min", "27120 s" eller "7,5 h". */
 function minutes(line: string, plain: 'min' | 'h' | 's'): number | null {
@@ -395,7 +395,7 @@ export function formatHealth(metric: HealthMetric, value: number): string {
     const m = total % 60
     return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`
   }
-  return `${num(value, info.decimals)} ${info.unit}`
+  return `${num(value, info.decimals)}\u00a0${info.unit}`
 }
 
 /** "8 432 av 10 000 steg", "6 h 30 min av 7 h" – enheten skrivs bara en gång när den är samma. */
@@ -418,7 +418,7 @@ export function guessRule(name: string): AutoRule | null {
   const n = name.toLowerCase()
   const k = /(\d+(?:[.,]\d+)?)\s*k\s*steg/.exec(n)
   if (k) return { metric: 'steps', min: toNumber(k[1]) * 1000 }
-  const steps = /(\d[\d  ]*)\s*steg/.exec(n)
+  const steps = /(\d[\d \u00a0]*)\s*steg/.exec(n)
   if (steps) return { metric: 'steps', min: toNumber(steps[1].trim()) }
   if (/steg|gå|promenad/.test(n)) return { metric: 'steps', min: 10000 }
   if (/medit|mindful|andning/.test(n)) return { metric: 'mindfulMin', min: 10 }
