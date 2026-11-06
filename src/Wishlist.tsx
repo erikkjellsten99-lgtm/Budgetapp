@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ItemRow, PaidCheck, SortableList, isPaid } from './Categories';
-import { budgetMonth, deleteWish, newId, saveWish } from './db';
+import { budgetMonth, deleteWish, getWishes, newId, saveWish } from './db';
 import { formatKr } from './money';
+import { offerUndo } from './undo';
 import { WISH_LISTS, type Wish, type WishList } from './types';
 
 interface WishlistProps {
@@ -138,8 +139,12 @@ export default function Wishlist({ wishes, onChanged }: WishlistProps) {
                         autoFocus={wish.id === focus}
                         onChange={(changed) => save({ ...wish, name: changed.name, amount: changed.amount })}
                         onDelete={async () => {
+                          // Senast sparade versionen, så att ett namn som just skrivits följer med vid Ångra.
+                          const latest = (await getWishes()).find((other) => other.id === wish.id) ?? wish;
                           await deleteWish(wish.id);
                           await onChanged();
+                          // Ångra sparar tillbaka önskan precis som den var (samma id, pris, plats och bock).
+                          offerUndo(`${latest.name.trim() || 'Önskan'} togs bort`, () => save(latest));
                         }}
                         onTogglePaid={() => save({ ...wish, paidMonth: isPaid(wish) ? undefined : budgetMonth() })}
                       />

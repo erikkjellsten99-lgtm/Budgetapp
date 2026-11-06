@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { budgetMonth, deleteCategory, monthName, newId, saveCategories, saveCategory, updateBudget } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
+import { offerUndo, restoreAt } from './undo';
 import { CATEGORY_TYPES, type Category, type CategoryItem, type CategoryType } from './types';
 
 interface CategoriesProps {
@@ -34,8 +35,12 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
   }
 
   /** Ändrar raderna i en kategori och sätter kategorins budget till deras summa. */
-  async function updateItems(categoryId: string, change: (items: CategoryItem[], category: Category) => CategoryItem[]) {
-    await updateBudget(budgetMonth(), (list) =>
+  async function updateItems(
+    categoryId: string,
+    change: (items: CategoryItem[], category: Category) => CategoryItem[],
+    month = budgetMonth(),
+  ) {
+    await updateBudget(month, (list) =>
       list.map((category) => {
         if (category.id !== categoryId) return category;
         const items = change(category.items ?? [], category);
@@ -57,6 +62,28 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
       next.push({ id, name: '', amount: 0 });
       return next;
     });
+  }
+
+  /** Tar bort en rad och erbjuder Ångra, som lägger tillbaka raden på samma plats i samma månad. */
+  async function removeItem(category: Category, item: CategoryItem) {
+    const month = budgetMonth();
+    // Raden som den låg sparad precis innan, så att Ångra ger tillbaka exakt samma belopp och bock.
+    let removed: CategoryItem | undefined;
+    let index = -1;
+    await updateItems(
+      category.id,
+      (items) => {
+        index = items.findIndex((other) => other.id === item.id);
+        removed = items[index];
+        return items.filter((other) => other.id !== item.id);
+      },
+      month,
+    );
+    const restored = removed;
+    if (!restored) return;
+    offerUndo(`${restored.name.trim() || 'Raden'} togs bort`, () =>
+      updateItems(category.id, (items) => restoreAt(items, restored, index), month),
+    );
   }
 
   const [focusItem, setFocusItem] = useState<string | null>(null);
@@ -185,7 +212,7 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
                           onChange={(changed) =>
                             updateItems(category.id, (items) => items.map((other) => (other.id === changed.id ? changed : other)))
                           }
-                          onDelete={() => updateItems(category.id, (items) => items.filter((other) => other.id !== item.id))}
+                          onDelete={() => removeItem(category, item)}
                           onTogglePaid={() =>
                             updateItems(category.id, (items) =>
                               items.map((other) =>

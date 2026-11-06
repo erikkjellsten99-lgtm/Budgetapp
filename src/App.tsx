@@ -3,6 +3,7 @@ import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import Account from './Account';
 import ThemePicker from './ThemePicker';
+import UndoToast from './UndoToast';
 import {
   budgetMonth,
   currentMonth,
@@ -235,6 +236,7 @@ export default function App() {
           </div>
         </div>
       </main>
+      <UndoToast />
     </div>
   );
 }

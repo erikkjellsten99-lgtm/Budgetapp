@@ -2054,3 +2054,70 @@ main > div > h2 + .hint {
   padding-left: 0;
   padding-right: 0;
 }
+
+/* Ångra efter en borttagning (UndoToast). Ligger ovanför bottenmenyn på mobilen. */
+.undo-toast {
+  position: fixed;
+  z-index: 20;
+  right: 1rem;
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 26rem;
+  min-height: 3.55rem;
+  margin: 0 auto;
+  padding: 0.4rem 0.4rem 0.4rem 1rem;
+  user-select: none;
+  -webkit-user-select: none;
+  border-radius: var(--radius-card);
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 22%);
+  animation: undo-in 160ms ease-out;
+}
+
+.undo-message {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.undo-button {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--hero-text);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.undo-button:hover {
+  background: rgb(255 255 255 / 10%);
+}
+
+@media (max-width: 639px) {
+  .undo-toast {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes undo-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .undo-toast {
+    animation: none;
+  }
+}
