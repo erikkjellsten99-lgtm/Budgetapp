@@ -24,6 +24,7 @@ import { useLoanSplit } from './useLoanSplit';
 import Forecast from './Forecast';
 import Income from './Income';
 import Vanor from './vanor/Vanor';
+import Jarvis from './Jarvis';
 import { formatKr } from './money';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
@@ -180,6 +181,7 @@ export default function App() {
               {toLoan > 0 && ', enligt Prognos → Extra på lånet'}
             </p>
           </section>
+          <Jarvis />
           <div className="overview-grid">
             <section className="card summary overview-breakdown">
               <h3>Månadens budget</h3>

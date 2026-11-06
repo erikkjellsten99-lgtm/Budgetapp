@@ -2250,3 +2250,217 @@ main > div > h2 + .hint {
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* Fråga Jarvis (Jarvis.tsx): knappen i Översikt och frågevyn */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.jarvis-open {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.6rem;
+  padding: 0.6rem 0.6rem 0.6rem 1rem;
+  border-color: var(--accent);
+  color: var(--text);
+  text-align: left;
+}
+
+.jarvis-open-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.jarvis-eyebrow {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.jarvis-open-hint {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.jarvis-mic {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+}
+
+.jarvis-mic svg,
+.jarvis-close svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.jarvis-sheet {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.jarvis-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(100%, 44rem);
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem 0.8rem;
+}
+
+.jarvis-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.jarvis-sub {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.jarvis-close {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.jarvis-messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(100%, 44rem);
+  margin: 0 auto;
+  padding: 1rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
+.jarvis-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.jarvis-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.jarvis-question {
+  align-self: flex-end;
+  max-width: 80%;
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  background: var(--accent-soft);
+  border-radius: 14px 14px 4px 14px;
+  overflow-wrap: anywhere;
+}
+
+.jarvis-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 92%;
+  padding: 0.8rem 0.9rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px 14px 14px 14px;
+}
+
+.jarvis-reply p {
+  margin: 0;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.jarvis-reply.failed p,
+.jarvis-wait {
+  color: var(--muted);
+}
+
+.jarvis-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: min(100%, 44rem);
+  margin: 0 auto;
+  padding: 0.7rem 1rem max(1rem, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+}
+
+.jarvis-examples {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.jarvis-examples button {
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.86rem;
+}
+
+.jarvis-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.jarvis-field {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.jarvis-field input {
+  width: 100%;
+  min-height: 3rem;
+  font-size: 1rem;
+}
+
+.jarvis-send {
+  flex: none;
+  min-height: 3rem;
+}
