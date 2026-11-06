@@ -16,6 +16,8 @@
 //   Den kan bara läsa sammanfattningen, inte lägga in något. Bara en hash sparas (tabellen read_tokens).
 // - POST ?action=sammanfattning  (med läsnyckeln): hela Groundwork som text med exakta siffror
 //   (summary.ts, samma uträkningar som appen). Läser bara, ändrar inget.
+// - POST ?action=fraga  (med läsnyckeln): JSON { fraga: "Hur sov jag i natt?" }. Kort svar med exakta siffror
+//   för Siri, utan AI (ask.ts). Förstår den inte frågan säger den det och ger tre exempel. Läser bara.
 //
 // Funktionen kontrollerar själv vem som anropar (verify_jwt är av).
 
@@ -25,7 +27,8 @@ import { confirmText, parseSpoken } from './spoken.ts'
 import { prioritizeToday } from './priority.ts'
 import { morningText } from './morning.ts'
 import { addDays, weekStart } from './dates.ts'
-import { summaryText } from './summary.ts'
+import { summaryFacts, summaryText, type SummaryInput } from './summary.ts'
+import { answer } from './ask.ts'
 import { monthPlans } from './months.ts'
 import { MAX_MONTHS } from './goalPlan.ts'
 import type { Loan } from './forecast.ts'
@@ -145,12 +148,11 @@ async function allRows<T>(query: (from: number, to: number) => PromiseLike<{ dat
  * Sammanfattningen. Läser hushållets ekonomi (records) och dina egna vanor, Att göra och hälsa
  * (personal_records), och räknar med samma kod som appen. Skriver ingenting.
  */
-async function summary(req: Request) {
-  const owner = await readOwner(req)
-  if (owner instanceof Response) return owner
+async function summaryInput(userId: string): Promise<SummaryInput | Response> {
   const today = stockholmToday()
-  const { data: member } = await admin.from('household_members').select('household_id').eq('user_id', owner.user_id).maybeSingle()
+  const { data: member } = await admin.from('household_members').select('household_id').eq('user_id', userId).maybeSingle()
   if (!member) return say('Du är inte med i något hushåll i Groundwork än. Logga in i appen först.', 404)
+  const owner = { user_id: userId }
 
   const [economy, mine, checkRows] = await Promise.all([
     allRows<{ store: string; data: unknown }>((from, to) =>
@@ -201,19 +203,36 @@ async function summary(req: Request) {
   }
   const health = pick<HealthDay>(mine, 'health').filter((d) => d.date >= addDays(today, -1))
 
-  return say(
-    summaryText({
-      today,
-      plans,
-      assets: pick<Asset>(economy, 'assets'),
-      goal: pick<SavingsGoal>(economy, 'goals')[0] ?? null,
-      loan: pick<Loan>(economy, 'loans')[0] ?? null,
-      wishes: pick<Wish>(economy, 'wishes'),
-      priority: prioritizeToday(habits, log, paused, tasks, today),
-      tasks,
-      health,
-    }),
-  )
+  return {
+    today,
+    plans,
+    assets: pick<Asset>(economy, 'assets'),
+    goal: pick<SavingsGoal>(economy, 'goals')[0] ?? null,
+    loan: pick<Loan>(economy, 'loans')[0] ?? null,
+    wishes: pick<Wish>(economy, 'wishes'),
+    priority: prioritizeToday(habits, log, paused, tasks, today),
+    tasks,
+    health,
+  }
+}
+
+/** Sammanfattningen som text (med läsnyckeln). */
+async function summary(req: Request) {
+  const owner = await readOwner(req)
+  if (owner instanceof Response) return owner
+  const input = await summaryInput(owner.user_id)
+  return input instanceof Response ? input : say(summaryText(input))
+}
+
+/** "Fråga Groundwork": ett kort svar på en fråga, utan AI (med läsnyckeln). */
+async function ask(req: Request) {
+  const owner = await readOwner(req)
+  if (owner instanceof Response) return owner
+  const type = req.headers.get('content-type') ?? ''
+  const body = type.includes('json') ? await req.json().catch(() => ({})) : { fraga: await req.text() }
+  const question = String(body?.fraga ?? body?.text ?? '').slice(0, 300)
+  const input = await summaryInput(owner.user_id)
+  return input instanceof Response ? input : say(answer(question, summaryFacts(input)))
 }
 
 async function receive(req: Request) {
@@ -358,6 +377,7 @@ Deno.serve(async (req) => {
     if (action === 'morgon') return await morning(req)
     if (action === 'lasnyckel') return await createToken(req, 'read')
     if (action === 'sammanfattning') return await summary(req)
+    if (action === 'fraga') return await ask(req)
     return await receive(req)
   } catch (e) {
     console.error('inbox', e)
