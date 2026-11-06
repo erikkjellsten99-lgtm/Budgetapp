@@ -91,12 +91,17 @@ export interface SavingsGoal {
   name: string;
   /** Målbelopp i kronor. */
   target: number;
-  /** Hur mycket som sätts in varje månad, i kronor. */
+  /** Hur mycket som sattes in varje månad, i kronor. Används inte längre: insättningen kommer från budgeten. */
   monthlyDeposit: number;
   /** Antagen avkastning per år i procent, t.ex. 7. */
   annualReturn: number;
   /** Tillgångarna (konton) vars saldo räknas mot målet. */
   assetIds: string[];
+  /**
+   * Budgetkategorierna (sparande) som går till målet varje månad. Saknas = de med
+   * "gemensam" i namnet, t.ex. Gemensamt sparande.
+   */
+  categoryIds?: string[];
 }
 
 /** Vems önskelista en önskan står på. */

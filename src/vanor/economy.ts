@@ -5,7 +5,9 @@
 import { currentMonth, getAssets, getBudget, getGoals, getIncome, getLoans, getWishes, shiftMonth } from '../db'
 import type { Category, CategoryType, Wish } from '../types'
 import { forecast, type MonthInput } from '../forecast'
-import { goalCurrent, monthLabel, project } from '../Goal'
+import { goalCurrent } from '../Goal'
+import { planGoal, planWhen } from '../goalPlan'
+import { loadGoalData } from '../useGoalPlan'
 
 export interface Economy {
   /**
@@ -141,10 +143,11 @@ export async function loadEconomy(): Promise<Economy> {
   let goalPath: number[] | null = null
   if (goal && goal.target > 0) {
     const current = goalCurrent(goal, assets)
-    const projection = project(current, goal)
+    // Samma uträkning som Sparmål och Översikt (goalPlan.ts).
+    const projection = planGoal(current, goal.target, goal.annualReturn, (await loadGoalData(goal)).rows)
     goalPath = projection.withReturn
     const reachedAt = projection.reachedAt
-    savings = { name: goal.name, current, target: goal.target, reachedIn: reachedAt === null ? null : reachedAt === 0 ? 'nu' : monthLabel(reachedAt) }
+    savings = { name: goal.name, current, target: goal.target, reachedIn: reachedAt === null ? null : reachedAt === 0 ? 'nu' : planWhen(projection, reachedAt) }
   }
 
   // Budgeten den här månaden, som i fliken Budget: inkomster minus utgifter (önskningar köpta i månaden räknas

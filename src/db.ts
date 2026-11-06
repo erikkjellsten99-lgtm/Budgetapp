@@ -471,6 +471,44 @@ export function deleteCategory(month: string, id: string): Promise<void> {
   return updateBudget(month, (categories) => categories.filter((category) => category.id !== id));
 }
 
+/** Budget och inkomst för en månad, som getBudget och getIncome ger dem. */
+export interface MonthPlan {
+  month: string;
+  categories: Category[];
+  income: MonthlyIncome;
+}
+
+/**
+ * Budget och inkomst för många månader i följd ("first" och framåt), med samma regler som
+ * getBudget och getIncome: en månad utan egen post utgår från närmaste tidigare månad.
+ * Läser databasen en gång, så att 40 år framåt går snabbt (används av sparmålet).
+ */
+export async function getMonthPlans(first: string, count: number): Promise<MonthPlan[]> {
+  const [budgets, incomes, legacy] = await Promise.all([
+    read('budgets', (store) => store.getAll()) as Promise<MonthBudget[]>,
+    read('income', (store) => store.getAll()) as Promise<MonthlyIncome[]>,
+    read('categories', (store) => store.getAll()) as Promise<Category[]>,
+  ]);
+  // getAll ger posterna i nyckelordning, alltså månad för månad.
+  const latest = <T extends { month: string }>(list: T[], month: string) => {
+    let found: T | undefined;
+    for (const item of list) {
+      if (item.month > month) break;
+      found = item;
+    }
+    return found;
+  };
+  return Array.from({ length: count }, (_, i) => {
+    const month = shiftMonth(first, i);
+    const income = latest(incomes, month);
+    return {
+      month,
+      categories: latest(budgets, month)?.categories ?? legacy,
+      income: { month, csn: income?.csn ?? 0, other: income?.other ?? 0 },
+    };
+  });
+}
+
 // Utgångsläge för sammanslagning av budgeten (budgetMerge.ts)
 
 const BASE_PREFIX = 'base:budgets:';
