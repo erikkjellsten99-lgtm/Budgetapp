@@ -252,6 +252,12 @@ h3 span,
   --fc-loan: #ffb547;
 }
 
+/* Dagens citat i Vanor i samma typsnitt som rubrikerna (Space Grotesk har ingen kursiv) */
+.vanor .quote-text {
+  font-family: var(--hud-display);
+  font-weight: 500;
+}
+
 /* Veckans sol i Vanor: himlen i HUD-blått i stället för grönt */
 .vanor {
   --sky-top: #eaf1f8;
