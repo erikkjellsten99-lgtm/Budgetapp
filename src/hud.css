@@ -1,0 +1,273 @@
+/* HUD-stilen (skiss B): färger, rutnät, tunna linjer och siffror i monospace, i ljust och mörkt läge.
+   Bara utseende: inga uträkningar eller belopp ändras. Laddas sist (main.tsx), så att den ligger över
+   styles.css och vanor.css med samma väljare. */
+
+:root {
+  --hud-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --hud-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --bg: #f2f5f9;
+  --card: #ffffff;
+  --card-raised: #ffffff;
+  --text: #0b1b2e;
+  --muted: #4a5b70;
+  --border: #c9d6e4;
+  --accent: #0a6aa8;
+  --accent-hover: #08578a;
+  --accent-soft: #e3eff8;
+  --danger: #a8322b;
+  --danger-soft: #faeeec;
+  --chart-main: #0a6aa8;
+  --chart-ref: #6b7b8f;
+  --focus: #0a6aa8;
+  --hero-bg: #0c1830;
+  --hero-text: #e6f1ff;
+  --hero-muted: #a9bcd6;
+  --hud-grid: rgb(10 106 168 / 6%);
+  --hud-bracket: #0a6aa8;
+  --hud-glow: rgb(10 106 168 / 0%);
+  --shadow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #070b14;
+    --card: #0e1626;
+    --card-raised: #132036;
+    --text: #e6f1ff;
+    --muted: #93a7c3;
+    --border: #22405c;
+    --accent: #5cc8ff;
+    --accent-hover: #86d8ff;
+    --accent-soft: #10283f;
+    --danger: #ff9b90;
+    --danger-soft: #3a1f22;
+    --chart-main: #5cc8ff;
+    --chart-ref: #93a7c3;
+    --focus: #86d8ff;
+    --hero-bg: #0c1830;
+    --hero-text: #e6f1ff;
+    --hero-muted: #a9bcd6;
+    --hud-grid: rgb(92 200 255 / 5%);
+    --hud-bracket: #5cc8ff;
+    --hud-glow: rgb(92 200 255 / 22%);
+  }
+}
+
+/* Mörkt läge valt i appen (Konto → Utseende) */
+:root[data-theme='dark'] {
+  --bg: #070b14;
+  --card: #0e1626;
+  --card-raised: #132036;
+  --text: #e6f1ff;
+  --muted: #93a7c3;
+  --border: #22405c;
+  --accent: #5cc8ff;
+  --accent-hover: #86d8ff;
+  --accent-soft: #10283f;
+  --danger: #ff9b90;
+  --danger-soft: #3a1f22;
+  --chart-main: #5cc8ff;
+  --chart-ref: #93a7c3;
+  --focus: #86d8ff;
+  --hero-bg: #0c1830;
+  --hero-text: #e6f1ff;
+  --hero-muted: #a9bcd6;
+  --hud-grid: rgb(92 200 255 / 5%);
+  --hud-bracket: #5cc8ff;
+  --hud-glow: rgb(92 200 255 / 22%);
+}
+
+/* Rutnätet i bakgrunden */
+body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--hud-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hud-grid) 1px, transparent 1px);
+  background-size: 25px 25px;
+  background-attachment: fixed;
+}
+
+.app-header {
+  background: transparent;
+}
+
+/* Rubriker i Space Grotesk */
+h1,
+h2,
+.vanor .headline {
+  font-family: var(--hud-display);
+}
+
+/* Små rubriker som HUD-etiketter */
+h3 {
+  font-family: var(--hud-mono);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+/* Alla belopp i Space Grotesk med jämnbreda siffror (samma tal, bara annat typsnitt).
+   Inte monospace: där blir mellanrummet i "16 858 kr" lika brett som en siffra. */
+.hero-amount,
+h3 span,
+.row-amount,
+.item-amount,
+.total strong,
+.summary p > span:last-child,
+.summary .left strong,
+.net-worth,
+.goal-summary-amount,
+.wish-bought-amount,
+.hero-split dd,
+.forecast-table,
+.chart-tip {
+  font-family: var(--hud-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.month-picker,
+.goal-summary-head {
+  font-family: var(--hud-mono);
+}
+
+/* Kort: tunn linje, ingen skugga */
+.card,
+.goal {
+  box-shadow: none;
+}
+
+/* Översta rutan: hörnmarkeringar och svagt sken */
+.balance-hero {
+  border: 1px solid var(--hud-bracket);
+  box-shadow: 0 0 32px var(--hud-glow);
+}
+
+.balance-hero::before,
+.balance-hero::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.balance-hero::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--hud-bracket);
+  border-left: 2px solid var(--hud-bracket);
+  border-top-left-radius: 14px;
+}
+
+.balance-hero::after {
+  right: -1px;
+  bottom: -1px;
+  border-right: 2px solid var(--hud-bracket);
+  border-bottom: 2px solid var(--hud-bracket);
+  border-bottom-right-radius: 14px;
+}
+
+.hero-label {
+  font-family: var(--hud-mono);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-amount {
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: #5cc8ff;
+}
+
+.balance-hero.negative .hero-amount {
+  color: #ff9b90;
+}
+
+/* Flikraden längst ner */
+@media (max-width: 639px) {
+  .app-nav {
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    box-shadow: none;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+}
+
+/* Mörkt läge: knapptext mot den ljusblå accenten */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) button.primary {
+    color: #04121f;
+  }
+}
+
+:root[data-theme='dark'] button.primary {
+  color: #04121f;
+}
+
+/* Vanor-fliken */
+.vanor {
+  --sunk: #e6edf5;
+  --warn: #8f5300;
+  --warn-soft: #f7ebd6;
+  --scrim: rgb(5 12 22 / 0.45);
+  --mono: var(--hud-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .vanor {
+    --sunk: #0a1220;
+    --done-ink: #04121f;
+    --warn: #ffc46b;
+    --warn-soft: #33270f;
+    --scrim: rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme='dark'] .vanor {
+  --sunk: #0a1220;
+  --done-ink: #04121f;
+  --warn: #ffc46b;
+  --warn-soft: #33270f;
+  --scrim: rgb(0 0 0 / 0.6);
+}
+
+/* Prognosdiagrammet: sparat i accentblått, lånet i bärnsten (skiljs åt även i ljushet) */
+.forecast-chart {
+  --fc-save: #0a6aa8;
+  --fc-loan: #b86e00;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .forecast-chart {
+    --fc-save: #5cc8ff;
+    --fc-loan: #ffb547;
+  }
+}
+
+:root[data-theme='dark'] .forecast-chart {
+  --fc-save: #5cc8ff;
+  --fc-loan: #ffb547;
+}
+
+/* Veckans sol i Vanor: himlen i HUD-blått i stället för grönt */
+.vanor {
+  --sky-top: #eaf1f8;
+  --sky-bottom: #f3f1ea;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .vanor {
+    --sky-top: #0a1324;
+    --sky-bottom: #0e1a2e;
+    --warm-top: #1a1a1c;
+  }
+}
+
+:root[data-theme='dark'] .vanor {
+  --sky-top: #0a1324;
+  --sky-bottom: #0e1a2e;
+  --warm-top: #1a1a1c;
+}
