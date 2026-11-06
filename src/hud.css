@@ -275,14 +275,17 @@ h3 span,
 /* Idag, Fråga Jarvis och underflikarna i HUD-stil */
 .today-amount,
 .today-rows,
-.jarvis-reply p {
+.jarvis-a,
+.jarvis-heard {
   font-family: var(--hud-display);
   font-variant-numeric: tabular-nums;
 }
 
 .today-label,
 .jarvis-eyebrow,
-.jarvis-sub,
+.jarvis-top-title p,
+.jarvis-status,
+.core-name,
 .today .eyebrow {
   font-family: var(--hud-mono);
   font-weight: 500;
@@ -301,4 +304,24 @@ h3 span,
 
 .today .eyebrow {
   letter-spacing: 0.02em;
+}
+
+/* Nyheter i HUD-stil */
+.news .news-title {
+  font-family: var(--hud-display);
+}
+
+.news-meta,
+.news-badge,
+.news-because,
+.news-intro .eyebrow {
+  font-family: var(--hud-mono);
+}
+
+.news-meta {
+  letter-spacing: 0.02em;
+}
+
+.jarvis-top-title h2 {
+  font-family: var(--hud-display);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { answer, EXAMPLES, normalize } from './ask.ts'
+import { answer, dayBrief, EXAMPLES, HIDDEN_MONEY, normalize } from './ask.ts'
 import { summaryFacts, summaryLines, type SummaryInput } from './summary.ts'
 import { prioritizeToday } from './priority.ts'
 import type { Loan } from './forecast.ts'
@@ -72,11 +72,27 @@ describe('Fråga Groundwork', () => {
     expect(ask('Hur mycket har vi kvar?')).toContain('blir det')
   })
 
-  it('förstår inte: säger det och ger tre exempel', () => {
+  it('förstår inte: svarar ändå med dagens läge', () => {
     const reply = ask('Vad blir det för väder?')
-    expect(reply).toMatch(/^Det förstår jag inte än\. Prova: /)
-    for (const example of EXAMPLES) expect(reply).toContain(example)
-    expect(ask('')).toMatch(/^Det förstår jag inte än/)
+    expect(reply).toMatch(/^Det har jag inget exakt svar på, men så här är läget: /)
+    expect(reply).toContain(facts.left)
+    expect(reply).toContain(`Klart idag: ${facts.done} av ${facts.total}.`)
+    expect(ask('')).toMatch(/^Fråga till exempel: /)
+    for (const example of EXAMPLES) expect(ask('')).toContain(example)
+  })
+
+  it('allmänna frågor får ett samlat svar', () => {
+    expect(ask('Hur går det?')).toBe(dayBrief(facts))
+    expect(ask('Hur ser ekonomin ut?')).toContain(`Inkomster ${facts.income}, kostnader ${facts.costs}`)
+    expect(ask('Hur mår jag?')).toContain('sömn 8 h 42 min')
+  })
+
+  it('tål felstavning och å/ä/ö skrivna som a/o', () => {
+    expect(ask('hur mycket ar inkomsterna')).toContain(facts.income)
+    expect(ask('nar nas sparmalet')).toContain(facts.goal!.target)
+    expect(ask('hur somnade jag')).toContain('Du sov')
+    expect(ask('inkomser')).toContain(facts.income)
+    expect(ask('Hur mycket kostar allt?')).toContain(facts.costs)
   })
 
   it('normalize: gemener, å/ä/ö kvar, skiljetecken bort', () => {
@@ -88,5 +104,30 @@ describe('Fråga Groundwork', () => {
 describe('vad ska jag göra', () => {
   it('ger vanorna och vad som ska göras först', () => {
     expect(answer('Vad ska jag göra idag?', facts)).toBe('Måste göras idag: Meditation och Gym. Börja med Ringa tandläkaren.')
+  })
+})
+
+describe('småprat och visningsläge', () => {
+  it('hälsningar och vad Jarvis kan, utan belopp', () => {
+    expect(ask('Hej Jarvis')).toMatch(/^Hej! Jag är Jarvis/)
+    expect(ask('Vad kan du?')).toMatch(/^Jag är Jarvis i Groundwork/)
+    expect(ask('Tack!')).toBe('Varsågod!')
+    // En fråga efter hälsningen vinner
+    expect(ask('Hej, hur sov jag?')).toBe('Du sov 8 h 42 min enligt Hälsa (idag).')
+  })
+
+  it('visningsläge: inga belopp, men vanor och hälsa svarar som vanligt', () => {
+    const hidden = (q: string) => answer(q, facts, { hideMoney: true })
+    for (const q of ['Vad blir över?', 'Hur mycket är kvar på billånet?', 'När nås sparmålet?', 'Hur ser ekonomin ut?', 'Inkomster?', 'Önskelistan']) {
+      expect(hidden(q)).toBe(HIDDEN_MONEY)
+    }
+    for (const q of ['Hur går det?', 'Vad blir det för väder?']) {
+      const reply = hidden(q)
+      expect(reply).not.toMatch(/kr\b/)
+      expect(reply).not.toContain(facts.left)
+      expect(reply).toContain(`Klart idag: ${facts.done} av ${facts.total}.`)
+    }
+    expect(hidden('Hur sov jag?')).toBe('Du sov 8 h 42 min enligt Hälsa (idag).')
+    expect(hidden('Vad ska jag göra idag?')).toBe('Måste göras idag: Meditation och Gym. Börja med Ringa tandläkaren.')
   })
 })
