@@ -271,3 +271,34 @@ h3 span,
   --sky-bottom: #0e1a2e;
   --warm-top: #1a1a1c;
 }
+
+/* Idag, Fråga Jarvis och underflikarna i HUD-stil */
+.today-amount,
+.today-rows,
+.jarvis-reply p {
+  font-family: var(--hud-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.today-label,
+.jarvis-eyebrow,
+.jarvis-sub,
+.today .eyebrow {
+  font-family: var(--hud-mono);
+  font-weight: 500;
+}
+
+.today-money {
+  border-color: var(--hud-bracket);
+  box-shadow: 0 0 28px var(--hud-glow);
+}
+
+.sub-nav {
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.today .eyebrow {
+  letter-spacing: 0.02em;
+}

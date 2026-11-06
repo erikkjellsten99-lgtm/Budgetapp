@@ -2464,3 +2464,203 @@ main > div > h2 + .hint {
   flex: none;
   min-height: 3rem;
 }
+
+/* Underflikarna i Ekonomi (App.tsx) */
+.sub-nav {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  display: flex;
+  gap: 0.25rem;
+  margin: -0.5rem -1.25rem 1rem;
+  padding: 0.5rem 1.25rem;
+  overflow-x: auto;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+}
+
+.sub-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.sub-nav-item {
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.9rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.sub-nav-item.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 639px) {
+  .sub-nav {
+    margin: -0.5rem -1rem 0.9rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* Idag (Today.tsx) */
+.today .eyebrow {
+  margin: 0 0 0.2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  min-height: 1.3em;
+}
+
+.today-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .today-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .today-money {
+    grid-column: span 2;
+  }
+}
+
+.today-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 1rem 1.1rem;
+  color: var(--text);
+  text-align: left;
+  font-weight: 400;
+}
+
+.today-label {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.today-amount {
+  font-size: clamp(2rem, 9vw, 2.6rem);
+  line-height: 1.05;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.today-amount.small {
+  font-size: 1.45rem;
+  color: var(--text);
+}
+
+.today-amount.negative {
+  color: var(--danger);
+}
+
+.today-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-top: 0.2rem;
+}
+
+.today-rows > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-rows > span > span:first-child {
+  color: var(--muted);
+}
+
+.today-rows > span > span:last-child {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.today-more {
+  align-self: flex-end;
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.today-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.today-first {
+  align-self: flex-start;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.today-bar {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--accent-soft);
+}
+
+.today-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+}
+
+.today-skeleton {
+  min-height: 7rem;
+  background: var(--card);
+  opacity: 0.6;
+}
+
+.today-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+}
+
+.today-error p {
+  margin: 0;
+}
+
+.today .jarvis-open {
+  margin-bottom: 0.75rem;
+}
