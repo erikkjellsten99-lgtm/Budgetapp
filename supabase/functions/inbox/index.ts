@@ -9,11 +9,20 @@
 // - POST  (från genvägen "Hälsa till Groundwork"): JSON { steg: "8 432", traning: "34 min", … }, valfritt datum.
 //   Sparas som dagens hälsodata och bockar vanor vars regel är uppfylld (health.ts).
 //
+// - POST ?action=morgon  (från genvägen "Morgonbesked", samma nyckel): kort text om dagens Att göra,
+//   vanor som måste göras idag och vad som bör göras först (morning.ts, samma ordning som Vanor).
+//   Läser bara, ändrar inget.
+//
 // Funktionen kontrollerar själv vem som anropar (verify_jwt är av).
 
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4'
 import { itemId, parseLines, stockholmToday, type InboxItem } from './parse.ts'
 import { confirmText, parseSpoken } from './spoken.ts'
+import { prioritizeToday } from './priority.ts'
+import { morningText } from './morning.ts'
+import { weekStart } from './dates.ts'
+import type { Habit, Log } from './habits.ts'
+import type { Task } from './tasks.ts'
 import { FIELD_METRICS, formatHealth, isHealthBody, metRules, parseHealthBody, parseSleepStages, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
@@ -53,11 +62,56 @@ async function createToken(req: Request) {
   return json({ token })
 }
 
-async function receive(req: Request) {
+/** Vem nyckeln i genvägen tillhör, eller ett felsvar. */
+async function tokenOwner(req: Request): Promise<{ user_id: string } | Response> {
   const token = bearer(req)
   if (!token.startsWith('gw_')) return json({ error: 'Fel nyckel. Skapa en ny i Groundwork → Vanor → Mina vanor.' }, 401)
   const { data: owner } = await admin.from('inbox_tokens').select('user_id').eq('token_hash', await sha256(token)).maybeSingle()
   if (!owner) return json({ error: 'Nyckeln gäller inte längre. Skapa en ny i Groundwork → Vanor → Mina vanor.' }, 401)
+  return owner
+}
+
+/** Morgonbeskedet. Läser vanor, bockningar den här veckan, pausdagar och Att göra. Skriver ingenting. */
+async function morning(req: Request) {
+  const owner = await tokenOwner(req)
+  if (owner instanceof Response) return owner
+  const today = stockholmToday()
+  const [{ data: rows, error }, { data: checkRows, error: checkError }] = await Promise.all([
+    admin
+      .from('personal_records')
+      .select('store, data')
+      .eq('user_id', owner.user_id)
+      .in('store', ['habits', 'pauses', 'tasks'])
+      .eq('deleted', false)
+      .limit(5000),
+    // Bara veckans bockar behövs för att räkna veckomålen och dagens måsten.
+    admin
+      .from('personal_records')
+      .select('data')
+      .eq('user_id', owner.user_id)
+      .eq('store', 'checks')
+      .eq('deleted', false)
+      .gte('data->>date', weekStart(today))
+      .limit(5000),
+  ])
+  if (error || checkError) {
+    console.error('inbox morgon', error ?? checkError)
+    return say('Det gick inte att hämta morgonbeskedet just nu. Försök igen.', 500)
+  }
+  const of = <T>(store: string) => (rows ?? []).filter((r) => r.store === store && r.data).map((r) => r.data as T)
+  const habits = of<Habit>('habits').sort((a, b) => a.order - b.order)
+  const paused = new Set(of<{ date: string }>('pauses').map((p) => p.date))
+  const log: Log = {}
+  for (const r of checkRows ?? []) {
+    const c = r.data as { date: string; habitId: string } | null
+    if (c) (log[c.date] ??= []).push(c.habitId)
+  }
+  return say(morningText(prioritizeToday(habits, log, paused, of<Task>('tasks'), today), today))
+}
+
+async function receive(req: Request) {
+  const owner = await tokenOwner(req)
+  if (owner instanceof Response) return owner
 
   const type = req.headers.get('content-type') ?? ''
   const body = type.includes('json') ? await req.json().catch(() => ({})) : { rader: await req.text() }
@@ -193,7 +247,9 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Använd POST.' }, 405)
   try {
     const action = new URL(req.url).searchParams.get('action')
-    return action === 'token' ? await createToken(req) : await receive(req)
+    if (action === 'token') return await createToken(req)
+    if (action === 'morgon') return await morning(req)
+    return await receive(req)
   } catch (e) {
     console.error('inbox', e)
     return json({ error: 'Något gick fel. Försök igen.' }, 500)
