@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import Account from './Account';
@@ -23,10 +23,11 @@ import { useGoalData } from './useGoalPlan';
 import { useLoanSplit } from './useLoanSplit';
 import Forecast from './Forecast';
 import Income from './Income';
-import Vanor from './vanor/Vanor';
+// Vanor (med galaxen) och Nyheter laddas först när fliken öppnas, så att appen startar snabbare.
+const Vanor = lazy(() => import('./vanor/Vanor'));
 import Today from './Today';
 import JarvisView from './Jarvis';
-import Nyheter from './Nyheter';
+const Nyheter = lazy(() => import('./Nyheter'));
 import { formatKr } from './money';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
@@ -94,6 +95,11 @@ export default function App() {
 
   const [economyView, setEconomyView] = useState<EconomyView>(savedEconomy);
   const section = sectionOf(view);
+  // Flikar som öppnats en gång stannar kvar i bakgrunden, så att de är redo nästa gång.
+  const [visited, setVisited] = useState<Set<View>>(() => new Set([savedView()]));
+  useEffect(() => {
+    setVisited((prev) => (prev.has(view) ? prev : new Set(prev).add(view)));
+  }, [view]);
 
   function showView(next: View) {
     setView(next);
@@ -294,11 +300,19 @@ export default function App() {
           <JarvisView active={view === 'jarvis'} />
         </div>
         <div hidden={view !== 'nyheter'}>
-          <Nyheter active={view === 'nyheter'} />
+          {visited.has('nyheter') && (
+            <Suspense fallback={<ViewLoading />}>
+              <Nyheter active={view === 'nyheter'} />
+            </Suspense>
+          )}
         </div>
         <div hidden={view !== 'vanor'}>
           <div className="vanor-column">
-            <Vanor />
+            {visited.has('vanor') && (
+              <Suspense fallback={<ViewLoading />}>
+                <Vanor />
+              </Suspense>
+            )}
           </div>
         </div>
         <div hidden={view !== 'goal'}>
@@ -335,6 +349,16 @@ export default function App() {
         </div>
       </main>
       <UndoToast />
+    </div>
+  );
+}
+
+/** Visas de första tiondelarna medan en flik laddas. */
+function ViewLoading() {
+  return (
+    <div className="view-loading" aria-busy="true" aria-label="Laddar">
+      <div className="card today-skeleton" />
+      <div className="card today-skeleton" />
     </div>
   );
 }

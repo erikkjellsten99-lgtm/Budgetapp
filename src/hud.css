@@ -325,3 +325,200 @@ h3 span,
 .jarvis-top-title h2 {
   font-family: var(--hud-display);
 }
+
+/* ---------- Galaxen: gränssnittet ovanpå 3D-scenen i HUD-stil ---------- */
+.galaxy-view {
+  --g-accent: #5cc8ff;
+  --g-line: rgb(92 200 255 / 35%);
+  --g-glow: rgb(92 200 255 / 30%);
+  --g-panel: rgb(5 10 22 / 78%);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+/* Cockpitram: tunna hörn runt hela bilden */
+.galaxy-view::before,
+.galaxy-view::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.galaxy-view::before {
+  top: max(10px, env(safe-area-inset-top));
+  left: 10px;
+  border-top: 2px solid var(--g-line);
+  border-left: 2px solid var(--g-line);
+}
+
+.galaxy-view::after {
+  right: 10px;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  border-right: 2px solid var(--g-line);
+  border-bottom: 2px solid var(--g-line);
+}
+
+.galaxy-view .gv-top h2,
+.galaxy-view .gv-big {
+  font-family: var(--hud-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.galaxy-view .gv-top p,
+.galaxy-view .gv-label,
+.galaxy-view .cv-sub,
+.galaxy-view .gv-hint {
+  font-family: var(--hud-mono);
+}
+
+.galaxy-view .gv-hint {
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: #9fb3cf;
+}
+
+/* Knapparna uppe till höger */
+.galaxy-view .gv-close {
+  background: var(--g-panel);
+  border-color: var(--g-line);
+  color: #e6f1ff;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.galaxy-view .gv-help {
+  font-family: var(--hud-mono);
+  font-size: 1rem;
+}
+
+.galaxy-view .gv-help[aria-expanded='true'] {
+  background: rgb(92 200 255 / 18%);
+  border-color: var(--g-accent);
+  color: var(--g-accent);
+}
+
+/* Målen i rymden: siktram med hörn, monospace-text */
+.cosmos-view .cv-label {
+  padding: 7px 12px 8px;
+  background: var(--g-panel);
+  border-radius: 6px;
+  outline: 1px solid var(--g-line);
+  outline-offset: -1px;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.cosmos-view .cv-label::before,
+.cosmos-view .cv-label::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+}
+
+.cosmos-view .cv-label::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--g-accent);
+  border-left: 2px solid var(--g-accent);
+}
+
+.cosmos-view .cv-label::after {
+  right: -1px;
+  bottom: -1px;
+  border-right: 2px solid var(--g-accent);
+  border-bottom: 2px solid var(--g-accent);
+}
+
+.cosmos-view .cv-label b {
+  font-family: var(--hud-mono);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+
+.cosmos-view .cv-label small {
+  color: #9fb3cf;
+}
+
+.cosmos-view .cv-label.site b,
+.cosmos-view .cv-label.base b,
+.cosmos-view .cv-label.earth b {
+  color: var(--g-accent);
+}
+
+.cosmos-view .cv-label.crew,
+.cosmos-view .cv-label.star {
+  outline: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.cosmos-view .cv-label.crew::before,
+.cosmos-view .cv-label.crew::after,
+.cosmos-view .cv-label.star::before,
+.cosmos-view .cv-label.star::after {
+  display: none;
+}
+
+.cosmos-view .cv-label:focus-visible {
+  outline: 2px solid var(--g-accent);
+}
+
+/* Chippen längst ner (Hälsa, Ekonomi, månader) och nästa-knappen */
+.galaxy-view .gv-month {
+  background: var(--g-panel);
+  border-color: var(--g-line);
+  border-radius: 10px;
+  color: #e6f1ff;
+  font-family: var(--hud-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.galaxy-view .gv-month.is-current {
+  border-color: var(--g-accent);
+  box-shadow: 0 0 18px var(--g-glow);
+}
+
+.galaxy-view .cv-next {
+  border-color: var(--g-accent);
+  background: rgb(92 200 255 / 12%);
+  color: #e6f1ff;
+}
+
+.galaxy-view .cv-next span {
+  background: var(--g-accent);
+  color: #04121f;
+  font-family: var(--hud-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Panelerna (vana, besättning, ekonomi) och guiden */
+.galaxy-view .gv-panel,
+.galaxy-view .gv-guide {
+  background: var(--g-panel);
+  border-color: var(--g-line);
+  border-radius: 14px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.galaxy-view .gv-guide h3 {
+  font-family: var(--hud-display);
+  font-weight: 600;
+}
+
+.galaxy-view .gv-guide-ok,
+.galaxy-view .gv-back {
+  border-color: var(--g-line);
+  color: var(--g-accent);
+  font-weight: 600;
+}

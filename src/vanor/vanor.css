@@ -1642,8 +1642,8 @@
    Design: typsnitt, lättare lista och solgult för det som är klart.
    ------------------------------------------------------------------ */
 .vanor {
-  --display: 'Bricolage Grotesque', system-ui, sans-serif;
-  --body: 'Figtree', system-ui, sans-serif;
+  --display: var(--hud-display, system-ui);
+  --body: system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --fill: #e9a23b;
   --fill-ink: #2b1c04;
@@ -2254,7 +2254,7 @@
   z-index: 60;
   background: #03050c;
   color: #eef1ff;
-  font-family: 'Figtree', system-ui, sans-serif;
+  font-family: system-ui, sans-serif;
   animation: vanor-fade 0.25s ease-out;
 }
 
@@ -2289,7 +2289,7 @@
 
 .galaxy-view .gv-top h2 {
   margin: 0;
-  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-family: var(--hud-display, system-ui);
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -2401,7 +2401,7 @@
 }
 
 .galaxy-view .gv-big {
-  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-family: var(--hud-display, system-ui);
   font-size: 2.2rem;
   font-weight: 800;
   line-height: 1.1;
@@ -2842,7 +2842,7 @@
   margin: 0;
   padding: 0;
   color: #fff;
-  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-family: var(--hud-display, system-ui);
   font-size: 1.3rem;
   font-weight: 800;
   letter-spacing: normal;
@@ -3338,7 +3338,7 @@
 
 .galaxy-view .gv-economy .gv-big small {
   color: #aab4d8;
-  font-family: 'Figtree', system-ui, sans-serif;
+  font-family: system-ui, sans-serif;
   font-size: 0.95rem;
   font-weight: 500;
 }
@@ -3495,7 +3495,7 @@
 }
 
 .cosmos-view .cv-score b {
-  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-family: var(--hud-display, system-ui);
   font-size: 3.4rem;
   font-weight: 800;
   line-height: 0.95;
@@ -3510,7 +3510,7 @@
 
 .cosmos-view .gv-top .cv-phase,
 .cosmos-view .gv-top .cv-tip {
-  font-family: 'Figtree', system-ui, sans-serif;
+  font-family: system-ui, sans-serif;
 }
 
 .cosmos-view .cv-phase {
@@ -3526,7 +3526,7 @@
 
 .cosmos-view .cv-hero h2 {
   margin: 2px 0 0;
-  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-family: var(--hud-display, system-ui);
   font-size: 1.9rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -3678,7 +3678,7 @@
 }
 
 .cosmos-view .cv-card-title {
-  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-family: var(--hud-display, system-ui);
   font-size: 1.5rem;
   font-weight: 800;
   line-height: 1.15;

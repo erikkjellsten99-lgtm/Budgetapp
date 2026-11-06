@@ -5,8 +5,16 @@ import { onDataChange } from './db';
 import { onHabitChange } from './vanor/store';
 import { longDate } from './vanor/dates';
 import type { SummaryFacts } from '../supabase/functions/inbox/summary';
+import { dayBrief } from '../supabase/functions/inbox/ask';
 
-type Target = 'overview' | 'goal' | 'vanor' | 'jarvis';
+type Target = 'overview' | 'budget' | 'goal' | 'vanor' | 'jarvis' | 'nyheter';
+
+const QUICK: { id: Target; label: string; icon: string }[] = [
+  { id: 'overview', label: 'Översikt', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
+  { id: 'budget', label: 'Budget', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
+  { id: 'goal', label: 'Prognos', icon: 'M3 19l5.5-6 4 3.5L21 7M15 7h6v6' },
+  { id: 'nyheter', label: 'Nyheter', icon: 'M5 4h11v15a1 1 0 0 0 2 0V8h2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM8 8h5M8 12h5M8 16h3' },
+];
 
 function greeting(hour: number): string {
   if (hour < 5) return 'God natt';
@@ -59,6 +67,27 @@ export default function Today({ active, onOpen }: { active: boolean; onOpen: (ta
       </div>
 
       <JarvisButton onOpen={() => onOpen('jarvis')} />
+
+      {facts && (
+        <section className="card today-say" aria-label="Jarvis säger">
+          <span className="today-say-dot" aria-hidden="true" />
+          <p>
+            <span className="jarvis-eyebrow">Jarvis säger</span>
+            {dayBrief(facts)}
+          </p>
+        </section>
+      )}
+
+      <nav className="today-quick" aria-label="Snabbval">
+        {QUICK.map((q) => (
+          <button key={q.id} type="button" onClick={() => onOpen(q.id)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d={q.icon} />
+            </svg>
+            {q.label}
+          </button>
+        ))}
+      </nav>
 
       {failed && !facts && (
         <div className="card today-error" role="alert">

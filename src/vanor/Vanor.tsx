@@ -11,12 +11,6 @@ import { daySummary, habitPlan, isDaily, isDone, rampToday, type Habit, type Tod
 import { prioritizeToday } from '../../supabase/functions/inbox/priority'
 import { loadHabitData, minimumKeys, onHabitChange, saveTaskRecord, toggleCheck, togglePause, toLog, type HabitData } from './store'
 import { dayQuote } from './quotes'
-import '@fontsource/bricolage-grotesque/700.css'
-import '@fontsource/bricolage-grotesque/800.css'
-import '@fontsource/figtree/400.css'
-import '@fontsource/figtree/500.css'
-import '@fontsource/figtree/600.css'
-import '@fontsource/figtree/700.css'
 import '@fontsource/jetbrains-mono/500.css'
 import './vanor.css'
 
