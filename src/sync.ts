@@ -1,5 +1,20 @@
 import { createClient, type Session } from '@supabase/supabase-js';
-import { applyRemote, clearOutbox, getAllRecords, getMeta, getOutbox, onDataChange, setMeta, type RemoteRecord } from './db';
+import {
+  applyMergedBudgets,
+  applyRemote,
+  clearOutbox,
+  getAllRecords,
+  getBudgetBase,
+  getMeta,
+  getOutbox,
+  onDataChange,
+  saveSyncedBudgetBases,
+  setMeta,
+  type OutboxEntry,
+  type RemoteRecord,
+} from './db';
+import { mergeBudget } from './budgetMerge';
+import type { MonthBudget } from './types';
 
 // Synk med servern (Supabase), så att du och Cassandra ser samma siffror.
 // Appen fungerar som förut utan internet: allt sparas på telefonen och ändringarna köas.
@@ -142,6 +157,7 @@ async function runSync() {
     setState({ householdId: meta.householdId });
     await push(meta.householdId);
     await pull(meta);
+    await saveSyncedBudgetBases();
     setState({ status: 'synkad', lastSynced: new Date() });
     await updatePending();
   } catch (error) {
@@ -237,18 +253,76 @@ async function handleEmailLink() {
 async function push(householdId: string) {
   const outbox = await getOutbox();
   if (!outbox.length) return;
+  const { entries, budgetTs } = await mergeWithServer(householdId, outbox);
   await pushRows(
-    outbox.map((entry) => ({
+    entries.map((entry) => ({
       household_id: householdId,
       store: entry.store,
       id: entry.id,
       data: entry.data,
       deleted: entry.deleted,
-      client_ts: entry.ts,
+      client_ts: budgetTs.get(entry.key) ?? entry.ts,
     })),
   );
-  await clearOutbox(outbox);
+  // Servern sparar bara en ändring som är nyare än den den redan har. Hann den andra telefonen
+  // spara samma månad precis nu ligger månaden kvar i kön och slås ihop igen vid nästa synk
+  // (inom 30 sekunder, eller direkt vid nästa ändring).
+  const kept = await budgetsNotStored(householdId, entries, budgetTs);
+  await clearOutbox(entries.filter((entry) => !kept.has(entry.key)));
   await updatePending();
+}
+
+/**
+ * Månadsbudgetar i kön slås ihop med serverns version innan de skickas, så att ingen av
+ * telefonernas ändringar försvinner (budgetMerge.ts). Svarar med kön som ska skickas och
+ * tidsstämpeln varje budget skickas med (minst serverns, annars sparar servern den inte).
+ */
+async function mergeWithServer(householdId: string, outbox: OutboxEntry[]) {
+  const budgetTs = new Map<string, number>();
+  const budgets = outbox.filter((entry) => entry.store === 'budgets' && !entry.deleted && entry.data);
+  if (!budgets.length) return { entries: outbox, budgetTs };
+
+  const { data, error } = await supabase
+    .from('records')
+    .select('id, data, deleted, client_ts')
+    .eq('household_id', householdId)
+    .eq('store', 'budgets')
+    .in('id', budgets.map((entry) => entry.id));
+  if (error) throw error;
+  const server = new Map((data as { id: string; data: MonthBudget | null; deleted: boolean; client_ts: number }[]).map((row) => [row.id, row]));
+
+  const merged: { key: string; ts: number; data: MonthBudget }[] = [];
+  for (const entry of budgets) {
+    const remote = server.get(entry.id);
+    if (!remote || remote.deleted || !remote.data) continue;
+    const local = entry.data as MonthBudget;
+    const categories = mergeBudget(await getBudgetBase(entry.id), local.categories, remote.data.categories);
+    merged.push({ key: entry.key, ts: entry.ts, data: { ...local, categories } });
+    budgetTs.set(entry.key, Math.max(entry.ts, Number(remote.client_ts) + 1));
+  }
+  // Har något ändrats här under tiden skickas inget för den månaden nu, den tas vid nästa synk.
+  const applied = await applyMergedBudgets(merged);
+  const byKey = new Map(merged.map((m) => [m.key, m.data]));
+  const entries = outbox
+    .filter((entry) => !budgetTs.has(entry.key) || applied.has(entry.key))
+    .map((entry) => (applied.has(entry.key) ? { ...entry, data: byKey.get(entry.key) } : entry));
+  for (const key of budgetTs.keys()) if (!applied.has(key)) budgetTs.delete(key);
+  return { entries, budgetTs };
+}
+
+/** Månadsbudgetar som servern inte sparade (en nyare version hann före). */
+async function budgetsNotStored(householdId: string, sent: OutboxEntry[], budgetTs: Map<string, number>): Promise<Set<string>> {
+  const budgets = sent.filter((entry) => entry.store === 'budgets');
+  if (!budgets.length) return new Set();
+  const { data, error } = await supabase
+    .from('records')
+    .select('id, client_ts')
+    .eq('household_id', householdId)
+    .eq('store', 'budgets')
+    .in('id', budgets.map((entry) => entry.id));
+  if (error) throw error;
+  const stored = new Map((data as { id: string; client_ts: number }[]).map((row) => [row.id, Number(row.client_ts)]));
+  return new Set(budgets.filter((entry) => stored.get(entry.id) !== (budgetTs.get(entry.key) ?? entry.ts)).map((entry) => entry.key));
 }
 
 async function pushRows(rows: object[]) {
