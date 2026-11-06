@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState, type PointerEvent, type ReactNod
 import { budgetMonth, deleteCategory, monthName, newId, saveCategories, saveCategory, updateBudget } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
 import { offerUndo, restoreAt } from './undo';
+import { useAmountInput } from './useAmountInput';
 import { CATEGORY_TYPES, type Category, type CategoryItem, type CategoryType } from './types';
 
 interface CategoriesProps {
@@ -269,31 +270,13 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
   );
 }
 
-/** Beloppet per månad för en kategori utan rader. Skrivs direkt och sparas medan du skriver. */
+/** Beloppet per månad för en kategori utan rader. Sparas när du lämnar fältet. */
 function AmountField({ category, onSave }: { category: Category; onSave: (amount: number) => void }) {
-  const [text, setText] = useState(toInputKr(category.monthlyBudget));
-  const amount = parseKr(text);
-  const ok = Number.isFinite(amount) && amount >= 0;
-
-  // Hämta nytt värde om beloppet har ändrats någon annanstans, t.ex. på den andra telefonen.
-  useEffect(() => {
-    if (parseKr(text) !== category.monthlyBudget) setText(toInputKr(category.monthlyBudget));
-  }, [category.monthlyBudget]);
-
+  const amount = useAmountInput(category.monthlyBudget, onSave);
   return (
     <label className="amount-field">
       Belopp per månad (kr)
-      <input
-        value={text}
-        inputMode="decimal"
-        placeholder="0"
-        aria-invalid={!ok}
-        onChange={(event) => {
-          setText(event.target.value);
-          const next = parseKr(event.target.value);
-          if (Number.isFinite(next) && next >= 0) onSave(next);
-        }}
-      />
+      <input {...amount.props} placeholder="0" aria-invalid={amount.invalid} />
     </label>
   );
 }
@@ -522,19 +505,14 @@ interface ItemRowProps {
   placeholder?: string;
 }
 
-/** En rad under en kategori: namn och belopp som skrivs direkt i listan. Sparas medan du skriver. */
+/** En rad under en kategori: namn och belopp som skrivs direkt i listan. Sparas när du lämnar fältet. */
 export function ItemRow({ item, handle, autoFocus, onChange, onDelete, onTogglePaid, placeholder }: ItemRowProps) {
   const [name, setName] = useState(item.name);
-  const [amountText, setAmountText] = useState(toInputKr(item.amount));
 
-  // Hämta nya värden om raden har ändrats på den andra telefonen.
+  // Hämta nytt namn om raden har ändrats på den andra telefonen.
   useEffect(() => setName(item.name), [item.name]);
-  useEffect(() => {
-    if (parseKr(amountText) !== item.amount) setAmountText(toInputKr(item.amount));
-  }, [item.amount]);
 
-  const amount = parseKr(amountText);
-  const amountOk = Number.isFinite(amount) && amount >= 0;
+  const amount = useAmountInput(item.amount, (next) => onChange({ ...item, name: name.trim(), amount: next }));
 
   return (
     <div className={isPaid(item) ? 'item-row paid' : 'item-row'}>
@@ -549,17 +527,11 @@ export function ItemRow({ item, handle, autoFocus, onChange, onDelete, onToggleP
         onBlur={() => name !== item.name && onChange({ ...item, name: name.trim() })}
       />
       <input
+        {...amount.props}
         className="item-amount"
-        value={amountText}
         placeholder="0"
-        inputMode="decimal"
         aria-label={`Belopp för ${name || 'raden'}`}
-        aria-invalid={!amountOk}
-        onChange={(event) => {
-          setAmountText(event.target.value);
-          const next = parseKr(event.target.value);
-          if (Number.isFinite(next) && next >= 0) onChange({ ...item, name: name.trim(), amount: next });
-        }}
+        aria-invalid={amount.invalid}
       />
       <button type="button" className="item-delete" aria-label={`Ta bort ${name || 'raden'}`} onClick={onDelete}>
         ×
