@@ -88,9 +88,62 @@ export function listen(handlers: {
   return { stop: () => rec.stop(), abort: () => rec.abort() };
 }
 
-function swedishVoice(): SpeechSynthesisVoice | undefined {
-  const voices = window.speechSynthesis.getVoices();
-  return voices.find((v) => v.lang === 'sv-SE') ?? voices.find((v) => v.lang.startsWith('sv'));
+// ---------- Rösten ----------
+
+export interface VoiceSettings {
+  /** Vald röst (voiceURI). Saknas: en svensk röst som inte är telefonens standardröst, om det finns. */
+  voice?: string;
+  /** 0.5–1.5, lägre är mörkare. */
+  pitch: number;
+  /** 0.7–1.4 */
+  rate: number;
+}
+
+export const DEFAULT_VOICE: VoiceSettings = { pitch: 0.85, rate: 1.05 };
+const VOICE_SETTINGS_KEY = 'jarvis-röst';
+
+export function readVoice(): VoiceSettings {
+  try {
+    const saved = JSON.parse(localStorage.getItem(VOICE_SETTINGS_KEY) ?? 'null') as Partial<VoiceSettings> | null;
+    const clamp = (n: unknown, min: number, max: number, fallback: number) =>
+      typeof n === 'number' && Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+    return {
+      voice: typeof saved?.voice === 'string' ? saved.voice : undefined,
+      pitch: clamp(saved?.pitch, 0.5, 1.5, DEFAULT_VOICE.pitch),
+      rate: clamp(saved?.rate, 0.7, 1.4, DEFAULT_VOICE.rate),
+    };
+  } catch {
+    return { ...DEFAULT_VOICE };
+  }
+}
+
+export function saveVoice(settings: VoiceSettings) {
+  try {
+    localStorage.setItem(VOICE_SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // Gäller bara tills appen stängs.
+  }
+}
+
+/** Telefonens svenska röster. Listan kan vara tom första gången; lyssna på onVoicesChanged. */
+export function swedishVoices(): SpeechSynthesisVoice[] {
+  if (!canSpeak()) return [];
+  return window.speechSynthesis.getVoices().filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith('sv'));
+}
+
+export function onVoicesChanged(listener: () => void): () => void {
+  if (!canSpeak()) return () => {};
+  window.speechSynthesis.addEventListener?.('voiceschanged', listener);
+  return () => window.speechSynthesis.removeEventListener?.('voiceschanged', listener);
+}
+
+/** Rösten att använda: den valda, annars en svensk röst som inte är standardrösten. */
+export function pickVoice(voices: SpeechSynthesisVoice[], chosen?: string): SpeechSynthesisVoice | undefined {
+  return (
+    (chosen ? voices.find((v) => v.voiceURI === chosen) : undefined) ??
+    voices.find((v) => !v.default && !/siri/i.test(v.name)) ??
+    voices[0]
+  );
 }
 
 /**
@@ -104,19 +157,20 @@ export function unlockSpeech() {
   window.speechSynthesis.speak(u);
 }
 
-/** Läser upp en text på svenska. onEnd körs när uppläsningen är klar eller avbryts. */
-export function speak(text: string, onEnd: () => void) {
+/** Läser upp en text på svenska med vald röst. onEnd körs när uppläsningen är klar eller avbryts. */
+export function speak(text: string, onEnd: () => void, settings: VoiceSettings = readVoice()) {
   if (!canSpeak()) return onEnd();
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'sv-SE';
-  const voice = swedishVoice();
+  u.pitch = settings.pitch;
+  const voice = pickVoice(swedishVoices(), settings.voice);
   try {
     if (voice) u.voice = voice;
   } catch {
     // Rösten gick inte att välja: telefonens standardröst för svenska används.
   }
-  u.rate = 1.02;
+  u.rate = settings.rate;
   u.onend = onEnd;
   u.onerror = onEnd;
   try {

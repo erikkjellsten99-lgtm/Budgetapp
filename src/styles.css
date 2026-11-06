@@ -3098,3 +3098,99 @@ body.jarvis-locked {
   font-size: 0.86rem;
   line-height: 1.5;
 }
+
+/* Jarvis röst (VoicePanel i Jarvis.tsx) */
+.jarvis-voice {
+  position: absolute;
+  z-index: 2;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 1rem;
+  background: #0b1628;
+  border: 1px solid var(--j-accent);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 50%);
+  color: var(--j-text);
+}
+
+.jarvis-voice h3 {
+  display: block;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  color: var(--j-accent);
+  letter-spacing: 0.14em;
+}
+
+.jarvis-voice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+}
+
+.jarvis-voice-row input {
+  width: 1.4rem;
+  height: 1.4rem;
+  accent-color: var(--j-accent);
+}
+
+.jarvis-voice-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.jarvis-voice-field small {
+  margin-left: 0.3rem;
+  color: var(--j-muted);
+}
+
+.jarvis-voice-field select {
+  min-height: 2.9rem;
+  padding: 0 0.7rem;
+  background: var(--j-panel);
+  border: 1px solid var(--j-line);
+  border-radius: 10px;
+  color: var(--j-text);
+  font-size: 1rem;
+}
+
+.jarvis-voice-field input[type='range'] {
+  width: 100%;
+  min-height: 2.75rem;
+  accent-color: var(--j-accent);
+}
+
+.jarvis-voice-hint {
+  margin: 0;
+  color: var(--j-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.jarvis-voice-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.jarvis-voice-actions button {
+  min-height: 2.75rem;
+  background: transparent;
+  border: 1px solid var(--j-line);
+  color: var(--j-text);
+}
+
+.jarvis-voice-actions button.primary {
+  background: var(--j-accent);
+  border-color: var(--j-accent);
+  color: #04121f;
+}
