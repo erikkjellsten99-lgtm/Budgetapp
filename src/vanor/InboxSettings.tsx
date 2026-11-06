@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getSyncState, supabase } from '../sync'
 import { FIELD_METRICS, METRICS } from '../../supabase/functions/inbox/health'
 
@@ -290,6 +290,26 @@ function ReadKeyCard() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmNew, setConfirmNew] = useState(false)
+  // Nyckeln sparas bara i den här webbläsaren. Skapas en ny någon annanstans (t.ex. på iPhonen) slutar den
+  // här att gälla utan att appen vet det, så vi frågar servern. Bara svaret 401 räknas – inget nät = inget besked.
+  const [stale, setStale] = useState(false)
+
+  useEffect(() => {
+    if (!key) return
+    let active = true
+    setStale(false)
+    fetch(`${INBOX_URL}?action=sammanfattning`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}` },
+    })
+      .then((res) => {
+        if (active && res.status === 401) setStale(true)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [key])
 
   async function create() {
     if (busy) return
@@ -332,6 +352,16 @@ function ReadKeyCard() {
         <button type="button" className="primary" disabled={busy} onClick={create}>
           {busy ? 'Skapar …' : 'Skapa läsnyckel'}
         </button>
+      ) : stale ? (
+        <>
+          <p className="field-error push-msg" role="status">
+            Nyckeln som sparats här gäller inte längre – en nyare har skapats, kanske på en annan enhet. Skapa en ny
+            och klistra in den i Jarvis och "Fråga Groundwork".
+          </p>
+          <button type="button" className="primary" disabled={busy} onClick={create}>
+            {busy ? 'Skapar …' : 'Skapa ny läsnyckel'}
+          </button>
+        </>
       ) : (
         <>
           <CopyField label="Adress (URL)" value={`${INBOX_URL}?action=sammanfattning`} />
@@ -342,8 +372,8 @@ function ReadKeyCard() {
           <div className="push-actions">
             {confirmNew ? (
               <>
-                <button type="button" className="text-btn" disabled={busy} onClick={create}>
-                  Ja, skapa ny (den gamla slutar gälla)
+                <button type="button" className="primary" disabled={busy} onClick={create}>
+                  {busy ? 'Skapar …' : 'Ja, skapa ny (den gamla slutar gälla)'}
                 </button>
                 <button type="button" className="text-btn quiet" onClick={() => setConfirmNew(false)}>
                   Avbryt
