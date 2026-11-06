@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { ago, cachedNews, clock, fetchNews, TOPICS, type NewsResult, type NewsTopic, type Tone } from './news';
 
 const FRESH = 10 * 60 * 1000;
@@ -74,20 +74,22 @@ export default function Nyheter({ active }: { active: boolean }) {
 
       {total > 0 && (
         <div className="card news-mood">
-          <div className="news-mood-bar" aria-hidden="true">
-            <span className="pos" style={{ width: `${(count('positiv') / total) * 100}%` }} />
-            <span className="neu" style={{ width: `${(count('neutral') / total) * 100}%` }} />
-            <span className="neg" style={{ width: `${(count('negativ') / total) * 100}%` }} />
-          </div>
           <div className="segmented-row news-tone" role="group" aria-label="Visa">
             {(
               [
-                ['alla', `Alla ${total}`],
-                ['positiv', `Positiva ${count('positiv')}`],
-                ['negativ', `Negativa ${count('negativ')}`],
-              ] as [ToneFilter, string][]
-            ).map(([id, label]) => (
-              <button key={id} type="button" className={tone === id ? 'seg active' : 'seg'} aria-pressed={tone === id} onClick={() => setTone(id)}>
+                ['alla', `Alla ${total}`, 1],
+                ['positiv', `Positiva ${count('positiv')}`, count('positiv') / total],
+                ['negativ', `Negativa ${count('negativ')}`, count('negativ') / total],
+              ] as [ToneFilter, string, number][]
+            ).map(([id, label, share]) => (
+              <button
+                key={id}
+                type="button"
+                className={tone === id ? `seg ${id} active` : `seg ${id}`}
+                style={{ '--share': share } as CSSProperties}
+                aria-pressed={tone === id}
+                onClick={() => setTone(id)}
+              >
                 {label}
               </button>
             ))}
