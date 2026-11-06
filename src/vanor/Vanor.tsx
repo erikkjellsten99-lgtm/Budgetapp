@@ -4,10 +4,11 @@ import ProgressCard from './ProgressCard'
 import HealthCard from './HealthCard'
 import { formatProgress } from '../../supabase/functions/inbox/health'
 import TaskSheet from './TaskSheet'
-import { doneToday, dueTasks, upcomingTasks, whenText, type Task } from './tasks'
+import { doneToday, upcomingTasks, whenText, type Task } from './tasks'
 import HabitSheet from './HabitSheet'
 import { addDays, isoWeek, longDate, todayKey, weekStart, type DateKey } from './dates'
-import { daySummary, habitPlan, isDaily, isDone, rampToday, todayInfo, type Habit, type TodayInfo } from './habits'
+import { daySummary, habitPlan, isDaily, isDone, rampToday, type Habit, type TodayInfo } from './habits'
+import { prioritizeToday } from '../../supabase/functions/inbox/priority'
 import { loadHabitData, minimumKeys, onHabitChange, saveTaskRecord, toggleCheck, togglePause, toLog, type HabitData } from './store'
 import { dayQuote } from './quotes'
 import '@fontsource/bricolage-grotesque/700.css'
@@ -76,9 +77,9 @@ export default function Vanor() {
   // Kopplingar till borttagna vanor räknas inte (annars skulle t.ex. Stretching aldrig komma upp).
   const names = new Map(habits.map((h) => [h.id, h.name]))
   const healthToday = data.health.find((d) => d.date === today)
-  const rows = habits.map((h) => {
-    const habit = { ...h, after: h.after.filter((id) => names.has(id)) }
-    const info = todayInfo(habit, log, today, paused)
+  // Vad som ska göras och i vilken ordning räknas på ett ställe, som morgonbeskedet också använder.
+  const priority = prioritizeToday(data.habits, log, paused, data.tasks, today)
+  const rows = priority.rows.map(({ habit, info }) => {
     // En efter-vana som väntar på passet: säg det, så att den inte ser klar ut.
     if (habit.after.length && !info.done && !info.due && !pausedToday && info.count < info.goal) {
       const after = habit.after.map((id) => names.get(id)).join(' eller ')
@@ -115,12 +116,13 @@ export default function Vanor() {
     }))
   // Prioritera: det som måste göras idag först, sedan det som kan vänta (mest bråttom först).
   const open = rows.filter((r) => r.info.due && !r.info.done)
-  const must = open.filter((r) => r.info.must)
-  const flexible = open.filter((r) => !r.info.must).sort((a, b) => b.info.urgency - a.info.urgency)
+  const byId = new Map(rows.map((r) => [r.habit.id, r]))
+  const must = priority.must.map((r) => byId.get(r.habit.id)!)
+  const flexible = priority.flexible.map((r) => byId.get(r.habit.id)!)
   const closed = rows.filter((r) => !(r.info.due && !r.info.done))
   const habitSummary = daySummary(rows.map((r) => r.info))
   // Att göra-saker räknas som måsten idag (och försenade), precis som dagliga vanor.
-  const tasksDue = dueTasks(data.tasks, today)
+  const tasksDue = priority.tasksDue
   const tasksDone = doneToday(data.tasks, today)
   const upcoming = upcomingTasks(data.tasks, today)
   const summary = {

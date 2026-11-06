@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ItemRow, PaidCheck, SortableList, isPaid } from './Categories';
-import { budgetMonth, deleteWish, getWishes, newId, saveWish } from './db';
+import { budgetMonth, deleteWish, getWishes, monthName, newId, saveWish } from './db';
 import { formatKr } from './money';
 import { offerUndo } from './undo';
+import { byOrder, hasBought, splitWishes, sumLeftToBuy, sumPaidIn } from '../supabase/functions/inbox/wishes.ts';
 import { WISH_LISTS, type Wish, type WishList } from './types';
 
 interface WishlistProps {
@@ -11,13 +12,12 @@ interface WishlistProps {
   onChanged: () => Promise<void>;
 }
 
+// Summorna räknas i supabase/functions/inbox/wishes.ts, som servern också använder.
+export { hasBought, splitWishes, sumLeftToBuy } from '../supabase/functions/inbox/wishes.ts';
+
 /** Summan av det som är ikryssat denna månad. Det räknas in i rörliga utgifter. */
 export function sumCheckedWishes(wishes: Wish[]): number {
-  return wishes.filter(isPaid).reduce((sum, wish) => sum + wish.amount, 0);
-}
-
-function byOrder(a: Wish, b: Wish): number {
-  return (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER) || a.name.localeCompare(b.name, 'sv');
+  return sumPaidIn(wishes, budgetMonth());
 }
 
 const EXPANDED_KEY = 'expandedWishlists';
@@ -64,11 +64,23 @@ export default function Wishlist({ wishes, onChanged }: WishlistProps) {
     await save(wish);
   }
 
-  /** Bocken på en lista kryssar i alla saker på den, eller kryssar ur alla om alla redan är ikryssade. */
+  /**
+   * Bocken på en lista kryssar i alla saker som går att bocka den här månaden, eller kryssar ur
+   * alla om alla redan är ikryssade. Sådant som köptes en annan månad rörs inte.
+   */
   async function toggleList(items: Wish[]) {
     const checked = !items.every(isPaid);
-    for (const wish of items) await saveWish({ ...wish, paidMonth: checked ? budgetMonth() : undefined });
+    for (const wish of items) {
+      const paidMonth = checked ? budgetMonth() : undefined;
+      if (wish.paidMonth !== paidMonth) await saveWish({ ...wish, paidMonth });
+    }
     await onChanged();
+  }
+
+  /** Köpt en annan månad, men inte köpt ändå: tillbaka på listan. Går att ångra. */
+  async function unbuy(wish: Wish) {
+    await save({ ...wish, paidMonth: undefined });
+    offerUndo(`${wish.name.trim() || 'Önskan'} är tillbaka på listan`, () => save(wish));
   }
 
   async function reorder(items: Wish[]) {
@@ -98,15 +110,17 @@ export default function Wishlist({ wishes, onChanged }: WishlistProps) {
             ? `Ikryssat ${formatKr(checkedTotal)} · räknas i rörliga utgifter`
             : 'Inget ikryssat den här månaden'}
         </p>
+        {hasBought(wishes) && <p className="paid-summary">Kvar att köpa: {formatKr(sumLeftToBuy(wishes))}</p>}
         <ul className="category-list">
           {WISH_LISTS.map(({ id, label }) => {
             const items = wishes.filter((wish) => wish.list === id).sort(byOrder);
+            const { open: current, bought } = splitWishes(items, budgetMonth());
             const open = expanded.has(id);
-            const allChecked = items.length > 0 && items.every(isPaid);
+            const allChecked = current.length > 0 && current.every(isPaid);
             return (
               <li key={id}>
                 <div className={allChecked ? 'category-row paid' : 'category-row'}>
-                  <PaidCheck paid={allChecked} label={label} onToggle={() => items.length && toggleList(items)} />
+                  <PaidCheck paid={allChecked} label={label} onToggle={() => current.length && toggleList(current)} />
                   <button className="row" aria-expanded={open} onClick={() => setOpen(id, !open)}>
                     <span>{label}</span>
                     <span className="row-amount">
@@ -125,9 +139,10 @@ export default function Wishlist({ wishes, onChanged }: WishlistProps) {
                     +
                   </button>
                 </div>
-                {open && items.length > 0 && (
+                {hasBought(items) && <p className="wish-left">Kvar att köpa: {formatKr(sumLeftToBuy(items))}</p>}
+                {open && current.length > 0 && (
                   <SortableList
-                    items={items}
+                    items={current}
                     listClass="items"
                     onReorder={reorder}
                     renderItem={(wish, handle) => (
@@ -157,6 +172,30 @@ export default function Wishlist({ wishes, onChanged }: WishlistProps) {
                       + Lägg till önskan
                     </button>
                   </div>
+                )}
+                {open && bought.length > 0 && (
+                  <details className="wish-bought">
+                    <summary>Köpt andra månader ({bought.length})</summary>
+                    <ul>
+                      {bought.map((wish) => (
+                        <li key={wish.id}>
+                          <span className="wish-bought-name">
+                            {wish.name.trim() || 'Utan namn'}
+                            <small>Köpt {monthName(wish.paidMonth!)} · räknas den månaden</small>
+                          </span>
+                          <span className="wish-bought-amount">{formatKr(wish.amount)}</span>
+                          <button
+                            type="button"
+                            className="link-button"
+                            aria-label={`${wish.name.trim() || 'Önskan'} köptes inte, tillbaka på listan`}
+                            onClick={() => unbuy(wish)}
+                          >
+                            Inte köpt
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
                 )}
               </li>
             );

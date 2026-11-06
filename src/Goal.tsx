@@ -1,62 +1,16 @@
 import { useEffect, useState } from 'react';
 import { getGoals, onDataChange, saveGoal } from './db';
+import { countsForGoal, goalStatus, planGoal, planWhen, type GoalPlan } from './goalPlan';
 import { formatKr } from './money';
 import { useAmountInput } from './useAmountInput';
+import { useGoalData } from './useGoalPlan';
 import type { Asset, SavingsGoal } from './types';
 
-/** Längsta prognosen som räknas fram, i månader (40 år). */
-const MAX_MONTHS = 480;
-
-interface Projection {
-  /** Saldo med avkastning, ett värde per månad från idag (index 0). */
-  withReturn: number[];
-  /** Saldo om pengarna bara låg still, ett värde per månad. */
-  depositsOnly: number[];
-  /** Månaden då målet nås, eller null om det inte nås inom 40 år. */
-  reachedAt: number | null;
-}
-
-/**
- * Ränta på ränta: varje månad växer saldot med månadens avkastning och månadssparandet läggs till.
- * Kurvan räknas tills målet är nått (avrundat uppåt till helt år) och minst 10 år framåt, så att ränta-på-ränta-effekten syns.
- */
-export function project(start: number, goal: SavingsGoal): Projection {
-  const monthlyRate = Math.pow(1 + goal.annualReturn / 100, 1 / 12) - 1;
-  const withReturn = [start];
-  const depositsOnly = [start];
-  let reachedAt: number | null = start >= goal.target ? 0 : null;
-
-  for (let month = 1; month <= MAX_MONTHS; month++) {
-    withReturn.push(withReturn[month - 1] * (1 + monthlyRate) + goal.monthlyDeposit);
-    depositsOnly.push(start + goal.monthlyDeposit * month);
-    if (reachedAt === null && withReturn[month] >= goal.target) reachedAt = month;
-    const shown = reachedAt === null ? MAX_MONTHS : Math.max(120, Math.ceil((reachedAt + 1) / 12) * 12);
-    if (month >= shown) break;
-  }
-  return { withReturn, depositsOnly, reachedAt };
-}
-
-/** Datum om ett antal månader, t.ex. "mars 2031". */
-export function monthLabel(monthsFromNow: number): string {
-  const date = new Date();
-  date.setDate(1);
-  date.setMonth(date.getMonth() + monthsFromNow);
-  return date.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
-}
-
-/** T.ex. "4 år och 3 månader". */
-export function durationLabel(months: number): string {
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  const parts = [];
-  if (years > 0) parts.push(`${years} år`);
-  if (rest > 0) parts.push(`${rest} ${rest === 1 ? 'månad' : 'månader'}`);
-  return parts.join(' och ') || 'nu';
-}
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** Kort belopp till axeln, t.ex. "150 tkr". */
 function shortKr(amount: number): string {
-  return amount >= 1000 ? `${Math.round(amount / 1000)} tkr` : `${Math.round(amount)} kr`;
+  return amount >= 1000 ? `${Math.round(amount / 1000).toLocaleString('sv-SE')} tkr` : `${Math.round(amount)} kr`;
 }
 
 /** Ett jämnt steg för y-axeln, så att det blir 3–5 linjer. */
@@ -73,17 +27,8 @@ interface GoalProps {
   onChange?: (goal: SavingsGoal) => void;
 }
 
-/** Summan av kontona som räknas mot målet. */
-export function goalCurrent(goal: SavingsGoal, assets: Asset[]): number {
-  return assets.filter((asset) => goal.assetIds.includes(asset.id)).reduce((sum, asset) => sum + asset.amount, 0);
-}
-
-/** Kort text om när målet nås, t.ex. "Målet nås i mars 2029, om 2 år och 5 månader." */
-export function goalStatus(reachedAt: number | null): string {
-  if (reachedAt === 0) return 'Målet är nått!';
-  if (reachedAt === null) return 'Med de här siffrorna nås målet inte inom 40 år. Öka månadssparandet.';
-  return `Målet nås i ${monthLabel(reachedAt)}, om ${durationLabel(reachedAt)}.`;
-}
+/** Summan av kontona som räknas mot målet (räknas i goalPlan.ts, som servern också använder). */
+export { goalCurrent } from './goalPlan';
 
 /** Sparmålet med en prognos över när målet nås. */
 export default function Goal({ assets, onChange }: GoalProps) {
@@ -99,6 +44,8 @@ export default function Goal({ assets, onChange }: GoalProps) {
     if (goal) onChange?.(goal);
   }, [goal]);
 
+  const data = useGoalData(goal);
+
   if (!goal) return null;
 
   async function update(change: Partial<SavingsGoal>) {
@@ -110,7 +57,10 @@ export default function Goal({ assets, onChange }: GoalProps) {
   const counted = assets.filter((asset) => goal.assetIds.includes(asset.id));
   const current = counted.reduce((sum, asset) => sum + asset.amount, 0);
   const progress = goal.target > 0 ? Math.min(1, current / goal.target) : 0;
-  const projection = project(current, goal);
+  const projection = data ? planGoal(current, goal.target, goal.annualReturn, data.rows) : null;
+  const categories = [...(data?.savingsCategories ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'sv'));
+  const chosen = categories.filter((category) => countsForGoal(goal, category));
+  const next = data?.rows[0];
 
   return (
     <>
@@ -126,16 +76,35 @@ export default function Goal({ assets, onChange }: GoalProps) {
           <div className="bar" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
             <div style={{ width: `${progress * 100}%` }} />
           </div>
-          <p className="goal-result">
-            {goalStatus(projection.reachedAt)}
+          {projection ? (
+            <>
+              <p className="goal-result">{goalStatus(projection)}</p>
+              <GoalChart projection={projection} target={goal.target} />
+            </>
+          ) : (
+            <p className="goal-result muted">Räknar …</p>
+          )}
+          {next && (
+            <dl className="goal-monthly">
+              <div>
+                <dt>Till målet nästa månad</dt>
+                <dd>{formatKr(Math.round(next.toGoal))}</dd>
+              </div>
+              <div className="sub">
+                <dt>{chosen.length ? chosen.map((category) => category.name).join(', ') : 'Inga sparkategorier valda'}</dt>
+                <dd>{formatKr(next.categories)}</dd>
+              </div>
+              <div className="sub">
+                <dt>Det som blir över</dt>
+                <dd>{formatKr(Math.round(next.left))}</dd>
+              </div>
+            </dl>
+          )}
+          <p className="hint small">
+            Varje månad går de valda sparkategorierna i budgeten och det som blir över till målet. Går det som blir
+            över till billånet (Prognos → Extra på lånet) räknas det först när lånet är betalt.
           </p>
-          <GoalChart projection={projection} target={goal.target} />
           <div className="goal-inputs">
-            <NumberField
-              label="Per månad (kr)"
-              value={goal.monthlyDeposit}
-              onSave={(monthlyDeposit) => update({ monthlyDeposit })}
-            />
             <NumberField
               label="Avkastning/år (%)"
               value={goal.annualReturn}
@@ -144,6 +113,25 @@ export default function Goal({ assets, onChange }: GoalProps) {
             />
             <NumberField label="Mål (kr)" value={goal.target} onSave={(target) => update({ target })} />
           </div>
+          <details className="goal-accounts">
+            <summary>Budgetkategorier som går till målet ({chosen.length})</summary>
+            {categories.length === 0 && <p className="hint small">Det finns inga sparkategorier i budgeten.</p>}
+            {categories.map((category) => (
+              <label key={category.id} className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={countsForGoal(goal, category)}
+                  onChange={(event) => {
+                    const ids = chosen.map((c) => c.id);
+                    update({
+                      categoryIds: event.target.checked ? [...ids, category.id] : ids.filter((id) => id !== category.id),
+                    });
+                  }}
+                />
+                {category.name} · {formatKr(category.monthlyBudget)}/mån
+              </label>
+            ))}
+          </details>
           <details className="goal-accounts">
             <summary>Konton som räknas mot målet ({counted.length})</summary>
             {assets
@@ -196,9 +184,9 @@ function NumberField({ label, value, max, onSave }: NumberFieldProps) {
 // Diagrammet ritas som SVG utan bibliotek. Måtten är i viewBox-enheter och skalas till bredden.
 const W = 340;
 const H = 200;
-const PAD = { top: 12, right: 12, bottom: 24, left: 48 };
+const PAD = { top: 12, right: 12, bottom: 24, left: 58 };
 
-function GoalChart({ projection, target }: { projection: Projection; target: number }) {
+function GoalChart({ projection, target }: { projection: GoalPlan; target: number }) {
   const { withReturn, depositsOnly, reachedAt } = projection;
   const months = withReturn.length - 1;
   const [hover, setHover] = useState<number | null>(null);
@@ -229,7 +217,7 @@ function GoalChart({ projection, target }: { projection: Projection; target: num
   return (
     <figure className="goal-chart">
       <figcaption className="goal-readout">
-        <span>{shown === 0 ? 'Idag' : monthLabel(shown)}</span>
+        <span>{capitalize(planWhen(projection, shown))}</span>
         <strong>{formatKr(Math.round(withReturn[shown]))}</strong>
         <span className="muted">varav insatt {formatKr(Math.round(depositsOnly[shown]))}</span>
       </figcaption>

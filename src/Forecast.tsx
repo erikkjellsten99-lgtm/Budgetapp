@@ -17,6 +17,9 @@ import {
 import { CSN_PLAN, csnPayouts, forecast, planCsn, type Forecast as ForecastResult, type Loan, type MonthInput, type MonthResult } from './forecast';
 import { formatKr, parseKr, toInputKr } from './money';
 import type { MonthlyIncome, SavingsGoal } from './types';
+import { goalCurrent } from './Goal';
+import { planGoal, planWhen } from './goalPlan';
+import { useGoalData } from './useGoalPlan';
 
 const HORIZONS = [
   { months: 12, label: '1 år' },
@@ -32,6 +35,8 @@ interface Data {
   startSavings: number;
   goalTarget: number;
   goal: SavingsGoal | null;
+  /** Saldot på kontona som räknas mot sparmålet. */
+  goalStart: number;
   loan: Loan | null;
 }
 
@@ -41,6 +46,8 @@ const SHORT = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'o
 const shortMonth = (month: string) => `${SHORT[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
 
 const kr = (amount: number) => formatKr(Math.round(amount));
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 async function loadData(first: string, count: number): Promise<Data> {
   const months = Array.from({ length: count }, (_, i) => shiftMonth(first, i));
@@ -62,6 +69,7 @@ async function loadData(first: string, count: number): Promise<Data> {
     startSavings: assets.filter((a) => !a.spending).reduce((s, a) => s + a.amount, 0),
     goalTarget: goal?.target ?? 0,
     goal: goal ?? null,
+    goalStart: goal ? goalCurrent(goal, assets) : 0,
     loan: loans[0] ?? null,
   };
 }
@@ -89,6 +97,8 @@ export default function Forecast() {
       stop();
     };
   }, [now, horizon]);
+
+  const goalData = useGoalData(data?.goal ?? null);
 
   if (!data) return null;
   const [nowInput, ...futureInputs] = data.inputs;
@@ -147,12 +157,21 @@ export default function Forecast() {
             </small>
           )}
         </div>
-        {data.goalTarget > 0 && (
-          <div className="card fact">
-            <span>{kr(data.goalTarget)} sparat totalt</span>
-            <strong>{result.goalReachedIn ? `Slutet av ${monthName(shiftMonth(result.goalReachedIn, -1))}` : 'Inte inom perioden'}</strong>
-          </div>
-        )}
+        {data.goal && data.goalTarget > 0 && goalData && (() => {
+          // Samma uträkning och samma avkastning som Sparmål nedan och Översikt (goalPlan.ts), så att datumet
+          // är detsamma överallt. Valet med eller utan avkastning här gäller bara sparandet totalt.
+          const plan = planGoal(data.goalStart, data.goalTarget, data.goal.annualReturn, goalData.rows);
+          const at = plan.reachedAt;
+          return (
+            <div className="card fact">
+              <span>
+                {data.goal.name} ({kr(data.goalTarget)})
+              </span>
+              <strong>{at === 0 ? 'Nått' : at === null ? 'Inte inom 40 år' : capitalize(planWhen(plan, at))}</strong>
+              <small>som i Sparmål, med {String(data.goal.annualReturn).replace('.', ',')}&nbsp;% avkastning</small>
+            </div>
+          );
+        })()}
       </div>
 
       {result.lowest.savings < data.startSavings && (
@@ -186,7 +205,8 @@ export default function Forecast() {
         ))}
       </div>
 
-      <Chart result={withNow} goal={data.goalTarget} flat={flat ? [nowRow, ...flat.months] : null} />
+      {/* Utan mållinje: kurvan är allt sparande, och sparmålet räknas bara på sina egna konton (se Sparmål). */}
+      <Chart result={withNow} goal={0} flat={flat ? [nowRow, ...flat.months] : null} />
 
       {data.loan && <LoanCard loan={data.loan} />}
 

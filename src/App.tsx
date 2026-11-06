@@ -17,7 +17,10 @@ import {
 } from './db';
 import Wishlist, { sumCheckedWishes } from './Wishlist';
 import { getSyncState, onSyncState, type SyncState } from './sync';
-import Goal, { goalCurrent, goalStatus, project } from './Goal';
+import Goal, { goalCurrent } from './Goal';
+import { goalStatus, planGoal } from './goalPlan';
+import { useGoalData } from './useGoalPlan';
+import { useLoanSplit } from './useLoanSplit';
 import Forecast from './Forecast';
 import Income from './Income';
 import Vanor from './vanor/Vanor';
@@ -107,8 +110,14 @@ export default function App() {
   const spendingTotal = sumAmounts(assets.filter((asset) => asset.spending));
 
   const goalNow = goal ? goalCurrent(goal, assets) : 0;
+  const goalData = useGoalData(goal);
+  const goalPlan = goal && goalData ? planGoal(goalNow, goal.target, goal.annualReturn, goalData.rows) : null;
   const goalPercent = goal && goal.target > 0 ? Math.min(100, Math.round((goalNow / goal.target) * 100)) : 0;
   const month = monthName(selectedMonth);
+  // Går det som blir över extra till billånet (Prognos → Extra på lånet) visas hur det delas.
+  // Samma uträkning som Prognos, och bara när det finns något över att dela.
+  const split = useLoanSplit(selectedMonth);
+  const toLoan = split && leftForSavings > 0 ? Math.min(split.extra, leftForSavings) : 0;
 
   return (
     <div className="app-shell">
@@ -151,9 +160,25 @@ export default function App() {
             <h2>Översikt</h2>
           </div>
           <section className={leftForSavings < 0 ? 'card balance-hero negative' : 'card balance-hero'}>
-            <p className="hero-label">Kvar att sätta in på sparande</p>
+            <p className="hero-label">{toLoan > 0 ? 'Blir över' : 'Kvar att sätta in på sparande'}</p>
             <strong className="hero-amount">{formatKr(leftForSavings)}</strong>
-            <p className="hero-period">Efter utgifter och planerat sparande i {month}</p>
+            {toLoan > 0 && split && (
+              <dl className="hero-split">
+                <div>
+                  <dt>Extra på lånet ({split.loanName})</dt>
+                  <dd>{formatKr(Math.round(toLoan))}</dd>
+                </div>
+                <div>
+                  <dt>Till sparande</dt>
+                  {/* Så att de två raderna alltid blir summan ovanför, även efter avrundning. */}
+                  <dd>{formatKr(Math.round(leftForSavings) - Math.round(toLoan))}</dd>
+                </div>
+              </dl>
+            )}
+            <p className="hero-period">
+              Efter utgifter och planerat sparande i {month}
+              {toLoan > 0 && ', enligt Prognos → Extra på lånet'}
+            </p>
           </section>
           <div className="overview-grid">
             <section className="card summary overview-breakdown">
@@ -194,7 +219,7 @@ export default function App() {
               <span className="bar" aria-hidden="true">
                 <span style={{ width: `${goalPercent}%` }} />
               </span>
-              <span className="goal-summary-status">{goalStatus(project(goalNow, goal).reachedAt)}</span>
+              {goalPlan && <span className="goal-summary-status">{goalStatus(goalPlan)}</span>}
             </button>
           )}
         </div>

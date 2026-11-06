@@ -2121,3 +2121,132 @@ main > div > h2 + .hint {
     animation: none;
   }
 }
+
+/* Sparmål: vad som går till målet nästa månad */
+.goal-monthly {
+  display: grid;
+  gap: 0.3rem;
+  margin: 1rem 0 0.4rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  background: var(--bg);
+}
+
+.goal-monthly div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.goal-monthly dt {
+  min-width: 0;
+  font-weight: 650;
+}
+
+.goal-monthly dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.goal-monthly div.sub {
+  padding-left: 0.8rem;
+  font-size: 0.88rem;
+}
+
+.goal-monthly div.sub dt,
+.goal-monthly div.sub dd {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Översikt: hur det som blir över delas mellan billånet och sparandet */
+.hero-split {
+  display: grid;
+  gap: 0.3rem;
+  width: 100%;
+  margin: 1rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgb(255 255 255 / 14%);
+}
+
+.hero-split div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hero-split dt {
+  min-width: 0;
+  color: var(--hero-muted);
+  font-size: 0.92rem;
+}
+
+.hero-split dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Önskelista: sådant som köptes en annan månad (ligger kvar på den månaden) */
+.wish-bought {
+  padding: 0 1rem 0.8rem 3.4rem;
+}
+
+.wish-bought summary {
+  min-height: 2.75rem;
+  padding: 0.6rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wish-bought ul {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wish-bought li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.wish-bought-name {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.wish-bought-name small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.wish-bought-amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wish-bought .link-button {
+  min-height: 2.75rem;
+  white-space: nowrap;
+}
+
+/* Önskelista: "Kvar att köpa" under listans summa */
+.wish-left {
+  margin: -0.35rem 0 0;
+  padding: 0 1rem 0.6rem 3.4rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
