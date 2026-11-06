@@ -1,26 +1,28 @@
 // Påminnelser för Vanor (web push). Körs var 5:e minut av pg_cron, och anropas av appen
 // för att hämta den publika nyckeln (?action=key) och skicka en testnotis (?action=test).
 //
-// Logiken speglar appen (src/vanor/habits.ts) i förenklad form:
-// - Påminnelse för en vana: vid vald tid, om den inte är bockad idag, dagen inte är pausad
-//   och veckomålet inte redan är nått. Efter-vanor bara om en kopplad vana är bockad idag.
-// - Kvällspåminnelse: vid vald tid, om det finns vanor som måste göras idag för att hinna veckomålet.
+// Vad som ska skickas räknas i plan.ts med samma kod som appen och morgonbeskedet (../inbox/priority.ts):
+// - Påminnelse för en vana: vid vald tid, om den går att göra idag och inte är bockad (inte pausad dag,
+//   inte nått veckomål). Efter-vanor bara om en kopplad vana är bockad idag.
+// - Kvällspåminnelse: vid vald tid, Att göra (idag och försenat) plus vanorna som måste göras idag.
 // - Att göra-saker med tid: vid tiden den dagen, om de inte är bockade (även pausade dagar).
 // - Rapport på söndagkvällen (en timme efter kvällspåminnelsen, annars 21:00): veckans procent och vad som drog ner.
 //   Är det månadens sista vecka blir det en månadsrapport (report.ts).
 // Samma påminnelse skickas högst en gång per dag (tabellen push_sent).
+//
+// Utläggning: funktionen importerar filer från ../inbox, så de måste följa med när den läggs ut
+// (priority, habits, tasks, dates, health), precis som report.ts och plan.ts.
 
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4';
-import { addDays, sundayReport, weekday, type ReportHabit } from './report.ts';
+import { addDays } from './report.ts';
+import { asHabit, asTask, plannedReminders, type Check } from './plan.ts';
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
 });
 
 const APP_URL = 'https://budgetapp-orpin.vercel.app/';
-/** Hur länge efter vald tid en missad påminnelse fortfarande skickas (om cron var sen). */
-const LATE_MINUTES = 60;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -31,26 +33,6 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-interface Habit {
-  id: string;
-  name: string;
-  goal: number;
-  after?: string[];
-  archived?: boolean;
-  minimum?: string;
-  remind?: string;
-  /** 0 = måndag … 6 = söndag. Saknas = alla dagar. */
-  remindDays?: number[];
-  /** Planerade dagar. Finns de gäller påminnelsen bara de dagarna. */
-  days?: number[];
-}
-interface Task {
-  id: string;
-  title: string;
-  date: string;
-  time?: string;
-  doneOn?: string;
-}
 interface Sub {
   endpoint: string;
   user_id: string;
@@ -88,22 +70,6 @@ function localNow(tz: string, now = new Date()) {
   );
   return { date: `${parts.year}-${parts.month}-${parts.day}`, minutes: Number(parts.hour) * 60 + Number(parts.minute) };
 }
-
-const toMinutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
-const isDue = (hhmm: string | null | undefined, minutes: number) => {
-  if (!hhmm || !/^\d\d:\d\d$/.test(hhmm)) return false;
-  const diff = minutes - toMinutes(hhmm);
-  return diff >= 0 && diff < LATE_MINUTES;
-};
-
-/** Rapporten kommer en timme efter kvällspåminnelsen (högst 23:00), eller 21:00 om den är avstängd. */
-function reportTime(evening: string | null): string {
-  const m = Math.min(23 * 60, (evening && /^\d\d:\d\d$/.test(evening) ? toMinutes(evening) : 20 * 60) + 60);
-  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-}
-
-const nameList = (names: string[]) =>
-  names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} och ${names[names.length - 1]}`;
 
 async function send(keys: { public_key: string; private_key: string }, sub: Sub, payload: object) {
   try {
@@ -172,68 +138,14 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
   for (const sub of subs as Sub[]) {
     const { date, minutes } = localNow(sub.tz || 'Europe/Stockholm');
     const mine = (rows ?? []).filter((r) => r.user_id === sub.user_id);
-    const habits = mine.filter((r) => r.store === 'habits').map((r) => r.data as Habit).filter((h) => !h.archived);
-    const checks = mine.filter((r) => r.store === 'checks').map((r) => r.data as { date: string; habitId: string });
+    const habits = mine.filter((r) => r.store === 'habits').map((r) => asHabit(r.data));
+    const checks = mine.filter((r) => r.store === 'checks').map((r) => r.data as Check);
     const paused = new Set(mine.filter((r) => r.store === 'pauses').map((r) => (r.data as { date: string }).date));
-    const pausedToday = paused.has(date);
-    const tasks = mine.filter((r) => r.store === 'tasks').map((r) => r.data as Task).filter((t) => !t.doneOn);
-    const tasksDue = tasks.filter((t) => t.date <= date);
+    const tasks = mine.filter((r) => r.store === 'tasks').map((r) => asTask(r.data)).filter((t) => !t.doneOn);
 
-    const monday = addDays(date, -weekday(date));
-    const doneToday = new Set(checks.filter((c) => c.date === date).map((c) => c.habitId));
-    const weekCount = (id: string) => checks.filter((c) => c.habitId === id && c.date >= monday && c.date <= date).length;
-    const active = new Set(habits.map((h) => h.id));
-    const linked = (h: Habit) => (h.after ?? []).filter((id) => active.has(id));
-    // Efter-vanor (t.ex. Stretching efter Gym) gäller bara dagar då en kopplad vana är bockad.
-    const relevant = (h: Habit) => !linked(h).length || linked(h).some((id) => doneToday.has(id));
-    const open = (h: Habit) => !doneToday.has(h.id) && weekCount(h.id) < Math.min(7, h.goal) && relevant(h);
-
-    const outgoing: { key: string; payload: object }[] = [];
-    for (const t of tasks) {
-      if (t.date !== date || !isDue(t.time, minutes)) continue;
-      outgoing.push({
-        key: `task:${t.id}`,
-        payload: { title: t.title, body: `Att göra idag ${t.time}.`, tag: `task-${t.id}`, url: APP_URL },
-      });
-    }
-    for (const h of habits) {
-      if (pausedToday || !isDue(h.remind, minutes) || !open(h)) continue;
-      const remindOn = h.days?.length ? h.days : h.remindDays;
-      if (remindOn?.length && !remindOn.includes(weekday(date))) continue;
-      outgoing.push({
-        key: `habit:${h.id}`,
-        payload: {
-          title: `Dags för ${h.name}`,
-          body: h.minimum ? `En dålig dag räcker ${h.minimum}.` : 'Tryck för att bocka av när du är klar.',
-          tag: `habit-${h.id}`,
-          url: APP_URL,
-        },
-      });
-    }
-
-    if (isDue(sub.evening, minutes)) {
-      const daysLeft = 7 - weekday(date);
-      const must = pausedToday
-        ? []
-        : habits.filter((h) => open(h) && (h.goal >= 7 || h.goal - weekCount(h.id) >= daysLeft));
-      const names = [...tasksDue.map((t) => t.title), ...must.map((h) => h.name)];
-      if (names.length) {
-        outgoing.push({
-          key: 'evening',
-          payload: {
-            title: names.length === 1 ? '1 sak kvar idag' : `${names.length} saker kvar idag`,
-            body: must.length ? `${nameList(names)} – annars hinns veckomålet inte.` : `${nameList(names)}.`,
-            tag: 'evening',
-            url: APP_URL,
-          },
-        });
-      }
-    }
-
-    if (isDue(reportTime(sub.evening), minutes)) {
-      const report = sundayReport(habits as ReportHabit[], checks, paused, date);
-      if (report) outgoing.push({ key: report.key, payload: { title: report.title, body: report.body, tag: 'report', url: APP_URL } });
-    }
+    const outgoing = plannedReminders({ habits, checks, paused, tasks, date, minutes, evening: sub.evening }).map(
+      ({ key, ...payload }) => ({ key, payload: { ...payload, url: APP_URL } }),
+    );
 
     for (const o of outgoing) {
       // Markera först: blir det en dubblett (annan körning hann före) skickas inget.
