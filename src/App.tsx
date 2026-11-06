@@ -17,7 +17,9 @@ import {
 } from './db';
 import Wishlist, { sumCheckedWishes } from './Wishlist';
 import { getSyncState, onSyncState, type SyncState } from './sync';
-import Goal, { goalCurrent, goalStatus, project } from './Goal';
+import Goal, { goalCurrent } from './Goal';
+import { goalStatus, planGoal } from './goalPlan';
+import { useGoalData } from './useGoalPlan';
 import Forecast from './Forecast';
 import Income from './Income';
 import Vanor from './vanor/Vanor';
@@ -107,6 +109,8 @@ export default function App() {
   const spendingTotal = sumAmounts(assets.filter((asset) => asset.spending));
 
   const goalNow = goal ? goalCurrent(goal, assets) : 0;
+  const goalData = useGoalData(goal);
+  const goalPlan = goal && goalData ? planGoal(goalNow, goal.target, goal.annualReturn, goalData.rows) : null;
   const goalPercent = goal && goal.target > 0 ? Math.min(100, Math.round((goalNow / goal.target) * 100)) : 0;
   const month = monthName(selectedMonth);
 
@@ -194,7 +198,7 @@ export default function App() {
               <span className="bar" aria-hidden="true">
                 <span style={{ width: `${goalPercent}%` }} />
               </span>
-              <span className="goal-summary-status">{goalStatus(project(goalNow, goal).reachedAt)}</span>
+              {goalPlan && <span className="goal-summary-status">{goalStatus(goalPlan)}</span>}
             </button>
           )}
         </div>

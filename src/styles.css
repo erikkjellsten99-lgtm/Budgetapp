@@ -2121,3 +2121,42 @@ main > div > h2 + .hint {
     animation: none;
   }
 }
+
+/* Sparmål: vad som går till målet nästa månad */
+.goal-monthly {
+  display: grid;
+  gap: 0.3rem;
+  margin: 1rem 0 0.4rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  background: var(--bg);
+}
+
+.goal-monthly div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.goal-monthly dt {
+  min-width: 0;
+  font-weight: 650;
+}
+
+.goal-monthly dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.goal-monthly div.sub {
+  padding-left: 0.8rem;
+  font-size: 0.88rem;
+}
+
+.goal-monthly div.sub dt,
+.goal-monthly div.sub dd {
+  color: var(--muted);
+  font-weight: 500;
+}
