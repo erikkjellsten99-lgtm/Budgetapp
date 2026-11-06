@@ -1,32 +1,63 @@
 # Groundwork – regler för Claude
 
-Groundwork är Eriks app för budget, sparande och vanor (Vite + React + TypeScript, IndexedDB lokalt, Supabase för synk och inkorg, Vercel publicerar main).
+Eriks app för ekonomi, vanor, Jarvis och galaxen. Vite + React + TypeScript, IndexedDB lokalt, Supabase för synk och
+servern "inbox", publiceras på GitHub Pages från `main` (`.github/workflows/deploy.yml`). Svara på svenska, kort.
+Läs `STATUS.md` först: där står vad som är klart, halvfärdigt och trasigt.
+
+## Starta, testa, bygga
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm test           # vitest, alla ska vara gröna
+npm run build      # tsc + vite, måste gå igenom före push
+```
+Skärmbilder: Playwright finns. Kör med 375 px bredd i ljust och mörkt läge och blockera `supabase.co`, så att
+testerna aldrig rör riktiga data. Starta med tom lokal databas.
+
+## Delarna och hur de hänger ihop
+| Del | Kod | Egen CLAUDE.md |
+|---|---|---|
+| Ekonomi | `src/App.tsx` (flikarna), `Categories/Forecast/Goal/Assets/Wishlist/Income.tsx`, `db.ts`, `sync.ts` | föreslagen mapp `src/ekonomi/` (inte flyttat än) |
+| Vanor | `src/vanor/` | `src/vanor/CLAUDE.md` |
+| Jarvis | `src/Jarvis.tsx`, `jarvis.ts`, `speech.ts`, `Today.tsx` | föreslagen mapp `src/jarvis/` (inte flyttat än) |
+| Galax | `src/vanor/CosmosView.tsx`, `Galaxy.tsx`, `*3d.ts`, `CameraRig.ts`, `cosmos*.ts`, `universe.ts` | föreslagen mapp `src/galax/` (inte flyttat än) |
+| Servern | `supabase/functions/inbox/` | `supabase/functions/inbox/CLAUDE.md` |
+
+- **Delad kod ligger i `supabase/functions/inbox/`** (ask, summary, priority, habits, health, forecast, goalPlan …).
+  Appen importerar den direkt eller via shims i `src/` (`export * from '../supabase/functions/inbox/X.ts'`).
+  Så räknar app, Siri och Jarvis alltid samma siffror. Ändra aldrig en siffra på bara ett ställe.
+- **Navigationen** är `App.tsx`: Idag, Jarvis, Ekonomi (underflikar Översikt, Budget, Prognos, Konton, Önskelista),
+  Vanor, Nyheter. Galaxen öppnas inifrån Vanor → Månad och är inte en egen flik.
+- **Idag** och **Jarvis** läser allt via `summaryFacts` (`summary.ts`). Jarvis svar byggs i `ask.ts`, utan AI.
+- **Stilen** ligger i tre lager som laddas i ordning: `styles.css` (bas), `vanor/vanor.css`, `hud.css` (HUD-temat
+  ovanpå allt, även galaxens gränssnitt). Färger via CSS-variabler; mörkt läge i både `prefers-color-scheme` och
+  `[data-theme='dark']`.
 
 ## Ekonomidatan får aldrig ändras
-- Alla siffror i ekonomidelen (Översikt, Budget, Prognos, Konton, Önskelista) är Eriks och Cassandras riktiga siffror: inkomster, utgifter, budgetkategorier, lån, skulder, sparmål, kontosaldon, önskningar och prognosen.
-- Du får aldrig ändra, avrunda, flytta, ta bort, återställa eller hitta på något av det. Det gäller både datan (IndexedDB och Supabase) och uträkningarna som ger siffrorna (t.ex. prognos, ränta, sparmål, "över per månad").
-- Visa exakt de siffror som redan ligger i Groundwork. En designändring får ändra hur ett belopp ser ut, aldrig vilket belopp det är.
-- Behöver du testdata för skärmbilder: använd en separat testmiljö eller en tom lokal databas, aldrig Eriks riktiga data, och skriv aldrig testdata till Supabase.
-- Ser du något som verkar fel i en uträkning: beskriv det och fråga. Ändra inget själv.
-- Innan du lämnar en PR som rör ekonomidelen: jämför siffrorna före och efter på varje flik och skriv i PR:en att de är identiska.
+- Alla siffror i ekonomidelen är Eriks och Cassandras riktiga. Ändra, avrunda, flytta, ta bort eller hitta aldrig på
+  något: varken data (IndexedDB, Supabase) eller uträkningar (prognos, ränta, sparmål, "blir över").
+- Testdata bara i tom lokal databas. Skriv aldrig testdata till Supabase.
+- Verkar en uträkning fel: beskriv och fråga. Ändra inget själv.
+- PR som rör ekonomin: jämför varje fliks text mot `main` före och efter (skript finns i sessionens scratchpad,
+  gör ett nytt vid behov) och skriv i PR:en att beloppen är identiska.
 
-## Jarvis (assistenten i appen)
-- Jarvis får bara läsa ekonomidatan och svara på frågor om den. Den får aldrig ändra, lägga till eller ta bort något i ekonomidelen, och den ska citera exakt de siffror som ligger i Groundwork.
-- Allt Jarvis får ändra (t.ex. bocka vanor, lägga in uppgifter) ska Erik ha godkänt först, och det gäller aldrig ekonomin.
-- AI-nyckeln ligger bara i Supabase (edge function), aldrig i appen. Det ska finnas ett kostnadstak.
+## Jarvis
+- Läser bara. Får aldrig ändra något i ekonomin, och citerar exakt de siffror som ligger i Groundwork.
+- Ingen AI och inget som kostar pengar. Svaren byggs med nyckelord i `ask.ts`.
+- Visningsläget (ögat) döljer alla belopp; svar märkta `money: true` i `ask.ts` ersätts med `HIDDEN_MONEY`.
 
 ## Arbetssätt
-- Svara på svenska, kort. Skilj på fakta och din bedömning. Ge en rekommendation när det finns alternativ.
-- Säg emot direkt om något jag ber om har ett problem (teknik, tid, kostnad, användarvärde).
-- Pusha aldrig till main. Jobba på en egen gren och öppna en PR med kort svensk beskrivning och "Så testar du". Erik mergar själv.
-- Kör `npm test` och `npm run build` innan push. Inget får vara rött.
-- Ändra aldrig en befintlig databasversion (IndexedDB) – lägg till en ny med uppgraderingssteg.
-- Ändringar i Supabase (databas, edge functions som inbox) görs bara efter att Erik skrivit "Lägg ut".
-- Fråga innan ny teknik eller tjänst som kostar pengar.
+- Pusha aldrig till `main`. Egen gren mot `main` (inte staplade grenar), PR med kort svensk beskrivning och
+  "Så testar du". Erik mergar själv.
+- `npm test` och `npm run build` gröna före push.
+- IndexedDB: höj aldrig en befintlig version i efterhand, lägg till ny version med uppgraderingssteg
+  (`src/db.ts` DB_VERSION, `src/vanor/store.ts` DB_VERSION).
+- Supabase (databas, edge function `inbox`) ändras bara efter att Erik skrivit "Lägg ut".
+- Fråga innan ny teknik eller tjänst som kostar pengar. Erik vill inte betala något.
+- Max ett förslag på förbättring per leverans. Bygg det inte utan att fråga.
 
 ## Kvalitet
-- Ska fungera på 375 px bredd, i ljust och mörkt läge. Tomma lägen, laddning och fel ska vara designade.
-- Hantera kantfall: tom input, stora tal, å/ä/ö, dubbelklick, tappad uppkoppling.
+- 375 px bredd, ljust och mörkt läge, skrivbord ≥ 900 px (sidomeny). Tomma lägen, laddning och fel ska vara designade.
+- Kantfall: tom input, stora tal, å/ä/ö, dubbelklick, tappad uppkoppling.
 - Svenska datum (2026-10-20) och belopp (1 234 kr).
-- Kontrollera visuellt med skärmbilder (Playwright) innan du säger att något är klart.
-- Föreslå max en förbättring per leverans – bygg den inte utan att fråga.
+- Kontrollera med skärmbilder innan något kallas klart.
