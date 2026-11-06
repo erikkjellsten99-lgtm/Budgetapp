@@ -43,7 +43,7 @@ export function countsForGoal(goal: Pick<SavingsGoal, 'categoryIds'>, category: 
 }
 
 /** Budgetens summor för prognosen, räknade som i fliken Prognos (Forecast.tsx). */
-function monthInput(plan: MonthPlan): MonthInput {
+export function monthInput(plan: MonthPlan): MonthInput {
   const sum = (savings: boolean) =>
     plan.categories.filter((c) => (c.type === 'savings') === savings).reduce((s, c) => s + c.monthlyBudget, 0);
   return { month: plan.month, income: plan.income.csn + plan.income.other, costs: sum(false), plannedSavings: sum(true) };
