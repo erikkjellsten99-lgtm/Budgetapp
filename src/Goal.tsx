@@ -27,10 +27,8 @@ interface GoalProps {
   onChange?: (goal: SavingsGoal) => void;
 }
 
-/** Summan av kontona som räknas mot målet. */
-export function goalCurrent(goal: SavingsGoal, assets: Asset[]): number {
-  return assets.filter((asset) => goal.assetIds.includes(asset.id)).reduce((sum, asset) => sum + asset.amount, 0);
-}
+/** Summan av kontona som räknas mot målet (räknas i goalPlan.ts, som servern också använder). */
+export { goalCurrent } from './goalPlan';
 
 /** Sparmålet med en prognos över när målet nås. */
 export default function Goal({ assets, onChange }: GoalProps) {

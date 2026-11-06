@@ -12,6 +12,10 @@
 // - POST ?action=morgon  (från genvägen "Morgonbesked", samma nyckel): kort text om dagens Att göra,
 //   vanor som måste göras idag och vad som bör göras först (morning.ts, samma ordning som Vanor).
 //   Läser bara, ändrar inget.
+// - POST ?action=lasnyckel  (inloggad i appen): skapar en läsnyckel (gr_…) för Jarvis och "Fråga Groundwork".
+//   Den kan bara läsa sammanfattningen, inte lägga in något. Bara en hash sparas (tabellen read_tokens).
+// - POST ?action=sammanfattning  (med läsnyckeln): hela Groundwork som text med exakta siffror
+//   (summary.ts, samma uträkningar som appen). Läser bara, ändrar inget.
 //
 // Funktionen kontrollerar själv vem som anropar (verify_jwt är av).
 
@@ -20,7 +24,12 @@ import { itemId, parseLines, stockholmToday, type InboxItem } from './parse.ts'
 import { confirmText, parseSpoken } from './spoken.ts'
 import { prioritizeToday } from './priority.ts'
 import { morningText } from './morning.ts'
-import { weekStart } from './dates.ts'
+import { addDays, weekStart } from './dates.ts'
+import { summaryText } from './summary.ts'
+import { monthPlans } from './months.ts'
+import { MAX_MONTHS } from './goalPlan.ts'
+import type { Loan } from './forecast.ts'
+import type { Asset, Category, MonthBudget, MonthlyIncome, SavingsGoal, Wish } from './types.ts'
 import type { Habit, Log } from './habits.ts'
 import type { Task } from './tasks.ts'
 import { FIELD_METRICS, formatHealth, isHealthBody, metRules, parseHealthBody, parseSleepStages, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
@@ -50,13 +59,15 @@ function bearer(req: Request): string {
   return (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
 }
 
-async function createToken(req: Request) {
+/** Skapar en ny nyckel för den inloggade (gw_ i inbox_tokens, eller gr_ = bara läsa i read_tokens). Ersätter den gamla. */
+async function createToken(req: Request, kind: 'inbox' | 'read' = 'inbox') {
   const { data, error } = await admin.auth.getUser(bearer(req))
   if (error || !data.user) return json({ error: 'login' }, 401)
   const bytes = crypto.getRandomValues(new Uint8Array(24))
-  const token = 'gw_' + btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  const prefix = kind === 'read' ? 'gr_' : 'gw_'
+  const token = prefix + btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
   const { error: saveError } = await admin
-    .from('inbox_tokens')
+    .from(kind === 'read' ? 'read_tokens' : 'inbox_tokens')
     .upsert({ user_id: data.user.id, token_hash: await sha256(token), created_at: new Date().toISOString() })
   if (saveError) return json({ error: 'failed' }, 500)
   return json({ token })
@@ -107,6 +118,102 @@ async function morning(req: Request) {
     if (c) (log[c.date] ??= []).push(c.habitId)
   }
   return say(morningText(prioritizeToday(habits, log, paused, of<Task>('tasks'), today), today))
+}
+
+/** Vem läsnyckeln tillhör, eller ett felsvar. Den vanliga nyckeln (gw_) räcker inte för ekonomin. */
+async function readOwner(req: Request): Promise<{ user_id: string } | Response> {
+  const token = bearer(req)
+  if (token.startsWith('gw_')) return say('Sammanfattningen kräver läsnyckeln. Skapa den i Groundwork → Vanor → Mina vanor → Läsnyckel.', 401)
+  if (!token.startsWith('gr_')) return say('Fel nyckel. Skapa en läsnyckel i Groundwork → Vanor → Mina vanor.', 401)
+  const { data: owner } = await admin.from('read_tokens').select('user_id').eq('token_hash', await sha256(token)).maybeSingle()
+  if (!owner) return say('Läsnyckeln gäller inte längre. Skapa en ny i Groundwork → Vanor → Mina vanor.', 401)
+  return owner
+}
+
+/** Alla rader i en fråga, 1000 åt gången. */
+async function allRows<T>(query: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+  const out: T[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await query(from, from + 999)
+    if (error) throw error
+    out.push(...(data ?? []))
+    if (!data || data.length < 1000) return out
+  }
+}
+
+/**
+ * Sammanfattningen. Läser hushållets ekonomi (records) och dina egna vanor, Att göra och hälsa
+ * (personal_records), och räknar med samma kod som appen. Skriver ingenting.
+ */
+async function summary(req: Request) {
+  const owner = await readOwner(req)
+  if (owner instanceof Response) return owner
+  const today = stockholmToday()
+  const { data: member } = await admin.from('household_members').select('household_id').eq('user_id', owner.user_id).maybeSingle()
+  if (!member) return say('Du är inte med i något hushåll i Groundwork än. Logga in i appen först.', 404)
+
+  const [economy, mine, checkRows] = await Promise.all([
+    allRows<{ store: string; data: unknown }>((from, to) =>
+      admin.from('records').select('store, data').eq('household_id', member.household_id).eq('deleted', false).order('id').range(from, to),
+    ),
+    allRows<{ store: string; data: unknown }>((from, to) =>
+      admin
+        .from('personal_records')
+        .select('store, data')
+        .eq('user_id', owner.user_id)
+        .in('store', ['habits', 'pauses', 'tasks', 'health'])
+        .eq('deleted', false)
+        .order('id')
+        .range(from, to),
+    ),
+    allRows<{ data: unknown }>((from, to) =>
+      admin
+        .from('personal_records')
+        .select('data')
+        .eq('user_id', owner.user_id)
+        .eq('store', 'checks')
+        .eq('deleted', false)
+        .gte('data->>date', weekStart(today))
+        .order('id')
+        .range(from, to),
+    ),
+  ])
+  const pick = <T>(rows: { store: string; data: unknown }[], store: string) =>
+    rows.filter((r) => r.store === store && r.data).map((r) => r.data as T)
+  const byMonth = <T extends { month: string }>(list: T[]) => [...list].sort((a, b) => a.month.localeCompare(b.month))
+
+  // Budget och inkomst från innevarande månad och 40 år framåt, som i appen (db.ts → months.ts).
+  const month = today.slice(0, 7)
+  const plans = monthPlans(
+    byMonth(pick<MonthBudget>(economy, 'budgets')),
+    byMonth(pick<MonthlyIncome>(economy, 'income')),
+    pick<Category>(economy, 'categories'),
+    month,
+    MAX_MONTHS + 1,
+  )
+  const habits = pick<Habit>(mine, 'habits').sort((a, b) => a.order - b.order)
+  const tasks = pick<Task>(mine, 'tasks')
+  const paused = new Set(pick<{ date: string }>(mine, 'pauses').map((x) => x.date))
+  const log: Log = {}
+  for (const r of checkRows) {
+    const c = r.data as { date: string; habitId: string } | null
+    if (c) (log[c.date] ??= []).push(c.habitId)
+  }
+  const health = pick<HealthDay>(mine, 'health').filter((d) => d.date >= addDays(today, -1))
+
+  return say(
+    summaryText({
+      today,
+      plans,
+      assets: pick<Asset>(economy, 'assets'),
+      goal: pick<SavingsGoal>(economy, 'goals')[0] ?? null,
+      loan: pick<Loan>(economy, 'loans')[0] ?? null,
+      wishes: pick<Wish>(economy, 'wishes'),
+      priority: prioritizeToday(habits, log, paused, tasks, today),
+      tasks,
+      health,
+    }),
+  )
 }
 
 async function receive(req: Request) {
@@ -249,6 +356,8 @@ Deno.serve(async (req) => {
     const action = new URL(req.url).searchParams.get('action')
     if (action === 'token') return await createToken(req)
     if (action === 'morgon') return await morning(req)
+    if (action === 'lasnyckel') return await createToken(req, 'read')
+    if (action === 'sammanfattning') return await summary(req)
     return await receive(req)
   } catch (e) {
     console.error('inbox', e)

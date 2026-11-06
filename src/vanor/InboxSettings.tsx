@@ -268,6 +268,100 @@ export default function InboxSettings() {
           {error}
         </p>
       )}
+      {loggedIn && <ReadKeyCard />}
     </section>
+  )
+}
+
+const READ_KEY_STORAGE = 'vanor-lasnyckel'
+
+/**
+ * Läsnyckel för Jarvis på Macen och "Fråga Groundwork" på iPhone och klocka. Den kan bara läsa
+ * sammanfattningen (ekonomi, vanor och hälsa som text), aldrig lägga in eller ändra något.
+ */
+function ReadKeyCard() {
+  const [key, setKey] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(READ_KEY_STORAGE)
+    } catch {
+      return null
+    }
+  })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [confirmNew, setConfirmNew] = useState(false)
+
+  async function create() {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      const { data } = await supabase.auth.getSession()
+      if (!data.session) throw new Error('login')
+      const res = await fetch(`${INBOX_URL}?action=lasnyckel`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+      })
+      const body = (await res.json()) as { token?: string; error?: string }
+      if (!res.ok || !body.token) throw new Error(body.error ?? 'failed')
+      try {
+        localStorage.setItem(READ_KEY_STORAGE, body.token)
+      } catch {
+        // Privat läge: nyckeln visas ändå nu.
+      }
+      setKey(body.token)
+      setConfirmNew(false)
+    } catch (e) {
+      setError(
+        e instanceof Error && e.message === 'login'
+          ? 'Logga in först (personikonen uppe till höger).'
+          : 'Det gick inte att skapa läsnyckeln. Kontrollera uppkopplingen och försök igen.',
+      )
+    }
+    setBusy(false)
+  }
+
+  return (
+    <div className="push-card read-key">
+      <h4>Läsnyckel för Jarvis</h4>
+      <p className="push-lead">
+        För Jarvis på Macen och "Fråga Groundwork" med Siri. Nyckeln kan bara <b>läsa</b> en sammanfattning av budgeten,
+        sparmålet, billånet, önskelistan, dagens vanor och hälsan. Den kan aldrig ändra något.
+      </p>
+      {!key ? (
+        <button type="button" className="primary" disabled={busy} onClick={create}>
+          {busy ? 'Skapar …' : 'Skapa läsnyckel'}
+        </button>
+      ) : (
+        <>
+          <CopyField label="Adress (URL)" value={`${INBOX_URL}?action=sammanfattning`} />
+          <CopyField label="Rubrik: Authorization" value={`Bearer ${key}`} />
+          <p className="push-note">
+            Den här nyckeln visar era ekonomisiffror för den som har den. Dela den inte. Den vanliga nyckeln ovan påverkas inte.
+          </p>
+          <div className="push-actions">
+            {confirmNew ? (
+              <>
+                <button type="button" className="text-btn" disabled={busy} onClick={create}>
+                  Ja, skapa ny (den gamla slutar gälla)
+                </button>
+                <button type="button" className="text-btn quiet" onClick={() => setConfirmNew(false)}>
+                  Avbryt
+                </button>
+              </>
+            ) : (
+              <button type="button" className="text-btn quiet" onClick={() => setConfirmNew(true)}>
+                Skapa ny läsnyckel
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      {error && (
+        <p className="field-error push-msg" role="status">
+          {error}
+        </p>
+      )}
+    </div>
   )
 }

@@ -1,4 +1,5 @@
 import type { Loan } from './forecast';
+import { monthPlans, shiftMonth, type MonthPlan } from '../supabase/functions/inbox/months.ts';
 import type { Asset, Category, Debt, MonthBudget, MonthlyIncome, SavingsGoal, Transaction, Wish } from './types';
 
 const DB_NAME = 'budget';
@@ -86,17 +87,8 @@ export function currentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** Månaden flyttad ett antal steg, t.ex. shiftMonth("2026-12", 1) = "2027-01". */
-export function shiftMonth(month: string, steps: number): string {
-  const [year, number] = month.split('-').map(Number);
-  const index = year * 12 + (number - 1) + steps;
-  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
-}
-
-/** "2026-10" som "oktober 2026". */
-export function monthName(month: string): string {
-  return new Date(`${month}-01T12:00`).toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
-}
+// Månader och budget per månad delas med servern (supabase/functions/inbox/months.ts).
+export { monthName, shiftMonth, type MonthPlan } from '../supabase/functions/inbox/months.ts';
 
 const BUDGET_MONTH_KEY = 'budgetMonth';
 let selectedMonth: string | undefined;
@@ -471,13 +463,6 @@ export function deleteCategory(month: string, id: string): Promise<void> {
   return updateBudget(month, (categories) => categories.filter((category) => category.id !== id));
 }
 
-/** Budget och inkomst för en månad, som getBudget och getIncome ger dem. */
-export interface MonthPlan {
-  month: string;
-  categories: Category[];
-  income: MonthlyIncome;
-}
-
 /**
  * Budget och inkomst för många månader i följd ("first" och framåt), med samma regler som
  * getBudget och getIncome: en månad utan egen post utgår från närmaste tidigare månad.
@@ -490,23 +475,7 @@ export async function getMonthPlans(first: string, count: number): Promise<Month
     read('categories', (store) => store.getAll()) as Promise<Category[]>,
   ]);
   // getAll ger posterna i nyckelordning, alltså månad för månad.
-  const latest = <T extends { month: string }>(list: T[], month: string) => {
-    let found: T | undefined;
-    for (const item of list) {
-      if (item.month > month) break;
-      found = item;
-    }
-    return found;
-  };
-  return Array.from({ length: count }, (_, i) => {
-    const month = shiftMonth(first, i);
-    const income = latest(incomes, month);
-    return {
-      month,
-      categories: latest(budgets, month)?.categories ?? legacy,
-      income: { month, csn: income?.csn ?? 0, other: income?.other ?? 0 },
-    };
-  });
+  return monthPlans(budgets, incomes, legacy, first, count);
 }
 
 // Utgångsläge för sammanslagning av budgeten (budgetMerge.ts)
