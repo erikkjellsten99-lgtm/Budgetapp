@@ -302,3 +302,19 @@ h3 span,
 .today .eyebrow {
   letter-spacing: 0.02em;
 }
+
+/* Nyheter i HUD-stil */
+.news .news-title {
+  font-family: var(--hud-display);
+}
+
+.news-meta,
+.news-badge,
+.news-because,
+.news-intro .eyebrow {
+  font-family: var(--hud-mono);
+}
+
+.news-meta {
+  letter-spacing: 0.02em;
+}

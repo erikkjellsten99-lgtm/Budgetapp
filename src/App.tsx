@@ -25,21 +25,23 @@ import Forecast from './Forecast';
 import Income from './Income';
 import Vanor from './vanor/Vanor';
 import Today from './Today';
+import Nyheter from './Nyheter';
 import { formatKr } from './money';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
-type View = 'idag' | 'overview' | 'vanor' | 'goal' | 'budget' | 'wishlist' | 'assets' | 'account';
-type Section = 'idag' | 'ekonomi' | 'vanor';
+type View = 'idag' | 'nyheter' | 'overview' | 'vanor' | 'goal' | 'budget' | 'wishlist' | 'assets' | 'account';
+type Section = 'idag' | 'ekonomi' | 'vanor' | 'nyheter';
 type EconomyView = 'overview' | 'budget' | 'goal' | 'assets' | 'wishlist';
 
 /**
  * Huvudflikarna. Ekonomi är en flik med egna underflikar, så att fler huvudflikar
- * (t.ex. Nyheter) får plats i menyn längre fram. Ikonerna är enkla linjer i ett 24×24-rutnät.
+ * får plats i menyn. Ikonerna är enkla linjer i ett 24×24-rutnät.
  */
 const SECTIONS: { id: Section; label: string; icon: string }[] = [
   { id: 'idag', label: 'Idag', icon: 'M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4 7 17M17 7l1.4-1.4M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
   { id: 'ekonomi', label: 'Ekonomi', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
   { id: 'vanor', label: 'Vanor', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12.2l2.7 2.6L16.2 9.4' },
+  { id: 'nyheter', label: 'Nyheter', icon: 'M5 4h11v15a1 1 0 0 0 2 0V8h2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM8 8h5M8 12h5M8 16h3' },
 ];
 
 /** Underflikarna i Ekonomi. */
@@ -52,7 +54,7 @@ const ECONOMY: { id: EconomyView; label: string }[] = [
 ];
 
 const isEconomy = (view: View): view is EconomyView => ECONOMY.some((item) => item.id === view);
-const sectionOf = (view: View): Section | null => (view === 'idag' || view === 'vanor' ? view : isEconomy(view) ? 'ekonomi' : null);
+const sectionOf = (view: View): Section | null => (view === 'idag' || view === 'vanor' || view === 'nyheter' ? view : isEconomy(view) ? 'ekonomi' : null);
 
 function readStorage(key: string): string | null {
   try {
@@ -74,7 +76,7 @@ function writeStorage(key: string, value: string) {
 function savedView(): View {
   const saved = readStorage('view');
   if (saved === 'traning') return 'vanor'; // Träning fanns en tid som egen flik.
-  if (saved === 'account' || saved === 'idag' || saved === 'vanor' || (saved && isEconomy(saved as View))) return saved as View;
+  if (saved === 'account' || saved === 'idag' || saved === 'vanor' || saved === 'nyheter' || (saved && isEconomy(saved as View))) return saved as View;
   return 'idag';
 }
 
@@ -285,6 +287,9 @@ export default function App() {
               {goalPlan && <span className="goal-summary-status">{goalStatus(goalPlan)}</span>}
             </button>
           )}
+        </div>
+        <div hidden={view !== 'nyheter'}>
+          <Nyheter active={view === 'nyheter'} />
         </div>
         <div hidden={view !== 'vanor'}>
           <div className="vanor-column">

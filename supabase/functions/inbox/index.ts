@@ -18,6 +18,8 @@
 //   (summary.ts, samma uträkningar som appen). Läser bara, ändrar inget.
 // - POST ?action=fraga  (med läsnyckeln): JSON { fraga: "Hur sov jag i natt?" }. Kort svar med exakta siffror
 //   för Siri, utan AI (ask.ts). Förstår den inte frågan säger den det och ger tre exempel. Läser bara.
+// - GET ?action=nyheter (ingen nyckel): nyheter om ekonomi, krig, fotboll och Sverige från SVT:s RSS,
+//   med ton positiv/negativ/neutral bedömd med ordlistor (news.ts). Sparas 10 minuter i minnet.
 //
 // Funktionen kontrollerar själv vem som anropar (verify_jwt är av).
 
@@ -29,6 +31,7 @@ import { morningText } from './morning.ts'
 import { addDays, weekStart } from './dates.ts'
 import { summaryFacts, summaryText, type SummaryInput } from './summary.ts'
 import { answer } from './ask.ts'
+import { FEEDS, loadNews, type NewsResult } from './news.ts'
 import { monthPlans } from './months.ts'
 import { MAX_MONTHS } from './goalPlan.ts'
 import type { Loan } from './forecast.ts'
@@ -44,7 +47,7 @@ const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 }
 
 const say = (text: string, status = 200) =>
@@ -368,16 +371,39 @@ async function saveHealth(userId: string, body: Record<string, unknown>, today: 
   return `Hälsa sparad: ${shown.join(' · ')}.${checked.length ? ` Bockat: ${checked.join(', ')}.` : ''}`
 }
 
+// Nyheterna sparas en stund i minnet, så att flödena inte hämtas vid varje öppning av appen.
+const NEWS_TTL = 10 * 60 * 1000
+let newsCache: NewsResult | null = null
+
+async function fetchFeed(url: string): Promise<string> {
+  const res = await fetch(url, { headers: { 'user-agent': 'Groundwork/1.0 (RSS)' }, signal: AbortSignal.timeout(8000) })
+  if (!res.ok) throw new Error(`${res.status}`)
+  return await res.text()
+}
+
+/** Nyheter i fyra ämnen med ton (news.ts). Öppna RSS-flöden, inget konto behövs, läser bara. */
+async function news() {
+  if (!newsCache || Date.now() - newsCache.updated > NEWS_TTL || newsCache.missing.length === FEEDS.length) {
+    const fresh = await loadNews(fetchFeed)
+    console.log('nyheter', JSON.stringify({ antal: fresh.items.length, saknas: fresh.missing }))
+    // Gick alla flöden fel: behåll de gamla nyheterna hellre än att visa inga.
+    if (fresh.items.length || !newsCache) newsCache = fresh
+  }
+  return json(newsCache)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  const action = new URL(req.url).searchParams.get('action')
+  if (action === 'nyheter' && req.method === 'GET') return await news().catch(() => json({ error: 'Nyheterna gick inte att hämta.' }, 502))
   if (req.method !== 'POST') return json({ error: 'Använd POST.' }, 405)
   try {
-    const action = new URL(req.url).searchParams.get('action')
     if (action === 'token') return await createToken(req)
     if (action === 'morgon') return await morning(req)
     if (action === 'lasnyckel') return await createToken(req, 'read')
     if (action === 'sammanfattning') return await summary(req)
     if (action === 'fraga') return await ask(req)
+    if (action === 'nyheter') return await news()
     return await receive(req)
   } catch (e) {
     console.error('inbox', e)
