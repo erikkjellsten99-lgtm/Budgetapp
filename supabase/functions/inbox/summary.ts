@@ -58,6 +58,21 @@ const HEALTH: [HealthMetric, string][] = [
   ['restingHr', 'Vilopuls'],
 ]
 
+/** Översiktens siffror för en månad, som text. */
+export interface MonthFacts {
+  /** "2026-12" */
+  key: string
+  /** "december 2026" */
+  month: string
+  left: string
+  income: string
+  costs: string
+  plannedSavings: string
+}
+
+/** Hur många månader framåt (räknat med innevarande) som Jarvis kan svara om. */
+export const MONTHS_AHEAD = 12
+
 /** Sammanfattningens siffror och texter, räknade en gång. Används av sammanfattningen och "Fråga Groundwork". */
 export interface SummaryFacts {
   today: DateKey
@@ -70,6 +85,8 @@ export interface SummaryFacts {
   netWorth: string
   /** Pengar att använda, eller null om 0 kr. */
   spending: string | null
+  /** Innevarande månad och de närmaste månaderna efter, för frågor som "Vad blir över i december?". */
+  months: MonthFacts[]
   goal: { name: string; current: string; target: string; percent: number; status: string } | null
   loan: { name: string; left: string; payment: string; nextMonth: string; extra: string | null } | null
   wishes: { total: string; leftToBuy: string }
@@ -133,6 +150,17 @@ export function summaryFacts(input: SummaryInput): SummaryFacts {
     plannedSavings: formatKr(o.plannedSavings),
     netWorth: formatKr(o.netWorth),
     spending: o.spending > 0 ? formatKr(o.spending) : null,
+    months: plans.slice(0, MONTHS_AHEAD).map((plan) => {
+      const m = overviewNumbers(plan, wishes, assets)
+      return {
+        key: plan.month,
+        month: monthName(plan.month),
+        left: formatKr(m.left),
+        income: formatKr(m.income),
+        costs: formatKr(m.costs),
+        plannedSavings: formatKr(m.plannedSavings),
+      }
+    }),
     goal: goalFacts,
     loan: loanFacts,
     wishes: { total: formatKr(wishes.reduce((s, w) => s + w.amount, 0)), leftToBuy: formatKr(sumLeftToBuy(wishes)) },
