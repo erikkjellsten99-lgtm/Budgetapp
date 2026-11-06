@@ -4638,3 +4638,13 @@
 .galaxy-view .gv-stagebar i {
   min-width: 2px;
 }
+
+/* Läsnyckeln för Jarvis: eget kort under Koppla iPhone */
+.vanor .push-card.read-key {
+  margin-top: 12px;
+}
+
+.vanor .push-card.read-key h4 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
