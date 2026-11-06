@@ -2189,3 +2189,55 @@ main > div > h2 + .hint {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Önskelista: sådant som köptes en annan månad (ligger kvar på den månaden) */
+.wish-bought {
+  padding: 0 1rem 0.8rem 3.4rem;
+}
+
+.wish-bought summary {
+  min-height: 2.75rem;
+  padding: 0.6rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wish-bought ul {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wish-bought li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.wish-bought-name {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.wish-bought-name small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.wish-bought-amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wish-bought .link-button {
+  min-height: 2.75rem;
+  white-space: nowrap;
+}
