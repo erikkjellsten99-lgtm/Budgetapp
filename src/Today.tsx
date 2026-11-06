@@ -68,12 +68,14 @@ export default function Today({ active, onOpen }: { active: boolean; onOpen: (ta
 
       <JarvisButton onOpen={() => onOpen('jarvis')} />
 
+      {/* Utan pengameningen: beloppet står redan stort i kortet "Blir över" här nedanför.
+          Samma flagga som visningsläget, så Jarvis egen text är orörd (Siri och morgonbeskedet säger allt). */}
       {facts && (
         <section className="card today-say" aria-label="Jarvis säger">
           <span className="today-say-dot" aria-hidden="true" />
           <p>
             <span className="jarvis-eyebrow">Jarvis säger</span>
-            {dayBrief(facts)}
+            {dayBrief(facts, { hideMoney: true })}
           </p>
         </section>
       )}

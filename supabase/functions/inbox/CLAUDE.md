@@ -22,6 +22,9 @@ Allt här utom `index.ts`, `parse.ts`, `spoken.ts`, `news.ts` används också av
   `content` med lokala filer).
 - Senaste utlagda: version 16 (2026-11-06). Repot ligger steget före, se STATUS.md.
 - Logga med `console.log`; läs med `query_logs` (source `function_edge_logs`).
+- Funktionen `reminders` räknar via `../inbox/priority.ts` (se `reminders/plan.ts`). Läggs den ut måste
+  `priority.ts`, `habits.ts`, `tasks.ts`, `dates.ts` och `health.ts` följa med, med sökväg relativt
+  `reminders/index.ts` precis som i importen. Ändra aldrig "måste"-logiken i reminders för sig.
 
 ## Nyheter
 SVT:s RSS, fyra ämnen, ton via ordlistor i `news.ts` (ingen AI). Cache 10 min i minnet. Krig = utrikes filtrerat

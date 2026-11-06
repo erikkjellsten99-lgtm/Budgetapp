@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { answer, dayBrief, EXAMPLES, HIDDEN_MONEY, normalize } from './ask.ts'
-import { summaryFacts, summaryLines, type SummaryInput } from './summary.ts'
+import { answer, askedMonth, dayBrief, EXAMPLES, HIDDEN_MONEY, normalize } from './ask.ts'
+import { formatKr } from './money.ts'
+import { overviewNumbers, summaryFacts, summaryLines, type SummaryInput } from './summary.ts'
 import { prioritizeToday } from './priority.ts'
 import type { Loan } from './forecast.ts'
 
@@ -129,5 +130,56 @@ describe('småprat och visningsläge', () => {
     }
     expect(hidden('Hur sov jag?')).toBe('Du sov 8 h 42 min enligt Hälsa (idag).')
     expect(hidden('Vad ska jag göra idag?')).toBe('Måste göras idag: Meditation och Gym. Börja med Ringa tandläkaren.')
+  })
+})
+
+describe('andra månader', () => {
+  // Budgeten för december har en extra kostnad, så att svaret måste komma från rätt månad.
+  const december = { ...plans[1], categories: [...budget, { id: 'jul', name: 'Jul', type: 'variable' as const, monthlyBudget: 4000 }] }
+  const monthsInput = { ...input, plans: plans.map((p) => (p.month === '2026-12' ? december : p)) }
+  const f = summaryFacts(monthsInput)
+  const dec = overviewNumbers(december, monthsInput.wishes, monthsInput.assets)
+  const ask2 = (q: string) => answer(q, f)
+
+  it('askedMonth: månadsnamn, år, nästa och förra månaden', () => {
+    expect(askedMonth('Vad blir över i december?', '2026-11')).toBe('2026-12')
+    expect(askedMonth('inkomster i mars', '2026-11')).toBe('2027-03')
+    expect(askedMonth('Vad kostar november?', '2026-11')).toBe('2026-11')
+    expect(askedMonth('kostnader i maj 2028', '2026-11')).toBe('2028-05')
+    expect(askedMonth('Hur blir nästa månad?', '2026-12')).toBe('2027-01')
+    expect(askedMonth('Vad kostade förra månaden', '2026-11')).toBe('2026-10')
+    expect(askedMonth('Vad blir över?', '2026-11')).toBeNull()
+  })
+
+  it('svarar för månaden i frågan, med samma uträkning som Översikt', () => {
+    expect(f.months[1].left).toBe(formatKr(dec.left))
+    expect(f.months[1].left).not.toBe(f.left)
+    expect(ask2('Vad blir över i december?')).toBe(`I december 2026 blir det ${formatKr(dec.left)} över efter utgifter och planerat sparande.`)
+    expect(ask2('Kostnader nästa månad?')).toBe(`Kostnaderna i december 2026 är ${formatKr(dec.costs)}.`)
+    expect(ask2('Hur mycket kommer in i december')).toBe(`Inkomsterna i december 2026 är ${formatKr(dec.income)}.`)
+    expect(ask2('Hur ser ekonomin ut i december?')).not.toContain('Nettovärde')
+    // Innevarande månad som förut
+    expect(ask2('Vad blir över i november?')).toBe(ask2('Vad blir över?'))
+  })
+
+  it('månader utan siffror: säger det i stället för att svara för fel månad', () => {
+    const outside = 'Jag har siffror för november 2026 till oktober 2027.'
+    expect(ask2('Vad blev över förra månaden?')).toBe(`Oktober 2026 kan jag inte svara om. ${outside}`)
+    expect(ask2('Kostnader i november 2027?')).toBe(`November 2027 kan jag inte svara om. ${outside}`)
+    expect(ask2('Vad blir över i december?')).not.toContain(f.left)
+  })
+
+  it('lån, sparmål och visningsläge påverkas inte av månaden', () => {
+    expect(ask2('Hur mycket är kvar på billånet i december?')).toContain(f.loan!.left)
+    expect(answer('Vad blir över i december?', f, { hideMoney: true })).toBe(HIDDEN_MONEY)
+  })
+})
+
+describe('hälsningar tar inte över frågan', () => {
+  it('svarar på frågan efter hälsningen eller tacket', () => {
+    expect(ask('Hej, hur går det idag?')).toBe(dayBrief(facts))
+    expect(ask('Tack, hur ser ekonomin ut?')).toContain(`Inkomster ${facts.income}`)
+    expect(ask('Hej, hur mycket har vi kvar?')).toContain('blir det')
+    expect(ask('God morgon')).toMatch(/^Hej! Jag är Jarvis/)
   })
 })

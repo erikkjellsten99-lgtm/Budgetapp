@@ -47,7 +47,7 @@ const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '
 interface Ctx {
   habits: ReportHabit[];
   done: (id: string, date: string) => boolean;
-  paused: Set<string>;
+  paused: ReadonlySet<string>;
 }
 
 function habitWeek(ctx: Ctx, h: ReportHabit, monday: string) {
@@ -113,7 +113,7 @@ function monthScore(ctx: Ctx, month: string) {
  * Rapporten som ska skickas på söndagen `date` (veckans sista dag), eller null om det inte är söndag
  * eller inga vanor hade mål. Är det månadens sista vecka blir det en månadsrapport i stället.
  */
-export function sundayReport(habits: ReportHabit[], checks: ReportCheck[], paused: Set<string>, date: string): Report | null {
+export function sundayReport(habits: ReportHabit[], checks: ReportCheck[], paused: ReadonlySet<string>, date: string): Report | null {
   if (weekday(date) !== 6) return null;
   const doneSet = new Set(checks.map((c) => `${c.date}|${c.habitId}`));
   const ctx: Ctx = {

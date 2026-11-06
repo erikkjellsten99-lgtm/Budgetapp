@@ -5,7 +5,8 @@
 // inte frågan alls svarar den ändå med dagens läge. Läser bara. Rena funktioner, tester i ask.test.ts.
 
 import { list } from './morning.ts'
-import type { SummaryFacts } from './summary.ts'
+import type { MonthFacts, SummaryFacts } from './summary.ts'
+import { shiftMonth } from './months.ts'
 
 /** Gemener, utan skiljetecken och med enkla mellanslag, så att "Hur sov jag?" och "hur sov jag" blir samma. */
 export function normalize(question: string): string {
@@ -45,16 +46,52 @@ function has(q: string, words: string[]): boolean {
   })
 }
 
-/** Hur säker träffen är: exakta ämnen först, sedan allmänna, sist de bredaste orden. */
-type Level = 'specific' | 'social' | 'broad' | 'fallback'
+/**
+ * Hur säker träffen är: exakta ämnen först, sedan allmänna, sedan de bredaste orden. Hälsningar och
+ * småprat sist, så att "Hej, hur går det?" svarar på frågan och inte bara hälsar.
+ */
+type Level = 'specific' | 'broad' | 'fallback' | 'social'
 
 interface Intent {
   words: string[]
-  answer: (f: SummaryFacts) => string
+  /** `other` är sant när frågan gäller en annan månad än den innevarande. */
+  answer: (f: SummaryFacts, other: boolean) => string
   level?: Level
   /** Svaret visar ekonomin (döljs i visningsläge). */
   money?: true
+  /** Svaret gäller en månad (blir över, inkomster, kostnader), och följer månaden i frågan. */
+  monthly?: true
 }
+
+const MONTH_NAMES = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december']
+
+/**
+ * Månaden som frågan gäller, som "2026-12", eller null om frågan inte nämner någon.
+ * "december" utan år är nästa december (eller denna, om det är december nu). "nästa månad" och "förra månaden" förstås.
+ */
+export function askedMonth(question: string, current: string): string | null {
+  const tokens = fold(normalize(question)).trim().split(' ')
+  const q = ` ${tokens.join(' ')} `
+  if (/ nasta manad/.test(q)) return shiftMonth(current, 1)
+  if (/ forra manad/.test(q)) return shiftMonth(current, -1)
+  const index = MONTH_NAMES.findIndex((name) => tokens.includes(name))
+  if (index < 0) return null
+  const number = String(index + 1).padStart(2, '0')
+  const year = tokens.find((t) => /^20\d\d$/.test(t))
+  if (year) return `${year}-${number}`
+  const thisYear = `${current.slice(0, 4)}-${number}`
+  return thisYear >= current ? thisYear : `${Number(current.slice(0, 4)) + 1}-${number}`
+}
+
+/** Siffrorna med en annan månad i stället för den innevarande. */
+const withMonth = (f: SummaryFacts, m: MonthFacts): SummaryFacts => ({
+  ...f,
+  month: m.month,
+  left: m.left,
+  income: m.income,
+  costs: m.costs,
+  plannedSavings: m.plannedSavings,
+})
 
 export interface AskOptions {
   /** Visningsläge: inga belopp i svaren, så att Jarvis kan visas för andra. */
@@ -67,6 +104,15 @@ const healthValue = (f: SummaryFacts, label: string) => f.health?.values.find((v
 const healthWhen = (f: SummaryFacts) => (f.health?.when === 'igår' ? 'igår' : 'idag')
 
 const leftText = (f: SummaryFacts) => `I ${f.month} blir det ${f.left} över efter utgifter och planerat sparande.`
+
+/** Svaret när frågan gäller en månad som Jarvis inte har siffror för. */
+function outsideMonths(f: SummaryFacts, key: string): string {
+  const [year, number] = key.split('-')
+  const name = `${MONTH_NAMES[Number(number) - 1]} ${year}`
+  const first = f.months[0]?.month ?? f.month
+  const last = f.months[f.months.length - 1]?.month ?? f.month
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} kan jag inte svara om. Jag har siffror för ${first} till ${last}.`
+}
 const mustText = (f: SummaryFacts) => {
   if (f.paused) return 'Du har pausat idag, så inga vanor måste göras.'
   const must = f.must.length ? `Måste göras idag: ${list(f.must)}.` : 'Inget måste göras idag.'
@@ -150,16 +196,19 @@ const INTENTS: Intent[] = [
   {
     words: [' inkomst', ' tjän', ' lön', ' csn', ' får in', ' kommer in'],
     money: true,
+    monthly: true,
     answer: (f) => `Inkomsterna i ${f.month} är ${f.income}.`,
   },
   {
     words: [' kostnad', ' utgift', ' kostar', ' gör av med', ' lägger vi', ' lägger jag', ' räkning', ' spenderar'],
     money: true,
+    monthly: true,
     answer: (f) => `Kostnaderna i ${f.month} är ${f.costs}.`,
   },
   {
     words: [' blir över', ' över efter', ' över i månaden', ' över den här', ' kvar att spara', ' kvar att sätta'],
     money: true,
+    monthly: true,
     answer: leftText,
   },
   {
@@ -167,7 +216,7 @@ const INTENTS: Intent[] = [
     money: true,
     answer: (f) => `Nettovärdet på sparkontona är ${f.netWorth}.`,
   },
-  // Hälsningar och småprat: bara om frågan inte också handlar om något annat.
+  // Hälsningar och småprat: bara om frågan inte också handlar om något annat (nivån 'social' kommer sist).
   {
     words: [' hej', ' hallå', ' tjena', ' tja', ' hejsan', ' god morgon', ' god kväll', ' godmorgon'],
     answer: () => 'Hej! Jag är Jarvis. Fråga mig om dagen, vanorna, hälsan eller ekonomin.',
@@ -188,7 +237,11 @@ const INTENTS: Intent[] = [
   {
     words: [' ekonomi', ' pengar', ' råd', ' budget', ' plånbok'],
     money: true,
-    answer: (f) => `${leftText(f)} Inkomster ${f.income}, kostnader ${f.costs}, planerat sparande ${f.plannedSavings}. Nettovärde ${f.netWorth}.`,
+    monthly: true,
+    // Nettovärdet är dagens, så det tas bara med när frågan gäller innevarande månad.
+    answer: (f, other) =>
+      `${leftText(f)} Inkomster ${f.income}, kostnader ${f.costs}, planerat sparande ${f.plannedSavings}.` +
+      (other ? '' : ` Nettovärde ${f.netWorth}.`),
     level: 'broad',
   },
   {
@@ -205,6 +258,7 @@ const INTENTS: Intent[] = [
   {
     words: [' över', ' kvar', ' spara', ' sparande'],
     money: true,
+    monthly: true,
     answer: leftText,
     level: 'fallback',
   },
@@ -220,9 +274,18 @@ export function answer(question: string, facts: SummaryFacts, options: AskOption
   const q = normalize(question)
   if (q.trim() === '') return `Fråga till exempel: "${EXAMPLES[0]}", "${EXAMPLES[1]}" eller "${EXAMPLES[2]}"`
   const matches = INTENTS.filter((intent) => has(q, intent.words))
-  const say = (intent: Intent) =>
-    options.hideMoney && intent.money ? HIDDEN_MONEY : intent.answer === dayBriefAnswer ? dayBrief(facts, options) : intent.answer(facts)
-  for (const level of ['specific', 'social', 'broad', 'fallback'] as Level[]) {
+  // Gäller frågan en annan månad: svara för den månaden, eller säg att den ligger utanför.
+  const current = facts.months[0]?.key
+  const asked = current ? askedMonth(question, current) : null
+  const other = asked && asked !== current ? asked : null
+  const otherFacts = other ? facts.months.find((m) => m.key === other) : undefined
+  const say = (intent: Intent) => {
+    if (options.hideMoney && intent.money) return HIDDEN_MONEY
+    if (intent.answer === dayBriefAnswer) return dayBrief(facts, options)
+    if (!intent.monthly || !other) return intent.answer(facts, false)
+    return otherFacts ? intent.answer(withMonth(facts, otherFacts), true) : outsideMonths(facts, other)
+  }
+  for (const level of ['specific', 'broad', 'fallback', 'social'] as Level[]) {
     const hits = matches.filter((intent) => (intent.level ?? 'specific') === level)
     if (hits.length) return [...new Set(hits.slice(0, MAX_ANSWERS).map(say))].join(' ')
   }

@@ -934,7 +934,7 @@ main > div > h2 + .hint {
   justify-content: space-between;
 }
 
-/* Ikoner i menyn: syns i mobilens bottenmeny, döljs på större skärmar. */
+/* Ikoner i menyn: syns i mobilens bottenmeny och i sidomenyn på skrivbord, döljs på mellanstora skärmar. */
 .nav-icon {
   display: none;
   width: 1.35rem;
@@ -1125,8 +1125,21 @@ main > div > h2 + .hint {
 
 .category-row .row {
   flex: 1 1 auto;
+  gap: 0.6rem;
   min-width: 0;
   padding-right: 0.5rem;
+}
+
+/* Kategorinamnet klipps med … i stället för att radbrytas (Abonnemang på 375 px). Beloppet bryts aldrig. */
+.category-row .row > span:first-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.category-row .row-amount {
+  flex: none;
+  white-space: nowrap;
 }
 
 .item-add {
@@ -2729,6 +2742,23 @@ body.jarvis-locked {
   display: none;
 }
 
+/* Tonad kant till höger som visar att raden går att dra i sidled. Sista fliken får luft efter sig,
+   så att den inte ligger under toningen när raden är dragen hela vägen. */
+.sub-nav::after {
+  content: '';
+  position: sticky;
+  right: 0;
+  flex: none;
+  width: 2.25rem;
+  margin-left: -2.25rem;
+  background: linear-gradient(to right, transparent 40%, var(--bg));
+  pointer-events: none;
+}
+
+.sub-nav-item:last-child {
+  margin-right: 1.25rem;
+}
+
 .sub-nav-item {
   flex: none;
   min-height: 2.75rem;
@@ -2964,23 +2994,34 @@ body.jarvis-locked {
   margin: 0;
 }
 
-.news-mood-bar {
-  display: flex;
-  gap: 2px;
-  height: 6px;
-  overflow: hidden;
-  border-radius: 3px;
+/* Tonen som en tunn linje i varje knapp: linjens längd är andelen nyheter med den tonen (--share, 0–1). */
+.news-tone .seg {
+  position: relative;
+  min-height: 2.75rem;
+  padding-bottom: 0.7rem;
 }
 
-.news-mood-bar .pos {
-  background: var(--tone-pos);
+.news-tone .seg::after {
+  content: '';
+  position: absolute;
+  bottom: 0.35rem;
+  left: 0.6rem;
+  width: calc((100% - 1.2rem) * var(--share, 0));
+  height: 3px;
+  border-radius: 2px;
+  background: var(--tone-neu);
 }
 
-.news-mood-bar .neu {
+/* "Alla" bär ingen information: linjen syns bara svagt i den valda knappen */
+.news-tone .seg.alla::after {
   background: var(--border);
 }
 
-.news-mood-bar .neg {
+.news-tone .seg.positiv::after {
+  background: var(--tone-pos);
+}
+
+.news-tone .seg.negativ::after {
   background: var(--tone-neg);
 }
 
@@ -3237,6 +3278,7 @@ body.jarvis-locked {
   }
 
   .nav-item .nav-icon {
+    display: block;
     width: 1.3rem;
     height: 1.3rem;
   }

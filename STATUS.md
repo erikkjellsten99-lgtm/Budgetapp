@@ -12,6 +12,7 @@
    `erikkjellsten99-lgtm.github.io/groundwork/`; den installerade appen på telefonen pekar på den gamla adressen
    och måste installeras om. `README.md` nämner fortfarande Budgetapp-adressen.
 3. Öppna fliken Nyheter en gång och kontrollera i serverloggarna att alla fyra SVT-flöden kom fram.
+4. Lägg ut `reminders` tillsammans med inbox-filerna (priority, habits, tasks, dates, health) när PR #103 är mergad.
 
 ## Ekonomi
 - Fungerar: Översikt, Budget (månad för månad), Prognos med billån och extra på lånet, Sparmål (en uträkning i
