@@ -435,13 +435,16 @@ let budgetQueue: Promise<unknown> = Promise.resolve();
  */
 export function updateBudget(month: string, change: (categories: Category[]) => Category[]): Promise<void> {
   const next = budgetQueue.then(async () => {
-    const { categories } = await getBudget(month);
+    const { categories, from } = await getBudget(month);
     // Nästa månad ska inte följa med: utgår den från den här månaden får den först en egen
     // kopia av budgeten som den var. Då gäller ändringen bara den här månaden.
     const following = shiftMonth(month, 1);
     if ((await getBudget(following)).from !== following) {
+      // Den ärvda budgeten är utgångsläget om den andra telefonen också skapar månaden (budgetMerge.ts).
+      await setBudgetBaseIfMissing(following, categories);
       await putRecord('budgets', { month: following, categories } satisfies MonthBudget);
     }
+    if (from !== month) await setBudgetBaseIfMissing(month, categories);
     await putRecord('budgets', { month, categories: change(categories) } satisfies MonthBudget);
   });
   budgetQueue = next.catch(() => undefined);
@@ -466,6 +469,84 @@ export function saveCategories(month: string, changed: Category[]): Promise<void
 /** Tar bort en kategori ur månadens budget. Andra månader behåller den. */
 export function deleteCategory(month: string, id: string): Promise<void> {
   return updateBudget(month, (categories) => categories.filter((category) => category.id !== id));
+}
+
+// Utgångsläge för sammanslagning av budgeten (budgetMerge.ts)
+
+const BASE_PREFIX = 'base:budgets:';
+
+/**
+ * Den senaste versionen av en månads budget som också finns på servern. Används som
+ * utgångsläge när båda telefonerna har ändrat samma månad. Sparas i meta, inte i budgeten.
+ */
+export async function getBudgetBase(month: string): Promise<Category[] | undefined> {
+  return getMeta<Category[]>(BASE_PREFIX + month);
+}
+
+async function setBudgetBaseIfMissing(month: string, categories: Category[]): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction('meta', 'readwrite');
+    const meta = tx.objectStore('meta');
+    const existing = meta.get(BASE_PREFIX + month);
+    existing.onsuccess = () => {
+      if (!existing.result) meta.put({ key: BASE_PREFIX + month, value: categories });
+    };
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+/**
+ * Efter en lyckad synk: varje månad utan osända ändringar är samma här som på servern,
+ * och blir utgångsläget för nästa sammanslagning.
+ */
+export async function saveSyncedBudgetBases(): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(['budgets', 'outbox', 'meta'], 'readwrite');
+    const outbox = tx.objectStore('outbox');
+    const meta = tx.objectStore('meta');
+    const all = tx.objectStore('budgets').getAll();
+    all.onsuccess = () => {
+      for (const budget of all.result as MonthBudget[]) {
+        const pending = outbox.get(`budgets:${budget.month}`);
+        pending.onsuccess = () => {
+          if (!pending.result) meta.put({ key: BASE_PREFIX + budget.month, value: budget.categories });
+        };
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+/**
+ * Lägger in sammanslagna månader lokalt och i kön, men bara där inget har ändrats här sedan
+ * kön lästes (samma ts). Svarar med nycklarna som lades in.
+ */
+export async function applyMergedBudgets(entries: { key: string; ts: number; data: MonthBudget }[]): Promise<Set<string>> {
+  const db = await openDb();
+  const applied = new Set<string>();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(['budgets', 'outbox'], 'readwrite');
+    const outbox = tx.objectStore('outbox');
+    const budgets = tx.objectStore('budgets');
+    for (const entry of entries) {
+      const current = outbox.get(entry.key);
+      current.onsuccess = () => {
+        const row = current.result as OutboxEntry | undefined;
+        if (row?.ts !== entry.ts) return;
+        budgets.put(entry.data);
+        outbox.put({ ...row, data: entry.data });
+        applied.add(entry.key);
+      };
+    }
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  if (applied.size) emit('remote');
+  return applied;
 }
 
 // Transaktioner

@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { budgetMonth, deleteCategory, monthName, newId, saveCategories, saveCategory, updateBudget } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
+import { offerUndo, restoreAt } from './undo';
+import { useAmountInput } from './useAmountInput';
 import { CATEGORY_TYPES, type Category, type CategoryItem, type CategoryType } from './types';
 
 interface CategoriesProps {
@@ -34,8 +36,12 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
   }
 
   /** Ändrar raderna i en kategori och sätter kategorins budget till deras summa. */
-  async function updateItems(categoryId: string, change: (items: CategoryItem[], category: Category) => CategoryItem[]) {
-    await updateBudget(budgetMonth(), (list) =>
+  async function updateItems(
+    categoryId: string,
+    change: (items: CategoryItem[], category: Category) => CategoryItem[],
+    month = budgetMonth(),
+  ) {
+    await updateBudget(month, (list) =>
       list.map((category) => {
         if (category.id !== categoryId) return category;
         const items = change(category.items ?? [], category);
@@ -57,6 +63,28 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
       next.push({ id, name: '', amount: 0 });
       return next;
     });
+  }
+
+  /** Tar bort en rad och erbjuder Ångra, som lägger tillbaka raden på samma plats i samma månad. */
+  async function removeItem(category: Category, item: CategoryItem) {
+    const month = budgetMonth();
+    // Raden som den låg sparad precis innan, så att Ångra ger tillbaka exakt samma belopp och bock.
+    let removed: CategoryItem | undefined;
+    let index = -1;
+    await updateItems(
+      category.id,
+      (items) => {
+        index = items.findIndex((other) => other.id === item.id);
+        removed = items[index];
+        return items.filter((other) => other.id !== item.id);
+      },
+      month,
+    );
+    const restored = removed;
+    if (!restored) return;
+    offerUndo(`${restored.name.trim() || 'Raden'} togs bort`, () =>
+      updateItems(category.id, (items) => restoreAt(items, restored, index), month),
+    );
   }
 
   const [focusItem, setFocusItem] = useState<string | null>(null);
@@ -185,7 +213,7 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
                           onChange={(changed) =>
                             updateItems(category.id, (items) => items.map((other) => (other.id === changed.id ? changed : other)))
                           }
-                          onDelete={() => updateItems(category.id, (items) => items.filter((other) => other.id !== item.id))}
+                          onDelete={() => removeItem(category, item)}
                           onTogglePaid={() =>
                             updateItems(category.id, (items) =>
                               items.map((other) =>
@@ -242,31 +270,13 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
   );
 }
 
-/** Beloppet per månad för en kategori utan rader. Skrivs direkt och sparas medan du skriver. */
+/** Beloppet per månad för en kategori utan rader. Sparas när du lämnar fältet. */
 function AmountField({ category, onSave }: { category: Category; onSave: (amount: number) => void }) {
-  const [text, setText] = useState(toInputKr(category.monthlyBudget));
-  const amount = parseKr(text);
-  const ok = Number.isFinite(amount) && amount >= 0;
-
-  // Hämta nytt värde om beloppet har ändrats någon annanstans, t.ex. på den andra telefonen.
-  useEffect(() => {
-    if (parseKr(text) !== category.monthlyBudget) setText(toInputKr(category.monthlyBudget));
-  }, [category.monthlyBudget]);
-
+  const amount = useAmountInput(category.monthlyBudget, onSave);
   return (
     <label className="amount-field">
       Belopp per månad (kr)
-      <input
-        value={text}
-        inputMode="decimal"
-        placeholder="0"
-        aria-invalid={!ok}
-        onChange={(event) => {
-          setText(event.target.value);
-          const next = parseKr(event.target.value);
-          if (Number.isFinite(next) && next >= 0) onSave(next);
-        }}
-      />
+      <input {...amount.props} placeholder="0" aria-invalid={amount.invalid} />
     </label>
   );
 }
@@ -495,19 +505,14 @@ interface ItemRowProps {
   placeholder?: string;
 }
 
-/** En rad under en kategori: namn och belopp som skrivs direkt i listan. Sparas medan du skriver. */
+/** En rad under en kategori: namn och belopp som skrivs direkt i listan. Sparas när du lämnar fältet. */
 export function ItemRow({ item, handle, autoFocus, onChange, onDelete, onTogglePaid, placeholder }: ItemRowProps) {
   const [name, setName] = useState(item.name);
-  const [amountText, setAmountText] = useState(toInputKr(item.amount));
 
-  // Hämta nya värden om raden har ändrats på den andra telefonen.
+  // Hämta nytt namn om raden har ändrats på den andra telefonen.
   useEffect(() => setName(item.name), [item.name]);
-  useEffect(() => {
-    if (parseKr(amountText) !== item.amount) setAmountText(toInputKr(item.amount));
-  }, [item.amount]);
 
-  const amount = parseKr(amountText);
-  const amountOk = Number.isFinite(amount) && amount >= 0;
+  const amount = useAmountInput(item.amount, (next) => onChange({ ...item, name: name.trim(), amount: next }));
 
   return (
     <div className={isPaid(item) ? 'item-row paid' : 'item-row'}>
@@ -522,17 +527,11 @@ export function ItemRow({ item, handle, autoFocus, onChange, onDelete, onToggleP
         onBlur={() => name !== item.name && onChange({ ...item, name: name.trim() })}
       />
       <input
+        {...amount.props}
         className="item-amount"
-        value={amountText}
         placeholder="0"
-        inputMode="decimal"
         aria-label={`Belopp för ${name || 'raden'}`}
-        aria-invalid={!amountOk}
-        onChange={(event) => {
-          setAmountText(event.target.value);
-          const next = parseKr(event.target.value);
-          if (Number.isFinite(next) && next >= 0) onChange({ ...item, name: name.trim(), amount: next });
-        }}
+        aria-invalid={amount.invalid}
       />
       <button type="button" className="item-delete" aria-label={`Ta bort ${name || 'raden'}`} onClick={onDelete}>
         ×

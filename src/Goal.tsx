@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getGoals, onDataChange, saveGoal } from './db';
-import { formatKr, parseKr, toInputKr } from './money';
+import { formatKr } from './money';
+import { useAmountInput } from './useAmountInput';
 import type { Asset, SavingsGoal } from './types';
 
 /** Längsta prognosen som räknas fram, i månader (40 år). */
@@ -181,29 +182,13 @@ interface NumberFieldProps {
   onSave: (value: number) => void;
 }
 
-/** Ett sifferfält som sparas när du lämnar fältet. */
+/** Ett sifferfält som sparas när du lämnar fältet. Tomt eller ogiltigt ger tillbaka det gamla värdet. */
 function NumberField({ label, value, max, onSave }: NumberFieldProps) {
-  const [text, setText] = useState(toInputKr(value));
-  const parsed = parseKr(text);
-  const valid = Number.isFinite(parsed) && parsed >= 0 && (max === undefined || parsed <= max);
-
-  useEffect(() => setText(toInputKr(value)), [value]);
-
+  const field = useAmountInput(value, onSave, max);
   return (
     <label>
       {label}
-      <input
-        value={text}
-        inputMode="decimal"
-        placeholder="0"
-        aria-invalid={!valid}
-        onChange={(event) => {
-          setText(event.target.value);
-          const next = parseKr(event.target.value);
-          if (Number.isFinite(next) && next >= 0 && (max === undefined || next <= max)) onSave(next);
-        }}
-        onBlur={() => !valid && setText(toInputKr(value))}
-      />
+      <input {...field.props} placeholder="0" aria-invalid={field.invalid} />
     </label>
   );
 }
