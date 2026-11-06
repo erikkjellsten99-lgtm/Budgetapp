@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f4f5ef" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#111713" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f2f5f9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#070b14" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -16,7 +16,7 @@
         if (t === 'light' || t === 'dark') {
           document.documentElement.dataset.theme = t;
           document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
-            m.content = t === 'dark' ? '#111713' : '#f4f5ef';
+            m.content = t === 'dark' ? '#070b14' : '#f2f5f9';
           });
         }
       } catch (e) {}

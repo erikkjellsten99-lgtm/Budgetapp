@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import Account from './Account';
@@ -24,46 +24,91 @@ import { useLoanSplit } from './useLoanSplit';
 import Forecast from './Forecast';
 import Income from './Income';
 import Vanor from './vanor/Vanor';
+import Today from './Today';
 import { formatKr } from './money';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
-type View = 'overview' | 'vanor' | 'goal' | 'budget' | 'wishlist' | 'assets' | 'account';
+type View = 'idag' | 'overview' | 'vanor' | 'goal' | 'budget' | 'wishlist' | 'assets' | 'account';
+type Section = 'idag' | 'ekonomi' | 'vanor';
+type EconomyView = 'overview' | 'budget' | 'goal' | 'assets' | 'wishlist';
 
-/** Flikarna i menyn. Kort namn används i mobilens bottenmeny. */
-const VIEWS: { id: View; label: string; short: string; icon: string }[] = [
-  // Ikonerna är enkla linjer i ett 24×24-rutnät (SVG-sökvägar), ritade för appen.
-  { id: 'overview', label: 'Översikt', short: 'Översikt', icon: 'M4 11l8-7 8 7M6 9.5V20h4.5v-5.5h3V20H18V9.5' },
-  { id: 'budget', label: 'Inkomster & utgifter', short: 'Budget', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
-  { id: 'goal', label: 'Prognos & sparmål', short: 'Prognos', icon: 'M3 19l5.5-6 4 3.5L21 7M15 7h6v6' },
-  { id: 'assets', label: 'Tillgångar', short: 'Konton', icon: 'M3 7.5h18v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5zM3 7.5l2-3.5h14l2 3.5M16 14h2' },
-  { id: 'wishlist', label: 'Önskelista', short: 'Önskelista', icon: 'M12 20s-7.5-4.6-7.5-10.2A4.1 4.1 0 0 1 12 7.4a4.1 4.1 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z' },
-  { id: 'vanor', label: 'Vanor', short: 'Vanor', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12.2l2.7 2.6L16.2 9.4' },
+/**
+ * Huvudflikarna. Ekonomi är en flik med egna underflikar, så att fler huvudflikar
+ * (t.ex. Nyheter) får plats i menyn längre fram. Ikonerna är enkla linjer i ett 24×24-rutnät.
+ */
+const SECTIONS: { id: Section; label: string; icon: string }[] = [
+  { id: 'idag', label: 'Idag', icon: 'M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4 7 17M17 7l1.4-1.4M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
+  { id: 'ekonomi', label: 'Ekonomi', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
+  { id: 'vanor', label: 'Vanor', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12.2l2.7 2.6L16.2 9.4' },
 ];
 
-/** Senast öppnade flik, så att appen öppnas där du var. */
-function savedView(): View {
+/** Underflikarna i Ekonomi. */
+const ECONOMY: { id: EconomyView; label: string }[] = [
+  { id: 'overview', label: 'Översikt' },
+  { id: 'budget', label: 'Budget' },
+  { id: 'goal', label: 'Prognos' },
+  { id: 'assets', label: 'Konton' },
+  { id: 'wishlist', label: 'Önskelista' },
+];
+
+const isEconomy = (view: View): view is EconomyView => ECONOMY.some((item) => item.id === view);
+const sectionOf = (view: View): Section | null => (view === 'idag' || view === 'vanor' ? view : isEconomy(view) ? 'ekonomi' : null);
+
+function readStorage(key: string): string | null {
   try {
-    const saved = localStorage.getItem('view');
-    if (saved === 'traning') return 'vanor'; // Träning fanns en tid som egen flik.
-    if (saved === 'account' || VIEWS.some((item) => item.id === saved)) return saved as View;
+    return localStorage.getItem(key);
   } catch {
-    // Lagring kan vara avstängd, då börjar appen på översikten.
+    return null;
   }
-  return 'overview';
+}
+
+function writeStorage(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Lagring kan vara avstängd, då kommer appen bara inte ihåg fliken.
+  }
+}
+
+/** Senast öppnade flik, så att appen öppnas där du var. Första gången: Idag. */
+function savedView(): View {
+  const saved = readStorage('view');
+  if (saved === 'traning') return 'vanor'; // Träning fanns en tid som egen flik.
+  if (saved === 'account' || saved === 'idag' || saved === 'vanor' || (saved && isEconomy(saved as View))) return saved as View;
+  return 'idag';
+}
+
+/** Senaste underfliken i Ekonomi, så att Ekonomi öppnas där du var. */
+function savedEconomy(): EconomyView {
+  const saved = readStorage('ekonomi-flik') as View | null;
+  return saved && isEconomy(saved) ? saved : 'overview';
 }
 
 export default function App() {
   const [view, setView] = useState<View>(savedView);
   const [goal, setGoal] = useState<SavingsGoal | null>(null);
 
+  const [economyView, setEconomyView] = useState<EconomyView>(savedEconomy);
+  const section = sectionOf(view);
+
   function showView(next: View) {
     setView(next);
     window.scrollTo(0, 0);
-    try {
-      localStorage.setItem('view', next);
-    } catch {
-      // Inget att göra, fliken sparas bara inte.
+    writeStorage('view', next);
+    if (isEconomy(next)) {
+      setEconomyView(next);
+      writeStorage('ekonomi-flik', next);
     }
+  }
+
+  // Håll vald underflik synlig när raden inte får plats på smal skärm.
+  const subNav = useRef<HTMLElement>(null);
+  useEffect(() => {
+    subNav.current?.querySelector('.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [view, section]);
+
+  function showSection(next: Section) {
+    showView(next === 'ekonomi' ? economyView : next);
   }
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -124,19 +169,19 @@ export default function App() {
       <header className="app-header">
         <h1>Groundwork</h1>
         <nav className="app-nav" aria-label="Huvudmeny">
-          {VIEWS.map((item) => (
+          {SECTIONS.map((item) => (
             <button
               key={item.id}
               type="button"
-              className={item.id === view ? 'nav-item active' : 'nav-item'}
-              aria-current={item.id === view ? 'page' : undefined}
+              className={item.id === section ? 'nav-item active' : 'nav-item'}
+              aria-current={item.id === section ? 'page' : undefined}
               title={item.label}
-              onClick={() => showView(item.id)}
+              onClick={() => showSection(item.id)}
             >
               <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d={item.icon} />
               </svg>
-              <span className="nav-short-label">{item.short}</span>
+              <span className="nav-short-label">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -153,7 +198,25 @@ export default function App() {
         </button>
       </header>
       <main>
+        {section === 'ekonomi' && (
+          <nav className="sub-nav" aria-label="Ekonomi" ref={subNav}>
+            {ECONOMY.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={item.id === view ? 'sub-nav-item active' : 'sub-nav-item'}
+                aria-current={item.id === view ? 'page' : undefined}
+                onClick={() => showView(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        )}
         {/* Alla vyer ligger kvar i bakgrunden, så att summorna (t.ex. tillgångar) alltid är uppdaterade. */}
+        <div hidden={view !== 'idag'}>
+          <Today active={view === 'idag'} onOpen={showView} />
+        </div>
         <div hidden={view !== 'overview'}>
           <div className="view-intro">
             <MonthPicker month={selectedMonth} onChange={changeMonth} />

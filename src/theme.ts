@@ -5,7 +5,7 @@
 export type Theme = 'auto' | 'light' | 'dark'
 
 const KEY = 'groundwork-tema'
-const BAR = { light: '#f4f5ef', dark: '#111713' }
+const BAR = { light: '#f2f5f9', dark: '#070b14' }
 
 export function getTheme(): Theme {
   try {
