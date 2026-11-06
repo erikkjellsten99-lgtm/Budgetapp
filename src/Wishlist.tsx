@@ -29,6 +29,16 @@ export function splitWishes(items: Wish[], month: string): { open: Wish[]; bough
   return { open, bought };
 }
 
+/** Summan av det som inte är köpt (ingen månad alls). Det som är köpt, den här eller en annan månad, räknas inte. */
+export function sumLeftToBuy(wishes: Wish[]): number {
+  return wishes.filter((wish) => !wish.paidMonth).reduce((sum, wish) => sum + wish.amount, 0);
+}
+
+/** Något är köpt. Annars är "Kvar att köpa" samma som summan och visas inte. */
+export function hasBought(wishes: Wish[]): boolean {
+  return wishes.some((wish) => !!wish.paidMonth);
+}
+
 function byOrder(a: Wish, b: Wish): number {
   return (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER) || a.name.localeCompare(b.name, 'sv');
 }
@@ -123,6 +133,7 @@ export default function Wishlist({ wishes, onChanged }: WishlistProps) {
             ? `Ikryssat ${formatKr(checkedTotal)} · räknas i rörliga utgifter`
             : 'Inget ikryssat den här månaden'}
         </p>
+        {hasBought(wishes) && <p className="paid-summary">Kvar att köpa: {formatKr(sumLeftToBuy(wishes))}</p>}
         <ul className="category-list">
           {WISH_LISTS.map(({ id, label }) => {
             const items = wishes.filter((wish) => wish.list === id).sort(byOrder);
@@ -151,6 +162,7 @@ export default function Wishlist({ wishes, onChanged }: WishlistProps) {
                     +
                   </button>
                 </div>
+                {hasBought(items) && <p className="wish-left">Kvar att köpa: {formatKr(sumLeftToBuy(items))}</p>}
                 {open && current.length > 0 && (
                   <SortableList
                     items={current}

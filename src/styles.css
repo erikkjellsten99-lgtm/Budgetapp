@@ -2241,3 +2241,12 @@ main > div > h2 + .hint {
   min-height: 2.75rem;
   white-space: nowrap;
 }
+
+/* Önskelista: "Kvar att köpa" under listans summa */
+.wish-left {
+  margin: -0.35rem 0 0;
+  padding: 0 1rem 0.6rem 3.4rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
