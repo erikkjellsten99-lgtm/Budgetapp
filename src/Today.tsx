@@ -18,6 +18,17 @@ function greeting(hour: number): string {
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 const isNegative = (amount: string) => /^[−-]/.test(amount);
 
+/** Så många obetalda poster nämns på raden; resten blir "och 2 till". */
+const UNPAID_SHOWN = 3;
+
+/** "Hyra, El och 2 till", eller alla namn när de är få. */
+function unpaidNames(unpaid: NonNullable<SummaryFacts['unpaid']>): string {
+  const names = unpaid.items.slice(0, UNPAID_SHOWN).map((item) => item.name);
+  const more = unpaid.items.length - names.length;
+  if (more > 0) return `${names.join(', ')} och ${more} till`;
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} och ${names[names.length - 1]}` : names.join('');
+}
+
 /**
  * Idag: startsidan. Visar dagens viktigaste siffror och leder vidare till rätt flik.
  * Siffrorna kommer från summaryFacts (jarvis.ts), samma uträkning som Översikt, Sparmål och Siri.
@@ -135,8 +146,20 @@ function TodayGroups({ facts, onOpen }: { facts: SummaryFacts; onOpen: (target: 
         <h3 className="group-title" id="today-group-idag">
           Idag
         </h3>
-        {hasToday ? (
+        {(hasToday || facts.unpaid) && (
           <div className="group">
+            {/* Kvar att betala: det som inte är bockat som betalt i Budget den här månaden. Ingen budget: ingen rad. */}
+            {facts.unpaid && (
+              <button type="button" className="group-row" onClick={() => onOpen('budget')}>
+                <span className="row-main">
+                  <span className="row-name">Kvar att betala</span>
+                  <span className="row-sub">
+                    {facts.unpaid.items.length ? unpaidNames(facts.unpaid) : 'Allt är bockat som betalt i Budget.'}
+                  </span>
+                </span>
+                <span className="row-value">{facts.unpaid.items.length ? facts.unpaid.total : 'Klart'}</span>
+              </button>
+            )}
             {facts.total > 0 && (
               <button type="button" className="group-row" onClick={() => onOpen('vanor')}>
                 <span className="row-main">
@@ -165,7 +188,8 @@ function TodayGroups({ facts, onOpen }: { facts: SummaryFacts; onOpen: (target: 
               </button>
             ))}
           </div>
-        ) : (
+        )}
+        {!hasToday && (
           <div className="empty">
             <p>Inga vanor eller att göra än.</p>
             <button type="button" className="primary" onClick={() => onOpen('vanor')}>

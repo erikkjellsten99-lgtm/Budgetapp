@@ -4,13 +4,14 @@
 // - Sparmål: saldo, procent och när målet nås (goalPlan.ts)
 // - Billån: kvar och nästa månads betalning med extra på lånet (forecast.ts, som Prognos)
 // - Önskelista: summan och kvar att köpa (wishes.ts)
+// - Kvar att betala: budgetposter som inte är markerade betalda i månaden (paidThisMonth, som Budget och galaxen)
 // - Vanor: Att göra, måsten och vad som bör göras först (priority.ts), och hälsa (health.ts)
 // Läser bara. Rena funktioner, tester i summary.test.ts.
 
 import { forecast, type Loan } from './forecast.ts'
 import { goalCurrent, goalRows, goalStatus, planGoal, monthInput } from './goalPlan.ts'
 import { formatKr } from './money.ts'
-import { monthName, shiftMonth, type MonthPlan } from './months.ts'
+import { monthName, paidThisMonth, shiftMonth, type MonthPlan } from './months.ts'
 import type { Asset, SavingsGoal, Wish } from './types.ts'
 import { sumLeftToBuy, sumPaidIn } from './wishes.ts'
 import { firstThing, type Priority } from './priority.ts'
@@ -70,6 +71,16 @@ export interface MonthFacts {
   plannedSavings: string
 }
 
+/** Det som är kvar att betala av månadens budget, i kronor, per kategori med en budget. */
+export function unpaidNumbers(plan: MonthPlan) {
+  const budgeted = plan.categories.filter((c) => c.monthlyBudget > 0)
+  const items = budgeted
+    .map((c) => ({ name: c.name, left: c.monthlyBudget - paidThisMonth(c, plan.month) }))
+    .filter((c) => c.left > 0)
+    .sort((a, b) => b.left - a.left)
+  return { hasBudget: budgeted.length > 0, items, total: items.reduce((s, c) => s + c.left, 0) }
+}
+
 /** Hur många månader framåt (räknat med innevarande) som Jarvis kan svara om. */
 export const MONTHS_AHEAD = 12
 
@@ -90,6 +101,11 @@ export interface SummaryFacts {
   goal: { name: string; current: string; target: string; percent: number; status: string } | null
   loan: { name: string; left: string; payment: string; nextMonth: string; extra: string | null } | null
   wishes: { total: string; leftToBuy: string }
+  /**
+   * Innevarande månads budgetposter som inte är markerade betalda, störst först, med det som är kvar av varje
+   * (en kategori med rader kan vara delvis betald). Tom lista när allt är betalt, null när budgeten är tom.
+   */
+  unpaid: { total: string; items: { name: string; left: string }[] } | null
   /** Att göra idag och försenat, t.ex. "Ringa tandläkaren 14:00". */
   tasks: string[]
   paused: boolean
@@ -131,6 +147,12 @@ export function summaryFacts(input: SummaryInput): SummaryFacts {
     }
   }
 
+  // Kvar att betala: det som inte är markerat betalt i Budget den här månaden
+  const u = unpaidNumbers(now)
+  const unpaid: SummaryFacts['unpaid'] = u.hasBudget
+    ? { total: formatKr(u.total), items: u.items.map((c) => ({ name: c.name, left: formatKr(c.left) })) }
+    : null
+
   // Dagen i Vanor
   const habits = daySummary(p.rows.map((r) => r.info))
   const doneTasks = doneToday(tasks, today).length
@@ -164,6 +186,7 @@ export function summaryFacts(input: SummaryInput): SummaryFacts {
     goal: goalFacts,
     loan: loanFacts,
     wishes: { total: formatKr(wishes.reduce((s, w) => s + w.amount, 0)), leftToBuy: formatKr(sumLeftToBuy(wishes)) },
+    unpaid,
     tasks: p.tasksDue.map((t) => (t.time ? `${t.title} ${t.time}` : t.title)),
     paused: p.pausedToday,
     must: p.must.map((r) => r.habit.name),

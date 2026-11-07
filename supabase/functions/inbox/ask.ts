@@ -113,6 +113,16 @@ function outsideMonths(f: SummaryFacts, key: string): string {
   const last = f.months[f.months.length - 1]?.month ?? f.month
   return `${name.charAt(0).toUpperCase()}${name.slice(1)} kan jag inte svara om. Jag har siffror för ${first} till ${last}.`
 }
+/** Kvar att betala i månaden enligt bockarna i Budget. */
+export function unpaidText(f: SummaryFacts): string {
+  if (!f.unpaid) return `Det finns ingen budget för ${f.month} i Groundwork.`
+  if (!f.unpaid.items.length) return `Allt i budgeten är markerat som betalt i ${f.month}.`
+  const shown = f.unpaid.items.slice(0, 3).map((c) => `${c.name} ${c.left}`)
+  const more = f.unpaid.items.length - shown.length
+  const names = more > 0 ? `${shown.join(', ')} och ${more} till` : list(shown)
+  return `Kvar att betala i ${f.month}: ${f.unpaid.total}. ${names}.`
+}
+
 const mustText = (f: SummaryFacts) => {
   if (f.paused) return 'Du har pausat idag, så inga vanor måste göras.'
   const must = f.must.length ? `Måste göras idag: ${list(f.must)}.` : 'Inget måste göras idag.'
@@ -182,6 +192,12 @@ const INTENTS: Intent[] = [
     answer: (f) => `Önskelistan är ${f.wishes.total} totalt, och kvar att köpa är ${f.wishes.leftToBuy}.`,
   },
   {
+    // Inte " betalt": det träffar "betalning" ("nästa betalning på lånet") med ett stavfel. " betalat" täcker "betalt".
+    words: [' obetal', ' betalat', ' kvar att betala', ' ska betalas', ' räkningar kvar'],
+    money: true,
+    answer: unpaidText,
+  },
+  {
     words: [' att göra', ' uppgift', ' påminn', ' kalender', ' schema', ' planerat idag', ' inbokat'],
     answer: (f) => (f.tasks.length ? `Att göra idag: ${list(f.tasks)}.` : 'Inget att göra idag.'),
   },
@@ -225,7 +241,7 @@ const INTENTS: Intent[] = [
   {
     words: [' vem är du', ' vad är du', ' vad kan du', ' vad gör du', ' hjälp', ' vad kan jag fråga'],
     answer: () =>
-      'Jag är Jarvis i Groundwork. Jag kan svara på vad som blir över, inkomster, kostnader, sparmålet, billånet, önskelistan, vad du ska göra idag, vanorna, sömn, steg och vilopuls. Jag läser bara och ändrar ingenting.',
+      'Jag är Jarvis i Groundwork. Jag kan svara på vad som blir över, inkomster, kostnader, vad som är obetalt, sparmålet, billånet, önskelistan, vad du ska göra idag, vanorna, sömn, steg och vilopuls. Jag läser bara och ändrar ingenting.',
     level: 'social',
   },
   {

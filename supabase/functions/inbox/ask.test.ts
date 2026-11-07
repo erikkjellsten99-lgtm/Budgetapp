@@ -183,3 +183,52 @@ describe('hälsningar tar inte över frågan', () => {
     expect(ask('God morgon')).toMatch(/^Hej! Jag är Jarvis/)
   })
 })
+
+describe('Kvar att betala (bockarna i Budget)', () => {
+  const withBudget = (categories: SummaryInput['plans'][number]['categories']) =>
+    summaryFacts({ ...input, plans: input.plans.map((p) => ({ ...p, categories })) })
+
+  it('obetalda poster, störst först, med det som är kvar av varje', () => {
+    const f = withBudget([
+      { id: 'hyra', name: 'Hyra', type: 'fixed', monthlyBudget: 8500 },
+      { id: 'el', name: 'El', type: 'fixed', monthlyBudget: 600, paidMonth: '2026-11' },
+      {
+        id: 'ovr', name: 'Övriga kostnader', type: 'variable', monthlyBudget: 300,
+        items: [{ id: 'c', name: 'Claude', amount: 200, paidMonth: '2026-11' }, { id: 'g', name: 'ChatGPT', amount: 100 }],
+      },
+      { id: 'spar', name: 'Gemensamt sparande', type: 'savings', monthlyBudget: 2000, paidMonth: '2026-10' },
+      { id: 'noll', name: 'Tom', type: 'fixed', monthlyBudget: 0 },
+    ])
+    expect(f.unpaid).toEqual({
+      total: formatKr(10600),
+      items: [
+        { name: 'Hyra', left: formatKr(8500) },
+        { name: 'Gemensamt sparande', left: formatKr(2000) },
+        { name: 'Övriga kostnader', left: formatKr(100) },
+      ],
+    })
+    expect(answer('Vad är obetalt?', f)).toBe(
+      `Kvar att betala i november 2026: ${formatKr(10600)}. Hyra ${formatKr(8500)}, Gemensamt sparande ${formatKr(2000)} och Övriga kostnader ${formatKr(100)}.`,
+    )
+  })
+
+  it('fler än tre poster: de tre största och hur många till', () => {
+    const f = withBudget(['A', 'B', 'C', 'D', 'E'].map((name, i) => ({ id: name, name, type: 'fixed' as const, monthlyBudget: 100 * (i + 1) })))
+    expect(answer('vad har vi kvar att betala', f)).toBe(
+      `Kvar att betala i november 2026: ${formatKr(1500)}. E ${formatKr(500)}, D ${formatKr(400)}, C ${formatKr(300)} och 2 till.`,
+    )
+  })
+
+  it('allt betalt, och ingen budget', () => {
+    const paid = withBudget([{ id: 'hyra', name: 'Hyra', type: 'fixed', monthlyBudget: 8500, paidMonth: '2026-11' }])
+    expect(paid.unpaid).toEqual({ total: formatKr(0), items: [] })
+    expect(answer('Har vi betalat allt?', paid)).toBe('Allt i budgeten är markerat som betalt i november 2026.')
+    expect(answer('obetalt', withBudget([]))).toBe('Det finns ingen budget för november 2026 i Groundwork.')
+  })
+
+  it('döljs i visningsläget, och "nästa betalning" på lånet räknas inte', () => {
+    expect(answer('Vad är obetalt?', facts, { hideMoney: true })).toBe(HIDDEN_MONEY)
+    expect(ask('När är nästa betalning på lånet?')).not.toContain('Kvar att betala')
+    expect(ask('Vad är obetalt?')).toBe(`Kvar att betala i november 2026: ${facts.unpaid!.total}. Hem & hushåll ${formatKr(27269)}.`)
+  })
+})
