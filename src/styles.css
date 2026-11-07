@@ -2510,65 +2510,9 @@ body.jarvis-locked {
 }
 
 /* Underflikarna i Ekonomi (App.tsx) */
-.sub-nav {
-  position: sticky;
-  z-index: 5;
-  top: 0;
-  display: flex;
-  gap: 0.25rem;
-  margin: -0.5rem -1.25rem 1rem;
-  padding: 0.5rem 1.25rem;
-  overflow-x: auto;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  scrollbar-width: none;
-}
-
-.sub-nav::-webkit-scrollbar {
-  display: none;
-}
 
 /* Tonad kant till höger som visar att raden går att dra i sidled. Sista fliken får luft efter sig,
    så att den inte ligger under toningen när raden är dragen hela vägen. */
-.sub-nav::after {
-  content: '';
-  position: sticky;
-  right: 0;
-  flex: none;
-  width: 2.25rem;
-  margin-left: -2.25rem;
-  background: linear-gradient(to right, transparent 40%, var(--bg));
-  pointer-events: none;
-}
-
-.sub-nav-item:last-child {
-  margin-right: 1.25rem;
-}
-
-.sub-nav-item {
-  flex: none;
-  min-height: 2.75rem;
-  padding: 0.45rem 0.9rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 0.92rem;
-  font-weight: 600;
-}
-
-.sub-nav-item.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-@media (max-width: 639px) {
-  .sub-nav {
-    margin: -0.5rem -1rem 0.9rem;
-    padding: 0.5rem 1rem;
-  }
-}
 
 /* Idag (Today.tsx) */
 .today .eyebrow {
@@ -2613,7 +2557,7 @@ body.jarvis-locked {
 
 /* Nyheter (Nyheter.tsx) */
 .news {
-  --tone-pos: var(--accent);
+  --tone-pos: var(--pine);
   --tone-neg: var(--danger);
   --tone-neu: var(--muted);
 }
@@ -2639,17 +2583,43 @@ body.jarvis-locked {
   color: var(--accent);
 }
 
+/* Ämnena som chips; raden rullar i sidled om den inte får plats */
 .news-topics {
-  margin-top: 0;
-  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem -1rem 1rem;
+  padding: 0 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.news-topics::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.chip.active {
+  border-color: var(--cobalt);
+  background: var(--cobalt);
+  color: var(--surface);
 }
 
 .news-notice {
   margin: 0 0 0.75rem;
   padding: 0.6rem 0.8rem;
-  border: 1px solid var(--border);
   border-radius: var(--radius-control);
-  background: var(--card);
+  background: var(--surface);
   color: var(--muted);
   font-size: 0.88rem;
 }
@@ -2696,14 +2666,26 @@ body.jarvis-locked {
   background: var(--tone-neg);
 }
 
+/* Nyheterna som rader i en grupp; två spalter på skrivbord */
 .news-list {
   display: grid;
-  gap: 0.65rem;
+}
+
+.news-item + .news-item {
+  border-top: 1px solid var(--line);
 }
 
 @media (min-width: 900px) {
   .news-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .news-item:nth-child(2) {
+    border-top: 0;
+  }
+
+  .news-item:nth-child(even) {
+    border-left: 1px solid var(--line);
   }
 }
 
@@ -2713,14 +2695,6 @@ body.jarvis-locked {
   gap: 0.45rem;
   margin: 0;
   padding: 0.9rem 1rem;
-}
-
-.news-item.positiv {
-  box-shadow: inset 3px 0 0 var(--tone-pos);
-}
-
-.news-item.negativ {
-  box-shadow: inset 3px 0 0 var(--tone-neg);
 }
 
 .news-meta {
@@ -2798,12 +2772,6 @@ body.jarvis-locked {
   font-size: 0.78rem;
 }
 
-.news-skeleton {
-  min-height: 8rem;
-  opacity: 0.6;
-}
-
-.news-empty,
 .news-foot {
   margin: 1rem 0 0;
   color: var(--muted);
@@ -2969,9 +2937,7 @@ body.jarvis-locked {
     padding: 1.75rem 2rem 3rem;
   }
 
-  .sub-nav {
-    margin-top: -0.5rem;
-  }
+  
 }
 
 /* ---------- Finputs: tryck, fokus och övergångar ---------- */
@@ -2980,8 +2946,7 @@ body.jarvis-locked {
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
 }
 
-.nav-item:active,
-.sub-nav-item:active {
+.nav-item:active {
   transform: scale(0.985);
 }
 

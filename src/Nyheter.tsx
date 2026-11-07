@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
-import { ago, cachedNews, clock, fetchNews, TOPICS, type NewsResult, type NewsTopic, type Tone } from './news';
+import { cachedNews, clock, fetchNews, newsMeta, TOPICS, type NewsResult, type NewsTopic, type Tone } from './news';
 
 const FRESH = 10 * 60 * 1000;
 const TONE_LABEL: Record<Tone, string> = { positiv: 'Positiv', negativ: 'Negativ', neutral: 'Neutral' };
@@ -41,7 +41,7 @@ export default function Nyheter({ active }: { active: boolean }) {
     <div className="news">
       <div className="view-intro news-intro">
         <div>
-          <p className="eyebrow">{news ? `Uppdaterad ${clock(news.updated)} · SVT` : 'SVT'}</p>
+          <p className="eyebrow">{news ? `Uppdaterad ${clock(news.updated)}, SVT` : 'SVT'}</p>
           <h2>Nyheter</h2>
         </div>
         <button type="button" className="news-refresh" onClick={load} disabled={loading}>
@@ -49,12 +49,12 @@ export default function Nyheter({ active }: { active: boolean }) {
         </button>
       </div>
 
-      <nav className="sub-nav news-topics" aria-label="Ämnen">
+      <nav className="news-topics" aria-label="Ämnen">
         {[{ id: 'alla' as const, label: 'Alla' }, ...TOPICS].map((t) => (
           <button
             key={t.id}
             type="button"
-            className={t.id === topic ? 'sub-nav-item active' : 'sub-nav-item'}
+            className={t.id === topic ? 'chip active' : 'chip'}
             aria-pressed={t.id === topic}
             onClick={() => setTopic(t.id)}
           >
@@ -63,10 +63,18 @@ export default function Nyheter({ active }: { active: boolean }) {
         ))}
       </nav>
 
-      {failed && (
+      {failed && news && (
         <p className="news-notice" role="status">
-          {news ? `Kunde inte hämta nya nyheter. Visar de från ${clock(news.updated)}.` : 'Nyheterna gick inte att hämta. Kontrollera uppkopplingen och försök igen.'}
+          Kunde inte hämta nya nyheter. Visar de från {clock(news.updated)}.
         </p>
+      )}
+      {failed && !news && (
+        <div className="empty" role="alert">
+          <p>Nyheterna gick inte att hämta. Kontrollera uppkopplingen.</p>
+          <button type="button" className="primary" onClick={load} disabled={loading}>
+            Försök igen
+          </button>
+        </div>
       )}
       {news && news.missing.length > 0 && (
         <p className="news-notice">{news.missing.map(topicLabel).join(', ')} gick inte att hämta just nu.</p>
@@ -98,48 +106,55 @@ export default function Nyheter({ active }: { active: boolean }) {
       )}
 
       {!news && !failed && (
-        <div className="news-list" aria-busy="true">
-          <div className="card news-item news-skeleton" />
-          <div className="card news-item news-skeleton" />
-          <div className="card news-item news-skeleton" />
+        <div className="group news-list" aria-busy="true" aria-label="Laddar">
+          <span className="skeleton-row" />
+          <span className="skeleton-row" />
+          <span className="skeleton-row" />
+          <span className="skeleton-row" />
         </div>
       )}
 
       {news && shown.length === 0 && !loading && (
-        <p className="news-empty">
-          {tone === 'alla'
-            ? `Inga nyheter om ${topic === 'alla' ? 'de här ämnena' : topicLabel(topic).toLowerCase()} just nu.`
-            : `Inga ${tone === 'positiv' ? 'positiva' : 'negativa'} nyheter${topic === 'alla' ? '' : ` om ${topicLabel(topic).toLowerCase()}`} just nu.`}
-        </p>
+        <div className="empty">
+          <p>
+            {tone === 'alla'
+              ? `Inga nyheter om ${topic === 'alla' ? 'de här ämnena' : topicLabel(topic).toLowerCase()} just nu.`
+              : `Inga ${tone === 'positiv' ? 'positiva' : 'negativa'} nyheter${topic === 'alla' ? '' : ` om ${topicLabel(topic).toLowerCase()}`} just nu.`}
+          </p>
+          {(topic !== 'alla' || tone !== 'alla') && (
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                setTopic('alla');
+                setTone('alla');
+              }}
+            >
+              Visa alla nyheter
+            </button>
+          )}
+        </div>
       )}
 
-      <div className="news-list">
-        {shown.map((item) => (
-          <article key={item.id} className={`card news-item ${item.tone}`}>
-            <p className="news-meta">
-              <span>{topicLabel(item.topic)}</span>
-              <span aria-hidden="true">·</span>
-              <span>{item.source}</span>
-              {item.published > 0 && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <time dateTime={new Date(item.published).toISOString()}>{ago(item.published)}</time>
-                </>
-              )}
-            </p>
-            <h3 className="news-title">
-              <a href={item.link} target="_blank" rel="noopener noreferrer">
-                {item.title}
-              </a>
-            </h3>
-            {item.summary && <p className="news-summary">{item.summary}</p>}
-            <p className="news-tone-row">
-              <span className={`news-badge ${item.tone}`}>{TONE_LABEL[item.tone]}</span>
-              {item.because.length > 0 && <span className="news-because">{item.because.join(', ')}</span>}
-            </p>
-          </article>
-        ))}
-      </div>
+      {shown.length > 0 && (
+        <div className="group news-list">
+          {shown.map((item) => (
+            <article key={item.id} className={`news-item ${item.tone}`}>
+              <p className="news-meta">{newsMeta(item, { withTopic: topic === 'alla' })}</p>
+              <h3 className="news-title">
+                <a href={item.link} target="_blank" rel="noopener noreferrer">
+                  {item.title}
+                </a>
+              </h3>
+              {item.summary && <p className="news-summary">{item.summary}</p>}
+              <p className="news-tone-row">
+                <span className={`news-badge ${item.tone}`}>{TONE_LABEL[item.tone]}</span>
+                {item.because.length > 0 && <span className="news-because">{item.because.join(', ')}</span>}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
 
       <p className="news-foot">
         Rubrikerna kommer från SVT:s öppna RSS-flöden. Tonen bedöms automatiskt med svenska ordlistor, inte AI, och kan ha fel.
