@@ -1,4 +1,4 @@
-import { formatKr } from './money';
+import { formatKrOre } from './money';
 
 // Små hjälpfunktioner för visning i Investeringar och innehavets kursgraf.
 
@@ -7,9 +7,11 @@ export function shortDate(date: string): string {
   return new Date(`${date}T12:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace(/\.$/, '');
 }
 
-/** Belopp med plustecken för vinst, t.ex. "+199,39 kr". */
+/** Belopp avrundat till öre med tecken, t.ex. "+199,39 kr" eller "−1 042 kr" (riktigt minustecken). 0 får inget tecken. */
 export function signedKr(amount: number): string {
-  return amount > 0 ? `+${formatKr(amount)}` : formatKr(amount);
+  const ore = Math.round(amount * 100) / 100;
+  if (ore === 0) return formatKrOre(0);
+  return ore > 0 ? `+${formatKrOre(ore)}` : `\u2212${formatKrOre(-ore)}`;
 }
 
 /** "250 000" som "250 tkr", "1 500 000" som "1,5 mkr". */

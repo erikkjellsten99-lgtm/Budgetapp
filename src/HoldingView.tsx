@@ -3,7 +3,7 @@ import { deleteHolding, deleteTrade, getAssets, newId, saveHoldingWithTrade, sav
 import { formatKr, formatKrOre, formatPct, parseKr, toInputKr } from './money';
 import { searchTicker } from './prices';
 import { niceStep, shortDate, signedKr } from './chartUtil';
-import { longDate, parseQuantity, rangeStart, tradeError, type PriceRange } from './tradeForm';
+import { deleteError, longDate, parseQuantity, rangeStart, swedishDates, tradeError, type PriceRange } from './tradeForm';
 import { priceOn, type HoldingSummary } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset, Holding, HoldingType, PricePoint, Trade } from './types';
 
@@ -64,6 +64,10 @@ export default function HoldingView({ row, trades, prices, onBack }: HoldingView
         )
       ) : (
         <PriceChart points={points} trades={mine} firstDate={firstDate} />
+      )}
+
+      {row.invalid && (
+        <p className="error">{swedishDates(row.invalid)} Ändra eller ta bort en affär så att värdet kan räknas.</p>
       )}
 
       <section className="group-block" aria-label="Nyckeltal">
@@ -281,6 +285,7 @@ function TradeForm({ holding, trades, side, trade, onDone }: TradeFormProps) {
   const [feeText, setFeeText] = useState(toInputKr(trade?.fee));
   const [touched, setTouched] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const draft: Trade = {
     id,
@@ -327,6 +332,7 @@ function TradeForm({ holding, trades, side, trade, onDone }: TradeFormProps) {
       </label>
       {error && (touched || trade) && <p className="error">{error}</p>}
       {saveError && <p className="error">Det gick inte att spara. Försök igen.</p>}
+      {removeError && <p className="error">{removeError}</p>}
       <div className="actions">
         <button type="submit" className="primary" disabled={error !== null}>
           Spara
@@ -339,6 +345,10 @@ function TradeForm({ holding, trades, side, trade, onDone }: TradeFormProps) {
             type="button"
             className="danger"
             onClick={() => {
+              // En senare försäljning får inte bli större än innehavet när affären försvinner
+              const problem = deleteError(trades, trade.id);
+              setRemoveError(problem);
+              if (problem) return;
               if (confirm('Ta bort affären?')) void deleteTrade(trade.id).then(onDone);
             }}
           >

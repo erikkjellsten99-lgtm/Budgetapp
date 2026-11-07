@@ -121,12 +121,17 @@ export interface HoldingSummary {
   holding: Holding;
   position: Position;
   quote: Quote;
-  /** Antal gånger kurs i kronor. Null om kurs saknas. */
+  /** Antal gånger kurs i kronor. Null om kurs saknas eller affärerna inte går ihop. 0 för ett helt sålt innehav. */
   value: number | null;
   /** Värde minus investerat belopp. */
   change: number | null;
   /** Förändring delat med investerat belopp. Null om inget är investerat. */
   changePct: number | null;
+  /**
+   * Felmeddelandet från validateTrades när affärerna säljer fler andelar än som ägs, annars null.
+   * Kan hända när en affär tas bort eller ändras på andra telefonen. Då räknas inget värde.
+   */
+  invalid: string | null;
 }
 
 /** Ett nyckeltalsblock per innehav, räknat på läget `today`. */
@@ -137,15 +142,15 @@ export function summarize(
   today: string,
 ): HoldingSummary[] {
   return holdings.map((holding) => {
-    const pos = position(
-      trades.filter((t) => t.holdingId === holding.id),
-      today,
-    );
+    const own = trades.filter((t) => t.holdingId === holding.id);
+    const pos = position(own, today);
     const q = quote(holding, (holding.ticker && prices[holding.ticker]) || [], today);
-    const value = q.price === null ? null : pos.quantity * q.price;
+    const invalid = validateTrades(own);
+    // Ett helt sålt innehav är värt 0 även utan kurs. Affärer som inte går ihop ger inget värde alls.
+    const value = invalid !== null ? null : pos.quantity === 0 ? 0 : q.price === null ? null : pos.quantity * q.price;
     const change = value === null ? null : value - pos.invested;
     const changePct = change === null || pos.invested === 0 ? null : change / pos.invested;
-    return { holding, position: pos, quote: q, value, change, changePct };
+    return { holding, position: pos, quote: q, value, change, changePct, invalid };
   });
 }
 
@@ -159,7 +164,7 @@ export interface PortfolioTotals {
   /** Antal innehav utan kurs. */
   missing: number;
   /** Äldsta kursdatum bland innehav med marknadskurs. */
-  latestDate: string | null;
+  oldestPriceDate: string | null;
 }
 
 /** Summerar raderna. Värde, förändring och procent räknas bara på rader med kurs. */
@@ -170,7 +175,7 @@ export function totals(rows: HoldingSummary[]): PortfolioTotals {
   let value = 0;
   let valuedInvested = 0;
   let valued = 0;
-  let latestDate: string | null = null;
+  let oldestPriceDate: string | null = null;
   for (const r of rows) {
     invested += r.position.invested;
     realized += r.position.realized;
@@ -182,10 +187,10 @@ export function totals(rows: HoldingSummary[]): PortfolioTotals {
       valued++;
     }
     const d = r.quote.source === 'market' ? r.quote.date : null;
-    if (d !== null && (latestDate === null || d < latestDate)) latestDate = d;
+    if (d !== null && (oldestPriceDate === null || d < oldestPriceDate)) oldestPriceDate = d;
   }
   if (valued === 0) {
-    return { invested, value: null, change: null, changePct: null, realized, missing, latestDate };
+    return { invested, value: null, change: null, changePct: null, realized, missing, oldestPriceDate };
   }
   const change = value - valuedInvested;
   return {
@@ -195,7 +200,7 @@ export function totals(rows: HoldingSummary[]): PortfolioTotals {
     changePct: valuedInvested === 0 ? null : change / valuedInvested,
     realized,
     missing,
-    latestDate,
+    oldestPriceDate,
   };
 }
 
@@ -260,6 +265,10 @@ export function valueOverTime(
   today: string,
 ): SeriesPoint[] {
   if (trades.length === 0) return [];
+  // Innehav vars affärer inte går ihop (validateTrades) lämnas utanför som ett innehav utan kurs.
+  const invalid = new Set(
+    holdings.filter((h) => validateTrades(trades.filter((t) => t.holdingId === h.id)) !== null).map((h) => h.id),
+  );
   const first = trades.reduce((min, t) => (t.date < min ? t.date : min), trades[0].date);
   const currentMonth = today.slice(0, 7);
   const dates: string[] = [];
@@ -276,6 +285,10 @@ export function valueOverTime(
         trades.filter((t) => t.holdingId === h.id),
         date,
       );
+      if (invalid.has(h.id)) {
+        held++;
+        continue;
+      }
       if (pos.quantity <= 0) {
         invested += pos.invested;
         continue;
@@ -296,7 +309,7 @@ export function valueOverTime(
   });
 }
 
-/** Antal innehav på kontot vars värde saknas (ingen kurs). withHoldingValues räknar dem som 0. */
+/** Antal innehav på kontot vars värde saknas (ingen kurs eller affärer som inte går ihop). withHoldingValues räknar dem som 0. */
 export function missingValues(asset: Asset, rows: HoldingSummary[]): number {
   return rows.filter((r) => r.holding.assetId === asset.id && r.value === null).length;
 }

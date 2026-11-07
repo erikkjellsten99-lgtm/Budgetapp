@@ -33,7 +33,7 @@ export default function Investments({ holdings, trades, prices, rows, loaded, se
   const sorted = useMemo(() => [...rows].sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity)), [rows]);
 
   const anyStale = rows.some((r) => r.quote.stale);
-  const priceNote = anyStale ? 'Gamla kurser' : sum.latestDate ? `Kurser från ${shortDate(sum.latestDate)}` : null;
+  const priceNote = anyStale ? 'Gamla kurser' : sum.oldestPriceDate ? `Kurser från ${shortDate(sum.oldestPriceDate)}` : null;
 
   const open = selected === null || selected === 'new' ? undefined : rows.find((r) => r.holding.id === selected);
 

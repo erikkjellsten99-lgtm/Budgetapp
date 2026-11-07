@@ -34,7 +34,7 @@ import { morningText } from './morning.ts'
 import { addDays, weekStart } from './dates.ts'
 import { summaryFacts, summaryText, type SummaryInput } from './summary.ts'
 import { answer } from './ask.ts'
-import { fetchChart, fetchStart, isRealDay, rowsToUpsert, search, toSek } from './prices.ts'
+import { fetchChart, fetchStart, isRealDay, normalizeCurrency, rowsToUpsert, search, toSek } from './prices.ts'
 import { FEEDS, loadNews, type NewsResult } from './news.ts'
 import { monthPlans } from './months.ts'
 import { MAX_MONTHS } from './goalPlan.ts'
@@ -454,15 +454,21 @@ async function updatePrices(req: Request) {
       // Tiden är slut: resten får vänta till nästa uppdatering.
       if (Date.now() > deadline) { failed.push(ticker); continue }
       try {
-        const { data: last, error: readError } = await admin
-          .from('prices').select('date').eq('ticker', ticker).order('date', { ascending: false }).limit(1)
-        if (readError) throw readError
-        const start = fetchStart(last?.[0]?.date ?? null, from)
+        const [first, last] = await Promise.all([
+          admin.from('prices').select('date').eq('ticker', ticker).order('date', { ascending: true }).limit(1),
+          admin.from('prices').select('date').eq('ticker', ticker).order('date', { ascending: false }).limit(1),
+        ])
+        if (first.error) throw first.error
+        if (last.error) throw last.error
+        const start = fetchStart(first.data?.[0]?.date ?? null, last.data?.[0]?.date ?? null, from)
         const chart = await fetchChart(ticker, start)
         if (!chart) throw new Error('ingen kurs')
-        const fx = chart.currency === 'SEK' ? null : await fetchChart(`${chart.currency}SEK=X`, start)
-        if (chart.currency !== 'SEK' && !fx) throw new Error('ingen valutakurs')
-        const rows = rowsToUpsert(ticker, toSek(chart.points, fx?.points ?? null, chart.currency))
+        // Pence och liknande räknas om till huvudvalutan; en okänd valutakod gör att symbolen misslyckas.
+        const unit = normalizeCurrency(chart.currency)
+        if (!unit) throw new Error(`okänd valuta ${chart.currency}`)
+        const fx = unit.currency === 'SEK' ? null : await fetchChart(`${unit.currency}SEK=X`, start)
+        if (unit.currency !== 'SEK' && !fx) throw new Error('ingen valutakurs')
+        const rows = rowsToUpsert(ticker, toSek(chart.points, fx?.points ?? null, unit.currency, unit.divisor))
         if (rows.length) {
           const { error: saveError } = await admin.from('prices').upsert(rows, { onConflict: 'ticker,date' })
           if (saveError) throw saveError

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseQuantity, rangeStart, tradeError } from './tradeForm';
+import { deleteError, parseQuantity, rangeStart, swedishDates, tradeError } from './tradeForm';
 import type { Trade } from './types';
 
 const t = (id: string, side: 'buy' | 'sell', date: string, quantity: number, price = 100, fee = 0): Trade => ({
@@ -81,6 +81,30 @@ describe('tradeError', () => {
     for (const d of ['', '2026-13-01', '2026-02-30', '10/02/2026', '2026-2-3']) {
       expect(tradeError([buy], t('x', 'buy', d, 1))).toBe('Välj ett datum.');
     }
+  });
+});
+
+describe('deleteError', () => {
+  const buy = t('a', 'buy', '2026-01-10', 10);
+  const buy2 = t('c', 'buy', '2026-01-20', 5);
+  const sell = t('b', 'sell', '2026-02-10', 12);
+
+  it('ger null när affärerna går ihop utan affären', () => {
+    expect(deleteError([buy, buy2, sell], 'b')).toBeNull();
+  });
+
+  it('ger felet med svenskt datum när en senare försäljning blir för stor', () => {
+    expect(deleteError([buy, buy2, sell], 'c')).toBe(
+      'Affären kan inte tas bort: Ni säljer fler andelar än ni äger den 10 feb. 2026.',
+    );
+  });
+});
+
+describe('swedishDates', () => {
+  it('skriver datumet i meddelandet på svenska', () => {
+    expect(swedishDates('Ni säljer fler andelar än ni äger den 2026-02-10.')).toBe(
+      'Ni säljer fler andelar än ni äger den 10 feb. 2026.',
+    );
   });
 });
 

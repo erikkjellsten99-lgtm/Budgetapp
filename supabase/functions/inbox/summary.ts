@@ -212,7 +212,7 @@ export function summaryFacts(input: SummaryInput): SummaryFacts {
           change: sums.change === null ? null : formatKrOre(sums.change),
           changePct: sums.changePct,
           missing: sums.missing,
-          date: sums.latestDate ? shortDate(sums.latestDate) : null,
+          date: sums.oldestPriceDate ? shortDate(sums.oldestPriceDate) : null,
         }
       : null,
     unpaid,

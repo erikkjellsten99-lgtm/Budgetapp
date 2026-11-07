@@ -113,6 +113,10 @@ const buyFor = (holdingId: string, date: string, quantity: number, price: number
   ...trade('buy', date, quantity, price),
   holdingId,
 });
+const sellFor = (holdingId: string, date: string, quantity: number, price: number): Trade => ({
+  ...trade('sell', date, quantity, price),
+  holdingId,
+});
 
 describe('priceOn', () => {
   const points: PricePoint[] = [
@@ -192,10 +196,10 @@ describe('summarize och totals', () => {
     expect(t.value).toBe(1200);
     expect(t.change).toBe(200);
     expect(t.changePct).toBe(0.2);
-    expect(t.latestDate).toBe('2026-11-04');
+    expect(t.oldestPriceDate).toBe('2026-11-04');
   });
 
-  it('latestDate är äldsta marknadskursen', () => {
+  it('oldestPriceDate är äldsta marknadskursen', () => {
     const h3 = holding('h3', { ticker: 'B.ST' });
     const rows = summarize(
       [h1, h3],
@@ -203,7 +207,40 @@ describe('summarize och totals', () => {
       { ...prices, 'B.ST': [{ date: '2026-11-02', close: 10 }] },
       '2026-11-04',
     );
-    expect(totals(rows).latestDate).toBe('2026-11-02');
+    expect(totals(rows).oldestPriceDate).toBe('2026-11-02');
+  });
+
+  it('en giltig rad har invalid null', () => {
+    const [row] = summarize([h1], trades, prices, '2026-11-04');
+    expect(row.invalid).toBeNull();
+  });
+
+  it('affärer som säljer fler än som ägs ger inget värde och felmeddelandet', () => {
+    const bad = [buyFor('h1', '2026-01-10', 10, 100), sellFor('h1', '2026-02-10', 15, 100)];
+    const [row] = summarize([h1], bad, prices, '2026-11-04');
+    expect(row.value).toBeNull();
+    expect(row.change).toBeNull();
+    expect(row.changePct).toBeNull();
+    expect(row.invalid).toBe('Ni säljer fler andelar än ni äger den 2026-02-10.');
+    expect(totals([row]).missing).toBe(1);
+  });
+
+  it('ogiltiga affärer räknas som saknat värde på kontot', () => {
+    const acct: Asset = { id: 'a1', name: 'Avanza', amount: 0, updated: '', fromHoldings: true, cash: 100 };
+    const h = holding('h1', { ticker: 'A.ST', assetId: 'a1' });
+    const bad = [buyFor('h1', '2026-01-10', 10, 100), sellFor('h1', '2026-02-10', 15, 100)];
+    const rows = summarize([h], bad, prices, '2026-11-04');
+    expect(withHoldingValues([acct], rows)[0].amount).toBe(100);
+    expect(missingValues(acct, rows)).toBe(1);
+  });
+
+  it('helt sålt innehav utan kurs har värde 0 och räknas inte som saknat', () => {
+    const sold = [buyFor('h2', '2026-01-10', 5, 100), sellFor('h2', '2026-03-10', 5, 120)];
+    const [row] = summarize([h2], sold, prices, '2026-11-04');
+    expect(row.value).toBe(0);
+    expect(row.change).toBe(0);
+    expect(row.changePct).toBeNull();
+    expect(totals([row]).missing).toBe(0);
   });
 
   it('value är null när ingen rad har kurs', () => {
@@ -278,6 +315,19 @@ describe('valueOverTime', () => {
     const g = holding('h2', { ticker: 'B.ST' });
     const both = [...trades, buyFor('h2', '2026-01-15', 5, 100)];
     const prices = { 'A.ST': [{ date: '2026-01-20', close: 110 }] };
+    expect(valueOverTime([h, g], both, prices, '2026-02-10')).toEqual([
+      { date: '2026-01-31', invested: 1000, value: 1100 },
+      { date: '2026-02-10', invested: 1000, value: 1100 },
+    ]);
+  });
+
+  it('lämnar innehav med ogiltiga affärer utanför som ett utan kurs', () => {
+    const g = holding('h2', { ticker: 'B.ST' });
+    const both = [...trades, buyFor('h2', '2026-01-15', 5, 100), sellFor('h2', '2026-01-20', 8, 100)];
+    const prices = {
+      'A.ST': [{ date: '2026-01-20', close: 110 }],
+      'B.ST': [{ date: '2026-01-20', close: 100 }],
+    };
     expect(valueOverTime([h, g], both, prices, '2026-02-10')).toEqual([
       { date: '2026-01-31', invested: 1000, value: 1100 },
       { date: '2026-02-10', invested: 1000, value: 1100 },

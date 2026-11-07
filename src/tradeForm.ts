@@ -28,8 +28,18 @@ export function tradeError(trades: Trade[], draft: Trade): string | null {
   if (!(draft.fee >= 0)) return 'Courtage kan inte vara negativt.';
   const others = trades.filter((t) => t.id !== draft.id);
   const problem = validateTrades([...others, draft]);
-  // Datumet visas på svenska i formuläret, t.ex. "7 nov. 2026"
-  return problem?.replace(/\d{4}-\d{2}-\d{2}/, (d) => longDate(d)) ?? null;
+  return problem === null ? null : swedishDates(problem);
+}
+
+/** Felmeddelande om affären med `id` inte kan tas bort för att en senare försäljning då blir för stor, annars null. */
+export function deleteError(trades: Trade[], id: string): string | null {
+  const problem = validateTrades(trades.filter((t) => t.id !== id));
+  return problem === null ? null : `Affären kan inte tas bort: ${swedishDates(problem)}`;
+}
+
+/** Datumet i ett meddelande från validateTrades på svenska, t.ex. "7 nov. 2026". */
+export function swedishDates(message: string): string {
+  return message.replace(/\d{4}-\d{2}-\d{2}/, (d) => longDate(d));
 }
 
 export type PriceRange = '1m' | '1y' | 'all';

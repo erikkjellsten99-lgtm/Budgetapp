@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fetchStart, isRealDay, parseChart, parseSearch, rowsToUpsert, toSek } from './prices.ts'
+import { fetchStart, isRealDay, normalizeCurrency, parseChart, parseSearch, rowsToUpsert, toSek } from './prices.ts'
 import sek from './fixtures/chart-inve-b.json'
 import usd from './fixtures/chart-aapl.json'
 import usdSek from './fixtures/chart-usdsek.json'
@@ -52,6 +52,31 @@ describe('toSek', () => {
   it('ger inget om valutakurs saknas helt för annan valuta', () => {
     expect(toSek(parseChart(usd)!.points, null, 'USD')).toEqual([])
   })
+
+  it('delar kurser i pence med 100 före omräkningen', () => {
+    const points = [{ date: '2026-11-02', close: 1250 }]
+    const fx = [{ date: '2026-11-02', close: 13.5 }]
+    expect(toSek(points, fx, 'GBP', 100)).toEqual([{ date: '2026-11-02', close: 12.5 * 13.5 }])
+  })
+})
+
+describe('normalizeCurrency', () => {
+  it('gör om valutor i minsta enhet till huvudvalutan och delar med 100', () => {
+    expect(normalizeCurrency('GBp')).toEqual({ currency: 'GBP', divisor: 100 })
+    expect(normalizeCurrency('GBX')).toEqual({ currency: 'GBP', divisor: 100 })
+    expect(normalizeCurrency('ZAc')).toEqual({ currency: 'ZAR', divisor: 100 })
+    expect(normalizeCurrency('ILA')).toEqual({ currency: 'ILS', divisor: 100 })
+  })
+
+  it('lämnar vanliga valutor som de är', () => {
+    expect(normalizeCurrency('SEK')).toEqual({ currency: 'SEK', divisor: 1 })
+    expect(normalizeCurrency('USD')).toEqual({ currency: 'USD', divisor: 1 })
+    expect(normalizeCurrency('GBP')).toEqual({ currency: 'GBP', divisor: 1 })
+  })
+
+  it('avvisar okända former', () => {
+    for (const c of ['usd', 'US', 'USDT', '', 'Sek', 'GBp ']) expect(normalizeCurrency(c)).toBeNull()
+  })
 })
 
 describe('parseSearch', () => {
@@ -98,9 +123,17 @@ describe('tomma intervall och ogiltiga kurser', () => {
 })
 
 describe('fetchStart', () => {
-  it('hämtar om den senast sparade dagen, annars from', () => {
-    expect(fetchStart('2026-11-06', '2026-01-01')).toBe('2026-11-06')
-    expect(fetchStart(null, '2026-01-01')).toBe('2026-01-01')
+  it('hämtar om den senast sparade dagen när from redan är sparad', () => {
+    expect(fetchStart('2026-01-01', '2026-11-06', '2026-01-01')).toBe('2026-11-06')
+    expect(fetchStart('2025-06-01', '2026-11-06', '2026-01-01')).toBe('2026-11-06')
+  })
+
+  it('hämtar från from när inget är sparat', () => {
+    expect(fetchStart(null, null, '2026-01-01')).toBe('2026-01-01')
+  })
+
+  it('hämtar från from när en bakåtdaterad affär ligger före första sparade dagen', () => {
+    expect(fetchStart('2026-03-01', '2026-11-06', '2026-01-01')).toBe('2026-01-01')
   })
 })
 

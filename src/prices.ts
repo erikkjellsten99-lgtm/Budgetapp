@@ -8,10 +8,51 @@ import { INBOX_URL } from './vanor/InboxSettings';
 const PAGE = 1000;
 const MAX_TICKERS = 50;
 
-/** Kurser per ticker i datumordning. Supabase ger högst 1000 rader per fråga, så vi hämtar sida för sida. */
-export async function loadPrices(tickers: string[]): Promise<Record<string, PricePoint[]>> {
+/** Senast lästa kurser, sparade lokalt i meta så att värdena syns utan nät eller inloggning. */
+const CACHE_KEY = 'pricesCache';
+
+/** De sparade kurserna för `tickers`, eller {} om inga finns. */
+async function cachedPrices(tickers: string[]): Promise<Record<string, PricePoint[]>> {
   const out: Record<string, PricePoint[]> = {};
-  if (tickers.length === 0) return out;
+  try {
+    const cache = (await getMeta<Record<string, PricePoint[]>>(CACHE_KEY)) ?? {};
+    for (const t of tickers) if (cache[t]) out[t] = cache[t];
+  } catch {
+    // Ingen lokal kopia att läsa.
+  }
+  return out;
+}
+
+/**
+ * Kurser per ticker i datumordning. Supabase ger högst 1000 rader per fråga, så vi hämtar sida för sida.
+ * Lyckad läsning sparas lokalt; utloggad eller fel ger de senast sparade kurserna i stället.
+ */
+export async function loadPrices(tickers: string[]): Promise<Record<string, PricePoint[]>> {
+  if (tickers.length === 0) return {};
+  let out: Record<string, PricePoint[]>;
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return await cachedPrices(tickers);
+    out = await readPrices(tickers);
+  } catch {
+    return await cachedPrices(tickers);
+  }
+  try {
+    // Bara de begärda tickers byts ut; en ticker utan rader tas bort ur kopian
+    const cache = { ...((await getMeta<Record<string, PricePoint[]>>(CACHE_KEY)) ?? {}) };
+    for (const t of tickers) {
+      if (out[t]) cache[t] = out[t];
+      else delete cache[t];
+    }
+    await setMeta(CACHE_KEY, cache);
+  } catch {
+    // Kopian kunde inte sparas; kurserna gäller ändå.
+  }
+  return out;
+}
+
+async function readPrices(tickers: string[]): Promise<Record<string, PricePoint[]>> {
+  const out: Record<string, PricePoint[]> = {};
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
       .from('prices')
@@ -32,7 +73,10 @@ function dayOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Hämtar nya kurser för innehav med ticker och affärer. Returnerar false (utan att kasta) om det inte gick. */
+/**
+ * Hämtar nya kurser för innehav med ticker och affärer. True betyder att det kan finnas nya kurser att läsa.
+ * False (utan att kasta) om det inte gick, eller om samma lista redan hämtats i dag.
+ */
 export async function refreshPrices(holdings: Holding[], trades: Trade[], now: Date = new Date()): Promise<boolean> {
   try {
     const day = dayOf(now);
@@ -59,7 +103,7 @@ export async function refreshPrices(holdings: Holding[], trades: Trade[], now: D
       (await getMeta<string>('pricesRefreshedOn')) === day &&
       (await getMeta<string>('pricesRefreshedFor')) === signature
     ) {
-      return true;
+      return false;
     }
 
     const { data } = await supabase.auth.getSession();
@@ -70,6 +114,12 @@ export async function refreshPrices(holdings: Holding[], trades: Trade[], now: D
       body: JSON.stringify({ tickers }),
     });
     if (!res.ok) return false;
+    const body = (await res.json().catch(() => null)) as { updated?: Record<string, number>; failed?: string[] } | null;
+    const failed = Array.isArray(body?.failed) ? body.failed : [];
+    if (failed.length > 0) {
+      // Någon symbol misslyckades: dagen sparas inte, så att det görs ett nytt försök vid nästa ändring
+      return Object.values(body?.updated ?? {}).some((n) => n > 0);
+    }
     await setMeta('pricesRefreshedOn', day);
     await setMeta('pricesRefreshedFor', signature);
     return true;

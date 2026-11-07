@@ -40,15 +40,33 @@ export function parseChart(json: unknown): ChartData | null {
   return { currency: result.meta.currency, points }
 }
 
-/** Kurserna i kronor. Andra valutor räknas om med valutakursen samma dag; en dag utan valutakurs utelämnas. */
-export function toSek(points: ChartData['points'], fx: ChartData['points'] | null, currency: string): PricePoint[] {
-  if (currency === 'SEK') return points
+// Valutor som Yahoo anger i minsta enheten (pence, cent, agorot): huvudvalutan och hur mycket kursen ska delas med.
+const MINOR_UNITS: Record<string, { currency: string; divisor: number }> = {
+  GBp: { currency: 'GBP', divisor: 100 },
+  GBX: { currency: 'GBP', divisor: 100 },
+  ZAc: { currency: 'ZAR', divisor: 100 },
+  ILA: { currency: 'ILS', divisor: 100 },
+}
+
+/** Yahoos valutakod som huvudvaluta och delare, t.ex. "GBp" till GBP och 100. Null för en okänd form (då misslyckas symbolen). */
+export function normalizeCurrency(c: string): { currency: string; divisor: number } | null {
+  const minor = MINOR_UNITS[c]
+  if (minor) return { ...minor }
+  return /^[A-Z]{3}$/.test(c) ? { currency: c, divisor: 1 } : null
+}
+
+/**
+ * Kurserna i kronor. Kursen delas först med `divisor` (100 för pence o.d.), sedan räknas andra valutor om med
+ * valutakursen samma dag; en dag utan valutakurs utelämnas. `currency` är huvudvalutan från normalizeCurrency.
+ */
+export function toSek(points: ChartData['points'], fx: ChartData['points'] | null, currency: string, divisor = 1): PricePoint[] {
+  if (currency === 'SEK') return divisor === 1 ? points : points.map((p) => ({ date: p.date, close: p.close / divisor }))
   if (!fx) return []
   const rate = new Map(fx.map((p) => [p.date, p.close]))
   const out: PricePoint[] = []
   for (const p of points) {
     const r = rate.get(p.date)
-    if (r !== undefined) out.push({ date: p.date, close: p.close * r })
+    if (r !== undefined) out.push({ date: p.date, close: (divisor === 1 ? p.close : p.close / divisor) * r })
   }
   return out
 }
@@ -76,9 +94,12 @@ export function rowsToUpsert(ticker: string, points: PricePoint[]): { ticker: st
   return [...byDate].map(([date, close_sek]) => ({ ticker, date, close_sek }))
 }
 
-/** Första dagen att hämta. Den senast sparade dagen hämtas om, för den kan ha sparats mitt under handelsdagen. */
-export function fetchStart(lastStored: string | null, from: string): string {
-  return lastStored ?? from
+/**
+ * Första dagen att hämta. Ligger `from` före första sparade dagen (inget sparat, eller en bakåtdaterad affär) hämtas allt
+ * från `from`. Annars hämtas den senast sparade dagen om, för den kan ha sparats mitt under handelsdagen.
+ */
+export function fetchStart(earliestStored: string | null, latestStored: string | null, from: string): string {
+  return earliestStored === null || from < earliestStored ? from : (latestStored ?? from)
 }
 
 /** Ett riktigt datum på formen ÅÅÅÅ-MM-DD (alltså inte 2026-13-45). */

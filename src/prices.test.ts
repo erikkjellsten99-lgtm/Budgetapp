@@ -49,7 +49,8 @@ describe('refreshPrices', () => {
 
   it('två anrop samma dag ger ett nätverksanrop, nästa dag ett nytt', async () => {
     expect(await refreshPrices(holdings, trades, day1)).toBe(true);
-    await refreshPrices(holdings, trades, day1);
+    // Överhoppat anrop ger false, så att laddaren inte läser kurserna en gång till
+    expect(await refreshPrices(holdings, trades, day1)).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await refreshPrices(holdings, trades, day2);
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -106,6 +107,16 @@ describe('refreshPrices', () => {
     expect(meta.has('pricesRefreshedOn')).toBe(false);
   });
 
+  it('symboler som misslyckas: sparar inte dagen, true bara om något uppdaterades', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ updated: { A: 3 }, failed: ['B'] }) });
+    expect(await refreshPrices(holdings, trades, day1)).toBe(true);
+    expect(meta.has('pricesRefreshedOn')).toBe(false);
+    expect(meta.has('pricesRefreshedFor')).toBe(false);
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ updated: { A: 0 }, failed: ['B'] }) });
+    expect(await refreshPrices(holdings, trades, day1)).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('skickar högst 50 tickers', async () => {
     const hs = Array.from({ length: 60 }, (_, i) => h(`h${i}`, `T${i}`));
     const ts = hs.map((x) => t(x.id, '2025-01-01'));
@@ -133,6 +144,36 @@ describe('loadPrices', () => {
       A: [{ date: '2026-11-05', close: 10.5 }, { date: '2026-11-06', close: 11 }],
       B: [{ date: '2026-11-05', close: 7 }],
     });
+  });
+
+  it('sparar de hämtade kurserna i meta, bara de begärda tickers slås ihop', async () => {
+    meta.set('pricesCache', { A: [{ date: '2026-01-01', close: 1 }], C: [{ date: '2026-01-01', close: 3 }] });
+    rangeMock.mockResolvedValue({ data: [{ ticker: 'A', date: '2026-11-06', close_sek: 11 }], error: null });
+    await loadPrices(['A', 'B']);
+    expect(meta.get('pricesCache')).toEqual({
+      A: [{ date: '2026-11-06', close: 11 }],
+      C: [{ date: '2026-01-01', close: 3 }],
+    });
+  });
+
+  it('fel ger de sparade kurserna för de begärda tickers', async () => {
+    meta.set('pricesCache', { A: [{ date: '2026-11-05', close: 10 }], C: [{ date: '2026-01-01', close: 3 }] });
+    rangeMock.mockResolvedValue({ data: null, error: new Error('offline') });
+    expect(await loadPrices(['A', 'B'])).toEqual({ A: [{ date: '2026-11-05', close: 10 }] });
+    rangeMock.mockRejectedValue(new Error('nät'));
+    expect(await loadPrices(['A'])).toEqual({ A: [{ date: '2026-11-05', close: 10 }] });
+  });
+
+  it('utloggad ger de sparade kurserna utan fråga', async () => {
+    meta.set('pricesCache', { A: [{ date: '2026-11-05', close: 10 }] });
+    getSession.mockResolvedValue({ data: { session: null } });
+    expect(await loadPrices(['A'])).toEqual({ A: [{ date: '2026-11-05', close: 10 }] });
+    expect(rangeMock).not.toHaveBeenCalled();
+  });
+
+  it('fel utan sparade kurser ger {}', async () => {
+    rangeMock.mockResolvedValue({ data: null, error: new Error('offline') });
+    expect(await loadPrices(['A'])).toEqual({});
   });
 
   it('hämtar flera sidor om 1000 rader', async () => {

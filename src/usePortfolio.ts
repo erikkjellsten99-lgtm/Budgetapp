@@ -10,7 +10,6 @@ export interface Portfolio {
   trades: Trade[];
   prices: Record<string, PricePoint[]>;
   rows: HoldingSummary[];
-  reload: () => Promise<void>;
   /** Falskt tills första läsningen av innehav och affärer är klar. */
   loaded: boolean;
 }
@@ -41,5 +40,5 @@ export function usePortfolio(): Portfolio {
     () => summarize(state.holdings, state.trades, state.prices, today()),
     [state.holdings, state.trades, state.prices],
   );
-  return { ...state, rows, loaded, reload: () => loader.current!.load() };
+  return { ...state, rows, loaded };
 }
