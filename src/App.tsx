@@ -30,7 +30,7 @@ import Today from './Today';
 const JarvisView = lazy(() => import('./Jarvis'));
 import JarvisOrb from './JarvisOrb';
 import Room from './Room';
-import { ECONOMY, isEconomy, restoreView, SECTIONS, sectionOf, type EconomyView, type Section, type View } from './nav';
+import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type EconomyView, type Section, type View } from './nav';
 const Nyheter = lazy(() => import('./Nyheter'));
 import { formatKr } from './money';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
@@ -89,12 +89,6 @@ export default function App() {
       writeStorage('ekonomi-flik', next);
     }
   }
-
-  // Håll vald underflik synlig när raden inte får plats på smal skärm.
-  const subNav = useRef<HTMLElement>(null);
-  useEffect(() => {
-    subNav.current?.querySelector('.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [view, section]);
 
   function showSection(next: Section) {
     showView(next === 'ekonomi' ? economyView : next);
@@ -189,18 +183,21 @@ export default function App() {
       </header>
       <main>
         {section === 'ekonomi' && (
-          <nav className="sub-nav" aria-label="Ekonomi" ref={subNav}>
-            {ECONOMY.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={item.id === view ? 'sub-nav-item active' : 'sub-nav-item'}
-                aria-current={item.id === view ? 'page' : undefined}
-                onClick={() => showView(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
+          <nav className="segmented-row economy-tabs" aria-label="Ekonomi">
+            {ECONOMY_TABS.map((item) => {
+              const active = isEconomy(view) && tabOf(view) === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={active ? 'seg active' : 'seg'}
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => showView(item.id)}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </nav>
         )}
         {/* Alla vyer ligger kvar i bakgrunden, så att summorna (t.ex. tillgångar) alltid är uppdaterade. */}
@@ -212,9 +209,9 @@ export default function App() {
             <MonthPicker month={selectedMonth} onChange={changeMonth} />
             <h2>Översikt</h2>
           </div>
-          <section className={leftForSavings < 0 ? 'card balance-hero negative' : 'card balance-hero'}>
+          <section className="hero" aria-label="Kvar efter utgifter och sparande">
             <p className="hero-label">{toLoan > 0 ? 'Blir över' : 'Kvar att sätta in på sparande'}</p>
-            <strong className="hero-amount">{formatKr(leftForSavings)}</strong>
+            <strong className={leftForSavings < 0 ? 'hero-amount negative' : 'hero-amount positive'}>{formatKr(leftForSavings)}</strong>
             {toLoan > 0 && split && (
               <dl className="hero-split">
                 <div>
@@ -228,53 +225,82 @@ export default function App() {
                 </div>
               </dl>
             )}
-            <p className="hero-period">
+            <p className="hero-text">
               Efter utgifter och planerat sparande i {month}
               {toLoan > 0 && ', enligt Prognos → Extra på lånet'}
             </p>
           </section>
-          <div className="overview-grid">
-            <section className="card summary overview-breakdown">
-              <h3>Månadens budget</h3>
-              <p>
-                <span>Inkomster</span>
-                <span>{formatKr(totalIncome)}</span>
+
+          <section className="group-block" aria-labelledby="overview-budget">
+            <h3 className="group-title" id="overview-budget">
+              Månadens budget
+            </h3>
+            <div className="group">
+              <p className="group-row">
+                <span className="row-name">Inkomster</span>
+                <span className="row-value">{formatKr(totalIncome)}</span>
               </p>
-              <p>
-                <span>Kostnader</span>
-                <span>− {formatKr(costs)}</span>
+              <p className="group-row">
+                <span className="row-name">Kostnader</span>
+                <span className="row-value">− {formatKr(costs)}</span>
               </p>
-              <p>
-                <span>Planerat sparande</span>
-                <span>− {formatKr(plannedSavings)}</span>
+              <p className="group-row">
+                <span className="row-name">Planerat sparande</span>
+                <span className="row-value">− {formatKr(plannedSavings)}</span>
               </p>
-            </section>
-            <section className="card summary net-worth-card">
-              <h3>Nettovärde (sparkonton)</h3>
-              <strong className={netWorth < 0 ? 'net-worth negative' : 'net-worth'}>{formatKr(netWorth)}</strong>
+            </div>
+          </section>
+
+          <section className="group-block" aria-labelledby="overview-networth">
+            <h3 className="group-title" id="overview-networth">
+              Nettovärde
+            </h3>
+            <div className="group">
+              <button type="button" className="group-row" onClick={() => showView('assets')}>
+                <span className="row-main">
+                  <span className="row-name">Konton</span>
+                  <span className="row-sub">Det som finns på sparkontona</span>
+                </span>
+                <span className={netWorth < 0 ? 'row-value negative' : 'row-value'}>{formatKr(netWorth)}</span>
+              </button>
               {spendingTotal > 0 && (
-                <p className="net-worth-detail">
-                  <span>Pengar att använda (räknas inte)</span>
-                  <span>{formatKr(spendingTotal)}</span>
+                <p className="group-row">
+                  <span className="row-main">
+                    <span className="row-name">Pengar att använda</span>
+                    <span className="row-sub">Räknas inte i nettovärdet</span>
+                  </span>
+                  <span className="row-value">{formatKr(spendingTotal)}</span>
                 </p>
               )}
-            </section>
-          </div>
-          {goal && (
-            <button type="button" className="card goal-summary" onClick={() => showView('goal')}>
-              <span className="goal-summary-head">
-                <span>{goal.name}</span>
-                <span aria-hidden="true">›</span>
-              </span>
-              <span className="goal-summary-amount">
-                <strong>{formatKr(goalNow)}</strong> av {formatKr(goal.target)} · {goalPercent} %
-              </span>
-              <span className="bar" aria-hidden="true">
-                <span style={{ width: `${goalPercent}%` }} />
-              </span>
-              {goalPlan && <span className="goal-summary-status">{goalStatus(goalPlan)}</span>}
-            </button>
-          )}
+            </div>
+          </section>
+
+          <section className="group-block" aria-label="Sparmål och önskelista">
+            <div className="group">
+              {goal && (
+                <button type="button" className="group-row" onClick={() => showView('goal')}>
+                  <span className="row-main">
+                    <span className="row-name">{goal.name}</span>
+                    <span className="row-sub">
+                      {formatKr(goalNow)} av {formatKr(goal.target)}
+                    </span>
+                    <span className="bar" aria-hidden="true">
+                      <span style={{ width: `${goalPercent}%` }} />
+                    </span>
+                    {goalPlan && <span className="row-sub">{goalStatus(goalPlan)}</span>}
+                  </span>
+                  <span className="row-value">{goalPercent} %</span>
+                </button>
+              )}
+              <button type="button" className="group-row" onClick={() => showView('wishlist')}>
+                <span className="row-main">
+                  <span className="row-name">Önskelista</span>
+                  <span className="row-sub">Det som är ikryssat räknas in i rörliga utgifter</span>
+                </span>
+                <span className="row-value">{formatKr(wishTotal)}</span>
+              </button>
+            </div>
+          </section>
         </div>
         <div hidden={view !== 'nyheter'}>
           {visited.has('nyheter') && (
@@ -313,9 +339,11 @@ export default function App() {
           />
         </div>
         <div hidden={view !== 'wishlist'}>
+          <BackToOverview onClick={() => showView('overview')} />
           <Wishlist wishes={wishes} onChanged={reload} />
         </div>
         <div hidden={view !== 'assets'}>
+          <BackToOverview onClick={() => showView('overview')} />
           <Assets onChange={setAssets} />
         </div>
         <div hidden={view !== 'account'}>
@@ -332,6 +360,18 @@ export default function App() {
       </Room>
       <UndoToast />
     </div>
+  );
+}
+
+/** Textknapp överst i Konton och Önskelista, som öppnas från Översikt. */
+function BackToOverview({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className="back-link" onClick={onClick}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15 5l-7 7 7 7" />
+      </svg>
+      Översikt
+    </button>
   );
 }
 
@@ -355,7 +395,7 @@ function MonthPicker({ month, onChange }: { month: string; onChange: (steps: num
         </svg>
       </button>
       <p className="eyebrow month-name" aria-live="polite">
-        {monthName(month).toUpperCase()}
+        {monthName(month).replace(/^./, (c) => c.toUpperCase())}
       </p>
       <button type="button" className="month-step" onClick={() => onChange(1)} aria-label="Nästa månad">
         <svg viewBox="0 0 24 24" aria-hidden="true">

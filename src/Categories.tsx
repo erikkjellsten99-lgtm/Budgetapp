@@ -20,6 +20,8 @@ interface CategoriesProps {
 export default function Categories({ categories, onChanged, income, wishTotal, onOpenWishlist }: CategoriesProps) {
   // Id på kategorin som redigeras, 'new' när en ny läggs till, annars null.
   const [editing, setEditing] = useState<string | null>(null);
+  // Redigeringsläge: plus och handtag för att flytta syns bara då, så att varje rad annars är bock, namn och belopp.
+  const [arranging, setArranging] = useState(false);
 
   // Alla ändringar gäller den valda budgetmånaden. Andra månader påverkas inte.
 
@@ -142,7 +144,18 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
           <Fragment key={type}>
           <section className="card">
             <h3>
-              {label} <span>{formatKr(sumBudgets(items) + extra)}</span>
+              {label}
+              <span className="category-head-end">
+                <button
+                  type="button"
+                  className="text-button"
+                  aria-pressed={arranging}
+                  onClick={() => setArranging((on) => !on)}
+                >
+                  {arranging ? 'Klar' : 'Redigera'}
+                </button>
+                <span>{formatKr(sumBudgets(items) + extra)}</span>
+              </span>
             </h3>
             {sumBudgets(items) + extra > 0 && (
               <p className="paid-summary">
@@ -188,15 +201,17 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
                           </svg>
                         </span>
                       </button>
-                      <button
-                        type="button"
-                        className="item-add"
-                        aria-label={`Lägg till rad under ${category.name}`}
-                        onClick={() => addItem(category)}
-                      >
-                        +
-                      </button>
-                      {categoryHandle}
+                      {arranging && (
+                        <button
+                          type="button"
+                          className="item-add"
+                          aria-label={`Lägg till rad under ${category.name}`}
+                          onClick={() => addItem(category)}
+                        >
+                          +
+                        </button>
+                      )}
+                      {arranging && categoryHandle}
                     </div>
                   )}
                   {editing !== category.id && !!category.items?.length && expanded.has(category.id) && (
@@ -208,7 +223,7 @@ export default function Categories({ categories, onChanged, income, wishTotal, o
                         <ItemRow
                           key={item.id}
                           item={item}
-                          handle={handle}
+                          handle={arranging ? handle : null}
                           autoFocus={item.id === focusItem}
                           onChange={(changed) =>
                             updateItems(category.id, (items) => items.map((other) => (other.id === changed.id ? changed : other)))

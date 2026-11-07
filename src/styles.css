@@ -177,6 +177,7 @@ main {
   min-width: 8.5rem;
   text-align: center;
   color: var(--text);
+  font-weight: 600;
 }
 
 .month-step {
@@ -272,7 +273,8 @@ h2 {
   margin: 0 0 0.85rem;
   overflow: hidden;
   background: var(--card);
-  border: 1px solid var(--border);
+  /* Ytor skiljs åt med färg, inte linjer (designspec "Två rum"). Ramen finns kvar, osynlig, för fokus och felmarkering. */
+  border: 1px solid transparent;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow);
 }
@@ -402,8 +404,7 @@ h3,
 .goal-chart,
 .legend,
 .target,
-.hero-amount,
-.net-worth {
+.hero-amount {
   font-variant-numeric: tabular-nums;
 }
 
@@ -491,22 +492,6 @@ h3,
   color: var(--danger);
 }
 
-.balance-hero {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 12rem;
-  margin-bottom: 1rem;
-  padding: 1.35rem 1.4rem;
-  background: var(--hero-bg);
-  border-color: var(--hero-bg);
-  border-radius: 14px;
-  color: var(--hero-text);
-  box-shadow: none;
-}
-
 .hero-label {
   margin: 0 0 0.6rem;
   color: var(--hero-muted);
@@ -532,60 +517,6 @@ h3,
 
 .hero-amount.negative {
   color: var(--lingon);
-}
-
-.hero-period {
-  margin-top: 1rem;
-  color: var(--hero-muted);
-  font-size: 0.84rem;
-  font-weight: 550;
-}
-
-.balance-hero.negative .hero-amount {
-  color: var(--lingon);
-}
-
-.overview-grid {
-  display: grid;
-  gap: 0.85rem;
-}
-
-.overview-breakdown p + p {
-  border-top: 1px solid var(--border);
-}
-
-.net-worth-card {
-  display: flex;
-  flex-direction: column;
-  padding: 0.2rem 0 0.85rem;
-}
-
-.net-worth-card > .eyebrow {
-  padding: 0 1rem;
-}
-
-.net-worth {
-  display: block;
-  margin: 0.1rem 1rem 0.8rem;
-  font-size: clamp(1.9rem, 8vw, 2.5rem);
-  line-height: 1.05;
-  font-weight: 680;
-  letter-spacing: -0.055em;
-}
-
-.net-worth.negative {
-  color: var(--danger);
-}
-
-.net-worth-detail {
-  padding-top: 0.55rem !important;
-  padding-bottom: 0.55rem !important;
-  border-top: 1px solid var(--border);
-  font-size: 0.9rem !important;
-}
-
-.net-worth-card .note {
-  padding: 0.55rem 1rem 0 !important;
 }
 
 .overview-link {
@@ -930,11 +861,6 @@ main > div > h2 + .hint {
   display: none !important;
 }
 
-.net-worth-card p.net-worth-detail {
-  display: flex;
-  justify-content: space-between;
-}
-
 /* Ikoner i menyn: syns i mobilens bottenmeny och i sidomenyn på skrivbord, döljs på mellanstora skärmar. */
 .nav-icon {
   display: none;
@@ -965,50 +891,6 @@ main > div > h2 + .hint {
 }
 
 /* Sparmålet i liten form på översikten. Hela kortet är en knapp till fliken Sparmål. */
-.goal-summary {
-  display: grid;
-  gap: 0.6rem;
-  width: 100%;
-  margin-top: 0;
-  padding: 0.9rem 1rem 1rem;
-  text-align: left;
-  font-variant-numeric: tabular-nums;
-}
-
-.goal-summary-head {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 750;
-  letter-spacing: 0.055em;
-  text-transform: uppercase;
-}
-
-.goal-summary-head span:last-child {
-  font-size: 1.2rem;
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-.goal-summary-amount {
-  color: var(--muted);
-}
-
-.goal-summary-amount strong {
-  color: var(--text);
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-}
-
-.goal-summary .bar {
-  display: block;
-}
-
-.goal-summary-status {
-  font-weight: 650;
-}
 
 /* Konto-knappen i sidhuvudet, med en prick som visar synkens status. */
 .app-nav {
@@ -1461,20 +1343,11 @@ main > div > h2 + .hint {
     padding-top: 1.75rem;
   }
 
-  .overview-grid {
-    grid-template-columns: 1fr 1fr;
-    align-items: stretch;
-  }
+  
 
-  .overview-breakdown,
-  .net-worth-card {
-    min-height: 15rem;
-  }
+  
 
-  .balance-hero {
-    min-height: 15rem;
-    padding: 2rem 2.2rem;
-  }
+  
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1500,37 +1373,6 @@ main > div > h2 + .hint {
 
 .forecast-note {
   margin-top: 0;
-}
-
-.forecast-facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  gap: 0.6rem;
-  margin-bottom: 0.85rem;
-}
-
-.forecast-facts .fact {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  margin: 0;
-  padding: 0.8rem 0.9rem;
-}
-
-.fact span {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.fact strong {
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
-.fact strong::first-letter {
-  text-transform: uppercase;
 }
 
 .segmented-row {
@@ -1559,23 +1401,19 @@ main > div > h2 + .hint {
 }
 
 .forecast-chart {
-  --fc-save: #18805a;
-  --fc-loan: #9a5fc0;
+  --fc-save: var(--pine);
+  --fc-loan: var(--muted);
   position: relative;
   padding: 0.75rem 0.6rem 0.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .forecast-chart {
-    --fc-save: #4aa673;
-    --fc-loan: #9f7fd4;
   }
 }
 
 /* Mörkt läge valt i appen (Konto → Utseende) */
 :root[data-theme='dark'] .forecast-chart {
-  --fc-save: #4aa673;
-  --fc-loan: #9f7fd4;
 }
 
 .chart-legend {
@@ -1967,12 +1805,6 @@ main > div > h2 + .hint {
 
 .return-body .hint {
   margin: 0;
-}
-
-.fact small {
-  color: var(--muted);
-  font-size: 0.75rem;
-  line-height: 1.3;
 }
 
 .forecast-chart .flat-line {
@@ -3274,6 +3106,10 @@ button.hero {
   }
 }
 
+.hero p {
+  margin: 0;
+}
+
 .hero .hero-label {
   margin: 0;
   color: var(--muted);
@@ -3423,4 +3259,108 @@ button.group-row::after {
 
 .today-loading .group {
   margin-bottom: 1.5rem;
+}
+
+/* ---------- Ekonomi (designspec "Två rum") ---------- */
+/* Underflikarna som segmentväljare, fast överst när man rullar */
+.economy-tabs {
+  position: sticky;
+  z-index: 5;
+  top: 0.5rem;
+  margin: 0 0 1rem;
+  background: color-mix(in srgb, var(--line) 80%, var(--bg));
+  /* Täcker innehållet som rullar förbi ovanför och runt raden */
+  box-shadow: 0 -0.5rem 0 0.5rem var(--bg);
+}
+
+.economy-tabs .seg {
+  font-size: 0.9375rem;
+}
+
+.economy-tabs .seg.active {
+  color: var(--cobalt);
+}
+
+.row-value.negative {
+  color: var(--lingon);
+}
+
+.group-row .bar {
+  height: 0.35rem;
+  margin: 0.35rem 0 0.15rem;
+}
+
+.group-row .bar > span {
+  background: var(--pine);
+}
+
+/* Konton och Önskelista: tillbaka till Översikt */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 2.75rem;
+  margin: -0.5rem 0 0.25rem -0.5rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--cobalt);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.back-link svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+  .back-link:not(:disabled):hover {
+    background: transparent;
+    text-decoration: underline;
+  }
+}
+
+/* Budgeten: Redigera/Klar till höger om gruppens rubrik */
+.category-head-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.text-button {
+  min-height: 2.25rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--cobalt);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .text-button:not(:disabled):hover {
+    background: transparent;
+    text-decoration: underline;
+  }
+}
+
+/* Prognosens nyckeltal som rader; långa värden (datum) får brytas */
+.forecast-facts {
+  margin-bottom: 1rem;
+}
+
+.forecast-facts .row-name {
+  white-space: normal;
+}
+
+.forecast-facts .row-value {
+  max-width: 55%;
+  text-align: right;
+  white-space: normal;
 }

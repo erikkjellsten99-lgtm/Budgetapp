@@ -23,6 +23,17 @@ export const ECONOMY: { id: EconomyView; label: string }[] = [
   { id: 'wishlist', label: 'Önskelista' },
 ];
 
+/** Underflikarna som syns (segmentväljaren). Konton och Önskelista öppnas från rader i Översikt. */
+export type EconomyTab = 'overview' | 'budget' | 'goal';
+export const ECONOMY_TABS: { id: EconomyTab; label: string }[] = [
+  { id: 'overview', label: 'Översikt' },
+  { id: 'budget', label: 'Budget' },
+  { id: 'goal', label: 'Prognos' },
+];
+
+/** Vilken underflik som är vald när en vy visas. Konton och Önskelista hör till Översikt. */
+export const tabOf = (view: EconomyView): EconomyTab => (view === 'assets' || view === 'wishlist' ? 'overview' : view);
+
 export const isEconomy = (view: string): view is EconomyView => ECONOMY.some((item) => item.id === view);
 
 export const sectionOf = (view: View): Section | null =>
