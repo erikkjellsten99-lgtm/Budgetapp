@@ -157,6 +157,8 @@ async function runSync() {
     setState({ householdId: meta.householdId });
     await push(meta.householdId);
     await pull(meta);
+    // Ett misslyckat engångsförsök ska inte göra hela synken till ett fel; flaggan sätts inte, så det görs om.
+    await backfillInvestments(meta.householdId).catch((error) => console.error(error));
     await saveSyncedBudgetBases();
     setState({ status: 'synkad', lastSynced: new Date() });
     await updatePending();
@@ -332,6 +334,8 @@ async function pushRows(rows: object[]) {
   }
 }
 
+const INVESTMENTS_BACKFILLED = 'investmentsBackfilled';
+
 async function pull(meta: HouseholdMeta) {
   const since = meta.lastPull ? new Date(new Date(meta.lastPull).getTime() - PULL_OVERLAP_MS).toISOString() : null;
   const rows = await fetchSince(meta.householdId, since);
@@ -341,9 +345,21 @@ async function pull(meta: HouseholdMeta) {
   await setMeta('household', meta);
 }
 
+/**
+ * En telefon som körde den äldre appen hoppade över innehav och affärer men flyttade ändå fram lastPull
+ * förbi dem. Första synken efter uppgraderingen hämtar därför alla sådana poster en gång, oavsett lastPull.
+ * Misslyckas hämtningen sätts ingen flagga, så det görs om vid nästa synk.
+ */
+async function backfillInvestments(householdId: string) {
+  if (await getMeta<boolean>(INVESTMENTS_BACKFILLED)) return;
+  const rows = await fetchSince(householdId, null, ['holdings', 'trades']);
+  await applyRemote(rows);
+  await setMeta(INVESTMENTS_BACKFILLED, true);
+}
+
 type ServerRow = RemoteRecord & { updated_at: string };
 
-async function fetchSince(householdId: string, since: string | null): Promise<ServerRow[]> {
+async function fetchSince(householdId: string, since: string | null, stores?: string[]): Promise<ServerRow[]> {
   const all: ServerRow[] = [];
   for (let from = 0; ; from += 1000) {
     let query = supabase
@@ -353,6 +369,7 @@ async function fetchSince(householdId: string, since: string | null): Promise<Se
       .order('updated_at')
       .range(from, from + 999);
     if (since) query = query.gt('updated_at', since);
+    if (stores) query = query.in('store', stores);
     const { data, error } = await query;
     if (error) throw error;
     all.push(...(data as ServerRow[]));

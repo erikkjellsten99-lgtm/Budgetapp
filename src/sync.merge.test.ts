@@ -15,6 +15,8 @@ interface Row {
   updated_at: string;
 }
 
+let storeQueries = 0;
+let failStoreQueries = false;
 const server = new Map<string, Row>();
 let clock = 0;
 const HOUSEHOLD = 'hushall-1';
@@ -34,6 +36,7 @@ function fakeClient(userId: string) {
   function query() {
     const filters: ((row: Row) => boolean)[] = [];
     let head = false;
+    let byStore = false;
     let range: [number, number] | null = null;
     const builder = {
       select: (_cols: string, options?: { head?: boolean }) => {
@@ -41,11 +44,12 @@ function fakeClient(userId: string) {
         return builder;
       },
       eq: (col: keyof Row, value: unknown) => (filters.push((row) => row[col] === value), builder),
-      in: (col: keyof Row, values: unknown[]) => (filters.push((row) => values.includes(row[col])), builder),
+      in: (col: keyof Row, values: unknown[]) => (col === 'store' && (storeQueries++, (byStore = true)), filters.push((row) => values.includes(row[col])), builder),
       gt: (col: keyof Row, value: string) => (filters.push((row) => String(row[col]) > value), builder),
       order: () => builder,
       range: (from: number, to: number) => ((range = [from, to]), builder),
       then: (resolve: (value: unknown) => void) => {
+        if (byStore && failStoreQueries) return resolve({ data: null, error: new Error('nätverksfel') });
         let rows = [...server.values()].filter((row) => filters.every((f) => f(row)));
         rows.sort((a, b) => a.updated_at.localeCompare(b.updated_at));
         if (range) rows = rows.slice(range[0], range[1] + 1);
@@ -174,5 +178,105 @@ describe('två telefoner ändrar samma månad', () => {
     expect(sent.categories).toEqual((await erik.db.getBudget(month)).categories);
     await cassandra.sync.syncNow();
     expect((await cassandra.db.getBudget(month)).categories).toEqual(sent.categories);
+  });
+});
+
+describe('innehav och affärer mellan telefonerna', () => {
+  const holding = { id: 'h1', name: 'Global fond', type: 'fund' as const };
+  const trade = { id: 'tr1', holdingId: 'h1', date: '2030-05-02', side: 'buy' as const, quantity: 10, price: 123.45, fee: 1 };
+
+  it('ett innehav och ett köp når den andra telefonen, och en ändrad affär går tillbaka', async () => {
+    const erik = await phone('erik');
+    const cassandra = await phone('cassandra');
+
+    await erik.db.saveHolding(holding);
+    await erik.db.saveTrade(trade);
+    await erik.sync.syncNow();
+    await cassandra.sync.syncNow();
+    expect(await cassandra.db.getHoldings()).toEqual([holding]);
+    expect(await cassandra.db.getTrades()).toEqual([trade]);
+
+    // Cassandra ändrar antalet efteråt och Erik får hennes version.
+    await cassandra.db.saveTrade({ ...trade, quantity: 12 });
+    await cassandra.sync.syncNow();
+    await erik.sync.syncNow();
+    expect(await erik.db.getTrades()).toEqual([{ ...trade, quantity: 12 }]);
+  });
+
+  it('deleteHolding tar bort innehavet och dess affärer även på den andra telefonen', async () => {
+    const erik = await phone('erik');
+    const cassandra = await phone('cassandra');
+    const other = { id: 'h2', name: 'Annan fond', type: 'fund' as const };
+    const otherTrade = { ...trade, id: 'tr2', holdingId: 'h2' };
+
+    await erik.db.saveHolding(holding);
+    await erik.db.saveHolding(other);
+    await erik.db.saveTrade(trade);
+    await erik.db.saveTrade({ ...trade, id: 'tr1b', quantity: 3 });
+    await erik.db.saveTrade(otherTrade);
+    await erik.sync.syncNow();
+    await cassandra.sync.syncNow();
+    expect(await cassandra.db.getTrades()).toHaveLength(3);
+
+    await erik.db.deleteHolding('h1');
+    await erik.sync.syncNow();
+    await cassandra.sync.syncNow();
+
+    for (const p of [erik, cassandra]) {
+      expect(await p.db.getHoldings()).toEqual([other]);
+      expect(await p.db.getTrades()).toEqual([otherTrade]);
+    }
+  });
+
+  it('en telefon som hoppade över raderna med den äldre appen hämtar dem en gång efter uppgraderingen', async () => {
+    server.clear();
+    const erik = await phone('erik');
+    const cassandra = await phone('cassandra');
+    // Cassandras telefon motsvarar den äldre appen: ingen flagga än, och lastPull ligger efter raderna.
+    await cassandra.db.setMeta('investmentsBackfilled', undefined);
+
+    await erik.db.saveHolding(holding);
+    await erik.db.saveTrade(trade);
+    await erik.sync.syncNow();
+    const latest = [...server.values()].map((r) => r.updated_at).sort().pop()!;
+    const household = (await cassandra.db.getMeta<{ lastPull: string | null }>('household'))!;
+    await cassandra.db.setMeta('household', { ...household, lastPull: new Date(new Date(latest).getTime() + 60_000).toISOString() });
+    expect(await cassandra.db.getHoldings()).toEqual([]);
+
+    const before = storeQueries;
+    await cassandra.sync.syncNow();
+    expect(await cassandra.db.getHoldings()).toEqual([holding]);
+    expect(await cassandra.db.getTrades()).toEqual([trade]);
+    expect(storeQueries).toBeGreaterThan(before);
+    expect(await cassandra.db.getMeta('investmentsBackfilled')).toBe(true);
+
+    const afterFirst = storeQueries;
+    await cassandra.sync.syncNow();
+    expect(storeQueries).toBe(afterFirst);
+  });
+
+  it('misslyckas engångshämtningen är synken ändå klar och hämtningen görs om nästa gång', async () => {
+    server.clear();
+    const erik = await phone('erik');
+    const cassandra = await phone('cassandra');
+    await cassandra.db.setMeta('investmentsBackfilled', undefined);
+    await erik.db.saveHolding(holding);
+    await erik.sync.syncNow();
+    const latest = [...server.values()].map((r) => r.updated_at).sort().pop()!;
+    const household = (await cassandra.db.getMeta<{ lastPull: string | null }>('household'))!;
+    await cassandra.db.setMeta('household', { ...household, lastPull: new Date(new Date(latest).getTime() + 60_000).toISOString() });
+
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    failStoreQueries = true;
+    await cassandra.sync.syncNow();
+    failStoreQueries = false;
+    log.mockRestore();
+    expect(cassandra.sync.getSyncState().status).toBe('synkad');
+    expect(await cassandra.db.getMeta('investmentsBackfilled')).toBeUndefined();
+    expect(await cassandra.db.getHoldings()).toEqual([]);
+
+    await cassandra.sync.syncNow();
+    expect(await cassandra.db.getHoldings()).toEqual([holding]);
+    expect(await cassandra.db.getMeta('investmentsBackfilled')).toBe(true);
   });
 });

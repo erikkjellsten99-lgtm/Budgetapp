@@ -1,5 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Assets from './Assets';
+import Investments from './Investments';
 import Categories, { sumBudgets } from './Categories';
 import Account from './Account';
 import ThemePicker from './ThemePicker';
@@ -33,7 +34,9 @@ import { lazyWithReload } from './lazyWithReload';
 import Room from './Room';
 import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type EconomyView, type Section, type View } from './nav';
 const Nyheter = lazy(() => import('./Nyheter'));
-import { formatKr } from './money';
+import { formatKr, formatKrOre, formatPct } from './money';
+import { usePortfolio } from './usePortfolio';
+import { missingValues, totals, withHoldingValues } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
 function readStorage(key: string): string | null {
@@ -99,6 +102,11 @@ export default function App() {
   // Månaden budgeten är sparad på (se getBudget). Visar om vald månad har en egen budget.
   const [budgetFrom, setBudgetFrom] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [invSelected, setInvSelected] = useState<string | 'new' | null>(null);
+  const portfolio = usePortfolio();
+  // Konton som räknas från innehaven får värdet härifrån. Övriga är exakt som de sparats.
+  const portfolioTotals = useMemo(() => totals(portfolio.rows), [portfolio.rows]);
+  const valuedAssets = useMemo(() => withHoldingValues(assets, portfolio.rows), [assets, portfolio.rows]);
   const [income, setIncome] = useState<MonthlyIncome>({ month: budgetMonth(), csn: 0, other: 0 });
   const [selectedMonth, setSelectedMonth] = useState(budgetMonth);
   const [wishes, setWishes] = useState<Wish[]>([]);
@@ -135,10 +143,15 @@ export default function App() {
   const leftForSavings = totalIncome - costs - plannedSavings;
   // Nettovärdet är det som finns på sparkontona. Pengar att använda (hushållskontot) räknas inte.
   const sumAmounts = (list: Asset[]) => list.reduce((sum, asset) => sum + asset.amount, 0);
-  const netWorth = sumAmounts(assets.filter((asset) => !asset.spending));
-  const spendingTotal = sumAmounts(assets.filter((asset) => asset.spending));
+  const netWorth = sumAmounts(valuedAssets.filter((asset) => !asset.spending));
+  const spendingTotal = sumAmounts(valuedAssets.filter((asset) => asset.spending));
 
-  const goalNow = goal ? goalCurrent(goal, assets) : 0;
+  // Innehav utan kurs räknas som 0 i kontots värde, så det ska synas.
+  const missingTotal = assets
+    .filter((asset) => asset.fromHoldings && !asset.spending)
+    .reduce((sum, asset) => sum + missingValues(asset, portfolio.rows), 0);
+
+  const goalNow = goal ? goalCurrent(goal, valuedAssets) : 0;
   const goalData = useGoalData(goal);
   const goalPlan = goal && goalData ? planGoal(goalNow, goal.target, goal.annualReturn, goalData.rows) : null;
   const goalPercent = goal && goal.target > 0 ? Math.min(100, Math.round((goalNow / goal.target) * 100)) : 0;
@@ -260,17 +273,41 @@ export default function App() {
               <button type="button" className="group-row" onClick={() => showView('assets')}>
                 <span className="row-main">
                   <span className="row-name">Konton</span>
-                  <span className="row-sub">Det som finns på sparkontona</span>
+                  <span className="row-sub">
+                    {missingTotal > 0
+                      ? `Det som finns på sparkontona, värde saknas för ${missingTotal} innehav`
+                      : 'Det som finns på sparkontona'}
+                  </span>
                 </span>
-                <span className={netWorth < 0 ? 'row-value negative' : 'row-value'}>{formatKr(netWorth)}</span>
+                <span className={netWorth < 0 ? 'row-value negative' : 'row-value'}>{formatKrOre(netWorth)}</span>
               </button>
+              {!portfolio.loaded ? null : portfolio.holdings.length === 0 ? (
+                <button type="button" className="group-row" onClick={() => showView('investments')}>
+                  <span className="row-name">Lägg in investeringar</span>
+                </button>
+              ) : (
+                <button type="button" className="group-row" onClick={() => showView('investments')}>
+                  <span className="row-main">
+                    <span className="row-name">Investeringar</span>
+                    <span className="row-sub">
+                      {portfolioTotals.value === null
+                        ? 'Värde saknas'
+                        : portfolioTotals.changePct !== null &&
+                          `Utveckling ${formatPct(portfolioTotals.changePct)}${
+                            portfolioTotals.missing > 0 ? `, värde saknas för ${portfolioTotals.missing} innehav` : ''
+                          }`}
+                    </span>
+                  </span>
+                  {portfolioTotals.value !== null && <span className="row-value">{formatKrOre(portfolioTotals.value)}</span>}
+                </button>
+              )}
               {spendingTotal > 0 && (
                 <p className="group-row">
                   <span className="row-main">
                     <span className="row-name">Pengar att använda</span>
                     <span className="row-sub">Räknas inte i nettovärdet</span>
                   </span>
-                  <span className="row-value">{formatKr(spendingTotal)}</span>
+                  <span className="row-value">{formatKrOre(spendingTotal)}</span>
                 </p>
               )}
             </div>
@@ -283,7 +320,7 @@ export default function App() {
                   <span className="row-main">
                     <span className="row-name">{goal.name}</span>
                     <span className="row-sub">
-                      {formatKr(goalNow)} av {formatKr(goal.target)}
+                      {formatKrOre(goalNow)} av {formatKr(goal.target)}
                     </span>
                     <span className="bar" aria-hidden="true">
                       <span style={{ width: `${goalPercent}%` }} />
@@ -321,7 +358,7 @@ export default function App() {
         </div>
         <div hidden={view !== 'goal'}>
           <Forecast />
-          <Goal assets={assets} onChange={setGoal} />
+          <Goal assets={valuedAssets} onChange={setGoal} />
         </div>
         <div hidden={view !== 'budget'}>
           <div className="view-intro">
@@ -345,7 +382,23 @@ export default function App() {
         </div>
         <div hidden={view !== 'assets'}>
           <BackToOverview onClick={() => showView('overview')} />
-          <Assets onChange={setAssets} />
+          <Assets onChange={setAssets} rows={portfolio.rows} />
+        </div>
+        <div hidden={view !== 'investments'}>
+          {invSelected === null ? (
+            <BackToOverview onClick={() => showView('overview')} />
+          ) : (
+            <BackToOverview label="Investeringar" onClick={() => setInvSelected(null)} />
+          )}
+          <Investments
+            holdings={portfolio.holdings}
+            trades={portfolio.trades}
+            prices={portfolio.prices}
+            rows={portfolio.rows}
+            loaded={portfolio.loaded}
+            selected={invSelected}
+            onSelect={setInvSelected}
+          />
         </div>
         <div hidden={view !== 'account'}>
           <Account sync={sync} />
@@ -376,13 +429,13 @@ function JarvisUnavailable() {
 }
 
 /** Textknapp överst i Konton och Önskelista, som öppnas från Översikt. */
-function BackToOverview({ onClick }: { onClick: () => void }) {
+function BackToOverview({ onClick, label = 'Översikt' }: { onClick: () => void; label?: string }) {
   return (
     <button type="button" className="back-link" onClick={onClick}>
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" />
       </svg>
-      Översikt
+      {label}
     </button>
   );
 }

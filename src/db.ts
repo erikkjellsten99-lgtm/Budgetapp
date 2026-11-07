@@ -1,12 +1,12 @@
 import type { Loan } from './forecast';
 import { monthPlans, shiftMonth, type MonthPlan } from '../supabase/functions/inbox/months.ts';
-import type { Asset, Category, Debt, MonthBudget, MonthlyIncome, SavingsGoal, Transaction, Wish } from './types';
+import type { Asset, Category, Debt, Holding, MonthBudget, MonthlyIncome, SavingsGoal, Trade, Transaction, Wish } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 12;
+const DB_VERSION = 13;
 
 /** Listorna med appens data. Det är dessa som synkas mellan telefonerna. */
-export const DATA_STORES = ['categories', 'budgets', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes', 'loans'] as const;
+export const DATA_STORES = ['categories', 'budgets', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes', 'loans', 'holdings', 'trades'] as const;
 export type DataStore = (typeof DATA_STORES)[number];
 type StoreName = DataStore | 'outbox' | 'meta';
 
@@ -242,6 +242,12 @@ function openDb(): Promise<IDBDatabase> {
           const old = current.result as Loan | undefined;
           if (!old || (old.balance === 100000 && old.annualRate === 10)) loans.put({ ...MY_CAR_LOAN, payExtra: old?.payExtra ?? true });
         };
+      }
+
+      if (event.oldVersion < 13) {
+        // Investeringar: innehav och deras köp och sälj. Nya, tomma lager; inget befintligt rörs.
+        db.createObjectStore('holdings', { keyPath: 'id' });
+        db.createObjectStore('trades', { keyPath: 'id' });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -633,6 +639,75 @@ export function saveAsset(asset: Asset): Promise<void> {
 
 export function deleteAsset(id: string): Promise<void> {
   return removeRecord('assets', id);
+}
+
+// Investeringar
+
+export function getHoldings(): Promise<Holding[]> {
+  return read('holdings', (store) => store.getAll());
+}
+
+export function saveHolding(holding: Holding): Promise<void> {
+  return putRecord('holdings', holding);
+}
+
+/** Tar bort innehavet och alla dess affärer i en enda transaktion, så att allt eller inget försvinner och synkas. */
+export async function deleteHolding(id: string): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(['trades', 'holdings', 'outbox'], 'readwrite');
+    const trades = tx.objectStore('trades');
+    const outbox = tx.objectStore('outbox');
+    const queue = (store: 'trades' | 'holdings', key: string) => {
+      const entry: OutboxEntry = { key: `${store}:${key}`, store, id: key, data: null, deleted: true, ts: Date.now() };
+      outbox.put(entry);
+    };
+    const all = trades.getAll();
+    all.onsuccess = () => {
+      for (const trade of all.result as Trade[]) {
+        if (trade.holdingId !== id) continue;
+        trades.delete(trade.id);
+        queue('trades', trade.id);
+      }
+      tx.objectStore('holdings').delete(id);
+      queue('holdings', id);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  emit('local');
+}
+
+/** Sparar ett nytt innehav och dess första affär i en enda transaktion, så att båda eller ingen sparas och synkas. */
+export async function saveHoldingWithTrade(holding: Holding, trade: Trade): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(['holdings', 'trades', 'outbox'], 'readwrite');
+    const outbox = tx.objectStore('outbox');
+    const queue = (store: 'holdings' | 'trades', record: Holding | Trade) => {
+      const entry: OutboxEntry = { key: `${store}:${record.id}`, store, id: record.id, data: record, deleted: false, ts: Date.now() };
+      outbox.put(entry);
+    };
+    tx.objectStore('holdings').put(holding);
+    queue('holdings', holding);
+    tx.objectStore('trades').put(trade);
+    queue('trades', trade);
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  emit('local');
+}
+
+export function getTrades(): Promise<Trade[]> {
+  return read('trades', (store) => store.getAll());
+}
+
+export function saveTrade(trade: Trade): Promise<void> {
+  return putRecord('trades', trade);
+}
+
+export function deleteTrade(id: string): Promise<void> {
+  return removeRecord('trades', id);
 }
 
 // Önskelista

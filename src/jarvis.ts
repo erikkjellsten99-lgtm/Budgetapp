@@ -2,7 +2,9 @@
 // från datan som redan finns i appen (IndexedDB). Ingen server, ingen AI, läser bara.
 // Siffrorna kommer från summaryFacts (summary.ts), samma uträkning som sammanfattningen och Översikt.
 
-import { getAssets, getGoals, getLoans, getMonthPlans, getWishes } from './db';
+import { getAssets, getGoals, getHoldings, getLoans, getMonthPlans, getTrades, getWishes } from './db';
+import { loadPrices } from './prices';
+import type { PricePoint } from './types';
 import { MAX_MONTHS } from './goalPlan';
 import { loadHabitData, toLog } from './vanor/store';
 import { todayKey } from './vanor/dates';
@@ -16,19 +18,31 @@ export { EXAMPLES };
 export async function loadFacts(now = new Date()): Promise<SummaryFacts> {
   const today = todayKey(now);
   const month = today.slice(0, 7);
-  const [plans, assets, goals, loans, wishes, habitData] = await Promise.all([
+  const [plans, assets, holdings, trades, goals, loans, wishes, habitData] = await Promise.all([
     getMonthPlans(month, MAX_MONTHS + 1),
     getAssets(),
+    getHoldings(),
+    getTrades(),
     getGoals(),
     getLoans(),
     getWishes(),
     loadHabitData(),
   ]);
+  // Kurser läses bara för innehav med ticker; utan kurser räknas innehaven utan värde
+  let prices: Record<string, PricePoint[]> = {};
+  try {
+    prices = await loadPrices([...new Set(holdings.flatMap((h) => (h.ticker ? [h.ticker] : [])))]);
+  } catch {
+    prices = {};
+  }
   const paused = new Set(habitData.pauses.map((p) => p.date));
   return summaryFacts({
     today,
     plans,
     assets,
+    holdings,
+    trades,
+    prices,
     goal: goals[0] ?? null,
     loan: loans[0] ?? null,
     wishes,

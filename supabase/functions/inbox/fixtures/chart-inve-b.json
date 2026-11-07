@@ -1,0 +1,33 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "SEK",
+          "symbol": "INVE-B.ST"
+        },
+        "timestamp": [
+          1793606400,
+          1793692800,
+          1793779200,
+          1793865600,
+          1793952000
+        ],
+        "indicators": {
+          "quote": [
+            {
+              "close": [
+                281.4,
+                283.2,
+                null,
+                285.6,
+                286.1
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "error": null
+  }
+}

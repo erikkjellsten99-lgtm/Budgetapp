@@ -2,10 +2,11 @@
 // månsystem, önskelistan kometer och tillgångarna galaxens sken.
 // Läser hushållets data (samma som Budget, Prognos och Konton) men ändrar ingenting i den.
 
-import { currentMonth, getAssets, getBudget, getGoals, getIncome, getLoans, getWishes, shiftMonth } from '../db'
+import { currentMonth, getBudget, getGoals, getIncome, getLoans, getWishes, shiftMonth } from '../db'
 import type { CategoryType, Wish } from '../types'
 import { forecast, type MonthInput } from '../forecast'
 import { goalCurrent } from '../Goal'
+import { getValuedAssets } from '../valuedAssets'
 import { planGoal, planWhen } from '../goalPlan'
 import { loadGoalData } from '../useGoalPlan'
 import { paidThisMonth } from '../../supabase/functions/inbox/months'
@@ -121,7 +122,7 @@ export async function loadEconomy(): Promise<Economy> {
   const month = currentMonth()
   const [loans, assets, goals, wishes, budget, income] = await Promise.all([
     getLoans(),
-    getAssets(),
+    getValuedAssets(),
     getGoals(),
     getWishes(),
     getBudget(month),

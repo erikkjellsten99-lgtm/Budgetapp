@@ -3343,3 +3343,129 @@ button.group-row::after {
     padding-top: 0.5rem;
   }
 }
+
+/* Investeringar */
+.row-sub.negative {
+  color: var(--danger);
+}
+
+.investments-note {
+  margin: 0.4rem 1rem 0;
+}
+
+.investments-chart .save-line,
+.investments-chart .loan-line {
+  vector-effect: non-scaling-stroke;
+}
+
+.investments-allocation {
+  display: grid;
+  padding: 0.85rem 1rem 1rem;
+  gap: 0.75rem;
+}
+
+.investments-alloc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.investments-alloc-head h3 {
+  margin: 0;
+}
+
+.investments-bars {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.investments-bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3rem;
+  grid-template-areas: 'label share' 'track track';
+  gap: 0.2rem 0.5rem;
+  align-items: baseline;
+}
+
+.investments-bars .bar-label {
+  grid-area: label;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.investments-bars .bar-share {
+  grid-area: share;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.investments-bars .bar-track {
+  grid-area: track;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.investments-bars .bar-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fc-save, var(--pine));
+}
+
+.investments-alloc-head .segmented-row {
+  grid-template-columns: repeat(2, auto);
+  margin-bottom: 0;
+}
+
+/* Innehav */
+.holding-actions {
+  margin: 0.9rem 0;
+}
+
+.investments-chart .segmented-row {
+  margin-bottom: 0.6rem;
+}
+
+.chart-legend .key.buy::before,
+.chart-legend .key.sell::before {
+  width: 8px;
+  height: 8px;
+  border-top: 0;
+  background: var(--fc-save);
+  border-radius: 50%;
+}
+
+.chart-legend .key.sell::before {
+  border-radius: 0;
+  background: var(--danger);
+}
+
+.investments-chart .trade-dot {
+  stroke: var(--card);
+  stroke-width: 1.5;
+}
+
+.investments-chart .trade-dot.buy {
+  fill: var(--fc-save);
+}
+
+.investments-chart .trade-dot.sell {
+  fill: var(--danger);
+}
+
+.ticker-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--text);
+}
