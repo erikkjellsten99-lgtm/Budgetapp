@@ -3,7 +3,7 @@
  * som öppnas med orben. Ekonomi har egna underflikar.
  */
 export type Section = 'idag' | 'ekonomi' | 'vanor' | 'nyheter';
-export type EconomyView = 'overview' | 'budget' | 'goal' | 'assets' | 'wishlist';
+export type EconomyView = 'overview' | 'budget' | 'goal' | 'assets' | 'investments' | 'wishlist';
 export type View = 'idag' | 'nyheter' | 'vanor' | 'account' | EconomyView;
 
 /** Huvudflikarna. Ikonerna är enkla linjer i ett 24×24-rutnät. */
@@ -20,10 +20,11 @@ export const ECONOMY: { id: EconomyView; label: string }[] = [
   { id: 'budget', label: 'Budget' },
   { id: 'goal', label: 'Prognos' },
   { id: 'assets', label: 'Konton' },
+  { id: 'investments', label: 'Investeringar' },
   { id: 'wishlist', label: 'Önskelista' },
 ];
 
-/** Underflikarna som syns (segmentväljaren). Konton och Önskelista öppnas från rader i Översikt. */
+/** Underflikarna som syns (segmentväljaren). Konton, Investeringar och Önskelista öppnas från rader i Översikt. */
 export type EconomyTab = 'overview' | 'budget' | 'goal';
 export const ECONOMY_TABS: { id: EconomyTab; label: string }[] = [
   { id: 'overview', label: 'Översikt' },
@@ -31,8 +32,9 @@ export const ECONOMY_TABS: { id: EconomyTab; label: string }[] = [
   { id: 'goal', label: 'Prognos' },
 ];
 
-/** Vilken underflik som är vald när en vy visas. Konton och Önskelista hör till Översikt. */
-export const tabOf = (view: EconomyView): EconomyTab => (view === 'assets' || view === 'wishlist' ? 'overview' : view);
+/** Vilken underflik som är vald när en vy visas. Konton, Investeringar och Önskelista hör till Översikt. */
+export const tabOf = (view: EconomyView): EconomyTab =>
+  view === 'assets' || view === 'investments' || view === 'wishlist' ? 'overview' : view;
 
 export const isEconomy = (view: string): view is EconomyView => ECONOMY.some((item) => item.id === view);
 

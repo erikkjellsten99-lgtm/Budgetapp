@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ECONOMY_TABS, restoreView, SECTIONS, tabOf } from './nav';
+import { ECONOMY, ECONOMY_TABS, isEconomy, restoreView, SECTIONS, tabOf } from './nav';
 
 describe('huvudmenyn', () => {
   it('fyra flikar i rätt ordning', () => {
@@ -18,7 +18,7 @@ describe('restoreView', () => {
   });
 
   it('giltiga vyer behålls', () => {
-    for (const v of ['idag', 'vanor', 'nyheter', 'account', 'overview', 'budget', 'goal', 'assets', 'wishlist'])
+    for (const v of ['idag', 'vanor', 'nyheter', 'account', 'overview', 'budget', 'goal', 'assets', 'investments', 'wishlist'])
       expect(restoreView(v)).toBe(v);
   });
 });
@@ -33,5 +33,11 @@ describe('Ekonomins underflikar', () => {
     expect(tabOf('wishlist')).toBe('overview');
     expect(tabOf('budget')).toBe('budget');
     expect(tabOf('goal')).toBe('goal');
+  });
+
+  it('Investeringar öppnas från Översikt, efter Konton', () => {
+    expect(tabOf('investments')).toBe('overview');
+    expect(isEconomy('investments')).toBe(true);
+    expect(ECONOMY.map((e) => e.id).indexOf('investments')).toBe(ECONOMY.map((e) => e.id).indexOf('assets') + 1);
   });
 });

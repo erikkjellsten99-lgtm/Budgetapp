@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Assets from './Assets';
+import Investments from './Investments';
 import Categories, { sumBudgets } from './Categories';
 import Account from './Account';
 import ThemePicker from './ThemePicker';
@@ -33,9 +34,9 @@ import { lazyWithReload } from './lazyWithReload';
 import Room from './Room';
 import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type EconomyView, type Section, type View } from './nav';
 const Nyheter = lazy(() => import('./Nyheter'));
-import { formatKr } from './money';
+import { formatKr, formatPct } from './money';
 import { usePortfolio } from './usePortfolio';
-import { missingValues, withHoldingValues } from '../supabase/functions/inbox/portfolio.ts';
+import { missingValues, totals, withHoldingValues } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
 function readStorage(key: string): string | null {
@@ -103,6 +104,7 @@ export default function App() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const portfolio = usePortfolio();
   // Konton som räknas från innehaven får värdet härifrån. Övriga är exakt som de sparats.
+  const portfolioTotals = useMemo(() => totals(portfolio.rows), [portfolio.rows]);
   const valuedAssets = useMemo(() => withHoldingValues(assets, portfolio.rows), [assets, portfolio.rows]);
   const [income, setIncome] = useState<MonthlyIncome>({ month: budgetMonth(), csn: 0, other: 0 });
   const [selectedMonth, setSelectedMonth] = useState(budgetMonth);
@@ -278,6 +280,23 @@ export default function App() {
                 </span>
                 <span className={netWorth < 0 ? 'row-value negative' : 'row-value'}>{formatKr(netWorth)}</span>
               </button>
+              {portfolio.holdings.length === 0 ? (
+                <button type="button" className="group-row" onClick={() => showView('investments')}>
+                  <span className="row-name">Lägg in investeringar</span>
+                </button>
+              ) : (
+                <button type="button" className="group-row" onClick={() => showView('investments')}>
+                  <span className="row-main">
+                    <span className="row-name">Investeringar</span>
+                    <span className="row-sub">
+                      {portfolioTotals.value === null
+                        ? 'Värde saknas'
+                        : portfolioTotals.changePct !== null && `Utveckling ${formatPct(portfolioTotals.changePct)}`}
+                    </span>
+                  </span>
+                  {portfolioTotals.value !== null && <span className="row-value">{formatKr(portfolioTotals.value)}</span>}
+                </button>
+              )}
               {spendingTotal > 0 && (
                 <p className="group-row">
                   <span className="row-main">
@@ -360,6 +379,17 @@ export default function App() {
         <div hidden={view !== 'assets'}>
           <BackToOverview onClick={() => showView('overview')} />
           <Assets onChange={setAssets} rows={portfolio.rows} />
+        </div>
+        <div hidden={view !== 'investments'}>
+          <BackToOverview onClick={() => showView('overview')} />
+          <Investments
+            holdings={portfolio.holdings}
+            trades={portfolio.trades}
+            prices={portfolio.prices}
+            rows={portfolio.rows}
+            onOpenHolding={() => {}}
+            onAdd={() => {}}
+          />
         </div>
         <div hidden={view !== 'account'}>
           <Account sync={sync} />
