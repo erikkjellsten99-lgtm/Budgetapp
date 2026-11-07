@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { position, validateTrades } from '../supabase/functions/inbox/portfolio';
-import type { Trade } from '../supabase/functions/inbox/types';
+import {
+  allocation,
+  position,
+  priceOn,
+  quote,
+  summarize,
+  totals,
+  validateTrades,
+  valueOverTime,
+  withHoldingValues,
+} from '../supabase/functions/inbox/portfolio';
+import type { Asset, Holding, PricePoint, Trade } from '../supabase/functions/inbox/types';
 
 let n = 0;
 const trade = (
@@ -89,5 +99,200 @@ describe('validateTrades', () => {
     expect(
       validateTrades([trade('buy', '2026-01-10', 10, 100), trade('sell', '2026-05-01', 10, 100)]),
     ).toBeNull();
+  });
+});
+
+const holding = (id: string, extra: Partial<Holding> = {}): Holding => ({
+  id,
+  name: id,
+  type: 'stock',
+  ...extra,
+});
+const buyFor = (holdingId: string, date: string, quantity: number, price: number): Trade => ({
+  ...trade('buy', date, quantity, price),
+  holdingId,
+});
+
+describe('priceOn', () => {
+  const points: PricePoint[] = [
+    { date: '2026-11-03', close: 100 },
+    { date: '2026-11-06', close: 110 },
+  ];
+
+  it('ger senaste kurs på eller före datumet', () => {
+    expect(priceOn(points, '2026-11-04')).toEqual(points[0]);
+    expect(priceOn(points, '2026-11-06')).toEqual(points[1]);
+  });
+
+  it('ger null före första kursen', () => {
+    expect(priceOn(points, '2026-11-02')).toBeNull();
+  });
+});
+
+describe('quote', () => {
+  const points: PricePoint[] = [{ date: '2026-10-30', close: 120 }];
+
+  it('använder marknadskurs när ticker och kurs finns', () => {
+    const q = quote(holding('a', { ticker: 'A.ST' }), points, '2026-11-04');
+    expect(q).toEqual({ price: 120, date: '2026-10-30', source: 'market', stale: false });
+  });
+
+  it('använder manuell kurs utan ticker', () => {
+    const q = quote(holding('a', { manualPrice: 50, manualPriceDate: '2026-11-03' }), [], '2026-11-04');
+    expect(q).toEqual({ price: 50, date: '2026-11-03', source: 'manual', stale: false });
+  });
+
+  it('ger ingen kurs när varken marknad eller manuell finns', () => {
+    expect(quote(holding('a'), [], '2026-11-04')).toEqual({
+      price: null,
+      date: null,
+      source: 'none',
+      stale: false,
+    });
+  });
+
+  it('markerar kurs äldre än 4 vardagar som gammal', () => {
+    const h = holding('a', { ticker: 'A.ST' });
+    expect(quote(h, points, '2026-11-05').stale).toBe(true);
+    expect(quote(h, points, '2026-11-04').stale).toBe(false);
+  });
+
+  it('räknar gammal även för manuell kurs', () => {
+    const h = holding('a', { manualPrice: 50, manualPriceDate: '2026-10-30' });
+    expect(quote(h, [], '2026-11-05').stale).toBe(true);
+  });
+});
+
+describe('summarize och totals', () => {
+  const h1 = holding('h1', { ticker: 'A.ST', type: 'fund' });
+  const h2 = holding('h2', { type: 'stock' });
+  const trades = [buyFor('h1', '2026-01-10', 10, 100), buyFor('h2', '2026-01-10', 5, 100)];
+  const prices = { 'A.ST': [{ date: '2026-11-04', close: 120 }] };
+
+  it('räknar värde, förändring och procent', () => {
+    const [row] = summarize([h1], trades, prices, '2026-11-04');
+    expect(row.value).toBe(1200);
+    expect(row.change).toBe(200);
+    expect(row.changePct).toBe(0.2);
+  });
+
+  it('ger null utan kurs', () => {
+    const [row] = summarize([h2], trades, prices, '2026-11-04');
+    expect(row.value).toBeNull();
+    expect(row.change).toBeNull();
+    expect(row.changePct).toBeNull();
+  });
+
+  it('totals räknar saknade och summerar bara rader med kurs', () => {
+    const rows = summarize([h1, h2], trades, prices, '2026-11-04');
+    const t = totals(rows);
+    expect(t.missing).toBe(1);
+    expect(t.invested).toBe(1500);
+    expect(t.value).toBe(1200);
+    expect(t.change).toBe(200);
+    expect(t.changePct).toBe(0.2);
+    expect(t.latestDate).toBe('2026-11-04');
+  });
+
+  it('latestDate är äldsta marknadskursen', () => {
+    const h3 = holding('h3', { ticker: 'B.ST' });
+    const rows = summarize(
+      [h1, h3],
+      [...trades, buyFor('h3', '2026-01-10', 1, 10)],
+      { ...prices, 'B.ST': [{ date: '2026-11-02', close: 10 }] },
+      '2026-11-04',
+    );
+    expect(totals(rows).latestDate).toBe('2026-11-02');
+  });
+
+  it('value är null när ingen rad har kurs', () => {
+    const t = totals(summarize([h2], trades, prices, '2026-11-04'));
+    expect(t.value).toBeNull();
+    expect(t.change).toBeNull();
+    expect(t.changePct).toBeNull();
+  });
+});
+
+describe('allocation', () => {
+  const fund = holding('f', { type: 'fund', ticker: 'F' });
+  const stock = holding('s', { type: 'stock', ticker: 'S' });
+  const trades = [buyFor('f', '2026-01-10', 30, 100), buyFor('s', '2026-01-10', 10, 100)];
+  const prices = {
+    F: [{ date: '2026-11-04', close: 100 }],
+    S: [{ date: '2026-11-04', close: 100 }],
+  };
+  const rows = summarize([stock, fund], trades, prices, '2026-11-04');
+
+  it('fördelar på typ, störst först', () => {
+    expect(allocation(rows, 'type')).toEqual([
+      { key: 'fund', label: 'Fonder', value: 3000, share: 0.75 },
+      { key: 'stock', label: 'Aktier', value: 1000, share: 0.25 },
+    ]);
+  });
+
+  it('fördelar på innehav och hoppar över rader utan värde', () => {
+    const none = summarize([holding('x')], [buyFor('x', '2026-01-10', 1, 1)], {}, '2026-11-04');
+    const slices = allocation([...rows, ...none], 'holding');
+    expect(slices.map((s) => s.key)).toEqual(['f', 's']);
+  });
+});
+
+describe('valueOverTime', () => {
+  const h = holding('h1', { ticker: 'A.ST' });
+  const trades = [buyFor('h1', '2026-01-15', 10, 100)];
+
+  it('ger en punkt per månad med invested och värde', () => {
+    const prices = {
+      'A.ST': [
+        { date: '2026-01-20', close: 110 },
+        { date: '2026-02-27', close: 120 },
+        { date: '2026-03-09', close: 130 },
+      ],
+    };
+    expect(valueOverTime([h], trades, prices, '2026-03-10')).toEqual([
+      { date: '2026-01-31', invested: 1000, value: 1100 },
+      { date: '2026-02-28', invested: 1000, value: 1200 },
+      { date: '2026-03-10', invested: 1000, value: 1300 },
+    ]);
+  });
+
+  it('ger value null när kurs saknas på eller före datumet', () => {
+    const prices = { 'A.ST': [{ date: '2026-02-20', close: 120 }] };
+    const s = valueOverTime([h], trades, prices, '2026-03-10');
+    expect(s.map((p) => p.value)).toEqual([null, 1200, 1200]);
+  });
+
+  it('ger tom serie utan affärer', () => {
+    expect(valueOverTime([h], [], {}, '2026-03-10')).toEqual([]);
+  });
+});
+
+describe('withHoldingValues', () => {
+  const plain: Asset = { id: 'a1', name: 'Sparkonto', amount: 777, updated: '2026-10-01' };
+  const acct: Asset = {
+    id: 'a2',
+    name: 'Avanza',
+    amount: 0,
+    updated: '2026-10-01',
+    fromHoldings: true,
+    cash: 500,
+  };
+  const row = (assetId: string, value: number | null) =>
+    ({
+      holding: holding(`h${value}`, { assetId }),
+      value,
+    }) as unknown as Parameters<typeof withHoldingValues>[1][number];
+
+  it('lämnar konto utan fromHoldings som samma objekt', () => {
+    expect(withHoldingValues([plain], [row('a1', 5)])[0]).toBe(plain);
+  });
+
+  it('summerar kontanter och innehavsvärden, null räknas som 0', () => {
+    const [res] = withHoldingValues([acct], [row('a2', 1000), row('a2', null), row('a1', 99)]);
+    expect(res.amount).toBe(1500);
+    expect(res.fromHoldings).toBe(true);
+    expect(res.cash).toBe(500);
+    expect(res.name).toBe('Avanza');
+    expect(res.updated).toBe('2026-10-01');
   });
 });
