@@ -1,0 +1,354 @@
+/* Specialrummet (designspec "Två rum"): Jarvis och galaxen i HUD-stil, alltid mörkt.
+   Allt här gäller bara inuti .room, som sätts på Jarvis-skärmen och galaxen. Vardagsrummet ligger i styles.css. */
+
+.room {
+  --hud-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --hud-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Samma namn som i vardagsrummet, med HUD-färger, så att knappar och fält i rummet blir mörka. */
+  --bg: #070b14;
+  --surface: #0e1626;
+  --line: #22405c;
+  --ink: #e6f1ff;
+  --muted: #93a7c3;
+  --pine: #6fc4a2;
+  --cobalt: #5cc8ff;
+  --lingon: #ff9b90;
+  --card: var(--surface);
+  --card-raised: #132036;
+  --text: var(--ink);
+  --border: var(--line);
+  --accent: var(--cobalt);
+  --accent-hover: #86d8ff;
+  --accent-soft: #10283f;
+  --danger: var(--lingon);
+  --danger-soft: #3a1f22;
+  --focus: #86d8ff;
+
+  color-scheme: dark;
+  color: var(--ink);
+}
+
+.room button.primary {
+  color: #04121f;
+}
+
+/* Jarvis */
+.room .jarvis-a,
+.room .jarvis-heard {
+  font-family: var(--hud-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.room .jarvis-eyebrow,
+.room .jarvis-top-title p,
+.room .jarvis-status,
+.room .core-name {
+  font-family: var(--hud-mono);
+  font-weight: 500;
+}
+
+.room .jarvis-top-title h2 {
+  font-family: var(--hud-display);
+}
+
+/* ---------- Galaxen: gränssnittet ovanpå 3D-scenen i HUD-stil ---------- */
+.room.galaxy-view {
+  --g-accent: #5cc8ff;
+  --g-line: rgb(92 200 255 / 35%);
+  --g-glow: rgb(92 200 255 / 30%);
+  --g-panel: rgb(5 10 22 / 78%);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+/* Cockpitram: tunna hörn runt hela bilden */
+.room.galaxy-view::before,
+.room.galaxy-view::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.room.galaxy-view::before {
+  top: max(10px, env(safe-area-inset-top));
+  left: 10px;
+  border-top: 2px solid var(--g-line);
+  border-left: 2px solid var(--g-line);
+}
+
+.room.galaxy-view::after {
+  right: 10px;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  border-right: 2px solid var(--g-line);
+  border-bottom: 2px solid var(--g-line);
+}
+
+.room.galaxy-view .gv-top h2,
+.room.galaxy-view .gv-big {
+  font-family: var(--hud-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.room.galaxy-view .gv-top p,
+.room.galaxy-view .gv-label,
+.room.galaxy-view .cv-sub,
+.room.galaxy-view .gv-hint {
+  font-family: var(--hud-mono);
+}
+
+.room.galaxy-view .gv-hint {
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: #9fb3cf;
+}
+
+/* Knapparna uppe till höger */
+.room.galaxy-view .gv-close {
+  background: var(--g-panel);
+  border-color: var(--g-line);
+  color: #e6f1ff;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.room.galaxy-view .gv-help {
+  font-family: var(--hud-mono);
+  font-size: 1rem;
+}
+
+.room.galaxy-view .gv-help[aria-expanded='true'] {
+  background: rgb(92 200 255 / 18%);
+  border-color: var(--g-accent);
+  color: var(--g-accent);
+}
+
+/* Målen i rymden: siktram med hörn, monospace-text */
+.room.cosmos-view .cv-label {
+  padding: 7px 12px 8px;
+  background: var(--g-panel);
+  border-radius: 6px;
+  outline: 1px solid var(--g-line);
+  outline-offset: -1px;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.room.cosmos-view .cv-label::before,
+.room.cosmos-view .cv-label::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+}
+
+.room.cosmos-view .cv-label::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--g-accent);
+  border-left: 2px solid var(--g-accent);
+}
+
+.room.cosmos-view .cv-label::after {
+  right: -1px;
+  bottom: -1px;
+  border-right: 2px solid var(--g-accent);
+  border-bottom: 2px solid var(--g-accent);
+}
+
+.room.cosmos-view .cv-label b {
+  font-family: var(--hud-mono);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+
+.room.cosmos-view .cv-label small {
+  color: #9fb3cf;
+}
+
+.room.cosmos-view .cv-label.site b,
+.room.cosmos-view .cv-label.base b,
+.room.cosmos-view .cv-label.earth b {
+  color: var(--g-accent);
+}
+
+.room.cosmos-view .cv-label.crew,
+.room.cosmos-view .cv-label.star {
+  outline: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.room.cosmos-view .cv-label.crew::before,
+.room.cosmos-view .cv-label.crew::after,
+.room.cosmos-view .cv-label.star::before,
+.room.cosmos-view .cv-label.star::after {
+  display: none;
+}
+
+.room.cosmos-view .cv-label:focus-visible {
+  outline: 2px solid var(--g-accent);
+}
+
+/* Chippen längst ner (Hälsa, Ekonomi, månader) och nästa-knappen */
+.room.galaxy-view .gv-month {
+  background: var(--g-panel);
+  border-color: var(--g-line);
+  border-radius: 10px;
+  color: #e6f1ff;
+  font-family: var(--hud-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.room.galaxy-view .gv-month.is-current {
+  border-color: var(--g-accent);
+  box-shadow: 0 0 18px var(--g-glow);
+}
+
+.room.galaxy-view .cv-next {
+  border-color: var(--g-accent);
+  background: rgb(92 200 255 / 12%);
+  color: #e6f1ff;
+}
+
+.room.galaxy-view .cv-next span {
+  background: var(--g-accent);
+  color: #04121f;
+  font-family: var(--hud-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Panelerna (vana, besättning, ekonomi) och guiden */
+.room.galaxy-view .gv-panel,
+.room.galaxy-view .gv-guide {
+  background: var(--g-panel);
+  border-color: var(--g-line);
+  border-radius: 14px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.room.galaxy-view .gv-guide h3 {
+  font-family: var(--hud-display);
+  font-weight: 600;
+}
+
+.room.galaxy-view .gv-guide-ok,
+.room.galaxy-view .gv-back {
+  border-color: var(--g-line);
+  color: var(--g-accent);
+  font-weight: 600;
+}
+
+/* Rummet som ark över appen, med Jarvis i full höjd */
+.room.room-sheet {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #050912;
+}
+
+.room.room-sheet .jarvis-screen:not(.full) {
+  min-height: 100dvh;
+  margin: 0;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  border: 0;
+  border-radius: 0;
+}
+
+.room .room-back {
+  position: absolute;
+  z-index: 2;
+  top: calc(env(safe-area-inset-top) + 0.9rem);
+  left: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 2.75rem;
+  padding: 0 0.85rem 0 0.45rem;
+  border: 1px solid rgb(92 200 255 / 28%);
+  border-radius: 999px;
+  background: rgb(14 24 42 / 85%);
+  color: #e6f1ff;
+  font: 600 0.9375rem/1 var(--font-text, system-ui);
+}
+
+.room .room-back svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Sidorna i Jarvis sidhuvud: lika breda, så att rubriken står i mitten. Vänster är plats för Tillbaka. */
+.room .jarvis-top-side {
+  display: flex;
+  flex: none;
+  gap: 0.4rem;
+  width: 6.5rem;
+}
+
+.room .jarvis-top-side.end {
+  justify-content: flex-end;
+}
+
+/* Titeln på egen rad under knapparna, så att undertiteln får plats på 375 px */
+.room .jarvis-top {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  row-gap: 0.35rem;
+}
+
+.room .jarvis-top-title {
+  flex: 1 0 100%;
+  order: 3;
+}
+
+/* Galaxen: Tillbaka först i sidhuvudet, knapparna till höger, rubriken på raden under */
+.room.galaxy-view .gv-top {
+  flex-wrap: wrap;
+  row-gap: 0.6rem;
+}
+
+.room.galaxy-view .gv-top > .room-back {
+  position: static;
+  pointer-events: auto;
+}
+
+.room.galaxy-view .gv-top > .gv-actions {
+  order: 1;
+  pointer-events: auto;
+}
+
+.room.galaxy-view .gv-top > :not(.room-back):not(.gv-actions) {
+  flex: 1 0 100%;
+  order: 2;
+}
+
+/* Cockpit-hörnet uppe till vänster flyttas ner under Tillbaka */
+.room.galaxy-view::before {
+  top: calc(max(10px, env(safe-area-inset-top)) + 3.5rem);
+}
+
+.room .room-unavailable {
+  margin: 0;
+  padding: calc(env(safe-area-inset-top) + 4.5rem) 1.5rem 0;
+  color: #9fb3cf;
+  text-align: center;
+  line-height: 1.5;
+}

@@ -131,7 +131,7 @@ export default function Forecast() {
   return (
     <section className="forecast" aria-labelledby="forecast-title">
       <div className="view-intro">
-        <p className="eyebrow">BUDGET FRÅN {monthName(first).toUpperCase()}</p>
+        <p className="eyebrow">Budget från {monthName(first)}</p>
         <h2 id="forecast-title">Prognos</h2>
       </div>
       <p className="forecast-lead">
@@ -141,21 +141,25 @@ export default function Forecast() {
         {withReturn ? `Med ${String(rate).replace('.', ',')}\u00a0% förväntad avkastning per år.` : 'Utan avkastning.'}
       </p>
 
-      <div className="forecast-facts">
+      <div className="group forecast-facts">
         {data.loan && (
-          <div className="card fact">
-            <span>{data.loan.name} betalt</span>
-            <strong>{result.loanPaidIn ? `Slutet av ${monthName(shiftMonth(result.loanPaidIn, -1))}` : 'Inte inom perioden'}</strong>
+          <div className="group-row fact">
+            <span className="row-name">{data.loan.name} betalt</span>
+            <strong className="row-value">
+              {result.loanPaidIn ? `Slutet av ${monthName(shiftMonth(result.loanPaidIn, -1))}` : 'Inte inom perioden'}
+            </strong>
           </div>
         )}
-        <div className="card fact">
-          <span>Sparat i slutet av {last ? monthName(shiftMonth(last.month, -1)) : ''}</span>
-          <strong>{last ? kr(last.savings) : '–'}</strong>
-          {withReturn && flat && last && (
-            <small>
-              varav {kr(earned)} avkastning · {kr(flat.months.at(-1)!.savings)} utan
-            </small>
-          )}
+        <div className="group-row fact">
+          <span className="row-main">
+            <span className="row-name">Sparat i slutet av {last ? monthName(shiftMonth(last.month, -1)) : ''}</span>
+            {withReturn && flat && last && (
+              <span className="row-sub">
+                varav {kr(earned)} avkastning, {kr(flat.months.at(-1)!.savings)} utan
+              </span>
+            )}
+          </span>
+          <strong className="row-value">{last ? kr(last.savings) : '–'}</strong>
         </div>
         {data.goal && data.goalTarget > 0 && goalData && (() => {
           // Samma uträkning och samma avkastning som Sparmål nedan och Översikt (goalPlan.ts), så att datumet
@@ -163,12 +167,14 @@ export default function Forecast() {
           const plan = planGoal(data.goalStart, data.goalTarget, data.goal.annualReturn, goalData.rows);
           const at = plan.reachedAt;
           return (
-            <div className="card fact">
-              <span>
-                {data.goal.name} ({kr(data.goalTarget)})
+            <div className="group-row fact">
+              <span className="row-main">
+                <span className="row-name">
+                  {data.goal.name} ({kr(data.goalTarget)})
+                </span>
+                <span className="row-sub">som i Sparmål, med {String(data.goal.annualReturn).replace('.', ',')}&nbsp;% avkastning</span>
               </span>
-              <strong>{at === 0 ? 'Nått' : at === null ? 'Inte inom 40 år' : capitalize(planWhen(plan, at))}</strong>
-              <small>som i Sparmål, med {String(data.goal.annualReturn).replace('.', ',')}&nbsp;% avkastning</small>
+              <strong className="row-value">{at === 0 ? 'Nått' : at === null ? 'Inte inom 40 år' : capitalize(planWhen(plan, at))}</strong>
             </div>
           );
         })()}

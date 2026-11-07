@@ -8,6 +8,7 @@
   hårda eller smala mellanslag ("8 432"); tolkningen i `health.ts` måste tåla det.
 - "Att göra" = enstaka saker med datum. Vanor med veckomål listas under "Måste"/"Kan vänta", inte under Att göra.
 - Pausad dag: inga måsten, streaks bryts inte, veckomål sänks.
-- Typsnitt: inga egna. Rubriker ärver `--hud-display` (Space Grotesk), text systemets. Bricolage/Figtree är borttagna.
+- Typsnitt och färger: designspecen "Två rum". Vanor är vardagsrum: systemets typsnitt, siffror i `--font-amount`,
+  klart i `--pine`, det man trycker på i `--act` (kobolt). Galaxen är specialrum och har HUD-stilen i `room.css`.
 - Galaxen (`CosmosView.tsx` m.fl.) öppnas härifrån (Månad → Öppna din galax) och laddas lazy. Regler för den
   står i root-CLAUDE.md under Galax tills den fått egen mapp.

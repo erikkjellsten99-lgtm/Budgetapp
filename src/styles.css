@@ -1,82 +1,76 @@
+/* Vardagsrummet (designspec "Två rum", docs/design/designspec-tva-rum.md).
+   Färgerna är specens. De gamla namnen (--card, --text, --accent …) är alias tills alla vyer är ombyggda.
+   Specialrummet (Jarvis och galaxen) har egna färger i room.css. */
 :root {
   color-scheme: light;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-text);
   line-height: 1.45;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --bg: #f2f4f2;
-  --card: #ffffff;
-  --card-raised: #ffffff;
-  --text: #19211d;
-  --muted: #59655e;
-  --border: #dce2de;
-  --accent: #176b4a;
-  --accent-hover: #11573b;
-  --accent-soft: #e8f1eb;
-  --danger: #a8322b;
-  --danger-soft: #faeeec;
-  --chart-main: #176b4a;
-  --chart-ref: #78867d;
-  --focus: #176b4a;
-  --hero-bg: #17231c;
-  --hero-text: #f5f7f5;
-  --hero-muted: #c1cec5;
-  --shadow: 0 1px 2px rgb(20 32 25 / 4%), 0 8px 24px rgb(20 32 25 / 3%);
-  --radius-card: 12px;
-  --radius-control: 8px;
+  --bg: #f2f4f5;
+  --surface: #ffffff;
+  --line: #dce2e6;
+  --ink: #1a1f24;
+  --muted: #56616b;
+  --pine: #23614f;
+  --cobalt: #2e4fd8;
+  --lingon: #c2362f;
 
-  color: var(--text);
+  --font-text: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-amount: ui-rounded, system-ui, -apple-system, sans-serif;
+  --radius-group: 14px;
+  --radius-card: var(--radius-group);
+  --radius-control: 10px;
+
+  --card: var(--surface);
+  --card-raised: var(--surface);
+  --text: var(--ink);
+  --border: var(--line);
+  --accent: var(--cobalt);
+  --accent-hover: color-mix(in srgb, var(--cobalt) 85%, var(--ink));
+  --accent-soft: color-mix(in srgb, var(--cobalt) 12%, var(--surface));
+  --danger: var(--lingon);
+  --danger-soft: color-mix(in srgb, var(--lingon) 12%, var(--surface));
+  --chart-main: var(--pine);
+  --chart-ref: var(--muted);
+  --focus: var(--cobalt);
+  --hero-bg: var(--surface);
+  --hero-text: var(--ink);
+  --hero-muted: var(--muted);
+  --shadow: none;
+
+  color: var(--ink);
   background: var(--bg);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #101512;
-    --card: #191f1b;
-    --card-raised: #202823;
-    --text: #f0f3f0;
-    --muted: #b0bbb3;
-    --border: #343e37;
-    --accent: #79c99a;
-    --accent-hover: #92d9ad;
-    --accent-soft: #24372b;
-    --danger: #ff9b90;
-    --danger-soft: #402724;
-    --chart-main: #79c99a;
-    --chart-ref: #a0ada4;
-    --focus: #9bdfb2;
-    --hero-bg: #202b24;
-    --hero-text: #f3f7f3;
-    --hero-muted: #c2d0c6;
-    --shadow: 0 1px 2px rgb(0 0 0 / 16%), 0 8px 24px rgb(0 0 0 / 10%);
+    --bg: #111518;
+    --surface: #1a2025;
+    --line: #2a333a;
+    --ink: #e8ecef;
+    --muted: #9ba7b1;
+    --pine: #6fc4a2;
+    --cobalt: #9aaeff;
+    --lingon: #ff8f86;
   }
 }
 
 /* Mörkt läge valt i appen (Konto → Utseende) */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #101512;
-  --card: #191f1b;
-  --card-raised: #202823;
-  --text: #f0f3f0;
-  --muted: #b0bbb3;
-  --border: #343e37;
-  --accent: #79c99a;
-  --accent-hover: #92d9ad;
-  --accent-soft: #24372b;
-  --danger: #ff9b90;
-  --danger-soft: #402724;
-  --chart-main: #79c99a;
-  --chart-ref: #a0ada4;
-  --focus: #9bdfb2;
-  --hero-bg: #202b24;
-  --hero-text: #f3f7f3;
-  --hero-muted: #c2d0c6;
-  --shadow: 0 1px 2px rgb(0 0 0 / 16%), 0 8px 24px rgb(0 0 0 / 10%);
+  --bg: #111518;
+  --surface: #1a2025;
+  --line: #2a333a;
+  --ink: #e8ecef;
+  --muted: #9ba7b1;
+  --pine: #6fc4a2;
+  --cobalt: #9aaeff;
+  --lingon: #ff8f86;
 }
 
 * {
@@ -165,10 +159,9 @@ main {
 .eyebrow {
   margin: 0 0 0.3rem;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.9375rem;
   line-height: 1.3;
-  font-weight: 750;
-  letter-spacing: 0.09em;
+  font-weight: 500;
 }
 
 /* Välj budgetmånad på översikten: ‹ NOVEMBER 2026 › */
@@ -184,6 +177,7 @@ main {
   min-width: 8.5rem;
   text-align: center;
   color: var(--text);
+  font-weight: 600;
 }
 
 .month-step {
@@ -279,7 +273,8 @@ h2 {
   margin: 0 0 0.85rem;
   overflow: hidden;
   background: var(--card);
-  border: 1px solid var(--border);
+  /* Ytor skiljs åt med färg, inte linjer (designspec "Två rum"). Ramen finns kvar, osynlig, för fokus och felmarkering. */
+  border: 1px solid transparent;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow);
 }
@@ -293,11 +288,9 @@ h3 {
   margin: 0;
   padding: 0.75rem 1rem;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.9375rem;
   line-height: 1.35;
-  font-weight: 750;
-  letter-spacing: 0.055em;
-  text-transform: uppercase;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -353,13 +346,13 @@ button.primary {
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) button.primary {
-    color: #102016;
+    color: var(--bg);
   }
 }
 
 /* Mörkt läge valt i appen (Konto → Utseende) */
 :root[data-theme='dark'] button.primary {
-  color: #102016;
+  color: var(--bg);
 }
 
 button.danger {
@@ -411,8 +404,7 @@ h3,
 .goal-chart,
 .legend,
 .target,
-.hero-amount,
-.net-worth {
+.hero-amount {
   font-variant-numeric: tabular-nums;
 }
 
@@ -500,22 +492,6 @@ h3,
   color: var(--danger);
 }
 
-.balance-hero {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 12rem;
-  margin-bottom: 1rem;
-  padding: 1.35rem 1.4rem;
-  background: var(--hero-bg);
-  border-color: var(--hero-bg);
-  border-radius: 14px;
-  color: var(--hero-text);
-  box-shadow: none;
-}
-
 .hero-label {
   margin: 0 0 0.6rem;
   color: var(--hero-muted);
@@ -523,68 +499,24 @@ h3,
   font-weight: 550;
 }
 
+/* Vyns huvudsiffra (designspec "Två rum"): rundade siffror, 44 px, aldrig bruten. */
 .hero-amount {
   max-width: 100%;
-  font-size: clamp(2.2rem, 10vw, 3.4rem);
-  line-height: 1;
-  font-weight: 680;
-  letter-spacing: -0.065em;
-  overflow-wrap: anywhere;
-}
-
-.hero-period {
-  margin-top: 1rem;
-  color: var(--hero-muted);
-  font-size: 0.84rem;
-  font-weight: 550;
-}
-
-.balance-hero.negative .hero-amount {
-  color: #ff9b90;
-}
-
-.overview-grid {
-  display: grid;
-  gap: 0.85rem;
-}
-
-
-.overview-breakdown p + p {
-  border-top: 1px solid var(--border);
-}
-
-.net-worth-card {
-  display: flex;
-  flex-direction: column;
-  padding: 0.2rem 0 0.85rem;
-}
-
-.net-worth-card > .eyebrow {
-  padding: 0 1rem;
-}
-
-.net-worth {
-  display: block;
-  margin: 0.1rem 1rem 0.8rem;
-  font-size: clamp(1.9rem, 8vw, 2.5rem);
+  font-family: var(--font-amount);
+  font-size: clamp(2.25rem, 11vw, 2.75rem);
+  font-variant-numeric: tabular-nums;
   line-height: 1.05;
-  font-weight: 680;
-  letter-spacing: -0.055em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
-.net-worth.negative {
-  color: var(--danger);
+.hero-amount.positive {
+  color: var(--pine);
 }
 
-.net-worth-detail {
-  padding-top: 0.55rem !important;
-  padding-bottom: 0.55rem !important;
-  border-top: 1px solid var(--border);
-  font-size: 0.9rem !important;
-}
-
-.net-worth-card .note {
-  padding: 0.55rem 1rem 0 !important;
+.hero-amount.negative {
+  color: var(--lingon);
 }
 
 .overview-link {
@@ -929,11 +861,6 @@ main > div > h2 + .hint {
   display: none !important;
 }
 
-.net-worth-card p.net-worth-detail {
-  display: flex;
-  justify-content: space-between;
-}
-
 /* Ikoner i menyn: syns i mobilens bottenmeny och i sidomenyn på skrivbord, döljs på mellanstora skärmar. */
 .nav-icon {
   display: none;
@@ -964,50 +891,6 @@ main > div > h2 + .hint {
 }
 
 /* Sparmålet i liten form på översikten. Hela kortet är en knapp till fliken Sparmål. */
-.goal-summary {
-  display: grid;
-  gap: 0.6rem;
-  width: 100%;
-  margin-top: 0;
-  padding: 0.9rem 1rem 1rem;
-  text-align: left;
-  font-variant-numeric: tabular-nums;
-}
-
-.goal-summary-head {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 750;
-  letter-spacing: 0.055em;
-  text-transform: uppercase;
-}
-
-.goal-summary-head span:last-child {
-  font-size: 1.2rem;
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-.goal-summary-amount {
-  color: var(--muted);
-}
-
-.goal-summary-amount strong {
-  color: var(--text);
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-}
-
-.goal-summary .bar {
-  display: block;
-}
-
-.goal-summary-status {
-  font-weight: 650;
-}
 
 /* Konto-knappen i sidhuvudet, med en prick som visar synkens status. */
 .app-nav {
@@ -1438,10 +1321,9 @@ main > div > h2 + .hint {
     min-height: 3.15rem;
     padding: 0.4rem 0.1rem;
     border-radius: 7px;
-    font-size: 0.68rem;
+    font-size: 0.8125rem;
     line-height: 1.2;
   }
-
 
   main {
     padding: 1rem 1rem 6.5rem;
@@ -1461,20 +1343,11 @@ main > div > h2 + .hint {
     padding-top: 1.75rem;
   }
 
-  .overview-grid {
-    grid-template-columns: 1fr 1fr;
-    align-items: stretch;
-  }
+  
 
-  .overview-breakdown,
-  .net-worth-card {
-    min-height: 15rem;
-  }
+  
 
-  .balance-hero {
-    min-height: 15rem;
-    padding: 2rem 2.2rem;
-  }
+  
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1500,37 +1373,6 @@ main > div > h2 + .hint {
 
 .forecast-note {
   margin-top: 0;
-}
-
-.forecast-facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  gap: 0.6rem;
-  margin-bottom: 0.85rem;
-}
-
-.forecast-facts .fact {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  margin: 0;
-  padding: 0.8rem 0.9rem;
-}
-
-.fact span {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.fact strong {
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
-.fact strong::first-letter {
-  text-transform: uppercase;
 }
 
 .segmented-row {
@@ -1559,23 +1401,19 @@ main > div > h2 + .hint {
 }
 
 .forecast-chart {
-  --fc-save: #18805a;
-  --fc-loan: #9a5fc0;
+  --fc-save: var(--pine);
+  --fc-loan: var(--muted);
   position: relative;
   padding: 0.75rem 0.6rem 0.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .forecast-chart {
-    --fc-save: #4aa673;
-    --fc-loan: #9f7fd4;
   }
 }
 
 /* Mörkt läge valt i appen (Konto → Utseende) */
 :root[data-theme='dark'] .forecast-chart {
-  --fc-save: #4aa673;
-  --fc-loan: #9f7fd4;
 }
 
 .chart-legend {
@@ -1969,12 +1807,6 @@ main > div > h2 + .hint {
   margin: 0;
 }
 
-.fact small {
-  color: var(--muted);
-  font-size: 0.75rem;
-  line-height: 1.3;
-}
-
 .forecast-chart .flat-line {
   fill: none;
   stroke: var(--muted);
@@ -2274,58 +2106,12 @@ main > div > h2 + .hint {
   white-space: nowrap;
 }
 
-.jarvis-open {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  min-height: 3.6rem;
-  padding: 0.6rem 0.6rem 0.6rem 1rem;
-  border-color: var(--accent);
-  color: var(--text);
-  text-align: left;
-}
-
-.jarvis-open-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
-}
-
 .jarvis-eyebrow {
   color: var(--accent);
   font-size: 0.72rem;
   font-weight: 650;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.jarvis-open-hint {
-  color: var(--muted);
-  font-size: 0.86rem;
-}
-
-.jarvis-mic {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 2.6rem;
-  height: 2.6rem;
-  border: 2px solid var(--accent);
-  border-radius: 50%;
-}
-
-.jarvis-mic svg {
-  width: 1.2rem;
-  height: 1.2rem;
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 /* Jarvis-fliken. Alltid mörk, som en skärm i en cockpit, i både ljust och mörkt läge. */
@@ -2724,65 +2510,9 @@ body.jarvis-locked {
 }
 
 /* Underflikarna i Ekonomi (App.tsx) */
-.sub-nav {
-  position: sticky;
-  z-index: 5;
-  top: 0;
-  display: flex;
-  gap: 0.25rem;
-  margin: -0.5rem -1.25rem 1rem;
-  padding: 0.5rem 1.25rem;
-  overflow-x: auto;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  scrollbar-width: none;
-}
-
-.sub-nav::-webkit-scrollbar {
-  display: none;
-}
 
 /* Tonad kant till höger som visar att raden går att dra i sidled. Sista fliken får luft efter sig,
    så att den inte ligger under toningen när raden är dragen hela vägen. */
-.sub-nav::after {
-  content: '';
-  position: sticky;
-  right: 0;
-  flex: none;
-  width: 2.25rem;
-  margin-left: -2.25rem;
-  background: linear-gradient(to right, transparent 40%, var(--bg));
-  pointer-events: none;
-}
-
-.sub-nav-item:last-child {
-  margin-right: 1.25rem;
-}
-
-.sub-nav-item {
-  flex: none;
-  min-height: 2.75rem;
-  padding: 0.45rem 0.9rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 0.92rem;
-  font-weight: 600;
-}
-
-.sub-nav-item.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-@media (max-width: 639px) {
-  .sub-nav {
-    margin: -0.5rem -1rem 0.9rem;
-    padding: 0.5rem 1rem;
-  }
-}
 
 /* Idag (Today.tsx) */
 .today .eyebrow {
@@ -2790,110 +2520,6 @@ body.jarvis-locked {
   color: var(--muted);
   font-size: 0.9rem;
   min-height: 1.3em;
-}
-
-.today-grid {
-  display: grid;
-  gap: 0.75rem;
-}
-
-@media (min-width: 640px) {
-  .today-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .today-money {
-    grid-column: span 2;
-  }
-}
-
-.today-card {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.45rem;
-  width: 100%;
-  min-height: 0;
-  margin: 0;
-  padding: 1rem 1.1rem;
-  color: var(--text);
-  text-align: left;
-  font-weight: 400;
-}
-
-.today-label {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.today-amount {
-  font-size: clamp(2rem, 9vw, 2.6rem);
-  line-height: 1.05;
-  font-weight: 650;
-  letter-spacing: -0.04em;
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-}
-
-.today-amount.small {
-  font-size: 1.45rem;
-  color: var(--text);
-}
-
-.today-amount.negative {
-  color: var(--danger);
-}
-
-.today-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  margin-top: 0.2rem;
-}
-
-.today-rows > span {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.35rem 0;
-  border-top: 1px solid var(--border);
-  font-size: 0.92rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.today-rows > span > span:first-child {
-  color: var(--muted);
-}
-
-.today-rows > span > span:last-child {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.today-more {
-  align-self: flex-end;
-  color: var(--accent);
-  font-size: 0.86rem;
-  font-weight: 650;
-}
-
-.today-meta {
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.today-first {
-  align-self: flex-start;
-  padding: 0.25rem 0.55rem;
-  border-radius: 6px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 0.85rem;
-  font-weight: 600;
 }
 
 .today-bar {
@@ -2911,13 +2537,6 @@ body.jarvis-locked {
   background: var(--accent);
 }
 
-.today-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  font-size: 0.95rem;
-}
-
 .today-skeleton {
   min-height: 7rem;
   background: var(--card);
@@ -2928,21 +2547,17 @@ body.jarvis-locked {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.6rem;
-  padding: 1rem 1.1rem;
+  gap: 0.75rem;
+  padding: 1rem;
 }
 
 .today-error p {
   margin: 0;
 }
 
-.today .jarvis-open {
-  margin-bottom: 0.75rem;
-}
-
 /* Nyheter (Nyheter.tsx) */
 .news {
-  --tone-pos: var(--accent);
+  --tone-pos: var(--pine);
   --tone-neg: var(--danger);
   --tone-neu: var(--muted);
 }
@@ -2968,17 +2583,43 @@ body.jarvis-locked {
   color: var(--accent);
 }
 
+/* Ämnena som chips; raden rullar i sidled om den inte får plats */
 .news-topics {
-  margin-top: 0;
-  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem -1rem 1rem;
+  padding: 0 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.news-topics::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.chip.active {
+  border-color: var(--cobalt);
+  background: var(--cobalt);
+  color: var(--surface);
 }
 
 .news-notice {
   margin: 0 0 0.75rem;
   padding: 0.6rem 0.8rem;
-  border: 1px solid var(--border);
   border-radius: var(--radius-control);
-  background: var(--card);
+  background: var(--surface);
   color: var(--muted);
   font-size: 0.88rem;
 }
@@ -3025,14 +2666,26 @@ body.jarvis-locked {
   background: var(--tone-neg);
 }
 
+/* Nyheterna som rader i en grupp; två spalter på skrivbord */
 .news-list {
   display: grid;
-  gap: 0.65rem;
+}
+
+.news-item + .news-item {
+  border-top: 1px solid var(--line);
 }
 
 @media (min-width: 900px) {
   .news-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .news-item:nth-child(2) {
+    border-top: 0;
+  }
+
+  .news-item:nth-child(even) {
+    border-left: 1px solid var(--line);
   }
 }
 
@@ -3042,14 +2695,6 @@ body.jarvis-locked {
   gap: 0.45rem;
   margin: 0;
   padding: 0.9rem 1rem;
-}
-
-.news-item.positiv {
-  box-shadow: inset 3px 0 0 var(--tone-pos);
-}
-
-.news-item.negativ {
-  box-shadow: inset 3px 0 0 var(--tone-neg);
 }
 
 .news-meta {
@@ -3127,12 +2772,6 @@ body.jarvis-locked {
   font-size: 0.78rem;
 }
 
-.news-skeleton {
-  min-height: 8rem;
-  opacity: 0.6;
-}
-
-.news-empty,
 .news-foot {
   margin: 1rem 0 0;
   color: var(--muted);
@@ -3283,9 +2922,13 @@ body.jarvis-locked {
     height: 1.3rem;
   }
 
+  .jarvis-orb {
+    align-self: flex-start;
+    margin: auto 0 0 0.3rem;
+  }
+
   .account-button {
     align-self: flex-start;
-    margin-top: auto;
     margin-left: 0.3rem;
   }
 
@@ -3294,31 +2937,17 @@ body.jarvis-locked {
     padding: 1.75rem 2rem 3rem;
   }
 
-  .sub-nav {
-    margin-top: -0.5rem;
-  }
+  
 }
 
 /* ---------- Finputs: tryck, fokus och övergångar ---------- */
 .card,
-.today-card,
-.news-item,
-.jarvis-open {
+.news-item {
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
 }
 
-button.today-card:active,
-.jarvis-open:active,
-.nav-item:active,
-.sub-nav-item:active {
+.nav-item:active {
   transform: scale(0.985);
-}
-
-@media (hover: hover) {
-  button.today-card:hover,
-  .jarvis-open:hover {
-    border-color: var(--accent);
-  }
 }
 
 :focus-visible {
@@ -3332,61 +2961,385 @@ button.today-card:active,
 }
 
 /* Idag: Jarvis säger och snabbval */
+
+/* Jarvis rad under huvudsiffran: lugn, ingen egen ruta */
 .today-say {
   display: flex;
-  gap: 0.8rem;
+  gap: 0.6rem;
   align-items: flex-start;
-  padding: 0.9rem 1rem;
-  border-color: var(--accent);
+  margin: -0.75rem 0 1.5rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.45;
 }
 
 .today-say-dot {
   flex: none;
-  width: 0.6rem;
-  height: 0.6rem;
-  margin-top: 0.45rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: 0.42rem;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
+  background: #5cc8ff;
+  box-shadow: 0 0 8px rgb(92 200 255 / 60%);
 }
 
-.today-say p {
+/* ---------- Jarvis-orben: dörren till specialrummet (designspec "Två rum") ---------- */
+.jarvis-orb {
+  position: relative;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid rgb(92 200 255 / 45%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #1d3b66 0%, #070b14 72%);
+  box-shadow: 0 0 14px rgb(92 200 255 / 35%);
+}
+
+@media (max-width: 639px) {
+  .jarvis-orb {
+    margin-left: auto;
+  }
+}
+
+.jarvis-orb-core {
+  position: absolute;
+  inset: 32%;
+  border-radius: 50%;
+  background: #5cc8ff;
+  box-shadow: 0 0 10px #5cc8ff;
+  animation: orb-breathe 4s ease-in-out infinite;
+}
+
+@keyframes orb-breathe {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(0.82);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jarvis-orb-core {
+    animation: none;
+  }
+}
+
+@media (hover: hover) {
+  .jarvis-orb:hover {
+    border-color: #5cc8ff;
+  }
+}
+
+/* ---------- Vardagsrummets komponenter (designspec "Två rum") ----------
+   .hero: vyns huvudsiffra med en mening. .group: en yta med rader och tunna linjer, rubrik i vanlig skrift
+   ovanför (.group-title). .empty: tomläge med en mening och en knapp. .skeleton-*: laddning. */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 0;
+  margin: 0 0 1.5rem;
+  padding: 0.25rem 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 400;
+}
+
+button.hero {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  button.hero:not(:disabled):hover {
+    background: transparent;
+  }
+
+  button.hero:hover .hero-text {
+    color: var(--cobalt);
+  }
+}
+
+.hero p {
   margin: 0;
-  font-size: 0.98rem;
-  line-height: 1.5;
-  font-variant-numeric: tabular-nums;
 }
 
-.today-say .jarvis-eyebrow {
+.hero .hero-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.hero-text {
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.group-block {
+  margin: 0 0 1.5rem;
+}
+
+.group-title {
   display: block;
-  margin-bottom: 0.2rem;
+  min-height: 0;
+  margin: 0 0 0.45rem;
+  padding: 0 0.25rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
 }
 
-.today-quick {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin: 0.75rem 0 1rem;
+.group {
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: var(--radius-group);
 }
 
-.today-quick button {
+.group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.25rem;
+  margin: 0;
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 400;
+}
+
+.group-row + .group-row {
+  border-top: 1px solid var(--line);
+}
+
+button.group-row {
+  cursor: pointer;
+}
+
+button.group-row::after {
+  content: '';
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: -0.25rem;
+  border-top: 1.5px solid var(--muted);
+  border-right: 1.5px solid var(--muted);
+  transform: rotate(45deg);
+}
+
+@media (hover: hover) {
+  button.group-row:not(:disabled):hover {
+    border-color: var(--line);
+    background: color-mix(in srgb, var(--cobalt) 6%, var(--surface));
+  }
+}
+
+.row-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.row-name {
+  overflow: hidden;
+  font-size: 1.0625rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row-sub {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.row-value {
+  flex: none;
+  font-family: var(--font-amount);
+  font-size: 1.0625rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  min-height: 3.8rem;
-  padding: 0.5rem 0.2rem;
-  font-size: 0.74rem;
-  font-weight: 600;
+  gap: 0.75rem;
+  padding: 1.25rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-group);
   color: var(--muted);
+  text-align: center;
 }
 
-.today-quick svg {
-  width: 1.3rem;
-  height: 1.3rem;
+.empty p {
+  margin: 0;
+}
+
+.skeleton-line,
+.skeleton-row {
+  display: block;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.skeleton-line {
+  width: 60%;
+  height: 1rem;
+}
+
+.skeleton-line.short {
+  width: 40%;
+}
+
+.skeleton-line.tall {
+  height: 2.6rem;
+}
+
+.skeleton-row {
+  height: 1.1rem;
+  margin: 1rem;
+}
+
+.today-loading .group {
+  margin-bottom: 1.5rem;
+}
+
+/* ---------- Ekonomi (designspec "Två rum") ---------- */
+/* Underflikarna som segmentväljare, fast överst när man rullar */
+.economy-tabs {
+  position: sticky;
+  z-index: 5;
+  top: 0.5rem;
+  margin: 0 0 1rem;
+  background: color-mix(in srgb, var(--line) 80%, var(--bg));
+  /* Täcker innehållet som rullar förbi ovanför och runt raden */
+  box-shadow: 0 -0.5rem 0 0.5rem var(--bg);
+}
+
+.economy-tabs .seg {
+  font-size: 0.9375rem;
+}
+
+.economy-tabs .seg.active {
+  color: var(--cobalt);
+}
+
+.row-value.negative {
+  color: var(--lingon);
+}
+
+.group-row .bar {
+  height: 0.35rem;
+  margin: 0.35rem 0 0.15rem;
+}
+
+.group-row .bar > span {
+  background: var(--pine);
+}
+
+/* Konton och Önskelista: tillbaka till Översikt */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 2.75rem;
+  margin: -0.5rem 0 0.25rem -0.5rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--cobalt);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.back-link svg {
+  width: 1.1rem;
+  height: 1.1rem;
   fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.8;
+  stroke: currentColor;
+  stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+  .back-link:not(:disabled):hover {
+    background: transparent;
+    text-decoration: underline;
+  }
+}
+
+/* Budgeten: Redigera/Klar till höger om gruppens rubrik */
+.category-head-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.text-button {
+  min-height: 2.25rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--cobalt);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .text-button:not(:disabled):hover {
+    background: transparent;
+    text-decoration: underline;
+  }
+}
+
+/* Prognosens nyckeltal som rader; långa värden (datum) får brytas */
+.forecast-facts {
+  margin-bottom: 1rem;
+}
+
+.forecast-facts .row-name {
+  white-space: normal;
+}
+
+.forecast-facts .row-value {
+  max-width: 55%;
+  text-align: right;
+  white-space: normal;
+}
+
+/* Idag på skrivbord: huvudsiffran till vänster, grupperna till höger */
+@media (min-width: 900px) {
+  .today {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 2.5rem;
+  }
+
+  .today-side {
+    padding-top: 0.5rem;
+  }
 }

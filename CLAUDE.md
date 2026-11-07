@@ -26,12 +26,15 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 - **Delad kod ligger i `supabase/functions/inbox/`** (ask, summary, priority, habits, health, forecast, goalPlan …).
   Appen importerar den direkt eller via shims i `src/` (`export * from '../supabase/functions/inbox/X.ts'`).
   Så räknar app, Siri och Jarvis alltid samma siffror. Ändra aldrig en siffra på bara ett ställe.
-- **Navigationen** är `App.tsx`: Idag, Jarvis, Ekonomi (underflikar Översikt, Budget, Prognos, Konton, Önskelista),
-  Vanor, Nyheter. Galaxen öppnas inifrån Vanor → Månad och är inte en egen flik.
+- **Navigationen** är `App.tsx` och `nav.ts`: Idag, Ekonomi (underflikar Översikt, Budget, Prognos; Konton och
+  Önskelista öppnas från rader i Översikt), Vanor, Nyheter. Jarvis är ingen flik: orben i sidhuvudet öppnar
+  Jarvis i specialrummet (`Room.tsx`). Galaxen öppnas inifrån Vanor → Månad och är också ett specialrum.
 - **Idag** och **Jarvis** läser allt via `summaryFacts` (`summary.ts`). Jarvis svar byggs i `ask.ts`, utan AI.
-- **Stilen** ligger i tre lager som laddas i ordning: `styles.css` (bas), `vanor/vanor.css`, `hud.css` (HUD-temat
-  ovanpå allt, även galaxens gränssnitt). Färger via CSS-variabler; mörkt läge i både `prefers-color-scheme` och
-  `[data-theme='dark']`.
+- **Stilen** följer designspecen "Två rum" (`docs/design/designspec-tva-rum.md`). Vardagsrummet (Idag, Ekonomi,
+  Vanor, Nyheter) ligger i `styles.css` och `vanor/vanor.css`; specialrummet (Jarvis och galaxen) i `room.css`,
+  där varje regel börjar med `.room`. Färger via tokens (`--bg`, `--surface`, `--ink`, `--pine`, `--cobalt`,
+  `--lingon` …), låsta i `design.test.ts`; mörkt läge i både `prefers-color-scheme` och `[data-theme='dark']`.
+  Typsnitt: systemets i vardagsrummet, `ui-rounded` för belopp, Space Grotesk och JetBrains Mono bara i rummet.
 
 ## Ekonomidatan får aldrig ändras
 - Alla siffror i ekonomidelen är Eriks och Cassandras riktiga. Ändra, avrunda, flytta, ta bort eller hitta aldrig på
