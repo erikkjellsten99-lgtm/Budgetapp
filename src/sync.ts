@@ -157,7 +157,8 @@ async function runSync() {
     setState({ householdId: meta.householdId });
     await push(meta.householdId);
     await pull(meta);
-    await backfillInvestments(meta.householdId);
+    // Ett misslyckat engångsförsök ska inte göra hela synken till ett fel; flaggan sätts inte, så det görs om.
+    await backfillInvestments(meta.householdId).catch((error) => console.error(error));
     await saveSyncedBudgetBases();
     setState({ status: 'synkad', lastSynced: new Date() });
     await updatePending();
