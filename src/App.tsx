@@ -34,7 +34,7 @@ import { lazyWithReload } from './lazyWithReload';
 import Room from './Room';
 import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type EconomyView, type Section, type View } from './nav';
 const Nyheter = lazy(() => import('./Nyheter'));
-import { formatKr, formatPct } from './money';
+import { formatKr, formatKrOre, formatPct } from './money';
 import { usePortfolio } from './usePortfolio';
 import { missingValues, totals, withHoldingValues } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
@@ -279,7 +279,7 @@ export default function App() {
                       : 'Det som finns på sparkontona'}
                   </span>
                 </span>
-                <span className={netWorth < 0 ? 'row-value negative' : 'row-value'}>{formatKr(netWorth)}</span>
+                <span className={netWorth < 0 ? 'row-value negative' : 'row-value'}>{formatKrOre(netWorth)}</span>
               </button>
               {!portfolio.loaded ? null : portfolio.holdings.length === 0 ? (
                 <button type="button" className="group-row" onClick={() => showView('investments')}>
@@ -298,7 +298,7 @@ export default function App() {
                           }`}
                     </span>
                   </span>
-                  {portfolioTotals.value !== null && <span className="row-value">{formatKr(portfolioTotals.value)}</span>}
+                  {portfolioTotals.value !== null && <span className="row-value">{formatKrOre(portfolioTotals.value)}</span>}
                 </button>
               )}
               {spendingTotal > 0 && (
@@ -307,7 +307,7 @@ export default function App() {
                     <span className="row-name">Pengar att använda</span>
                     <span className="row-sub">Räknas inte i nettovärdet</span>
                   </span>
-                  <span className="row-value">{formatKr(spendingTotal)}</span>
+                  <span className="row-value">{formatKrOre(spendingTotal)}</span>
                 </p>
               )}
             </div>
@@ -320,7 +320,7 @@ export default function App() {
                   <span className="row-main">
                     <span className="row-name">{goal.name}</span>
                     <span className="row-sub">
-                      {formatKr(goalNow)} av {formatKr(goal.target)}
+                      {formatKrOre(goalNow)} av {formatKr(goal.target)}
                     </span>
                     <span className="bar" aria-hidden="true">
                       <span style={{ width: `${goalPercent}%` }} />

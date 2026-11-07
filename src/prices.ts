@@ -18,6 +18,7 @@ export async function loadPrices(tickers: string[]): Promise<Record<string, Pric
       .select('ticker,date,close_sek')
       .in('ticker', tickers)
       .order('date')
+      .order('ticker')
       .range(from, from + PAGE - 1);
     if (error) throw error;
     const rows = (data ?? []) as { ticker: string; date: string; close_sek: number | string }[];

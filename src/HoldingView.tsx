@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { deleteHolding, deleteTrade, getAssets, newId, saveHoldingWithTrade, saveHolding, saveTrade, today } from './db';
-import { formatKr, formatPct, parseKr, toInputKr } from './money';
+import { formatKr, formatKrOre, formatPct, parseKr, toInputKr } from './money';
 import { searchTicker } from './prices';
 import { niceStep, shortDate, signedKr } from './chartUtil';
 import { longDate, parseQuantity, rangeStart, tradeError, type PriceRange } from './tradeForm';
@@ -69,20 +69,20 @@ export default function HoldingView({ row, trades, prices, onBack }: HoldingView
       <section className="group-block" aria-label="Nyckeltal">
         <div className="group">
           <Row name="Antal" value={qty(position.quantity)} />
-          <Row name="GAV" value={position.quantity > 0 ? formatKr(position.gav) : '–'} />
-          <Row name="Investerat" value={formatKr(position.invested)} />
+          <Row name="GAV" value={position.quantity > 0 ? formatKrOre(position.gav) : '–'} />
+          <Row name="Investerat" value={formatKrOre(position.invested)} />
           <p className="group-row">
             <span className="row-main">
               <span className="row-name">Värde</span>
               {quote.date && (
                 <span className="row-sub">
-                  {quote.price === null ? 'Kurs saknas' : `Kurs ${formatKr(quote.price)}`} {shortDate(quote.date)}
+                  {quote.price === null ? 'Kurs saknas' : `Kurs ${formatKrOre(quote.price)}`} {shortDate(quote.date)}
                   {quote.source === 'manual' ? ', egen kurs' : ''}
                   {quote.stale ? ', gammal kurs' : ''}
                 </span>
               )}
             </span>
-            <span className="row-value">{row.value === null ? 'Värde saknas' : formatKr(row.value)}</span>
+            <span className="row-value">{row.value === null ? 'Värde saknas' : formatKrOre(row.value)}</span>
           </p>
           <p className="group-row">
             <span className="row-main">
@@ -96,7 +96,7 @@ export default function HoldingView({ row, trades, prices, onBack }: HoldingView
           <p className="group-row">
             <span className="row-name">Realiserat</span>
             <span className={position.realized < 0 ? 'row-value negative' : 'row-value'}>
-              {formatKr(position.realized)}
+              {formatKrOre(position.realized)}
             </span>
           </p>
         </div>
@@ -233,7 +233,7 @@ function PriceLine({ shown, all, trades }: { shown: PricePoint[]; all: PricePoin
         <span className="key sell">Sälj</span>
       </figcaption>
       <div className="chart-box">
-        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Kurs ${formatKr(last.close)} den ${shortDate(last.date)}.`}>
+        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Kurs ${formatKrOre(last.close)} den ${shortDate(last.date)}.`}>
           {ticks.map((v) => (
             <g key={v}>
               <line x1={pad.l} x2={W - pad.r} y1={y(v)} y2={y(v)} className="grid" />

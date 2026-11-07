@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { today } from './db';
-import { formatKr, formatPct } from './money';
+import { formatKrOre, formatPct } from './money';
 import { axisLabel, niceStep, shortDate, signedKr } from './chartUtil';
 import HoldingView, { HoldingForm } from './HoldingView';
 import {
@@ -76,7 +76,7 @@ export default function Investments({ holdings, trades, prices, rows, loaded, se
         <div className="group">
           <p className="group-row">
             <span className="row-name">Investerat</span>
-            <span className="row-value">{formatKr(sum.invested)}</span>
+            <span className="row-value">{formatKrOre(sum.invested)}</span>
           </p>
           <p className="group-row">
             <span className="row-main">
@@ -85,7 +85,7 @@ export default function Investments({ holdings, trades, prices, rows, loaded, se
                 <span className="row-sub">Värde saknas för {sum.missing} innehav</span>
               )}
             </span>
-            <span className="row-value">{sum.value === null ? 'Värde saknas' : formatKr(sum.value)}</span>
+            <span className="row-value">{sum.value === null ? 'Värde saknas' : formatKrOre(sum.value)}</span>
           </p>
           <p className="group-row">
             <span className="row-main">
@@ -104,7 +104,7 @@ export default function Investments({ holdings, trades, prices, rows, loaded, se
           {sum.realized !== 0 && (
             <p className="group-row">
               <span className="row-name">Realiserat</span>
-              <span className={sum.realized < 0 ? 'row-value negative' : 'row-value'}>{formatKr(sum.realized)}</span>
+              <span className={sum.realized < 0 ? 'row-value negative' : 'row-value'}>{formatKrOre(sum.realized)}</span>
             </p>
           )}
         </div>
@@ -171,7 +171,7 @@ export default function Investments({ holdings, trades, prices, rows, loaded, se
                   )}
                 </span>
                 <span className="row-value">
-                  {r.value === null ? '–' : formatKr(r.value)}
+                  {r.value === null ? '–' : formatKrOre(r.value)}
                 </span>
               </button>
             );
@@ -238,7 +238,7 @@ function Chart({ series }: { series: SeriesPoint[] }) {
         <svg
           viewBox={`0 0 ${W} ${H}`}
           role="img"
-          aria-label={`Värde ${last.value === null ? 'saknas' : formatKr(last.value)}, investerat ${last.invested === null ? 'saknas' : formatKr(last.invested)} den ${shortDate(last.date)}.`}
+          aria-label={`Värde ${last.value === null ? 'saknas' : formatKrOre(last.value)}, investerat ${last.invested === null ? 'saknas' : formatKrOre(last.invested)} den ${shortDate(last.date)}.`}
         >
           {ticks.map((v) => (
             <g key={v}>

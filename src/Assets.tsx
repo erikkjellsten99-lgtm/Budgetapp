@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { deleteAsset, getAssets, newId, saveAsset, today, onDataChange } from './db';
-import { formatKr, parseKr, toInputKr } from './money';
+import { formatKrOre, parseKr, toInputKr } from './money';
 import { missingValues, withHoldingValues, type HoldingSummary } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset } from './types';
 
@@ -57,7 +57,7 @@ export default function Assets({ onChange, rows }: AssetsProps) {
       <p className="hint">Skriv av saldona från banken och Avanza när du vill, t.ex. en gång i månaden.</p>
       <section className="card">
         <h3>
-          Totalt <span>{formatKr(total)}</span>
+          Totalt <span>{formatKrOre(total)}</span>
         </h3>
         <ul>
           {sorted.map((asset) => (
@@ -84,7 +84,7 @@ export default function Assets({ onChange, rows }: AssetsProps) {
                       {asset.spending && ' · räknas inte i nettovärdet'}
                     </small>
                   </span>
-                  <span>{formatKr(shown.get(asset.id) ?? asset.amount)}</span>
+                  <span>{formatKrOre(shown.get(asset.id) ?? asset.amount)}</span>
                 </button>
               )}
             </li>

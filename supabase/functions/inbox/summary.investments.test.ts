@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { overviewNumbers, summaryFacts, summaryText, type SummaryInput } from './summary.ts'
-import { answer, HIDDEN_MONEY } from './ask.ts'
+import { answer, dayBrief, HIDDEN_MONEY } from './ask.ts'
 import { prioritizeToday } from './priority.ts'
 import { formatKr } from './money.ts'
 import type { Asset, Holding, Trade } from './types.ts'
@@ -69,6 +69,7 @@ describe('med innehav', () => {
       invested: formatKr(1000),
       change: formatKr(50),
       changePct: expect.closeTo(0.05, 6),
+      missing: 0,
       date: '5 nov',
     })
     expect(summaryText(withHoldings(prices, accounts))).toContain(`Investeringar: ${formatKr(1050)} (+5,0\u00a0%), kurser från 5 nov`)
@@ -76,7 +77,7 @@ describe('med innehav', () => {
 
   it('utan kurs: värde saknas', () => {
     const f = summaryFacts(withHoldings({}))
-    expect(f.investments).toEqual({ value: null, invested: formatKr(1000), change: null, changePct: null, date: null })
+    expect(f.investments).toEqual({ value: null, invested: formatKr(1000), change: null, changePct: null, missing: 1, date: null })
     expect(summaryText(withHoldings({}))).toContain(`Investeringar: värde saknas (investerat ${formatKr(1000)})`)
   })
 
@@ -88,5 +89,39 @@ describe('med innehav', () => {
     expect(answer('hur går aktierna', summaryFacts(base))).toBe('Det finns inga investeringar inlagda.')
     const down = summaryFacts(withHoldings({ FOND: [{ date: '2026-11-05', close: 95 }] }))
     expect(answer('hur går min portfölj', down)).toContain('5,0 % ned sedan köpen')
+  })
+
+  it('delvis prissatt: värde saknas för N innehav', () => {
+    const two: SummaryInput = {
+      ...withHoldings(prices),
+      holdings: [...holdings, { id: 'h2', assetId: 'a', name: 'Utan kurs', type: 'stock', ticker: 'INGEN' }],
+      trades: [...trades, { id: 't2', holdingId: 'h2', date: '2026-02-02', side: 'buy', quantity: 1, price: 10, fee: 0 }],
+    }
+    expect(summaryText(two)).toContain(`Investeringar: ${formatKr(1050)} (+5,0\u00a0%), värde saknas för 1 innehav, kurser från 5 nov`)
+    expect(answer('hur går fonderna', summaryFacts(two))).toBe(
+      `Investeringarna är värda ${formatKr(1050)}, 5,0\u00a0% upp sedan köpen. Värde saknas för 1 innehav. Kurser från 5 nov.`,
+    )
+  })
+
+  it('flyttalsbrus visas inte som ören', () => {
+    const noisy = summaryFacts({ ...withHoldings({ FOND: [{ date: '2026-11-05', close: 104.2 }] }) })
+    expect(noisy.investments!.value).toBe(formatKr(1042))
+  })
+})
+
+describe('frågor om aktivitet och att investera', () => {
+  const plain = summaryFacts({ ...base, assets: [], goal: null, loan: null, wishes: [], tasks: [], health: [], plans: [plans[0]] })
+  // Svaren på 89a381a (före investeringsfrågan) för samma fakta: dagens läge, eller dagens läge med hänvisning
+  it('aktiv och aktivitet svarar som före investeringsfrågan', () => {
+    expect(answer('hur aktiv har jag varit idag', plain)).toBe(dayBrief(plain))
+    expect(answer('aktivitet idag', plain)).toBe(dayBrief(plain))
+    expect(answer('var jag aktiv igår', plain)).toBe(
+      `Det har jag inget exakt svar på, men så här är läget: ${dayBrief(plain)} Du kan också fråga om sömn, steg, lånet, sparmålet, önskelistan eller vad du ska göra idag.`,
+    )
+  })
+  it('investerat, aktie och aktiekonto går till investeringar', () => {
+    for (const q of ['hur mycket har vi investerat', 'min aktie', 'hur går aktiekontot', 'hur går aktierna']) {
+      expect(answer(q, plain)).toBe('Det finns inga investeringar inlagda.')
+    }
   })
 })

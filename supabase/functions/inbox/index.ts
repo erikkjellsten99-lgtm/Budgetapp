@@ -157,7 +157,7 @@ async function loadPrices(tickers: string[]): Promise<Record<string, PricePoint[
   if (tickers.length === 0) return out
   try {
     const rows = await allRows<{ ticker: string; date: string; close_sek: number | string }>((from, to) =>
-      admin.from('prices').select('ticker,date,close_sek').in('ticker', tickers).order('date').range(from, to),
+      admin.from('prices').select('ticker,date,close_sek').in('ticker', tickers).order('date').order('ticker').range(from, to),
     )
     for (const r of rows) (out[r.ticker] ??= []).push({ date: r.date, close: Number(r.close_sek) })
     return out

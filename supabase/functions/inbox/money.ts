@@ -7,6 +7,11 @@ export function formatKr(amount: number): string {
   });
 }
 
+/** Som formatKr men avrundat till öre, så att flyttalsbrus i uträknade belopp inte visas ("1 042,00 kr"). */
+export function formatKrOre(amount: number): string {
+  return formatKr(Math.round(amount * 100) / 100);
+}
+
 /** Förändring som procent med tecken, t.ex. "+4,2 %" eller "−1,3 %" (riktigt minustecken). Ett tal som avrundas till 0,0 får inget tecken. */
 export function formatPct(fraction: number): string {
   const text = Math.abs(fraction * 100).toLocaleString('sv-SE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });

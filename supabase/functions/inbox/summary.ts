@@ -10,7 +10,7 @@
 
 import { forecast, type Loan } from './forecast.ts'
 import { goalCurrent, goalRows, goalStatus, planGoal, monthInput } from './goalPlan.ts'
-import { formatKr, formatPct } from './money.ts'
+import { formatKr, formatKrOre, formatPct } from './money.ts'
 import { summarize, totals, withHoldingValues } from './portfolio.ts'
 import { monthName, paidThisMonth, shiftMonth, type MonthPlan } from './months.ts'
 import type { Asset, Holding, PricePoint, SavingsGoal, Trade, Wish } from './types.ts'
@@ -108,7 +108,7 @@ export interface SummaryFacts {
   loan: { name: string; left: string; payment: string; nextMonth: string; extra: string | null } | null
   wishes: { total: string; leftToBuy: string }
   /** Investeringarna sammanlagt (portfolio.ts), eller null när det inte finns några innehav. */
-  investments: { value: string | null; invested: string; change: string | null; changePct: number | null; date: string | null } | null
+  investments: { value: string | null; invested: string; change: string | null; changePct: number | null; missing: number; date: string | null } | null
   /**
    * Innevarande månads budgetposter som inte är markerade betalda, störst först, med det som är kvar av varje
    * (en kategori med rader kan vara delvis betald). Tom lista när allt är betalt, null när budgeten är tom.
@@ -149,7 +149,7 @@ export function summaryFacts(input: SummaryInput): SummaryFacts {
     const current = goalCurrent(goal, assets)
     const percent = goal.target > 0 ? Math.min(100, Math.round((current / goal.target) * 100)) : 0
     const plan = planGoal(current, goal.target, goal.annualReturn, goalRows(future, loan, goal))
-    goalFacts = { name: goal.name, current: formatKr(current), target: formatKr(goal.target), percent, status: goalStatus(plan) }
+    goalFacts = { name: goal.name, current: formatKrOre(current), target: formatKr(goal.target), percent, status: goalStatus(plan) }
   }
 
   // Billånet: kvar, och nästa månads betalning med extra på lånet enligt Prognos
@@ -189,7 +189,7 @@ export function summaryFacts(input: SummaryInput): SummaryFacts {
     income: formatKr(o.income),
     costs: formatKr(o.costs),
     plannedSavings: formatKr(o.plannedSavings),
-    netWorth: formatKr(o.netWorth),
+    netWorth: formatKrOre(o.netWorth),
     spending: o.spending > 0 ? formatKr(o.spending) : null,
     months: plans.slice(0, MONTHS_AHEAD).map((plan) => {
       const m = overviewNumbers(plan, wishes, assets)
@@ -207,10 +207,11 @@ export function summaryFacts(input: SummaryInput): SummaryFacts {
     wishes: { total: formatKr(wishes.reduce((s, w) => s + w.amount, 0)), leftToBuy: formatKr(sumLeftToBuy(wishes)) },
     investments: holdings.length
       ? {
-          value: sums.value === null ? null : formatKr(sums.value),
-          invested: formatKr(sums.invested),
-          change: sums.change === null ? null : formatKr(sums.change),
+          value: sums.value === null ? null : formatKrOre(sums.value),
+          invested: formatKrOre(sums.invested),
+          change: sums.change === null ? null : formatKrOre(sums.change),
           changePct: sums.changePct,
+          missing: sums.missing,
           date: sums.latestDate ? shortDate(sums.latestDate) : null,
         }
       : null,
@@ -249,7 +250,7 @@ export function summaryLines(input: SummaryInput): string[] {
     lines.push(
       i.value === null
         ? `Investeringar: värde saknas (investerat ${i.invested})`
-        : `Investeringar: ${i.value}${i.changePct === null ? '' : ` (${formatPct(i.changePct)})`}${i.date ? `, kurser från ${i.date}` : ''}`,
+        : `Investeringar: ${i.value}${i.changePct === null ? '' : ` (${formatPct(i.changePct)})`}${i.missing > 0 ? `, värde saknas för ${i.missing} innehav` : ''}${i.date ? `, kurser från ${i.date}` : ''}`,
     )
   }
   lines.push(`Önskelista: ${f.wishes.total} totalt, kvar att köpa ${f.wishes.leftToBuy}`)

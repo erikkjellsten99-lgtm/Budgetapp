@@ -130,7 +130,7 @@ function investmentsText(f: SummaryFacts): string {
   if (!i) return 'Det finns inga investeringar inlagda.'
   if (i.value === null) return 'Det finns inga kurser för investeringarna än.'
   const pct = i.changePct === null ? '' : `, ${formatPct(Math.abs(i.changePct)).replace(/^[+\u2212]/, '')} ${i.changePct < 0 ? 'ned' : 'upp'} sedan köpen`
-  return `Investeringarna är värda ${i.value}${pct}.` + (i.date ? ` Kurser från ${i.date}.` : '')
+  return `Investeringarna är värda ${i.value}${pct}.` + (i.missing > 0 ? ` Värde saknas för ${i.missing} innehav.` : '') + (i.date ? ` Kurser från ${i.date}.` : '')
 }
 
 const mustText = (f: SummaryFacts) => {
@@ -202,7 +202,7 @@ const INTENTS: Intent[] = [
     answer: (f) => `Önskelistan är ${f.wishes.total} totalt, och kvar att köpa är ${f.wishes.leftToBuy}.`,
   },
   {
-    words: [' investering', ' fond', ' aktie', ' portfolj', ' portfölj'],
+    words: [' investera', ' fond', ' aktier', ' aktiekonto', ' portfolj', ' portfölj'],
     money: true,
     answer: investmentsText,
   },
