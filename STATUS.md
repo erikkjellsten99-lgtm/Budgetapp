@@ -4,15 +4,19 @@
 (uppgraderingen, innehåller även #100). Stäng #100 utan att merga.
 
 ## Gör först i nästa session
-1. **Lägg ut inbox version 17** (repot ligger före servern): `health.ts` med `\u`-koder och `types.ts`.
-   Servern (v16) kan missa hälsosiffror skrivna med smalt mellanslag (U+202F). Kontrollera efteråt fil för fil.
+1. **Lägg ut inbox version 18** (repot ligger före servern v17): `ask.ts` (månadsfrågor), `summary.ts`
+   (`MonthFacts`), `health.ts` med `\u`-koder och `types.ts`. Servern kan missa hälsosiffror skrivna med smalt
+   mellanslag (U+202F). Går inte via MCP-verktyget från sandboxen (för stort anrop, se `inbox/CLAUDE.md`):
+   antingen Supabase CLI från en dator, eller spara en Supabase-nyckel för `api.supabase.com` i molnmiljön
+   "Budgetapp" så att nästa molnsession kan lägga ut med CLI. Kontrollera efteråt fil för fil.
 2. **GitHub-repot är omdöpt till `groundwork`.** Remote i klonen är uppdaterad, men push dit misslyckades (403):
    Claude-appen på GitHub har bara tillgång till det gamla namnet. Ge appen tillgång till `groundwork`
    (github.com/apps/claude/installations) och testa push. Pages-adressen blir
    `erikkjellsten99-lgtm.github.io/groundwork/`; den installerade appen på telefonen pekar på den gamla adressen
    och måste installeras om. `README.md` nämner fortfarande Budgetapp-adressen.
 3. Öppna fliken Nyheter en gång och kontrollera i serverloggarna att alla fyra SVT-flöden kom fram.
-4. Lägg ut `reminders` tillsammans med inbox-filerna (priority, habits, tasks, dates, health) när PR #103 är mergad.
+4. ~~Lägg ut `reminders` med inbox-filerna~~ Klart: version 6 utlagd 2026-11-06, bootar och svarar 200 var 5:e minut.
+   `inbox/health.ts` tappades av verktyget (sista filen, bara typer) och saknas på servern; följer med nästa gång.
 
 ## Ekonomi
 - Fungerar: Översikt, Budget (månad för månad), Prognos med billån och extra på lånet, Sparmål (en uträkning i
