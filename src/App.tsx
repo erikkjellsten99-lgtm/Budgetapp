@@ -27,8 +27,9 @@ import Income from './Income';
 const Vanor = lazy(() => import('./vanor/Vanor'));
 import Today from './Today';
 // Jarvis bor i specialrummet och laddas först när rummet öppnas (med rummets typsnitt).
-const JarvisView = lazy(() => import('./Jarvis'));
+const JarvisView = lazy(lazyWithReload(() => import('./Jarvis'), 'jarvis', JarvisUnavailable));
 import JarvisOrb from './JarvisOrb';
+import { lazyWithReload } from './lazyWithReload';
 import Room from './Room';
 import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type EconomyView, type Section, type View } from './nav';
 const Nyheter = lazy(() => import('./Nyheter'));
@@ -360,6 +361,17 @@ export default function App() {
       </Room>
       <UndoToast />
     </div>
+  );
+}
+
+/** Visas i rummet när Jarvis-filen inte gick att hämta (ny version publicerad, eller ingen uppkoppling). */
+function JarvisUnavailable() {
+  return (
+    <p className="room-unavailable" role="alert">
+      {navigator.onLine
+        ? 'Jarvis kunde inte laddas. Stäng appen helt och öppna den igen.'
+        : 'Jarvis behöver internet första gången den öppnas.'}
+    </p>
   );
 }
 

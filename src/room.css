@@ -344,3 +344,11 @@
 .room.galaxy-view::before {
   top: calc(max(10px, env(safe-area-inset-top)) + 3.5rem);
 }
+
+.room .room-unavailable {
+  margin: 0;
+  padding: calc(env(safe-area-inset-top) + 4.5rem) 1.5rem 0;
+  color: #9fb3cf;
+  text-align: center;
+  line-height: 1.5;
+}

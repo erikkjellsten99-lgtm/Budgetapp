@@ -2,6 +2,9 @@ import { useEffect, useRef, type ReactNode } from 'react';
 
 const ROOM_BAR = '#050912';
 
+/** Escape stänger rummet, utom när Jarvis är i helskärm: då lämnar Escape helskärmen först (Jarvis.tsx). */
+export const escapeClosesRoom = (body: { classList: { contains(name: string): boolean } }) => !body.classList.contains('jarvis-locked');
+
 /**
  * Specialrummet (designspec "Två rum"): ett mörkt rum ovanpå appen, för Jarvis.
  * Tillbaka-knappen eller Escape stänger. Medan rummet är öppet går sidan under inte att rulla,
@@ -17,13 +20,17 @@ export default function Room({ open, onClose, children }: { open: boolean; onClo
     metas.forEach((meta) => (meta.content = ROOM_BAR));
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    // Resten av appen går inte att nå med tangentbord eller skärmläsare medan rummet är öppet.
+    const behind = [...document.querySelectorAll<HTMLElement>('.app-shell > :not(.room-sheet)')];
+    behind.forEach((el) => (el.inert = true));
     back.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && escapeClosesRoom(document.body) && onClose();
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
       metas.forEach((meta, i) => (meta.content = before[i]));
       document.body.style.overflow = overflow;
+      behind.forEach((el) => (el.inert = false));
     };
   }, [open, onClose]);
 
