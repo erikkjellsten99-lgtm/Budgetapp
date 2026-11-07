@@ -3425,3 +3425,39 @@ button.group-row::after {
   grid-template-columns: repeat(2, auto);
   margin-bottom: 0;
 }
+
+/* Innehav */
+.holding-actions {
+  margin: 0.9rem 0;
+}
+
+.investments-chart .segmented-row {
+  margin-bottom: 0.6rem;
+}
+
+.chart-legend .key.buy::before,
+.chart-legend .key.sell::before {
+  width: 8px;
+  height: 8px;
+  border-top: 0;
+  background: var(--fc-save);
+  border-radius: 50%;
+}
+
+.chart-legend .key.sell::before {
+  border-radius: 0;
+  background: var(--danger);
+}
+
+.investments-chart .trade-dot {
+  stroke: var(--card);
+  stroke-width: 1.5;
+}
+
+.investments-chart .trade-dot.buy {
+  fill: var(--fc-save);
+}
+
+.investments-chart .trade-dot.sell {
+  fill: var(--danger);
+}

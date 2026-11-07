@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { today } from './db';
 import { formatKr, formatPct } from './money';
+import { axisLabel, niceStep, shortDate, signedKr } from './chartUtil';
+import HoldingView, { HoldingForm } from './HoldingView';
 import {
   allocation,
   totals,
@@ -15,14 +17,15 @@ interface InvestmentsProps {
   trades: Trade[];
   prices: Record<string, PricePoint[]>;
   rows: HoldingSummary[];
-  /** Öppnar innehavet för redigering. */
-  onOpenHolding: (id: string) => void;
-  /** Öppnar formuläret för ett nytt innehav. */
-  onAdd: () => void;
+  /** Falskt tills första läsningen är klar, så att tomvyn inte blinkar förbi. */
+  loaded: boolean;
+  /** Vald vy: null är översikten, "new" nytt innehav, annars id för ett innehav. Ägs av App som visar tillbakalänken. */
+  selected: string | 'new' | null;
+  onSelect: (selected: string | 'new' | null) => void;
 }
 
 /** Investeringar: nyckeltal, värde över tid, fördelning och innehav. Räknar inte själv, allt kommer från portfolio.ts. */
-export default function Investments({ holdings, trades, prices, rows, onOpenHolding, onAdd }: InvestmentsProps) {
+export default function Investments({ holdings, trades, prices, rows, loaded, selected, onSelect }: InvestmentsProps) {
   const [by, setBy] = useState<'holding' | 'type'>('holding');
   const sum = useMemo(() => totals(rows), [rows]);
   const slices = useMemo(() => allocation(rows, by), [rows, by]);
@@ -32,12 +35,22 @@ export default function Investments({ holdings, trades, prices, rows, onOpenHold
   const anyStale = rows.some((r) => r.quote.stale);
   const priceNote = anyStale ? 'Gamla kurser' : sum.latestDate ? `Kurser från ${shortDate(sum.latestDate)}` : null;
 
+  if (!loaded) return null;
+
+  if (selected === 'new') {
+    return <HoldingForm onDone={() => onSelect(null)} />;
+  }
+  const open = selected === null ? undefined : rows.find((r) => r.holding.id === selected);
+  if (open) {
+    return <HoldingView row={open} trades={trades} prices={prices} onBack={() => onSelect(null)} />;
+  }
+
   if (rows.length === 0) {
     return (
       <>
         <h2>Investeringar</h2>
         <p className="hint">Lägg in dina aktier och fonder så följer appen värdet åt dig.</p>
-        <button className="add" onClick={onAdd}>
+        <button className="add" onClick={() => onSelect('new')}>
           + Nytt innehav
         </button>
       </>
@@ -136,7 +149,7 @@ export default function Investments({ holdings, trades, prices, rows, onOpenHold
               r.value === null ? 'värde saknas' : null,
             ].filter(Boolean);
             return (
-              <button type="button" key={r.holding.id} className="group-row" onClick={() => onOpenHolding(r.holding.id)}>
+              <button type="button" key={r.holding.id} className="group-row" onClick={() => onSelect(r.holding.id)}>
                 <span className="row-main">
                   <span className="row-name">{r.holding.name}</span>
                   {notes.length > 0 && (
@@ -153,40 +166,16 @@ export default function Investments({ holdings, trades, prices, rows, onOpenHold
           })}
         </div>
       </section>
-      <button className="add" onClick={onAdd}>
+      <button className="add" onClick={() => onSelect('new')}>
         + Nytt innehav
       </button>
     </>
   );
 }
 
-/** "2026-11-05" som "5 nov". */
-function shortDate(date: string): string {
-  return new Date(`${date}T12:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace(/\.$/, '');
-}
-
-/** Belopp med plustecken för vinst, t.ex. "+199,39 kr". */
-function signedKr(amount: number): string {
-  return amount > 0 ? `+${formatKr(amount)}` : formatKr(amount);
-}
-
 /** Andel som heltal, t.ex. "75 %". */
 function share(fraction: number): string {
   return `${Math.round(fraction * 100)} %`;
-}
-
-/** "250 000" som "250 tkr", "1 500 000" som "1,5 mkr". */
-function axisLabel(v: number): string {
-  if (v === 0) return '0';
-  if (v >= 1000000) return `${String(Math.round(v / 100000) / 10).replace('.', ',')} mkr`;
-  if (v >= 1000) return `${Math.round(v / 1000)} tkr`;
-  return String(Math.round(v));
-}
-
-/** Steg för y-axeln (1, 2 eller 5 gånger en tiopotens) så att det blir högst fyra rutor. */
-function niceStep(max: number): number {
-  const base = 10 ** Math.floor(Math.log10(Math.max(max, 1) / 4));
-  return [1, 2, 5, 10].map((m) => m * base).find((s) => max / s <= 4) ?? base * 10;
 }
 
 /** Värde och investerat belopp vid månadsskiften. Värdelinjen har ett glapp där något innehav saknar kurs. */

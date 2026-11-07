@@ -102,6 +102,7 @@ export default function App() {
   // Månaden budgeten är sparad på (se getBudget). Visar om vald månad har en egen budget.
   const [budgetFrom, setBudgetFrom] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [invSelected, setInvSelected] = useState<string | 'new' | null>(null);
   const portfolio = usePortfolio();
   // Konton som räknas från innehaven får värdet härifrån. Övriga är exakt som de sparats.
   const portfolioTotals = useMemo(() => totals(portfolio.rows), [portfolio.rows]);
@@ -384,14 +385,19 @@ export default function App() {
           <Assets onChange={setAssets} rows={portfolio.rows} />
         </div>
         <div hidden={view !== 'investments'}>
-          <BackToOverview onClick={() => showView('overview')} />
+          {invSelected === null ? (
+            <BackToOverview onClick={() => showView('overview')} />
+          ) : (
+            <BackToOverview label="Investeringar" onClick={() => setInvSelected(null)} />
+          )}
           <Investments
             holdings={portfolio.holdings}
             trades={portfolio.trades}
             prices={portfolio.prices}
             rows={portfolio.rows}
-            onOpenHolding={() => {}}
-            onAdd={() => {}}
+            loaded={portfolio.loaded}
+            selected={invSelected}
+            onSelect={setInvSelected}
           />
         </div>
         <div hidden={view !== 'account'}>
@@ -423,13 +429,13 @@ function JarvisUnavailable() {
 }
 
 /** Textknapp överst i Konton och Önskelista, som öppnas från Översikt. */
-function BackToOverview({ onClick }: { onClick: () => void }) {
+function BackToOverview({ onClick, label = 'Översikt' }: { onClick: () => void; label?: string }) {
   return (
     <button type="button" className="back-link" onClick={onClick}>
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" />
       </svg>
-      Översikt
+      {label}
     </button>
   );
 }
