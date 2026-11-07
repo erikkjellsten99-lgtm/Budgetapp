@@ -53,53 +53,48 @@ export default function Today({ active, onOpen }: { active: boolean; onOpen: (ta
 
   return (
     <div className="today">
-      <div className="view-intro">
-        <p className="eyebrow">{facts ? capitalize(longDate(facts.today)) : ' '}</p>
-        <h2>{greeting(hour)}</h2>
+      <div className="today-main">
+        <div className="view-intro">
+          <p className="eyebrow">{facts ? capitalize(longDate(facts.today)) : ' '}</p>
+          <h2>{greeting(hour)}</h2>
+        </div>
+        {facts && <TodayHero facts={facts} onOpen={onOpen} />}
       </div>
 
-      {failed && !facts && (
-        <div className="group today-error" role="alert">
-          <p>Det gick inte att läsa Groundwork just nu.</p>
-          <button type="button" onClick={load}>
-            Försök igen
-          </button>
-        </div>
-      )}
-
-      {!facts && !failed && (
-        <div className="today-loading" aria-busy="true" aria-label="Laddar">
-          <div className="hero">
-            <span className="skeleton-line short" />
-            <span className="skeleton-line tall" />
+      <div className="today-side">
+        {failed && !facts && (
+          <div className="group today-error" role="alert">
+            <p>Det gick inte att läsa Groundwork just nu.</p>
+            <button type="button" onClick={load}>
+              Försök igen
+            </button>
           </div>
-          {[0, 1].map((group) => (
-            <div key={group} className="group">
-              <span className="skeleton-row" />
-              <span className="skeleton-row" />
-              <span className="skeleton-row" />
-            </div>
-          ))}
-        </div>
-      )}
+        )}
 
-      {facts && <TodayFacts facts={facts} onOpen={onOpen} />}
+        {!facts && !failed && (
+          <div className="today-loading" aria-busy="true" aria-label="Laddar">
+            <div className="hero">
+              <span className="skeleton-line short" />
+              <span className="skeleton-line tall" />
+            </div>
+            {[0, 1].map((group) => (
+              <div key={group} className="group">
+                <span className="skeleton-row" />
+                <span className="skeleton-row" />
+                <span className="skeleton-row" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {facts && <TodayGroups facts={facts} onOpen={onOpen} />}
+      </div>
     </div>
   );
 }
 
-/** Huvudsiffran, Jarvis rad och grupperna Idag och Sparande. */
-function TodayFacts({ facts, onOpen }: { facts: SummaryFacts; onOpen: (target: Target) => void }) {
-  const habitValue = facts.total ? `${facts.done} av ${facts.total}` : '';
-  const habitSub = facts.paused
-    ? 'Pausad dag, inget måste.'
-    : facts.first
-      ? `Börja med ${facts.first}`
-      : facts.must.length
-        ? `Måste: ${facts.must.join(', ')}`
-        : 'Inget måste idag.';
-  const hasToday = facts.total > 0 || facts.tasks.length > 0 || !!facts.health;
-
+/** Huvudsiffran och Jarvis rad. */
+function TodayHero({ facts, onOpen }: { facts: SummaryFacts; onOpen: (target: Target) => void }) {
   return (
     <>
       <button type="button" className="hero" onClick={() => onOpen('overview')}>
@@ -118,7 +113,24 @@ function TodayFacts({ facts, onOpen }: { facts: SummaryFacts; onOpen: (target: T
           </span>
         </p>
       )}
+    </>
+  );
+}
 
+/** Grupperna Idag och Sparande. */
+function TodayGroups({ facts, onOpen }: { facts: SummaryFacts; onOpen: (target: Target) => void }) {
+  const habitValue = facts.total ? `${facts.done} av ${facts.total}` : '';
+  const habitSub = facts.paused
+    ? 'Pausad dag, inget måste.'
+    : facts.first
+      ? `Börja med ${facts.first}`
+      : facts.must.length
+        ? `Måste: ${facts.must.join(', ')}`
+        : 'Inget måste idag.';
+  const hasToday = facts.total > 0 || facts.tasks.length > 0 || !!facts.health;
+
+  return (
+    <>
       <section className="group-block" aria-labelledby="today-group-idag">
         <h3 className="group-title" id="today-group-idag">
           Idag

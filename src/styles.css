@@ -3329,3 +3329,17 @@ button.group-row::after {
   text-align: right;
   white-space: normal;
 }
+
+/* Idag på skrivbord: huvudsiffran till vänster, grupperna till höger */
+@media (min-width: 900px) {
+  .today {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 2.5rem;
+  }
+
+  .today-side {
+    padding-top: 0.5rem;
+  }
+}
