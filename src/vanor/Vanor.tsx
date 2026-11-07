@@ -11,7 +11,6 @@ import { daySummary, habitPlan, isDaily, isDone, rampToday, type Habit, type Tod
 import { prioritizeToday } from '../../supabase/functions/inbox/priority'
 import { loadHabitData, minimumKeys, onHabitChange, saveTaskRecord, toggleCheck, togglePause, toLog, type HabitData } from './store'
 import { dayQuote } from './quotes'
-import '@fontsource/jetbrains-mono/500.css'
 import './vanor.css'
 
 /** Dagens datum som byter vid midnatt, även om appen står öppen. */

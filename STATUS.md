@@ -22,7 +22,7 @@
 - Fungerar: Översikt, Budget (månad för månad), Prognos med billån och extra på lånet, Sparmål (en uträkning i
   hela appen, `goalPlan.ts`), Konton, Önskelista, synk mellan två telefoner med ihopslagning av budget.
 - Halvfärdigt: inget.
-- Kända buggar: "Abonnemang" radbryts i budgetlistan på 375 px (fanns före HUD-stilen).
+- Kända buggar: inga kända. (Abonnemang-radbrytningen åtgärdades i #104.)
 - Beslut: "Blir över" är ordet för kvar efter utgifter och sparande. Sparmålet matas av valda sparkategorier plus
   det som blir över. Skulderna är betalda och visas inte.
 
@@ -33,7 +33,8 @@
 - Kända buggar: se inbox v17 ovan (hälsosiffror med smalt mellanslag).
 
 ## Jarvis
-- Fungerar: egen flik med röst (telefonens taligenkänning och uppläsning), helskärm när du pratar, skriva,
+- Fungerar: specialrum bakom orben i sidhuvudet (sedan "Två rum"), med röst (telefonens taligenkänning och
+  uppläsning), helskärm när du pratar, skriva,
   visningsläge som döljer belopp, röstval med ton och tempo (PR #101), svar på vaga frågor och stavfel
   (`ask.ts`), "Jarvis säger" på Idag, Siri-genvägarna "Fråga Groundwork" och "Jarvis" (Mac, Apple Intelligence).
 - Begränsning (beslut): ingen AI och inget som kostar. Jarvis förstår nyckelord, inte fria samtal.
@@ -42,7 +43,7 @@
 
 ## Galax
 - Fungerar: 3D-universum (Jorden, rymdbas, hälsogalax, ekonomigalax) i `CosmosView.tsx`, laddas lazy.
-  Gränssnittet ovanpå scenen är i HUD-stil sedan #101. 3D-scenen själv är oförändrad.
+  Gränssnittet ovanpå scenen är i HUD-stil (`room.css`), med Tillbaka uppe till vänster. 3D-scenen själv är oförändrad.
 - Halvfärdigt: inget påbörjat. Erik vill "uppgradera" även själva 3D-scenen; inget bestämt vad.
 - Kända buggar: i Playwright utan grafikkort syns inte alla etiketter (Ekonomi) efter att man flugit till
   Hälsa; inte reproducerat på riktig enhet.
@@ -53,5 +54,7 @@
 - Beslut: ton positiv/negativ/neutral via ordlistor, orden som avgjorde visas. Neutral finns för att inte tvinga
   en ton.
 
-## Designskisser
-- HUD-skisser A och B finns som artifact (Design-canvas) i Eriks claude.ai; B med Jarvis-knapp valdes.
+## Design
+- Designspecen "Två rum" valdes 2026-11-07: lugnt vardagsrum (Idag, Ekonomi, Vanor, Nyheter) och mörkt specialrum
+  (Jarvis, galaxen). Spec och genomförandeplan i `docs/design/`.
+- Äldre: HUD-skisser A och B finns som artifact (Design-canvas) i Eriks claude.ai; B med Jarvis-knapp valdes.

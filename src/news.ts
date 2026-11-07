@@ -3,7 +3,7 @@
 // nyheterna syns även utan uppkoppling.
 
 import { INBOX_URL } from './vanor/InboxSettings';
-import type { NewsResult } from '../supabase/functions/inbox/news';
+import { TOPICS, type NewsItem, type NewsResult } from '../supabase/functions/inbox/news';
 
 export type { NewsItem, NewsResult, NewsTopic, Tone } from '../supabase/functions/inbox/news';
 export { TOPICS } from '../supabase/functions/inbox/news';
@@ -41,6 +41,15 @@ export function ago(time: number, now = Date.now()): string {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `för ${hours} tim sedan`;
   return new Date(time).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '');
+}
+
+/** Metaraden under en nyhet: "SVT Sport, för 16 min sedan", med ämnet först när alla ämnen visas. */
+export function newsMeta(
+  item: Pick<NewsItem, 'source' | 'published' | 'topic'>,
+  { now = Date.now(), withTopic = false }: { now?: number; withTopic?: boolean } = {},
+): string {
+  const topic = withTopic ? TOPICS.find((t) => t.id === item.topic)?.label : undefined;
+  return [topic, item.source, ago(item.published, now)].filter(Boolean).join(', ');
 }
 
 /** "14:05" */

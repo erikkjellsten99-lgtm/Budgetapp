@@ -1,12 +1,15 @@
 /* Vanor-fliken. Stilarna gäller bara inuti .vanor och använder budgetappens färger. */
 .vanor {
   --surface: var(--card);
-  --sunk: #e8ede9;
+  --sunk: var(--bg);
   --ink: var(--text);
   --line: var(--border);
-  --done: var(--accent);
-  --done-ink: #ffffff;
-  --done-soft: var(--accent-soft);
+  /* Klart är tallgrönt i hela appen (designspec "Två rum"). */
+  --done: var(--pine);
+  --done-ink: var(--surface);
+  --done-soft: color-mix(in srgb, var(--pine) 14%, var(--surface));
+  /* Det man trycker på eller har valt är kobolt, som i resten av appen. */
+  --act: var(--cobalt);
   --flame: var(--danger);
   --warn: #8f5d12;
   --warn-soft: #f6ead3;
@@ -22,8 +25,6 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .vanor {
-    --sunk: #141b17;
-    --done-ink: #101512;
     --warn: #e3a84b;
     --warn-soft: #3a2f1a;
     --scrim: rgb(0 0 0 / 0.6);
@@ -32,8 +33,6 @@
 
 /* Mörkt läge valt i appen (Konto → Utseende) */
 :root[data-theme='dark'] .vanor {
-  --sunk: #141b17;
-  --done-ink: #101512;
   --warn: #e3a84b;
   --warn-soft: #3a2f1a;
   --scrim: rgb(0 0 0 / 0.6);
@@ -129,7 +128,7 @@
 }
 
 .vanor .field textarea:focus {
-  border-color: var(--done);
+  border-color: var(--act);
   outline: none;
 }
 
@@ -601,7 +600,7 @@
   background: transparent;
   border: 0;
   border-radius: 10px;
-  color: var(--done);
+  color: var(--act);
   font-weight: 650;
 }
 
@@ -762,7 +761,7 @@
 }
 
 .vanor .field input:focus {
-  border-color: var(--done);
+  border-color: var(--act);
   outline: none;
 }
 
@@ -815,7 +814,7 @@
 }
 
 .vanor .goal-picker button[aria-checked='true'] {
-  background: var(--done);
+  background: var(--act);
   color: var(--done-ink);
 }
 
@@ -888,8 +887,8 @@
 }
 
 .vanor .chip[aria-pressed='true'] {
-  background: var(--done);
-  border-color: var(--done);
+  background: var(--act);
+  border-color: var(--act);
   color: var(--done-ink);
 }
 
@@ -905,7 +904,7 @@
 .vanor .primary {
   min-height: 48px;
   padding: 10px 18px;
-  background: var(--done);
+  background: var(--act);
   border: 0;
   border-radius: 12px;
   color: var(--done-ink);
@@ -1000,20 +999,21 @@
 }
 
 .vanor .day-choice .choice.on {
-  background: var(--done);
+  background: var(--act);
   color: var(--done-ink);
 }
 
 .vanor .day-choice .choice.on.min {
   background: var(--done-soft);
-  border-color: var(--done);
-  color: var(--done);
+  border-color: var(--act);
+  color: var(--act);
 }
 
 /* Veckans sol: utveckling överst i Vanor. --warm (0–1) sätts från veckans procent. */
 .vanor {
-  --sky-top: #eef3ef;
-  --sky-bottom: #f5f1e8;
+  /* Himlen i vardagsrummets färger; solens egen gula ton är en bild, inte en status. */
+  --sky-top: var(--surface);
+  --sky-bottom: var(--bg);
   --warm-top: #fbeed6;
   --warm-bottom: #f7d79c;
   --sun-a: #fff3cf;
@@ -1023,8 +1023,6 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .vanor {
-    --sky-top: #141c17;
-    --sky-bottom: #1b231e;
     --warm-top: #1f1d15;
     --warm-bottom: #4a3518;
     --sun-a: #ffe7a8;
@@ -1035,8 +1033,6 @@
 
 /* Mörkt läge valt i appen (Konto → Utseende) */
 :root[data-theme='dark'] .vanor {
-  --sky-top: #141c17;
-  --sky-bottom: #1b231e;
   --warm-top: #1f1d15;
   --warm-bottom: #4a3518;
   --sun-a: #ffe7a8;
@@ -1495,7 +1491,7 @@
   flex: none;
   width: 22px;
   height: 22px;
-  accent-color: var(--done);
+  accent-color: var(--act);
 }
 
 .vanor .push-toggle span {
@@ -1551,8 +1547,8 @@
 }
 
 .vanor .remind-days button.on {
-  background: var(--done);
-  border-color: var(--done);
+  background: var(--act);
+  border-color: var(--act);
   color: var(--done-ink);
 }
 
@@ -1642,28 +1638,14 @@
    Design: typsnitt, lättare lista och solgult för det som är klart.
    ------------------------------------------------------------------ */
 .vanor {
-  --display: var(--hud-display, system-ui);
-  --body: system-ui, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
-  --fill: #e9a23b;
-  --fill-ink: #2b1c04;
-  --fill-soft: #fbf0d9;
+  --display: var(--font-text);
+  --body: var(--font-text);
+  /* Siffror i Vanor i samma rundade typsnitt som beloppen, ingen mono i vardagsrummet. */
+  --mono: var(--font-amount);
+  --fill: var(--pine);
+  --fill-ink: var(--surface);
+  --fill-soft: color-mix(in srgb, var(--pine) 14%, var(--surface));
   font-family: var(--body);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .vanor {
-    --fill: #f0b14a;
-    --fill-ink: #241703;
-    --fill-soft: #3a2d17;
-  }
-}
-
-/* Mörkt läge valt i appen (Konto → Utseende) */
-:root[data-theme='dark'] .vanor {
-  --fill: #f0b14a;
-  --fill-ink: #241703;
-  --fill-soft: #3a2d17;
 }
 
 .vanor .headline,
@@ -1990,8 +1972,8 @@
 }
 
 .vanor .date-chips button[aria-pressed='true'] {
-  background: var(--done);
-  border-color: var(--done);
+  background: var(--act);
+  border-color: var(--act);
   color: var(--done-ink);
 }
 
