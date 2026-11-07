@@ -651,11 +651,31 @@ export function saveHolding(holding: Holding): Promise<void> {
   return putRecord('holdings', holding);
 }
 
-/** Tar bort innehavet och alla dess affärer, så att borttagningen synkas till andra telefonen. */
+/** Tar bort innehavet och alla dess affärer i en enda transaktion, så att allt eller inget försvinner och synkas. */
 export async function deleteHolding(id: string): Promise<void> {
-  const trades = await getTrades();
-  for (const trade of trades) if (trade.holdingId === id) await removeRecord('trades', trade.id);
-  await removeRecord('holdings', id);
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(['trades', 'holdings', 'outbox'], 'readwrite');
+    const trades = tx.objectStore('trades');
+    const outbox = tx.objectStore('outbox');
+    const queue = (store: 'trades' | 'holdings', key: string) => {
+      const entry: OutboxEntry = { key: `${store}:${key}`, store, id: key, data: null, deleted: true, ts: Date.now() };
+      outbox.put(entry);
+    };
+    const all = trades.getAll();
+    all.onsuccess = () => {
+      for (const trade of all.result as Trade[]) {
+        if (trade.holdingId !== id) continue;
+        trades.delete(trade.id);
+        queue('trades', trade.id);
+      }
+      tx.objectStore('holdings').delete(id);
+      queue('holdings', id);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  emit('local');
 }
 
 export function getTrades(): Promise<Trade[]> {

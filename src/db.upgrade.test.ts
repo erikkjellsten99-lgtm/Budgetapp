@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /** Skapar databasen som den såg ut i version 11, med det gamla billånet. */
 async function makeV11(loan: object) {
@@ -33,9 +33,10 @@ describe('uppgradering till version 12', () => {
 });
 
 describe('uppgradering till version 13', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('lämnar alla befintliga poster orörda, lägger till tomma lager för innehav och affärer och köar inget', async () => {
     const { IDBFactory, IDBKeyRange } = await import('fake-indexeddb');
-    const { vi } = await import('vitest');
     vi.resetModules();
     vi.stubGlobal('indexedDB', new IDBFactory());
     vi.stubGlobal('IDBKeyRange', IDBKeyRange);
@@ -93,6 +94,5 @@ describe('uppgradering till version 13', () => {
       expect(rows, name).toEqual([record]);
     }
     now.close();
-    vi.unstubAllGlobals();
   });
 });

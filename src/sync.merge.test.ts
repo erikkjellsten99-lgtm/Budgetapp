@@ -15,6 +15,7 @@ interface Row {
   updated_at: string;
 }
 
+let storeQueries = 0;
 const server = new Map<string, Row>();
 let clock = 0;
 const HOUSEHOLD = 'hushall-1';
@@ -41,7 +42,7 @@ function fakeClient(userId: string) {
         return builder;
       },
       eq: (col: keyof Row, value: unknown) => (filters.push((row) => row[col] === value), builder),
-      in: (col: keyof Row, values: unknown[]) => (filters.push((row) => values.includes(row[col])), builder),
+      in: (col: keyof Row, values: unknown[]) => (col === 'store' && storeQueries++, filters.push((row) => values.includes(row[col])), builder),
       gt: (col: keyof Row, value: string) => (filters.push((row) => String(row[col]) > value), builder),
       order: () => builder,
       range: (from: number, to: number) => ((range = [from, to]), builder),
@@ -222,5 +223,32 @@ describe('innehav och affärer mellan telefonerna', () => {
       expect(await p.db.getHoldings()).toEqual([other]);
       expect(await p.db.getTrades()).toEqual([otherTrade]);
     }
+  });
+
+  it('en telefon som hoppade över raderna med den äldre appen hämtar dem en gång efter uppgraderingen', async () => {
+    server.clear();
+    const erik = await phone('erik');
+    const cassandra = await phone('cassandra');
+    // Cassandras telefon motsvarar den äldre appen: ingen flagga än, och lastPull ligger efter raderna.
+    await cassandra.db.setMeta('investmentsBackfilled', undefined);
+
+    await erik.db.saveHolding(holding);
+    await erik.db.saveTrade(trade);
+    await erik.sync.syncNow();
+    const latest = [...server.values()].map((r) => r.updated_at).sort().pop()!;
+    const household = (await cassandra.db.getMeta<{ lastPull: string | null }>('household'))!;
+    await cassandra.db.setMeta('household', { ...household, lastPull: latest });
+    expect(await cassandra.db.getHoldings()).toEqual([]);
+
+    const before = storeQueries;
+    await cassandra.sync.syncNow();
+    expect(await cassandra.db.getHoldings()).toEqual([holding]);
+    expect(await cassandra.db.getTrades()).toEqual([trade]);
+    expect(storeQueries).toBeGreaterThan(before);
+    expect(await cassandra.db.getMeta('investmentsBackfilled')).toBe(true);
+
+    const afterFirst = storeQueries;
+    await cassandra.sync.syncNow();
+    expect(storeQueries).toBe(afterFirst);
   });
 });
