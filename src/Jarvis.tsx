@@ -47,21 +47,6 @@ const Mic = () => (
   </svg>
 );
 
-/** Knappen på Idag som tar dig till Jarvis. */
-export function JarvisButton({ onOpen }: { onOpen: () => void }) {
-  return (
-    <button type="button" className="card jarvis-open" onClick={onOpen}>
-      <span className="jarvis-open-text">
-        <span className="jarvis-eyebrow">Fråga Jarvis</span>
-        <span className="jarvis-open-hint">Prata eller skriv: Vad blir över? Hur sov jag?</span>
-      </span>
-      <span className="jarvis-mic">
-        <Mic />
-      </span>
-    </button>
-  );
-}
-
 const HIDE_KEY = 'jarvis-visningsläge';
 /** Exempel utan ekonomi, för visningsläget. */
 const SHOW_EXAMPLES = ['Vad kan du?', 'Hur sov jag i natt?', 'Vad ska jag göra idag?'];
@@ -261,47 +246,51 @@ export default function JarvisView({ active }: { active: boolean }) {
     >
       <div className="jarvis-stars" aria-hidden="true" />
       <header className="jarvis-top">
-        {full ? (
-          <button type="button" className="jarvis-icon-button" onClick={exitFull} aria-label="Stäng helskärm">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        ) : (
-          <button
-            type="button"
-            className={hideMoney ? 'jarvis-icon-button on' : 'jarvis-icon-button'}
-            onClick={toggleHide}
-            aria-pressed={hideMoney}
-            aria-label={hideMoney ? 'Visningsläge på: belopp döljs. Tryck för att visa belopp' : 'Visningsläge av. Tryck för att dölja belopp'}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
-              <circle cx="12" cy="12" r="3" />
-              {hideMoney && <path d="M4 20L20 4" />}
-            </svg>
-          </button>
-        )}
+        {/* Vänstra hörnet: Stäng i helskärm, annars plats för rummets Tillbaka-knapp. */}
+        <div className="jarvis-top-side">
+          {full && (
+            <button type="button" className="jarvis-icon-button" onClick={exitFull} aria-label="Stäng helskärm">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          )}
+        </div>
         <div className="jarvis-top-title">
           <h2 id="jarvis-title">Jarvis</h2>
           <p>{hideMoney ? 'Visningsläge · belopp döljs' : 'Läser bara · exakta siffror'}</p>
         </div>
-        {canSpeak() ? (
-          <button
-            type="button"
-            className={voiceOut ? 'jarvis-icon-button on' : 'jarvis-icon-button'}
-            onClick={() => setVoicePanel(true)}
-            aria-haspopup="dialog"
-            aria-label={voiceOut ? 'Röst och uppläsning (på)' : 'Röst och uppläsning (av)'}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" />
-              {voiceOut ? <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /> : <path d="M16 9.5l5 5M21 9.5l-5 5" />}
-            </svg>
-          </button>
-        ) : (
-          <span className="jarvis-icon-spacer" />
-        )}
+        <div className="jarvis-top-side end">
+          {!full && (
+            <button
+              type="button"
+              className={hideMoney ? 'jarvis-icon-button on' : 'jarvis-icon-button'}
+              onClick={toggleHide}
+              aria-pressed={hideMoney}
+              aria-label={hideMoney ? 'Visningsläge på: belopp döljs. Tryck för att visa belopp' : 'Visningsläge av. Tryck för att dölja belopp'}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+                <circle cx="12" cy="12" r="3" />
+                {hideMoney && <path d="M4 20L20 4" />}
+              </svg>
+            </button>
+          )}
+          {canSpeak() ? (
+            <button
+              type="button"
+              className={voiceOut ? 'jarvis-icon-button on' : 'jarvis-icon-button'}
+              onClick={() => setVoicePanel(true)}
+              aria-haspopup="dialog"
+              aria-label={voiceOut ? 'Röst och uppläsning (på)' : 'Röst och uppläsning (av)'}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" />
+                {voiceOut ? <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /> : <path d="M16 9.5l5 5M21 9.5l-5 5" />}
+              </svg>
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <div className="jarvis-stage">

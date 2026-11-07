@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { JarvisButton } from './Jarvis';
+import { JarvisButton } from './JarvisOrb';
 import { loadFacts } from './jarvis';
 import { onDataChange } from './db';
 import { onHabitChange } from './vanor/store';
@@ -7,7 +7,7 @@ import { longDate } from './vanor/dates';
 import type { SummaryFacts } from '../supabase/functions/inbox/summary';
 import { dayBrief } from '../supabase/functions/inbox/ask';
 
-type Target = 'overview' | 'budget' | 'goal' | 'vanor' | 'jarvis' | 'nyheter';
+type Target = 'overview' | 'budget' | 'goal' | 'vanor' | 'nyheter';
 
 const QUICK: { id: Target; label: string; icon: string }[] = [
   { id: 'overview', label: 'Översikt', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
@@ -31,7 +31,15 @@ const isNegative = (amount: string) => /^[−-]/.test(amount);
  * Siffrorna kommer från summaryFacts (jarvis.ts), samma uträkning som Översikt, Sparmål och Siri.
  * Läser bara.
  */
-export default function Today({ active, onOpen }: { active: boolean; onOpen: (target: Target) => void }) {
+export default function Today({
+  active,
+  onOpen,
+  onJarvis,
+}: {
+  active: boolean;
+  onOpen: (target: Target) => void;
+  onJarvis: () => void;
+}) {
   const [facts, setFacts] = useState<SummaryFacts | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -66,7 +74,7 @@ export default function Today({ active, onOpen }: { active: boolean; onOpen: (ta
         <h2>{greeting(hour)}</h2>
       </div>
 
-      <JarvisButton onOpen={() => onOpen('jarvis')} />
+      <JarvisButton onOpen={onJarvis} />
 
       {/* Utan pengameningen: beloppet står redan stort i kortet "Blir över" här nedanför.
           Samma flagga som visningsläget, så Jarvis egen text är orörd (Siri och morgonbeskedet säger allt). */}

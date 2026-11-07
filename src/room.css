@@ -248,3 +248,73 @@
   color: var(--g-accent);
   font-weight: 600;
 }
+
+/* Rummet som ark över appen, med Jarvis i full höjd */
+.room.room-sheet {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #050912;
+}
+
+.room.room-sheet .jarvis-screen:not(.full) {
+  min-height: 100dvh;
+  margin: 0;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  border: 0;
+  border-radius: 0;
+}
+
+.room .room-back {
+  position: absolute;
+  z-index: 2;
+  top: calc(env(safe-area-inset-top) + 0.9rem);
+  left: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 2.75rem;
+  padding: 0 0.85rem 0 0.45rem;
+  border: 1px solid rgb(92 200 255 / 28%);
+  border-radius: 999px;
+  background: rgb(14 24 42 / 85%);
+  color: #e6f1ff;
+  font: 600 0.9375rem/1 var(--font-text, system-ui);
+}
+
+.room .room-back svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Sidorna i Jarvis sidhuvud: lika breda, så att rubriken står i mitten. Vänster är plats för Tillbaka. */
+.room .jarvis-top-side {
+  display: flex;
+  flex: none;
+  gap: 0.4rem;
+  width: 6.5rem;
+}
+
+.room .jarvis-top-side.end {
+  justify-content: flex-end;
+}
+
+/* Titeln på egen rad under knapparna, så att undertiteln får plats på 375 px */
+.room .jarvis-top {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  row-gap: 0.35rem;
+}
+
+.room .jarvis-top-title {
+  flex: 1 0 100%;
+  order: 3;
+}
