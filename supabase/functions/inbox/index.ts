@@ -39,7 +39,7 @@ import { FEEDS, loadNews, type NewsResult } from './news.ts'
 import { monthPlans } from './months.ts'
 import { MAX_MONTHS } from './goalPlan.ts'
 import type { Loan } from './forecast.ts'
-import type { Asset, Category, MonthBudget, MonthlyIncome, SavingsGoal, Wish } from './types.ts'
+import type { Asset, Category, Holding, MonthBudget, MonthlyIncome, PricePoint, SavingsGoal, Trade, Wish } from './types.ts'
 import type { Habit, Log } from './habits.ts'
 import type { Task } from './tasks.ts'
 import { FIELD_METRICS, formatHealth, isHealthBody, metRules, parseHealthBody, parseSleepStages, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
@@ -151,6 +151,21 @@ async function allRows<T>(query: (from: number, to: number) => PromiseLike<{ dat
   }
 }
 
+/** Kurser per ticker i datumordning. Går det inte att läsa dem räknas innehaven utan värde, sammanfattningen faller inte. */
+async function loadPrices(tickers: string[]): Promise<Record<string, PricePoint[]>> {
+  const out: Record<string, PricePoint[]> = {}
+  if (tickers.length === 0) return out
+  try {
+    const rows = await allRows<{ ticker: string; date: string; close_sek: number | string }>((from, to) =>
+      admin.from('prices').select('ticker,date,close_sek').in('ticker', tickers).order('date').range(from, to),
+    )
+    for (const r of rows) (out[r.ticker] ??= []).push({ date: r.date, close: Number(r.close_sek) })
+    return out
+  } catch {
+    return {}
+  }
+}
+
 /**
  * Sammanfattningen. Läser hushållets ekonomi (records) och dina egna vanor, Att göra och hälsa
  * (personal_records), och räknar med samma kod som appen. Skriver ingenting.
@@ -200,6 +215,8 @@ async function summaryInput(userId: string): Promise<SummaryInput | Response> {
     month,
     MAX_MONTHS + 1,
   )
+  const holdings = pick<Holding>(economy, 'holdings')
+  const prices = await loadPrices([...new Set(holdings.flatMap((h) => (h.ticker ? [h.ticker] : [])))])
   const habits = pick<Habit>(mine, 'habits').sort((a, b) => a.order - b.order)
   const tasks = pick<Task>(mine, 'tasks')
   const paused = new Set(pick<{ date: string }>(mine, 'pauses').map((x) => x.date))
@@ -214,6 +231,9 @@ async function summaryInput(userId: string): Promise<SummaryInput | Response> {
     today,
     plans,
     assets: pick<Asset>(economy, 'assets'),
+    holdings,
+    trades: pick<Trade>(economy, 'trades'),
+    prices,
     goal: pick<SavingsGoal>(economy, 'goals')[0] ?? null,
     loan: pick<Loan>(economy, 'loans')[0] ?? null,
     wishes: pick<Wish>(economy, 'wishes'),

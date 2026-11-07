@@ -10,9 +10,10 @@
 
 import { forecast, type Loan } from './forecast.ts'
 import { goalCurrent, goalRows, goalStatus, planGoal, monthInput } from './goalPlan.ts'
-import { formatKr } from './money.ts'
+import { formatKr, formatPct } from './money.ts'
+import { summarize, totals, withHoldingValues } from './portfolio.ts'
 import { monthName, paidThisMonth, shiftMonth, type MonthPlan } from './months.ts'
-import type { Asset, SavingsGoal, Wish } from './types.ts'
+import type { Asset, Holding, PricePoint, SavingsGoal, Trade, Wish } from './types.ts'
 import { sumLeftToBuy, sumPaidIn } from './wishes.ts'
 import { firstThing, type Priority } from './priority.ts'
 import { daySummary } from './habits.ts'
@@ -26,7 +27,12 @@ export interface SummaryInput {
   today: DateKey
   /** Budget och inkomst från innevarande månad och framåt (minst två månader, gärna 40 år för sparmålet). */
   plans: MonthPlan[]
+  /** Konton som de är sparade; kontona från innehav värderas här (portfolio.ts). */
   assets: Asset[]
+  holdings: Holding[]
+  trades: Trade[]
+  /** Kurser per ticker i datumordning. */
+  prices: Record<string, PricePoint[]>
   goal: SavingsGoal | null
   loan: Loan | null
   wishes: Wish[]
@@ -101,6 +107,8 @@ export interface SummaryFacts {
   goal: { name: string; current: string; target: string; percent: number; status: string } | null
   loan: { name: string; left: string; payment: string; nextMonth: string; extra: string | null } | null
   wishes: { total: string; leftToBuy: string }
+  /** Investeringarna sammanlagt (portfolio.ts), eller null när det inte finns några innehav. */
+  investments: { value: string | null; invested: string; change: string | null; changePct: number | null; date: string | null } | null
   /**
    * Innevarande månads budgetposter som inte är markerade betalda, störst först, med det som är kvar av varje
    * (en kategori med rader kan vara delvis betald). Tom lista när allt är betalt, null när budgeten är tom.
@@ -117,9 +125,20 @@ export interface SummaryFacts {
   health: { when: 'idag' | 'igår'; values: { metric: HealthMetric; label: string; text: string }[] } | null
 }
 
+/** "2026-11-05" → "5 nov" */
+const shortDate = (date: string) =>
+  new Date(`${date}T12:00:00Z`)
+    .toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+    .replace(/\.$/, '')
+
 export function summaryFacts(input: SummaryInput): SummaryFacts {
-  const { today, plans, assets, goal, loan, wishes, priority: p, tasks, health } = input
+  const { today, plans, goal, loan, wishes, priority: p, tasks, health, holdings, trades, prices } = input
   const [now, ...future] = plans
+
+  // Innehaven värderas en gång här, så att nettovärde, sparmål och investeringar bygger på samma kurser
+  const rows = summarize(holdings, trades, prices, today)
+  const assets = withHoldingValues(input.assets, rows)
+  const sums = totals(rows)
 
   // Översikt för innevarande månad
   const o = overviewNumbers(now, wishes, assets)
@@ -186,6 +205,15 @@ export function summaryFacts(input: SummaryInput): SummaryFacts {
     goal: goalFacts,
     loan: loanFacts,
     wishes: { total: formatKr(wishes.reduce((s, w) => s + w.amount, 0)), leftToBuy: formatKr(sumLeftToBuy(wishes)) },
+    investments: holdings.length
+      ? {
+          value: sums.value === null ? null : formatKr(sums.value),
+          invested: formatKr(sums.invested),
+          change: sums.change === null ? null : formatKr(sums.change),
+          changePct: sums.changePct,
+          date: sums.latestDate ? shortDate(sums.latestDate) : null,
+        }
+      : null,
     unpaid,
     tasks: p.tasksDue.map((t) => (t.time ? `${t.title} ${t.time}` : t.title)),
     paused: p.pausedToday,
@@ -214,6 +242,14 @@ export function summaryLines(input: SummaryInput): string[] {
     lines.push(
       `${f.loan.name}: ${f.loan.left} kvar. Nästa betalning: ${f.loan.payment} i ${f.loan.nextMonth}` +
         (f.loan.extra ? `, och extra på lånet ${f.loan.extra} enligt Prognos.` : '.'),
+    )
+  }
+  if (f.investments) {
+    const i = f.investments
+    lines.push(
+      i.value === null
+        ? `Investeringar: värde saknas (investerat ${i.invested})`
+        : `Investeringar: ${i.value}${i.changePct === null ? '' : ` (${formatPct(i.changePct)})`}${i.date ? `, kurser från ${i.date}` : ''}`,
     )
   }
   lines.push(`Önskelista: ${f.wishes.total} totalt, kvar att köpa ${f.wishes.leftToBuy}`)

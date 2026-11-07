@@ -1,0 +1,273 @@
+{
+ "text": "Idag: Fredag 6 november 2026\nBlir över i november 2026 efter utgifter och planerat sparande: 17 416 kr\nInkomster i november 2026: 50 280 kr\nKostnader i november 2026: 32 364 kr\nPlanerat sparande i november 2026: 500 kr\nNettovärde (sparkonton): 69 940 kr\nPengar att använda (räknas inte i nettovärdet): 1 234 kr\nMål: 69 940 kr av 1 000 000 kr (7 %). Med budgeten som den är nås målet inte inom 40 år.\nBillån: 95 927 kr kvar. Nästa betalning: 1 586 kr i december 2026.\nÖnskelista: 5 095 kr totalt, kvar att köpa 0 kr\nAtt göra idag: Ringa 14:00\nMåste göras idag: Meditation\nBörja med: Ringa\nKlart idag: 0 av 2\nHälsa idag: Sömn 8 h 42 min, Steg 41 steg",
+ "facts": {
+  "today": "2026-11-06",
+  "month": "november 2026",
+  "left": "17 416 kr",
+  "income": "50 280 kr",
+  "costs": "32 364 kr",
+  "plannedSavings": "500 kr",
+  "netWorth": "69 940 kr",
+  "spending": "1 234 kr",
+  "months": [
+   {
+    "key": "2026-11",
+    "month": "november 2026",
+    "left": "17 416 kr",
+    "income": "50 280 kr",
+    "costs": "32 364 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2026-12",
+    "month": "december 2026",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-01",
+    "month": "januari 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-02",
+    "month": "februari 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-03",
+    "month": "mars 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-04",
+    "month": "april 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-05",
+    "month": "maj 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-06",
+    "month": "juni 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-07",
+    "month": "juli 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-08",
+    "month": "augusti 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-09",
+    "month": "september 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   },
+   {
+    "key": "2027-10",
+    "month": "oktober 2027",
+    "left": "22 511 kr",
+    "income": "50 280 kr",
+    "costs": "27 269 kr",
+    "plannedSavings": "500 kr"
+   }
+  ],
+  "goal": {
+   "name": "Mål",
+   "current": "69 940 kr",
+   "target": "1 000 000 kr",
+   "percent": 7,
+   "status": "Med budgeten som den är nås målet inte inom 40 år."
+  },
+  "loan": {
+   "name": "Billån",
+   "left": "95 927 kr",
+   "payment": "1 586 kr",
+   "nextMonth": "december 2026",
+   "extra": null
+  },
+  "wishes": {
+   "total": "5 095 kr",
+   "leftToBuy": "0 kr"
+  },
+  "unpaid": {
+   "total": "27 769 kr",
+   "items": [
+    {
+     "name": "Hem",
+     "left": "27 269 kr"
+    },
+    {
+     "name": "Spar",
+     "left": "500 kr"
+    }
+   ]
+  },
+  "tasks": [
+   "Ringa 14:00"
+  ],
+  "paused": false,
+  "must": [
+   "Meditation"
+  ],
+  "first": "Ringa",
+  "done": 0,
+  "total": 2,
+  "health": {
+   "when": "idag",
+   "values": [
+    {
+     "metric": "sleepH",
+     "label": "Sömn",
+     "text": "8 h 42 min"
+    },
+    {
+     "metric": "steps",
+     "label": "Steg",
+     "text": "41 steg"
+    }
+   ]
+  }
+ },
+ "ov": [
+  {
+   "income": 50280,
+   "costs": 32364,
+   "plannedSavings": 500,
+   "left": 17416,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  },
+  {
+   "income": 50280,
+   "costs": 27269,
+   "plannedSavings": 500,
+   "left": 22511,
+   "netWorth": 69940,
+   "spending": 1234
+  }
+ ]
+}

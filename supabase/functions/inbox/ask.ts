@@ -7,6 +7,7 @@
 import { list } from './morning.ts'
 import type { MonthFacts, SummaryFacts } from './summary.ts'
 import { shiftMonth } from './months.ts'
+import { formatPct } from './money.ts'
 
 /** Gemener, utan skiljetecken och med enkla mellanslag, så att "Hur sov jag?" och "hur sov jag" blir samma. */
 export function normalize(question: string): string {
@@ -123,6 +124,15 @@ export function unpaidText(f: SummaryFacts): string {
   return `Kvar att betala i ${f.month}: ${f.unpaid.total}. ${names}.`
 }
 
+/** Investeringarna: värde, procent sedan köpen och datumet på kurserna. */
+function investmentsText(f: SummaryFacts): string {
+  const i = f.investments
+  if (!i) return 'Det finns inga investeringar inlagda.'
+  if (i.value === null) return 'Det finns inga kurser för investeringarna än.'
+  const pct = i.changePct === null ? '' : `, ${formatPct(Math.abs(i.changePct)).replace(/^[+\u2212]/, '')} ${i.changePct < 0 ? 'ned' : 'upp'} sedan köpen`
+  return `Investeringarna är värda ${i.value}${pct}.` + (i.date ? ` Kurser från ${i.date}.` : '')
+}
+
 const mustText = (f: SummaryFacts) => {
   if (f.paused) return 'Du har pausat idag, så inga vanor måste göras.'
   const must = f.must.length ? `Måste göras idag: ${list(f.must)}.` : 'Inget måste göras idag.'
@@ -190,6 +200,11 @@ const INTENTS: Intent[] = [
     words: [' önsk', ' köpa', ' köpt', ' inköp', ' handla'],
     money: true,
     answer: (f) => `Önskelistan är ${f.wishes.total} totalt, och kvar att köpa är ${f.wishes.leftToBuy}.`,
+  },
+  {
+    words: [' investering', ' fond', ' aktie', ' portfolj', ' portfölj'],
+    money: true,
+    answer: investmentsText,
   },
   {
     // Inte " betalt": det träffar "betalning" ("nästa betalning på lånet") med ett stavfel. " betalat" täcker "betalt".
