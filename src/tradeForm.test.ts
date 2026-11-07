@@ -42,7 +42,7 @@ describe('tradeError', () => {
   });
 
   it('ger felet från validateTrades när ett ändrat köp gör en senare försäljning för stor', () => {
-    expect(tradeError([buy, sell], { ...buy, quantity: 5 })).toBe('Ni säljer fler andelar än ni äger den 2026-02-10.');
+    expect(tradeError([buy, sell], { ...buy, quantity: 5 })).toBe('Ni säljer fler andelar än ni äger den 10 feb. 2026.');
   });
 
   it('ersätter affären med samma id i listan', () => {
@@ -50,7 +50,11 @@ describe('tradeError', () => {
   });
 
   it('en ny affär läggs till i listan', () => {
-    expect(tradeError([buy], t('c', 'sell', '2026-02-10', 11))).toBe('Ni säljer fler andelar än ni äger den 2026-02-10.');
+    expect(tradeError([buy], t('c', 'sell', '2026-02-10', 11))).toBe('Ni säljer fler andelar än ni äger den 10 feb. 2026.');
+  });
+
+  it('avvisar datum i framtiden', () => {
+    expect(tradeError([buy], t('x', 'buy', '2999-01-01', 1))).toBe('Datumet har inte varit än.');
   });
 
   it('avvisar antal som inte är större än 0, för köp och sälj', () => {

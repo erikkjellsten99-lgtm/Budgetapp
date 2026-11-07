@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { today } from './db';
 import { formatKr, formatPct } from './money';
 import { axisLabel, niceStep, shortDate, signedKr } from './chartUtil';
@@ -35,12 +35,24 @@ export default function Investments({ holdings, trades, prices, rows, loaded, se
   const anyStale = rows.some((r) => r.quote.stale);
   const priceNote = anyStale ? 'Gamla kurser' : sum.latestDate ? `Kurser från ${shortDate(sum.latestDate)}` : null;
 
+  const open = selected === null || selected === 'new' ? undefined : rows.find((r) => r.holding.id === selected);
+
+  // Vyn öppnas överst, inte där översikten var scrollad
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) first.current = false;
+    else window.scrollTo(0, 0);
+  }, [selected]);
+  // Innehavet finns inte längre (borttaget här eller på andra telefonen): tillbaka till översikten
+  useEffect(() => {
+    if (loaded && selected !== null && selected !== 'new' && !open) onSelect(null);
+  }, [loaded, selected, open, onSelect]);
+
   if (!loaded) return null;
 
   if (selected === 'new') {
     return <HoldingForm onDone={() => onSelect(null)} />;
   }
-  const open = selected === null ? undefined : rows.find((r) => r.holding.id === selected);
   if (open) {
     return <HoldingView row={open} trades={trades} prices={prices} onBack={() => onSelect(null)} />;
   }

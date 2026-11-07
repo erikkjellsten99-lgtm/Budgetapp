@@ -1,4 +1,5 @@
 import { validateTrades } from '../supabase/functions/inbox/portfolio.ts';
+import { today } from './db';
 import type { Trade } from './types';
 
 /** Tolkar ett antal, t.ex. "12,3456" eller "1 000". Komma eller punkt som decimaltecken, ingen avrundning. Tomt eller ogiltigt blir NaN. */
@@ -21,11 +22,14 @@ function isRealDate(date: string): boolean {
  */
 export function tradeError(trades: Trade[], draft: Trade): string | null {
   if (!isRealDate(draft.date)) return 'Välj ett datum.';
+  if (draft.date > today()) return 'Datumet har inte varit än.';
   if (!(draft.quantity > 0)) return 'Skriv ett antal större än 0.';
   if (!(draft.price > 0)) return 'Skriv en kurs större än 0.';
   if (!(draft.fee >= 0)) return 'Courtage kan inte vara negativt.';
   const others = trades.filter((t) => t.id !== draft.id);
-  return validateTrades([...others, draft]);
+  const problem = validateTrades([...others, draft]);
+  // Datumet visas på svenska i formuläret, t.ex. "7 nov. 2026"
+  return problem?.replace(/\d{4}-\d{2}-\d{2}/, (d) => longDate(d)) ?? null;
 }
 
 export type PriceRange = '1m' | '1y' | 'all';
@@ -35,4 +39,9 @@ export function rangeStart(range: PriceRange, today: string, firstTradeDate: str
   if (range === 'all') return firstTradeDate ?? today;
   const days = range === '1m' ? 31 : 365;
   return new Date(Date.parse(`${today}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** "2026-11-07" som "7 nov. 2026". */
+export function longDate(date: string): string {
+  return new Date(`${date}T12:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' });
 }

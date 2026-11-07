@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { deleteHolding, deleteTrade, getAssets, newId, saveHolding, saveTrade, today } from './db';
+import { deleteHolding, deleteTrade, getAssets, newId, saveHoldingWithTrade, saveHolding, saveTrade, today } from './db';
 import { formatKr, formatPct, parseKr, toInputKr } from './money';
 import { searchTicker } from './prices';
 import { niceStep, shortDate, signedKr } from './chartUtil';
-import { parseQuantity, rangeStart, tradeError, type PriceRange } from './tradeForm';
+import { longDate, parseQuantity, rangeStart, tradeError, type PriceRange } from './tradeForm';
 import { priceOn, type HoldingSummary } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset, Holding, HoldingType, PricePoint, Trade } from './types';
 
@@ -57,7 +57,11 @@ export default function HoldingView({ row, trades, prices, onBack }: HoldingView
       <p className="hint">{subtitle}</p>
 
       {points.length === 0 ? (
-        <p className="hint">Ingen kurshistorik. Kursen skrivs in för hand.</p>
+        holding.ticker ? (
+          <p className="hint">Kurserna hämtas.</p>
+        ) : (
+          <p className="hint">Ingen kurshistorik. Kursen skrivs in för hand.</p>
+        )
       ) : (
         <PriceChart points={points} trades={mine} firstDate={firstDate} />
       )}
@@ -72,7 +76,7 @@ export default function HoldingView({ row, trades, prices, onBack }: HoldingView
               <span className="row-name">Värde</span>
               {quote.date && (
                 <span className="row-sub">
-                  Kurs {quote.price === null ? '' : formatKr(quote.price)} {shortDate(quote.date)}
+                  {quote.price === null ? 'Kurs saknas' : `Kurs ${formatKr(quote.price)}`} {shortDate(quote.date)}
                   {quote.source === 'manual' ? ', egen kurs' : ''}
                   {quote.stale ? ', gammal kurs' : ''}
                 </span>
@@ -118,7 +122,7 @@ export default function HoldingView({ row, trades, prices, onBack }: HoldingView
             >
               <span className="row-main">
                 <span className="row-name">
-                  {t.side === 'buy' ? 'Köp' : 'Sälj'} {shortDate(t.date)} {t.date.slice(0, 4)}
+                  {t.side === 'buy' ? 'Köp' : 'Sälj'} {longDate(t.date)}
                 </span>
                 <span className="row-sub">
                   {qty(t.quantity)} × {formatKr(t.price)}
@@ -272,10 +276,11 @@ interface TradeFormProps {
 function TradeForm({ holding, trades, side, trade, onDone }: TradeFormProps) {
   const [id] = useState(() => trade?.id ?? newId());
   const [date, setDate] = useState(trade?.date ?? today());
-  const [quantityText, setQuantityText] = useState(trade ? qty(trade.quantity).replace(/\s/g, '') : '');
+  const [quantityText, setQuantityText] = useState(trade ? String(trade.quantity).replace('.', ',') : '');
   const [priceText, setPriceText] = useState(toInputKr(trade?.price));
   const [feeText, setFeeText] = useState(toInputKr(trade?.fee));
   const [touched, setTouched] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   const draft: Trade = {
     id,
@@ -298,7 +303,7 @@ function TradeForm({ holding, trades, side, trade, onDone }: TradeFormProps) {
       onSubmit={(event) => {
         event.preventDefault();
         if (error) return;
-        void saveTrade(draft).then(onDone);
+        saveTrade(draft).then(onDone, () => setSaveError(true));
       }}
     >
       <h2>
@@ -321,6 +326,7 @@ function TradeForm({ holding, trades, side, trade, onDone }: TradeFormProps) {
         <input value={feeText} onChange={edit(setFeeText)} inputMode="decimal" placeholder="0" />
       </label>
       {error && (touched || trade) && <p className="error">{error}</p>}
+      {saveError && <p className="error">Det gick inte att spara. Försök igen.</p>}
       <div className="actions">
         <button type="submit" className="primary" disabled={error !== null}>
           Spara
@@ -356,9 +362,14 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
   const [name, setName] = useState(holding?.name ?? '');
   const [type, setType] = useState<HoldingType>(holding?.type ?? 'stock');
   const [ticker, setTicker] = useState(holding?.ticker ?? '');
-  const [query, setQuery] = useState(holding?.ticker ?? '');
+  // Sökrutan är bara en sökruta. Kortnamnet ändras när en träff väljs eller när det tas bort.
+  const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ ticker: string; name: string; type: HoldingType }[]>([]);
-  const [searched, setSearched] = useState(false);
+  // 'empty' = sökningen gick men gav inga träffar, 'failed' = den gick inte (utloggad, inget nät)
+  const [searched, setSearched] = useState<'empty' | 'failed' | null>(null);
+  const [touched, setTouched] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [assetId, setAssetId] = useState(holding?.assetId ?? '');
   const [manualText, setManualText] = useState(toInputKr(holding?.manualPrice));
@@ -385,27 +396,29 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
     };
   }, [holding]);
 
-  // Sök 300 ms efter sista tecknet, från två tecken. Ett valt kortnamn söks inte om.
+  // Sök 300 ms efter sista tecknet, från två tecken. Gamla träffar och meddelanden rensas direkt.
   useEffect(() => {
+    setResults([]);
+    setSearched(null);
     const q = query.trim();
-    if (q.length < 2 || q === ticker) {
-      setResults([]);
-      setSearched(false);
-      return;
-    }
+    if (q.length < 2) return;
     let cancelled = false;
     const timer = setTimeout(() => {
       void searchTicker(q).then((found) => {
         if (cancelled) return;
-        setResults(found.slice(0, 8));
-        setSearched(true);
+        if (found === null) {
+          setSearched('failed');
+        } else {
+          setResults(found.slice(0, 8));
+          setSearched(found.length === 0 ? 'empty' : null);
+        }
       });
     }, 300);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, ticker]);
+  }, [query]);
 
   const draft: Trade = {
     id: tradeId,
@@ -421,7 +434,8 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
   const manual = parseKr(manualText);
   const manualProblem = showManual && manualText.trim() !== '' && !(manual > 0) ? 'Skriv en kurs större än 0.' : null;
   const error = manualProblem ?? tradeProblem;
-  const valid = name.trim() !== '' && error === null;
+  const nameOk = name.trim() !== '';
+  const valid = nameOk && error === null;
 
   const save = async () => {
     const saved: Holding = { id, name: name.trim(), type };
@@ -437,8 +451,13 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
       if (holding.manualPrice !== undefined) saved.manualPrice = holding.manualPrice;
       if (holding.manualPriceDate !== undefined) saved.manualPriceDate = holding.manualPriceDate;
     }
-    await saveHolding(saved);
-    if (!holding) await saveTrade(draft);
+    try {
+      if (holding) await saveHolding(saved);
+      else await saveHoldingWithTrade(saved, draft);
+    } catch {
+      setSaveError(true);
+      return;
+    }
     onDone();
   };
 
@@ -451,16 +470,20 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
       }}
     >
       <h2>{holding ? 'Ändra innehav' : 'Nytt innehav'}</h2>
+      {ticker !== '' && (
+        <div className="ticker-chosen">
+          <span>Kortnamn: {ticker}</span>
+          <button type="button" onClick={() => setTicker('')}>
+            Ta bort kortnamn
+          </button>
+        </div>
+      )}
       <label>
-        Kortnamn
+        {ticker === '' ? 'Sök kortnamn' : 'Sök ett annat kortnamn'}
         <input
           value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setTicker('');
-          }}
+          onChange={(event) => setQuery(event.target.value)}
           placeholder="Sök på namn eller kortnamn"
-          autoCapitalize="characters"
           autoFocus={!holding}
         />
       </label>
@@ -475,8 +498,7 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
                 setName(r.name);
                 setType(r.type);
                 setTicker(r.ticker);
-                setQuery(r.ticker);
-                setResults([]);
+                setQuery('');
               }}
             >
               <span className="row-main">
@@ -489,13 +511,21 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
           ))}
         </div>
       )}
-      {searched && results.length === 0 && ticker === '' && (
-        <p className="hint">Hittade inget hos Yahoo. Skriv in kursen själva.</p>
+      {searched === 'empty' && <p className="hint">Hittade inget hos Yahoo. Skriv in kursen själva.</p>}
+      {searched === 'failed' && (
+        <p className="hint">Sökningen fungerar bara när du är inloggad och har nät. Skriv in kursen själva.</p>
       )}
       <label>
         Namn
-        <input value={name} onChange={(event) => setName(event.target.value)} />
+        <input
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            setNameTouched(true);
+          }}
+        />
       </label>
+      {nameTouched && !nameOk && <p className="error">Skriv ett namn.</p>}
       <label>
         Typ
         <select value={type} onChange={(event) => setType(event.target.value as HoldingType)}>
@@ -522,7 +552,10 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
           Egen kurs (kr)
           <input
             value={manualText}
-            onChange={(event) => setManualText(event.target.value)}
+            onChange={(event) => {
+              setManualText(event.target.value);
+              setTouched(true);
+            }}
             inputMode="decimal"
             placeholder="0"
           />
@@ -533,13 +566,20 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
           <h3>Första köpet</h3>
           <label>
             Datum
-            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            <input type="date" value={date} onChange={(event) => {
+                setDate(event.target.value);
+                setTouched(true);
+              }}
+            />
           </label>
           <label>
             Antal
             <input
               value={quantityText}
-              onChange={(event) => setQuantityText(event.target.value)}
+              onChange={(event) => {
+                setQuantityText(event.target.value);
+                setTouched(true);
+              }}
               inputMode="decimal"
               placeholder="0"
             />
@@ -548,7 +588,10 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
             Kurs (kr)
             <input
               value={priceText}
-              onChange={(event) => setPriceText(event.target.value)}
+              onChange={(event) => {
+                setPriceText(event.target.value);
+                setTouched(true);
+              }}
               inputMode="decimal"
               placeholder="0"
             />
@@ -557,16 +600,18 @@ export function HoldingForm({ holding, onDone }: HoldingFormProps) {
             Courtage (kr)
             <input
               value={feeText}
-              onChange={(event) => setFeeText(event.target.value)}
+              onChange={(event) => {
+                setFeeText(event.target.value);
+                setTouched(true);
+              }}
               inputMode="decimal"
               placeholder="0"
             />
           </label>
         </>
       )}
-      {error && (name !== '' || quantityText !== '' || priceText !== '' || manualText !== '') && (
-        <p className="error">{error}</p>
-      )}
+      {error && touched && <p className="error">{error}</p>}
+      {saveError && <p className="error">Det gick inte att spara. Försök igen.</p>}
       <div className="actions">
         <button type="submit" className="primary" disabled={!valid}>
           Spara

@@ -3461,3 +3461,11 @@ button.group-row::after {
 .investments-chart .trade-dot.sell {
   fill: var(--danger);
 }
+
+.ticker-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--text);
+}

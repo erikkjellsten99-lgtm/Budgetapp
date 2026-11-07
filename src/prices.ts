@@ -77,20 +77,20 @@ export async function refreshPrices(holdings: Holding[], trades: Trade[], now: D
   }
 }
 
-/** Sök bolag, fond eller ETF på namn eller ticker. */
-export async function searchTicker(q: string): Promise<{ ticker: string; name: string; type: HoldingType }[]> {
+/** Sök bolag, fond eller ETF på namn eller ticker. [] är en riktig tom träfflista, null att sökningen inte gick (utloggad, inget nät, serverfel). */
+export async function searchTicker(q: string): Promise<{ ticker: string; name: string; type: HoldingType }[] | null> {
   const query = q.trim();
   if (!query) return [];
   try {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) return [];
+    if (!data.session) return null;
     const res = await fetch(`${INBOX_URL}?action=kurssok&q=${encodeURIComponent(query)}`, {
       headers: { Authorization: `Bearer ${data.session.access_token}` },
     });
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     const body = (await res.json()) as { results?: { ticker: string; name: string; type: HoldingType }[] };
     return body.results ?? [];
   } catch {
-    return [];
+    return null;
   }
 }

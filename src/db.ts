@@ -678,6 +678,26 @@ export async function deleteHolding(id: string): Promise<void> {
   emit('local');
 }
 
+/** Sparar ett nytt innehav och dess första affär i en enda transaktion, så att båda eller ingen sparas och synkas. */
+export async function saveHoldingWithTrade(holding: Holding, trade: Trade): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(['holdings', 'trades', 'outbox'], 'readwrite');
+    const outbox = tx.objectStore('outbox');
+    const queue = (store: 'holdings' | 'trades', record: Holding | Trade) => {
+      const entry: OutboxEntry = { key: `${store}:${record.id}`, store, id: record.id, data: record, deleted: false, ts: Date.now() };
+      outbox.put(entry);
+    };
+    tx.objectStore('holdings').put(holding);
+    queue('holdings', holding);
+    tx.objectStore('trades').put(trade);
+    queue('trades', trade);
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  emit('local');
+}
+
 export function getTrades(): Promise<Trade[]> {
   return read('trades', (store) => store.getAll());
 }

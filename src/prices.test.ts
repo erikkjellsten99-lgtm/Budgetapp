@@ -161,10 +161,15 @@ describe('searchTicker', () => {
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer tok');
   });
 
-  it('fel ger []', async () => {
+  it('fel ger null, tom träfflista ger []', async () => {
     fetchMock.mockRejectedValue(new Error('x'));
-    expect(await searchTicker('volvo')).toEqual([]);
+    expect(await searchTicker('volvo')).toBeNull();
     fetchMock.mockResolvedValue({ ok: false, json: async () => ({ error: 'login' }) });
+    expect(await searchTicker('volvo')).toBeNull();
+    getSession.mockResolvedValue({ data: { session: null } });
+    expect(await searchTicker('volvo')).toBeNull();
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ results: [] }) });
     expect(await searchTicker('volvo')).toEqual([]);
   });
 });

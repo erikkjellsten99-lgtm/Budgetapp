@@ -1,6 +1,16 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { getBudget, getIncome, saveCategory, saveIncome, shiftMonth } from './db';
+import {
+  getBudget,
+  getHoldings,
+  getIncome,
+  getOutbox,
+  getTrades,
+  saveCategory,
+  saveHoldingWithTrade,
+  saveIncome,
+  shiftMonth,
+} from './db';
 
 // Databasen delas mellan testerna, så varje test använder egna månader långt fram.
 
@@ -46,5 +56,18 @@ describe('ändringar gäller bara den valda månaden', () => {
     await saveIncome({ month: '2035-06', csn: 9202, other: 1 }, true);
     await saveIncome({ month: '2035-07', csn: 0, other: 1 }, true);
     expect((await getIncome('2035-09')).csn).toBe(0);
+  });
+});
+
+describe('saveHoldingWithTrade', () => {
+  it('sparar innehav och första affär och köar båda för synk', async () => {
+    const holding = { id: 'h-tx', name: 'Testfond', type: 'fund' as const };
+    const trade = { id: 't-tx', holdingId: 'h-tx', date: '2026-01-05', side: 'buy' as const, quantity: 1.234567, price: 100, fee: 0 };
+    await saveHoldingWithTrade(holding, trade);
+    expect((await getHoldings()).find((x) => x.id === 'h-tx')).toEqual(holding);
+    expect((await getTrades()).find((x) => x.id === 't-tx')).toEqual(trade);
+    const keys = (await getOutbox()).map((e) => e.key);
+    expect(keys).toContain('holdings:h-tx');
+    expect(keys).toContain('trades:t-tx');
   });
 });
