@@ -29,6 +29,7 @@ const t = (holdingId: string, date: string): Trade =>
 
 const day1 = new Date(2026, 10, 7, 12);
 const day2 = new Date(2026, 10, 8, 12);
+const minutesAfter = (d: Date, m: number) => new Date(d.getTime() + m * 60_000);
 
 const fetchMock = vi.fn();
 
@@ -113,8 +114,45 @@ describe('refreshPrices', () => {
     expect(meta.has('pricesRefreshedOn')).toBe(false);
     expect(meta.has('pricesRefreshedFor')).toBe(false);
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ updated: { A: 0 }, failed: ['B'] }) });
-    expect(await refreshPrices(holdings, trades, day1)).toBe(false);
+    expect(await refreshPrices(holdings, trades, minutesAfter(day1, 31))).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('efter ett misslyckat försök väntar samma lista 30 minuter innan nästa anrop', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ updated: { A: 1 }, failed: ['B'] }) });
+    await refreshPrices(holdings, trades, day1);
+    // Varje dataändring inom 30 minuter hoppas över
+    expect(await refreshPrices(holdings, trades, minutesAfter(day1, 1))).toBe(false);
+    expect(await refreshPrices(holdings, trades, minutesAfter(day1, 29))).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await refreshPrices(holdings, trades, minutesAfter(day1, 30));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('svar som inte är 2xx och fetch som kastar väntar också 30 minuter', async () => {
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) });
+    await refreshPrices(holdings, trades, day1);
+    await refreshPrices(holdings, trades, minutesAfter(day1, 5));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    fetchMock.mockRejectedValue(new Error('nät'));
+    await refreshPrices(holdings, trades, minutesAfter(day1, 30));
+    await refreshPrices(holdings, trades, minutesAfter(day1, 40));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('ny lista efter ett misslyckat försök hämtas direkt', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ updated: {}, failed: ['VOLV-B.ST'] }) });
+    await refreshPrices(holdings, trades, day1);
+    await refreshPrices([...holdings, h('b', 'INVE-B.ST')], [...trades, t('b', '2025-01-01')], minutesAfter(day1, 1));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('utloggad räknas inte som försök', async () => {
+    getSession.mockResolvedValue({ data: { session: null } });
+    await refreshPrices(holdings, trades, day1);
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    await refreshPrices(holdings, trades, minutesAfter(day1, 1));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('skickar högst 50 tickers', async () => {

@@ -8,6 +8,11 @@ import { INBOX_URL } from './vanor/InboxSettings';
 const PAGE = 1000;
 const MAX_TICKERS = 50;
 
+/** Efter ett misslyckat försök med samma lista dröjer nästa anrop så här länge. */
+const RETRY_AFTER_MS = 30 * 60_000;
+const FAILED_AT_KEY = 'pricesFailedAt';
+const FAILED_FOR_KEY = 'pricesFailedFor';
+
 /** Senast lästa kurser, sparade lokalt i meta så att värdena syns utan nät eller inloggning. */
 const CACHE_KEY = 'pricesCache';
 
@@ -106,18 +111,42 @@ export async function refreshPrices(holdings: Holding[], trades: Trade[], now: D
       return false;
     }
 
+    // Samma lista misslyckades nyss: vänta, så att varje dataändring inte blir ett nytt anrop till Yahoo
+    const lastFailedAt = await getMeta<number>(FAILED_AT_KEY);
+    if (
+      (await getMeta<string>(FAILED_FOR_KEY)) === signature &&
+      typeof lastFailedAt === 'number' &&
+      now.getTime() - lastFailedAt < RETRY_AFTER_MS
+    ) {
+      return false;
+    }
+
     const { data } = await supabase.auth.getSession();
     if (!data.session) return false;
-    const res = await fetch(`${INBOX_URL}?action=kurser`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${data.session.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tickers }),
-    });
-    if (!res.ok) return false;
+    const failedAttempt = async () => {
+      await setMeta(FAILED_AT_KEY, now.getTime());
+      await setMeta(FAILED_FOR_KEY, signature);
+    };
+    let res: Response;
+    try {
+      res = await fetch(`${INBOX_URL}?action=kurser`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${data.session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tickers }),
+      });
+    } catch {
+      await failedAttempt();
+      return false;
+    }
+    if (!res.ok) {
+      await failedAttempt();
+      return false;
+    }
     const body = (await res.json().catch(() => null)) as { updated?: Record<string, number>; failed?: string[] } | null;
     const failed = Array.isArray(body?.failed) ? body.failed : [];
     if (failed.length > 0) {
-      // Någon symbol misslyckades: dagen sparas inte, så att det görs ett nytt försök vid nästa ändring
+      // Någon symbol misslyckades: dagen sparas inte, nytt försök tidigast om 30 minuter
+      await failedAttempt();
       return Object.values(body?.updated ?? {}).some((n) => n > 0);
     }
     await setMeta('pricesRefreshedOn', day);
