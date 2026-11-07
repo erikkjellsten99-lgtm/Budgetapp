@@ -1,12 +1,12 @@
 import type { Loan } from './forecast';
 import { monthPlans, shiftMonth, type MonthPlan } from '../supabase/functions/inbox/months.ts';
-import type { Asset, Category, Debt, MonthBudget, MonthlyIncome, SavingsGoal, Transaction, Wish } from './types';
+import type { Asset, Category, Debt, Holding, MonthBudget, MonthlyIncome, SavingsGoal, Trade, Transaction, Wish } from './types';
 
 const DB_NAME = 'budget';
-const DB_VERSION = 12;
+const DB_VERSION = 13;
 
 /** Listorna med appens data. Det är dessa som synkas mellan telefonerna. */
-export const DATA_STORES = ['categories', 'budgets', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes', 'loans'] as const;
+export const DATA_STORES = ['categories', 'budgets', 'transactions', 'income', 'debts', 'assets', 'goals', 'wishes', 'loans', 'holdings', 'trades'] as const;
 export type DataStore = (typeof DATA_STORES)[number];
 type StoreName = DataStore | 'outbox' | 'meta';
 
@@ -242,6 +242,12 @@ function openDb(): Promise<IDBDatabase> {
           const old = current.result as Loan | undefined;
           if (!old || (old.balance === 100000 && old.annualRate === 10)) loans.put({ ...MY_CAR_LOAN, payExtra: old?.payExtra ?? true });
         };
+      }
+
+      if (event.oldVersion < 13) {
+        // Investeringar: innehav och deras köp och sälj. Nya, tomma lager; inget befintligt rörs.
+        db.createObjectStore('holdings', { keyPath: 'id' });
+        db.createObjectStore('trades', { keyPath: 'id' });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -633,6 +639,35 @@ export function saveAsset(asset: Asset): Promise<void> {
 
 export function deleteAsset(id: string): Promise<void> {
   return removeRecord('assets', id);
+}
+
+// Investeringar
+
+export function getHoldings(): Promise<Holding[]> {
+  return read('holdings', (store) => store.getAll());
+}
+
+export function saveHolding(holding: Holding): Promise<void> {
+  return putRecord('holdings', holding);
+}
+
+/** Tar bort innehavet och alla dess affärer, så att borttagningen synkas till andra telefonen. */
+export async function deleteHolding(id: string): Promise<void> {
+  const trades = await getTrades();
+  for (const trade of trades) if (trade.holdingId === id) await removeRecord('trades', trade.id);
+  await removeRecord('holdings', id);
+}
+
+export function getTrades(): Promise<Trade[]> {
+  return read('trades', (store) => store.getAll());
+}
+
+export function saveTrade(trade: Trade): Promise<void> {
+  return putRecord('trades', trade);
+}
+
+export function deleteTrade(id: string): Promise<void> {
+  return removeRecord('trades', id);
 }
 
 // Önskelista

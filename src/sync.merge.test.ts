@@ -176,3 +176,51 @@ describe('två telefoner ändrar samma månad', () => {
     expect((await cassandra.db.getBudget(month)).categories).toEqual(sent.categories);
   });
 });
+
+describe('innehav och affärer mellan telefonerna', () => {
+  const holding = { id: 'h1', name: 'Global fond', type: 'fund' as const };
+  const trade = { id: 'tr1', holdingId: 'h1', date: '2030-05-02', side: 'buy' as const, quantity: 10, price: 123.45, fee: 1 };
+
+  it('ett innehav och ett köp når den andra telefonen, och en ändrad affär går tillbaka', async () => {
+    const erik = await phone('erik');
+    const cassandra = await phone('cassandra');
+
+    await erik.db.saveHolding(holding);
+    await erik.db.saveTrade(trade);
+    await erik.sync.syncNow();
+    await cassandra.sync.syncNow();
+    expect(await cassandra.db.getHoldings()).toEqual([holding]);
+    expect(await cassandra.db.getTrades()).toEqual([trade]);
+
+    // Cassandra ändrar antalet efteråt och Erik får hennes version.
+    await cassandra.db.saveTrade({ ...trade, quantity: 12 });
+    await cassandra.sync.syncNow();
+    await erik.sync.syncNow();
+    expect(await erik.db.getTrades()).toEqual([{ ...trade, quantity: 12 }]);
+  });
+
+  it('deleteHolding tar bort innehavet och dess affärer även på den andra telefonen', async () => {
+    const erik = await phone('erik');
+    const cassandra = await phone('cassandra');
+    const other = { id: 'h2', name: 'Annan fond', type: 'fund' as const };
+    const otherTrade = { ...trade, id: 'tr2', holdingId: 'h2' };
+
+    await erik.db.saveHolding(holding);
+    await erik.db.saveHolding(other);
+    await erik.db.saveTrade(trade);
+    await erik.db.saveTrade({ ...trade, id: 'tr1b', quantity: 3 });
+    await erik.db.saveTrade(otherTrade);
+    await erik.sync.syncNow();
+    await cassandra.sync.syncNow();
+    expect(await cassandra.db.getTrades()).toHaveLength(3);
+
+    await erik.db.deleteHolding('h1');
+    await erik.sync.syncNow();
+    await cassandra.sync.syncNow();
+
+    for (const p of [erik, cassandra]) {
+      expect(await p.db.getHoldings()).toEqual([other]);
+      expect(await p.db.getTrades()).toEqual([otherTrade]);
+    }
+  });
+});
