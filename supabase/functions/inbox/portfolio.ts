@@ -281,6 +281,11 @@ export function valueOverTime(
   });
 }
 
+/** Antal innehav på kontot vars värde saknas (ingen kurs). withHoldingValues räknar dem som 0. */
+export function missingValues(asset: Asset, rows: HoldingSummary[]): number {
+  return rows.filter((r) => r.holding.assetId === asset.id && r.value === null).length;
+}
+
 /** Konton med `fromHoldings` får saldot kontanter plus innehavens värden. Övriga returneras oförändrade. */
 export function withHoldingValues(assets: Asset[], rows: HoldingSummary[]): Asset[] {
   return assets.map((a) => {

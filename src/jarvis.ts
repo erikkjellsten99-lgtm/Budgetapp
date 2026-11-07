@@ -2,7 +2,8 @@
 // från datan som redan finns i appen (IndexedDB). Ingen server, ingen AI, läser bara.
 // Siffrorna kommer från summaryFacts (summary.ts), samma uträkning som sammanfattningen och Översikt.
 
-import { getAssets, getGoals, getLoans, getMonthPlans, getWishes } from './db';
+import { getValuedAssets } from './valuedAssets';
+import { getGoals, getLoans, getMonthPlans, getWishes } from './db';
 import { MAX_MONTHS } from './goalPlan';
 import { loadHabitData, toLog } from './vanor/store';
 import { todayKey } from './vanor/dates';
@@ -18,7 +19,7 @@ export async function loadFacts(now = new Date()): Promise<SummaryFacts> {
   const month = today.slice(0, 7);
   const [plans, assets, goals, loans, wishes, habitData] = await Promise.all([
     getMonthPlans(month, MAX_MONTHS + 1),
-    getAssets(),
+    getValuedAssets(),
     getGoals(),
     getLoans(),
     getWishes(),

@@ -9,6 +9,7 @@ import {
   validateTrades,
   valueOverTime,
   withHoldingValues,
+  missingValues,
 } from '../supabase/functions/inbox/portfolio';
 import type { Asset, Holding, PricePoint, Trade } from '../supabase/functions/inbox/types';
 
@@ -304,5 +305,15 @@ describe('withHoldingValues', () => {
     expect(res.cash).toBe(500);
     expect(res.name).toBe('Avanza');
     expect(res.updated).toBe('2026-10-01');
+  });
+});
+
+describe('missingValues', () => {
+  const acct: Asset = { id: 'a2', name: 'Avanza', amount: 0, updated: '', fromHoldings: true, cash: 1 };
+  const row = (assetId: string, value: number | null) =>
+    ({ holding: holding(`h${assetId}${value}`, { assetId }), value }) as unknown as Parameters<typeof missingValues>[1][number];
+  it('räknar innehav på kontot utan värde', () => {
+    expect(missingValues(acct, [row('a2', null), row('a2', 5), row('a2', null), row('a1', null)])).toBe(2);
+    expect(missingValues(acct, [])).toBe(0);
   });
 });

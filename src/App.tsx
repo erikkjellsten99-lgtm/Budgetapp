@@ -35,7 +35,7 @@ import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type 
 const Nyheter = lazy(() => import('./Nyheter'));
 import { formatKr } from './money';
 import { usePortfolio } from './usePortfolio';
-import { withHoldingValues } from '../supabase/functions/inbox/portfolio.ts';
+import { missingValues, withHoldingValues } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
 function readStorage(key: string): string | null {
@@ -142,6 +142,11 @@ export default function App() {
   const sumAmounts = (list: Asset[]) => list.reduce((sum, asset) => sum + asset.amount, 0);
   const netWorth = sumAmounts(valuedAssets.filter((asset) => !asset.spending));
   const spendingTotal = sumAmounts(valuedAssets.filter((asset) => asset.spending));
+
+  // Innehav utan kurs räknas som 0 i kontots värde, så det ska synas.
+  const missingTotal = assets
+    .filter((asset) => asset.fromHoldings && !asset.spending)
+    .reduce((sum, asset) => sum + missingValues(asset, portfolio.rows), 0);
 
   const goalNow = goal ? goalCurrent(goal, valuedAssets) : 0;
   const goalData = useGoalData(goal);
@@ -265,7 +270,11 @@ export default function App() {
               <button type="button" className="group-row" onClick={() => showView('assets')}>
                 <span className="row-main">
                   <span className="row-name">Konton</span>
-                  <span className="row-sub">Det som finns på sparkontona</span>
+                  <span className="row-sub">
+                    {missingTotal > 0
+                      ? `Det som finns på sparkontona, värde saknas för ${missingTotal} innehav`
+                      : 'Det som finns på sparkontona'}
+                  </span>
                 </span>
                 <span className={netWorth < 0 ? 'row-value negative' : 'row-value'}>{formatKr(netWorth)}</span>
               </button>

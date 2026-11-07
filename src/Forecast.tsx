@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   currentMonth,
-  getAssets,
   getBudget,
   getGoals,
   getIncome,
@@ -18,6 +17,7 @@ import { CSN_PLAN, csnPayouts, forecast, planCsn, type Forecast as ForecastResul
 import { formatKr, parseKr, toInputKr } from './money';
 import type { MonthlyIncome, SavingsGoal } from './types';
 import { goalCurrent } from './Goal';
+import { getValuedAssets } from './valuedAssets';
 import { planGoal, planWhen } from './goalPlan';
 import { useGoalData } from './useGoalPlan';
 
@@ -51,7 +51,7 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
 
 async function loadData(first: string, count: number): Promise<Data> {
   const months = Array.from({ length: count }, (_, i) => shiftMonth(first, i));
-  const [records, assets, goals, loans] = await Promise.all([getIncomeRecords(), getAssets(), getGoals(), getLoans()]);
+  const [records, assets, goals, loans] = await Promise.all([getIncomeRecords(), getValuedAssets(), getGoals(), getLoans()]);
   const inputs: MonthInput[] = [];
   const incomes: MonthlyIncome[] = [];
   for (const month of months) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { deleteAsset, getAssets, newId, saveAsset, today, onDataChange } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
-import { withHoldingValues, type HoldingSummary } from '../supabase/functions/inbox/portfolio.ts';
+import { missingValues, withHoldingValues, type HoldingSummary } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset } from './types';
 
 interface AssetsProps {
@@ -74,7 +74,9 @@ export default function Assets({ onChange, rows }: AssetsProps) {
                     {asset.name}
                     <small className="updated">
                       {asset.fromHoldings
-                        ? 'Från innehaven'
+                        ? missingValues(asset, rows) > 0
+                          ? `Från innehaven, värde saknas för ${missingValues(asset, rows)} innehav`
+                          : 'Från innehaven'
                         : asset.updated
                           ? `Uppdaterat ${formatDate(asset.updated)}`
                           : 'Inte ifyllt än'}
