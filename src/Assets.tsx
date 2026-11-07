@@ -46,6 +46,7 @@ export default function Assets({ onChange, rows }: AssetsProps) {
   // Konton som räknas från innehaven visas med det uträknade värdet (App använder samma uträkning).
   const valued = withHoldingValues(assets, rows);
   const shown = new Map(valued.map((asset) => [asset.id, asset.amount]));
+  const missing = new Map(assets.map((asset) => [asset.id, missingValues(asset, rows)]));
   const total = valued
     .filter((asset) => !asset.spending)
     .reduce((sum, asset) => sum + asset.amount, 0);
@@ -74,8 +75,8 @@ export default function Assets({ onChange, rows }: AssetsProps) {
                     {asset.name}
                     <small className="updated">
                       {asset.fromHoldings
-                        ? missingValues(asset, rows) > 0
-                          ? `Från innehaven, värde saknas för ${missingValues(asset, rows)} innehav`
+                        ? missing.get(asset.id)
+                          ? `Från innehaven, värde saknas för ${missing.get(asset.id)} innehav`
                           : 'Från innehaven'
                         : asset.updated
                           ? `Uppdaterat ${formatDate(asset.updated)}`
