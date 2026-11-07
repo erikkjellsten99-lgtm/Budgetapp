@@ -20,6 +20,9 @@
 //   för Siri, utan AI (ask.ts). Förstår den inte frågan säger den det och ger tre exempel. Läser bara.
 // - GET ?action=nyheter (ingen nyckel): nyheter om ekonomi, krig, fotboll och Sverige från SVT:s RSS,
 //   med ton positiv/negativ/neutral bedömd med ordlistor (news.ts). Sparas 10 minuter i minnet.
+// - GET ?action=kurssok&q=…  (inloggad i appen): söker aktier, fonder och ETF:er hos Yahoo Finance (prices.ts).
+// - POST ?action=kurser  (inloggad i appen): JSON { tickers: [{ ticker, from }] }. Hämtar dagskurser i kronor från
+//   senast sparade dag (eller `from`) och sparar dem i tabellen prices. Svar: { updated: { ticker: antal }, failed: [ticker] }.
 //
 // Funktionen kontrollerar själv vem som anropar (verify_jwt är av).
 
@@ -31,6 +34,7 @@ import { morningText } from './morning.ts'
 import { addDays, weekStart } from './dates.ts'
 import { summaryFacts, summaryText, type SummaryInput } from './summary.ts'
 import { answer } from './ask.ts'
+import { fetchChart, rowsToUpsert, search, toSek } from './prices.ts'
 import { FEEDS, loadNews, type NewsResult } from './news.ts'
 import { monthPlans } from './months.ts'
 import { MAX_MONTHS } from './goalPlan.ts'
@@ -392,10 +396,62 @@ async function news() {
   return json(newsCache)
 }
 
+const TICKER = /^[A-Za-z0-9.\-=^]{1,20}$/
+const DAY = /^\d{4}-\d{2}-\d{2}$/
+
+/** Sök innehav hos Yahoo. Kräver inloggning i appen. */
+async function priceSearch(req: Request) {
+  const { data, error } = await admin.auth.getUser(bearer(req))
+  if (error || !data.user) return json({ error: 'login' }, 401)
+  const q = (new URL(req.url).searchParams.get('q') ?? '').trim()
+  if (!q || q.length > 60) return json({ error: 'q' }, 400)
+  return json({ results: await search(q) })
+}
+
+/** Hämtar och sparar dagskurser i kronor. En symbol som misslyckas hamnar i `failed` och stoppar inte de andra. */
+async function updatePrices(req: Request) {
+  const { data, error } = await admin.auth.getUser(bearer(req))
+  if (error || !data.user) return json({ error: 'login' }, 401)
+  const body = await req.json().catch(() => null)
+  const list: unknown = body?.tickers
+  if (!Array.isArray(list) || list.length > 50) return json({ error: 'tickers' }, 400)
+  const wanted: { ticker: string; from: string }[] = []
+  for (const w of list) {
+    if (typeof w?.ticker !== 'string' || !TICKER.test(w.ticker) || typeof w?.from !== 'string' || !DAY.test(w.from)) {
+      return json({ error: 'tickers' }, 400)
+    }
+    wanted.push({ ticker: w.ticker, from: w.from })
+  }
+  const updated: Record<string, number> = {}
+  const failed: string[] = []
+  for (const { ticker, from } of wanted) {
+    try {
+      const { data: last, error: readError } = await admin
+        .from('prices').select('date').eq('ticker', ticker).order('date', { ascending: false }).limit(1)
+      if (readError) throw readError
+      const start = last?.[0]?.date ? addDays(last[0].date, 1) : from
+      const chart = await fetchChart(ticker, start)
+      if (!chart) throw new Error('ingen kurs')
+      const fx = chart.currency === 'SEK' ? null : await fetchChart(`${chart.currency}SEK=X`, start)
+      const rows = rowsToUpsert(ticker, toSek(chart.points, fx?.points ?? null, chart.currency))
+      if (rows.length) {
+        const { error: saveError } = await admin.from('prices').upsert(rows, { onConflict: 'ticker,date' })
+        if (saveError) throw saveError
+      }
+      updated[ticker] = rows.length
+    } catch (e) {
+      console.error('kurser', ticker, e)
+      failed.push(ticker)
+    }
+  }
+  return json({ updated, failed })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   const action = new URL(req.url).searchParams.get('action')
   if (action === 'nyheter' && req.method === 'GET') return await news().catch(() => json({ error: 'Nyheterna gick inte att hämta.' }, 502))
+  if (action === 'kurssok' && req.method === 'GET') return await priceSearch(req).catch(() => json({ error: 'Sökningen gick inte att göra.' }, 502))
   if (req.method !== 'POST') return json({ error: 'Använd POST.' }, 405)
   try {
     if (action === 'token') return await createToken(req)
@@ -404,6 +460,7 @@ Deno.serve(async (req) => {
     if (action === 'sammanfattning') return await summary(req)
     if (action === 'fraga') return await ask(req)
     if (action === 'nyheter') return await news()
+    if (action === 'kurser') return await updatePrices(req)
     return await receive(req)
   } catch (e) {
     console.error('inbox', e)

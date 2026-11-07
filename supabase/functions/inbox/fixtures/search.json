@@ -1,0 +1,25 @@
+{
+  "quotes": [
+    {
+      "symbol": "INVE-B.ST",
+      "shortname": "Investor AB ser. B",
+      "longname": "Investor AB (publ)",
+      "quoteType": "EQUITY"
+    },
+    {
+      "symbol": "0P0000XYZ.ST",
+      "shortname": "Fond Global",
+      "quoteType": "MUTUALFUND"
+    },
+    {
+      "symbol": "XACT-OMXS30.ST",
+      "shortname": "XACT OMXS30",
+      "quoteType": "ETF"
+    },
+    {
+      "symbol": "^OMX",
+      "shortname": "OMX Stockholm 30",
+      "quoteType": "INDEX"
+    }
+  ]
+}
