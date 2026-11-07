@@ -52,3 +52,9 @@ export function monthPlans(
     };
   });
 }
+
+/** Betalt en månad ("2026-11") för en kategori: markerade rader, eller hela kategorin om den saknar rader. */
+export function paidThisMonth(category: Category, month: string): number {
+  if (category.items?.length) return category.items.filter((i) => i.paidMonth === month).reduce((s, i) => s + i.amount, 0);
+  return category.paidMonth === month ? category.monthlyBudget : 0;
+}

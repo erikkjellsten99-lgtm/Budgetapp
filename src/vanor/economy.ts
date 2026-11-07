@@ -3,11 +3,12 @@
 // Läser hushållets data (samma som Budget, Prognos och Konton) men ändrar ingenting i den.
 
 import { currentMonth, getAssets, getBudget, getGoals, getIncome, getLoans, getWishes, shiftMonth } from '../db'
-import type { Category, CategoryType, Wish } from '../types'
+import type { CategoryType, Wish } from '../types'
 import { forecast, type MonthInput } from '../forecast'
 import { goalCurrent } from '../Goal'
 import { planGoal, planWhen } from '../goalPlan'
 import { loadGoalData } from '../useGoalPlan'
+import { paidThisMonth } from '../../supabase/functions/inbox/months'
 
 export interface Economy {
   /**
@@ -65,11 +66,8 @@ export interface WishComet {
   months: number | null
 }
 
-/** Betalt den här månaden för en kategori: markerade rader, eller hela kategorin om den saknar rader. */
-export function paidThisMonth(category: Category, month: string): number {
-  if (category.items?.length) return category.items.filter((i) => i.paidMonth === month).reduce((s, i) => s + i.amount, 0)
-  return category.paidMonth === month ? category.monthlyBudget : 0
-}
+/** Betalt den här månaden för en kategori. Delad med Idag och Jarvis (months.ts). */
+export { paidThisMonth } from '../../supabase/functions/inbox/months'
 
 /** Hur många månaders överskott en önskan kostar (samma uträkning som Budgets "över att spara extra"). */
 export function wishMonths(amount: number, extraPerMonth: number): number | null {

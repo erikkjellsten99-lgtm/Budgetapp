@@ -24,7 +24,9 @@ function greeting(hour: number): string {
 }
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
-const isNegative = (amount: string) => /^[−-]/.test(amount);
+/** Så många obetalda poster visas på kortet; resten blir "och 2 till". */
+const UNPAID_SHOWN = 4;
+const isNegative =(amount: string) => /^[−-]/.test(amount);
 
 /**
  * Idag: startsidan. Visar dagens viktigaste siffror och leder vidare till rätt flik.
@@ -131,6 +133,34 @@ export default function Today({ active, onOpen }: { active: boolean; onOpen: (ta
               Ekonomi ›
             </span>
           </button>
+
+          {/* Kvar att betala: det som inte är bockat som betalt i Budget den här månaden. Ingen budget: inget kort. */}
+          {facts.unpaid && (
+            <button type="button" className="card today-card" onClick={() => onOpen('budget')}>
+              <span className="today-label">Kvar att betala i {facts.month}</span>
+              <strong className="today-amount small">
+                {facts.unpaid.items.length ? facts.unpaid.total : 'Allt betalt'}
+              </strong>
+              {facts.unpaid.items.length > 0 ? (
+                <span className="today-rows">
+                  {facts.unpaid.items.slice(0, UNPAID_SHOWN).map((item, i) => (
+                    <span key={`${item.name}-${i}`}>
+                      <span>{item.name}</span>
+                      <span>{item.left}</span>
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                <span className="today-meta">Allt i budgeten är bockat som betalt.</span>
+              )}
+              {facts.unpaid.items.length > UNPAID_SHOWN && (
+                <span className="today-meta">och {facts.unpaid.items.length - UNPAID_SHOWN} till</span>
+              )}
+              <span className="today-more" aria-hidden="true">
+                Budget ›
+              </span>
+            </button>
+          )}
 
           <button type="button" className="card today-card" onClick={() => onOpen('vanor')}>
             <span className="today-label">Vanor idag</span>
