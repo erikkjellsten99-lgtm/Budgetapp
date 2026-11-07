@@ -4107,6 +4107,14 @@
   font-size: 0.72rem;
 }
 
+.vanor .sleep-pending {
+  margin: 0;
+  max-width: 22ch;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
 .vanor .sleep-tile.reached .sleep-goal {
   color: var(--done);
   font-weight: 700;
