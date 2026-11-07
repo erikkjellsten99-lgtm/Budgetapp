@@ -62,6 +62,49 @@ export interface Asset {
   updated: string;
   /** Pengar som ska användas, t.ex. matpengar på hushållskontot. Räknas inte i nettovärdet. */
   spending?: boolean;
+  /** Sant om värdet kommer från innehav (aktier, fonder) och inte skrivs in för hand. */
+  fromHoldings?: boolean;
+  /** Kontanter på kontot i kronor, vid sidan av innehaven. */
+  cash?: number;
+}
+
+export type HoldingType = 'stock' | 'fund' | 'etf';
+
+/** Ett innehav, t.ex. en aktie eller fond. Köp och sälj ligger som affärer. */
+export interface Holding {
+  id: string;
+  name: string;
+  type: HoldingType;
+  /** Kurssymbol, t.ex. "VOLV-B.ST". */
+  ticker?: string;
+  /** Kontot (Asset) som innehavet ligger på. */
+  assetId?: string;
+  /** Kurs i kronor som skrivits in för hand. */
+  manualPrice?: number;
+  /** Datum för den inskrivna kursen, som "2026-10-18". */
+  manualPriceDate?: string;
+}
+
+/** Ett köp eller en försäljning av ett innehav. */
+export interface Trade {
+  id: string;
+  holdingId: string;
+  /** Datum som "2026-10-18". */
+  date: string;
+  side: 'buy' | 'sell';
+  /** Antal andelar, kan ha decimaler för fonder. */
+  quantity: number;
+  /** Pris per andel i kronor. */
+  price: number;
+  /** Courtage i kronor. */
+  fee: number;
+}
+
+/** En stängningskurs en dag. */
+export interface PricePoint {
+  date: string;
+  /** Stängningskurs i kronor. */
+  close: number;
 }
 
 /** Inkomsten för en månad. Det finns högst en post per månad. */
