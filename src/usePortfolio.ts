@@ -11,6 +11,8 @@ export interface Portfolio {
   prices: Record<string, PricePoint[]>;
   rows: HoldingSummary[];
   reload: () => Promise<void>;
+  /** Falskt tills första läsningen av innehav och affärer är klar. */
+  loaded: boolean;
 }
 
 /**
@@ -20,10 +22,12 @@ export interface Portfolio {
  */
 export function usePortfolio(): Portfolio {
   const [state, setState] = useState<PortfolioState>({ holdings: [], trades: [], prices: {} });
+  const [loaded, setLoaded] = useState(false);
   const loader = useRef<ReturnType<typeof createPortfolioLoader> | null>(null);
-  loader.current ??= createPortfolioLoader({ getHoldings, getTrades, loadPrices, refreshPrices }, (patch) =>
-    setState((prev) => ({ ...prev, ...patch })),
-  );
+  loader.current ??= createPortfolioLoader({ getHoldings, getTrades, loadPrices, refreshPrices }, (patch) => {
+    setState((prev) => ({ ...prev, ...patch }));
+    if (patch.holdings) setLoaded(true);
+  });
 
   useEffect(() => {
     const load = () => {
@@ -37,5 +41,5 @@ export function usePortfolio(): Portfolio {
     () => summarize(state.holdings, state.trades, state.prices, today()),
     [state.holdings, state.trades, state.prices],
   );
-  return { ...state, rows, reload: () => loader.current!.load() };
+  return { ...state, rows, loaded, reload: () => loader.current!.load() };
 }

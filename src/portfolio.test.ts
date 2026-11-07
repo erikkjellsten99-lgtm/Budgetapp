@@ -231,6 +231,11 @@ describe('allocation', () => {
     ]);
   });
 
+  it('ger tom lista när värdena summerar till 0', () => {
+    const zero = summarize([holding('z', { ticker: 'Z' })], [buyFor('z', '2026-01-10', 1, 1)], { Z: [{ date: '2026-11-04', close: 0 }] }, '2026-11-04');
+    expect(allocation(zero, 'holding')).toEqual([]);
+  });
+
   it('fördelar på innehav och hoppar över rader utan värde', () => {
     const none = summarize([holding('x')], [buyFor('x', '2026-01-10', 1, 1)], {}, '2026-11-04');
     const slices = allocation([...rows, ...none], 'holding');
@@ -257,10 +262,20 @@ describe('valueOverTime', () => {
     ]);
   });
 
-  it('ger value null när kurs saknas på eller före datumet', () => {
+  it('ger value null när inget innehav har kurs på eller före datumet', () => {
     const prices = { 'A.ST': [{ date: '2026-02-20', close: 120 }] };
     const s = valueOverTime([h], trades, prices, '2026-03-10');
     expect(s.map((p) => p.value)).toEqual([null, 1200, 1200]);
+  });
+
+  it('lämnar innehav utan kurs utanför både värde och investerat', () => {
+    const g = holding('h2', { ticker: 'B.ST' });
+    const both = [...trades, buyFor('h2', '2026-01-15', 5, 100)];
+    const prices = { 'A.ST': [{ date: '2026-01-20', close: 110 }] };
+    expect(valueOverTime([h, g], both, prices, '2026-02-10')).toEqual([
+      { date: '2026-01-31', invested: 1000, value: 1100 },
+      { date: '2026-02-10', invested: 1000, value: 1100 },
+    ]);
   });
 
   it('ger tom serie utan affärer', () => {

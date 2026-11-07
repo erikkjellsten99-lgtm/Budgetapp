@@ -65,10 +65,15 @@ export default function Investments({ holdings, trades, prices, rows, onOpenHold
           <p className="group-row">
             <span className="row-main">
               <span className="row-name">Utveckling</span>
-              {sum.changePct !== null && <span className="row-sub">{formatPct(sum.changePct)}</span>}
+              {sum.changePct !== null && (
+                <span className="row-sub">
+                  {formatPct(sum.changePct)}
+                  {sum.missing > 0 && ', räknat på innehav med kurs'}
+                </span>
+              )}
             </span>
             <span className={sum.change !== null && sum.change < 0 ? 'row-value negative' : 'row-value'}>
-              {sum.change === null ? 'Värde saknas' : formatKr(sum.change)}
+              {sum.change === null ? 'Värde saknas' : signedKr(sum.change)}
             </span>
           </p>
           {sum.realized !== 0 && (
@@ -134,9 +139,13 @@ export default function Investments({ holdings, trades, prices, rows, onOpenHold
               <button type="button" key={r.holding.id} className="group-row" onClick={() => onOpenHolding(r.holding.id)}>
                 <span className="row-main">
                   <span className="row-name">{r.holding.name}</span>
-                  {notes.length > 0 && <span className="row-sub">{notes.join(', ')}</span>}
+                  {notes.length > 0 && (
+                    <span className={r.change !== null && r.change < 0 ? 'row-sub negative' : 'row-sub'}>
+                      {notes.join(', ')}
+                    </span>
+                  )}
                 </span>
-                <span className={r.change !== null && r.change < 0 ? 'row-value negative' : 'row-value'}>
+                <span className="row-value">
                   {r.value === null ? '–' : formatKr(r.value)}
                 </span>
               </button>
@@ -154,6 +163,11 @@ export default function Investments({ holdings, trades, prices, rows, onOpenHold
 /** "2026-11-05" som "5 nov". */
 function shortDate(date: string): string {
   return new Date(`${date}T12:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace(/\.$/, '');
+}
+
+/** Belopp med plustecken för vinst, t.ex. "+199,39 kr". */
+function signedKr(amount: number): string {
+  return amount > 0 ? `+${formatKr(amount)}` : formatKr(amount);
 }
 
 /** Andel som heltal, t.ex. "75 %". */
@@ -182,7 +196,7 @@ function Chart({ series }: { series: SeriesPoint[] }) {
   const W = 340;
   const H = 190;
   const pad = { l: 46, r: 14, t: 14, b: 26 };
-  const top = Math.max(...series.map((p) => Math.max(p.invested, p.value ?? 0)), 1);
+  const top = Math.max(...series.map((p) => Math.max(p.invested, p.value ?? 0)), 100);
   const step = niceStep(top);
   const max = Math.ceil(top / step) * step;
   const x = (i: number) => pad.l + (i / (series.length - 1)) * (W - pad.l - pad.r);
@@ -202,8 +216,7 @@ function Chart({ series }: { series: SeriesPoint[] }) {
   });
   const valueRuns = runs.filter((r) => r.length > 0);
 
-  const ticks: number[] = [];
-  for (let v = 0; v <= max; v += step) ticks.push(v);
+  const ticks = Array.from({ length: Math.round(max / step) + 1 }, (_, i) => i * step);
   const last = series[series.length - 1];
   const first = series[0];
 

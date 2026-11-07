@@ -280,7 +280,7 @@ export default function App() {
                 </span>
                 <span className={netWorth < 0 ? 'row-value negative' : 'row-value'}>{formatKr(netWorth)}</span>
               </button>
-              {portfolio.holdings.length === 0 ? (
+              {!portfolio.loaded ? null : portfolio.holdings.length === 0 ? (
                 <button type="button" className="group-row" onClick={() => showView('investments')}>
                   <span className="row-name">Lägg in investeringar</span>
                 </button>
@@ -291,7 +291,10 @@ export default function App() {
                     <span className="row-sub">
                       {portfolioTotals.value === null
                         ? 'Värde saknas'
-                        : portfolioTotals.changePct !== null && `Utveckling ${formatPct(portfolioTotals.changePct)}`}
+                        : portfolioTotals.changePct !== null &&
+                          `Utveckling ${formatPct(portfolioTotals.changePct)}${
+                            portfolioTotals.missing > 0 ? `, värde saknas för ${portfolioTotals.missing} innehav` : ''
+                          }`}
                     </span>
                   </span>
                   {portfolioTotals.value !== null && <span className="row-value">{formatKr(portfolioTotals.value)}</span>}

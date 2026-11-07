@@ -220,8 +220,10 @@ export function allocation(rows: HoldingSummary[], by: 'holding' | 'type'): Slic
     else sums.set(key, { label, value: r.value });
   }
   let sum = 0;
-  for (const s of sums.values()) sum += s.value;
+  for (const s of sums.values()) if (s.value > 0) sum += s.value;
+  if (sum <= 0) return [];
   return [...sums.entries()]
+    .filter(([, s]) => s.value > 0)
     .map(([key, s]) => ({ key, label: s.label, value: s.value, share: s.value / sum }))
     .sort((a, b) => b.value - a.value);
 }
@@ -229,7 +231,7 @@ export function allocation(rows: HoldingSummary[], by: 'holding' | 'type'): Slic
 export interface SeriesPoint {
   date: string;
   invested: number;
-  /** Null om något innehav saknar kurs på eller före datumet. */
+  /** Null om inget innehav har kurs på eller före datumet. */
   value: number | null;
 }
 
@@ -246,7 +248,10 @@ function nextMonth(month: string): string {
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
 }
 
-/** Investerat belopp och värde vid månadsskiften, från första affären till `today`. */
+/**
+ * Investerat belopp och värde vid månadsskiften, från första affären till `today`.
+ * Investerat räknar här bara innehav som har kurs det datumet. Värdet är null först när inget innehav har kurs.
+ */
 export function valueOverTime(
   holdings: Holding[],
   trades: Trade[],
@@ -262,22 +267,31 @@ export function valueOverTime(
 
   return dates.map((date) => {
     let invested = 0;
-    let value: number | null = 0;
+    let value = 0;
+    let held = 0;
+    let priced = 0;
     for (const h of holdings) {
       const pos = position(
         trades.filter((t) => t.holdingId === h.id),
         date,
       );
-      invested += pos.invested;
-      if (pos.quantity <= 0 || value === null) continue;
+      if (pos.quantity <= 0) {
+        invested += pos.invested;
+        continue;
+      }
+      held++;
       const market = h.ticker ? priceOn(prices[h.ticker] ?? [], date) : null;
       let close: number | null = market ? market.close : null;
       if (close === null && h.manualPrice !== undefined && h.manualPriceDate !== undefined && h.manualPriceDate <= date) {
         close = h.manualPrice;
       }
-      value = close === null ? null : value + pos.quantity * close;
+      // Innehav utan kurs det datumet lämnas utanför både värde och investerat, så att linjerna jämförs lika.
+      if (close === null) continue;
+      priced++;
+      invested += pos.invested;
+      value += pos.quantity * close;
     }
-    return { date, invested, value };
+    return { date, invested, value: held > 0 && priced === 0 ? null : value };
   });
 }
 
