@@ -1,3 +1,8 @@
+// Specialrummets typsnitt laddas här, inte vid start (designspec "Två rum").
+import '@fontsource/space-grotesk/500.css';
+import '@fontsource/space-grotesk/600.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/600.css';
 // Din galax i 3D: ett enda universum att röra sig fritt i.
 // - Jorden i mitten, med riktiga satellitbilder. Solen går upp över Jorden med dagens poäng:
 //   0 = natt (du ser stadsljusen), 100 = hela klotet i sol.
@@ -712,7 +717,7 @@ export default function CosmosView({ habits, log, paused, today, tasks, health, 
 
   if (failed)
     return createPortal(
-      <div className="galaxy-view cosmos-view loading" role="dialog" aria-modal="true" aria-label="Din galax">
+      <div className="room galaxy-view cosmos-view loading" role="dialog" aria-modal="true" aria-label="Din galax">
         <div className="cv-failed">
           <p>Galaxen kunde inte visas på den här enheten just nu.</p>
           <button type="button" className="gv-guide-ok" onClick={onClose}>
@@ -724,7 +729,7 @@ export default function CosmosView({ habits, log, paused, today, tasks, health, 
     )
 
   return createPortal(
-    <div className="galaxy-view cosmos-view" role="dialog" aria-modal="true" aria-label="Din galax">
+    <div className="room galaxy-view cosmos-view" role="dialog" aria-modal="true" aria-label="Din galax">
       <div className="gv-canvas" ref={mountRef} />
       <div className="cv-labels" aria-hidden={guideOpen}>
         {labels.map((l) => (

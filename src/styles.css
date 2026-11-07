@@ -1,82 +1,76 @@
+/* Vardagsrummet (designspec "Två rum", docs/design/designspec-tva-rum.md).
+   Färgerna är specens. De gamla namnen (--card, --text, --accent …) är alias tills alla vyer är ombyggda.
+   Specialrummet (Jarvis och galaxen) har egna färger i room.css. */
 :root {
   color-scheme: light;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-text);
   line-height: 1.45;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --bg: #f2f4f2;
-  --card: #ffffff;
-  --card-raised: #ffffff;
-  --text: #19211d;
-  --muted: #59655e;
-  --border: #dce2de;
-  --accent: #176b4a;
-  --accent-hover: #11573b;
-  --accent-soft: #e8f1eb;
-  --danger: #a8322b;
-  --danger-soft: #faeeec;
-  --chart-main: #176b4a;
-  --chart-ref: #78867d;
-  --focus: #176b4a;
-  --hero-bg: #17231c;
-  --hero-text: #f5f7f5;
-  --hero-muted: #c1cec5;
-  --shadow: 0 1px 2px rgb(20 32 25 / 4%), 0 8px 24px rgb(20 32 25 / 3%);
-  --radius-card: 12px;
-  --radius-control: 8px;
+  --bg: #f2f4f5;
+  --surface: #ffffff;
+  --line: #dce2e6;
+  --ink: #1a1f24;
+  --muted: #56616b;
+  --pine: #23614f;
+  --cobalt: #2e4fd8;
+  --lingon: #c2362f;
 
-  color: var(--text);
+  --font-text: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-amount: ui-rounded, system-ui, -apple-system, sans-serif;
+  --radius-group: 14px;
+  --radius-card: var(--radius-group);
+  --radius-control: 10px;
+
+  --card: var(--surface);
+  --card-raised: var(--surface);
+  --text: var(--ink);
+  --border: var(--line);
+  --accent: var(--cobalt);
+  --accent-hover: color-mix(in srgb, var(--cobalt) 85%, var(--ink));
+  --accent-soft: color-mix(in srgb, var(--cobalt) 12%, var(--surface));
+  --danger: var(--lingon);
+  --danger-soft: color-mix(in srgb, var(--lingon) 12%, var(--surface));
+  --chart-main: var(--pine);
+  --chart-ref: var(--muted);
+  --focus: var(--cobalt);
+  --hero-bg: var(--surface);
+  --hero-text: var(--ink);
+  --hero-muted: var(--muted);
+  --shadow: none;
+
+  color: var(--ink);
   background: var(--bg);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #101512;
-    --card: #191f1b;
-    --card-raised: #202823;
-    --text: #f0f3f0;
-    --muted: #b0bbb3;
-    --border: #343e37;
-    --accent: #79c99a;
-    --accent-hover: #92d9ad;
-    --accent-soft: #24372b;
-    --danger: #ff9b90;
-    --danger-soft: #402724;
-    --chart-main: #79c99a;
-    --chart-ref: #a0ada4;
-    --focus: #9bdfb2;
-    --hero-bg: #202b24;
-    --hero-text: #f3f7f3;
-    --hero-muted: #c2d0c6;
-    --shadow: 0 1px 2px rgb(0 0 0 / 16%), 0 8px 24px rgb(0 0 0 / 10%);
+    --bg: #111518;
+    --surface: #1a2025;
+    --line: #2a333a;
+    --ink: #e8ecef;
+    --muted: #9ba7b1;
+    --pine: #6fc4a2;
+    --cobalt: #9aaeff;
+    --lingon: #ff8f86;
   }
 }
 
 /* Mörkt läge valt i appen (Konto → Utseende) */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #101512;
-  --card: #191f1b;
-  --card-raised: #202823;
-  --text: #f0f3f0;
-  --muted: #b0bbb3;
-  --border: #343e37;
-  --accent: #79c99a;
-  --accent-hover: #92d9ad;
-  --accent-soft: #24372b;
-  --danger: #ff9b90;
-  --danger-soft: #402724;
-  --chart-main: #79c99a;
-  --chart-ref: #a0ada4;
-  --focus: #9bdfb2;
-  --hero-bg: #202b24;
-  --hero-text: #f3f7f3;
-  --hero-muted: #c2d0c6;
-  --shadow: 0 1px 2px rgb(0 0 0 / 16%), 0 8px 24px rgb(0 0 0 / 10%);
+  --bg: #111518;
+  --surface: #1a2025;
+  --line: #2a333a;
+  --ink: #e8ecef;
+  --muted: #9ba7b1;
+  --pine: #6fc4a2;
+  --cobalt: #9aaeff;
+  --lingon: #ff8f86;
 }
 
 * {
@@ -293,11 +287,9 @@ h3 {
   margin: 0;
   padding: 0.75rem 1rem;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.9375rem;
   line-height: 1.35;
-  font-weight: 750;
-  letter-spacing: 0.055em;
-  text-transform: uppercase;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -353,13 +345,13 @@ button.primary {
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) button.primary {
-    color: #102016;
+    color: var(--bg);
   }
 }
 
 /* Mörkt läge valt i appen (Konto → Utseende) */
 :root[data-theme='dark'] button.primary {
-  color: #102016;
+  color: var(--bg);
 }
 
 button.danger {

@@ -54,7 +54,7 @@ const CosmosView = lazy<ComponentType<GalaxyProps>>(() =>
       }
       return {
         default: ({ onClose }: { onClose: () => void }) => (
-          <div className="galaxy-view loading" role="dialog" aria-modal="true" onClick={onClose}>
+          <div className="room galaxy-view loading" role="dialog" aria-modal="true" onClick={onClose}>
             {navigator.onLine
               ? 'Galaxen kunde inte laddas. Stäng appen helt och öppna den igen. Tryck för att stänga.'
               : 'Galaxen behöver internet första gången den öppnas. Tryck för att stänga.'}
@@ -685,7 +685,7 @@ export function MonthView({ habits, log, paused, today, tasks, health }: { habit
         </div>
       )}
       {galaxyOpen && (
-        <Suspense fallback={<div className="galaxy-view loading">Laddar galaxen …</div>}>
+        <Suspense fallback={<div className="room galaxy-view loading">Laddar galaxen …</div>}>
           <CosmosView habits={habits} log={log} paused={paused} today={today} tasks={tasks} health={health} onClose={() => setGalaxyOpen(false)} />
         </Suspense>
       )}

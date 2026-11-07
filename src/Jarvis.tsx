@@ -1,3 +1,8 @@
+// Specialrummets typsnitt laddas här, inte vid start (designspec "Två rum").
+import '@fontsource/space-grotesk/500.css';
+import '@fontsource/space-grotesk/600.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/600.css';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ask, EXAMPLES } from './jarvis';
 import {
@@ -249,7 +254,7 @@ export default function JarvisView({ active }: { active: boolean }) {
 
   return (
     <div
-      className={`jarvis-screen mode-${mode}${full ? ' full' : ''}`}
+      className={`room jarvis-screen mode-${mode}${full ? ' full' : ''}`}
       role={full ? 'dialog' : undefined}
       aria-modal={full ? true : undefined}
       aria-labelledby="jarvis-title"
