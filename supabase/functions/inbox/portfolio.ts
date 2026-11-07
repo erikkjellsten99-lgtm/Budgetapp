@@ -230,7 +230,8 @@ export function allocation(rows: HoldingSummary[], by: 'holding' | 'type'): Slic
 
 export interface SeriesPoint {
   date: string;
-  invested: number;
+  /** Null när värdet är null, så att ett datum utan kurser inte ser ut som att inget var investerat. */
+  invested: number | null;
   /** Null om inget innehav har kurs på eller före datumet. */
   value: number | null;
 }
@@ -250,7 +251,7 @@ function nextMonth(month: string): string {
 
 /**
  * Investerat belopp och värde vid månadsskiften, från första affären till `today`.
- * Investerat räknar här bara innehav som har kurs det datumet. Värdet är null först när inget innehav har kurs.
+ * Investerat räknar här bara innehav som har kurs det datumet. Värde och investerat är båda null när inget innehav har kurs.
  */
 export function valueOverTime(
   holdings: Holding[],
@@ -291,7 +292,7 @@ export function valueOverTime(
       invested += pos.invested;
       value += pos.quantity * close;
     }
-    return { date, invested, value: held > 0 && priced === 0 ? null : value };
+    return held > 0 && priced === 0 ? { date, invested: null, value: null } : { date, invested, value };
   });
 }
 

@@ -3345,6 +3345,10 @@ button.group-row::after {
 }
 
 /* Investeringar */
+.row-sub.negative {
+  color: var(--danger);
+}
+
 .investments-note {
   margin: 0.4rem 1rem 0;
 }

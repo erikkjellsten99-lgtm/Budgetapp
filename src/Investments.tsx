@@ -192,29 +192,36 @@ function niceStep(max: number): number {
 /** Värde och investerat belopp vid månadsskiften. Värdelinjen har ett glapp där något innehav saknar kurs. */
 function Chart({ series }: { series: SeriesPoint[] }) {
   if (series.length < 2) return null;
+  if (series.filter((p) => p.value !== null).length < 2) {
+    return <p className="hint">Grafen visas när det finns kurser för fler dagar.</p>;
+  }
 
   const W = 340;
   const H = 190;
   const pad = { l: 46, r: 14, t: 14, b: 26 };
-  const top = Math.max(...series.map((p) => Math.max(p.invested, p.value ?? 0)), 100);
+  const top = Math.max(...series.map((p) => Math.max(p.invested ?? 0, p.value ?? 0)), 100);
   const step = niceStep(top);
   const max = Math.ceil(top / step) * step;
   const x = (i: number) => pad.l + (i / (series.length - 1)) * (W - pad.l - pad.r);
   const y = (v: number) => pad.t + (1 - v / max) * (H - pad.t - pad.b);
   const point = (i: number, v: number) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`;
 
-  const investedLine = series.map((p, i) => point(i, p.invested)).join(' ');
   // Sammanhängande stycken med värde. Ett stycke på en enda punkt blir en prick.
-  const runs: { i: number; v: number }[][] = [];
-  series.forEach((p, i) => {
-    if (p.value === null) {
-      runs.push([]);
-    } else {
-      if (runs.length === 0) runs.push([]);
-      runs[runs.length - 1].push({ i, v: p.value });
-    }
-  });
-  const valueRuns = runs.filter((r) => r.length > 0);
+  const runsOf = (get: (p: SeriesPoint) => number | null) => {
+    const runs: { i: number; v: number }[][] = [];
+    series.forEach((p, i) => {
+      const v = get(p);
+      if (v === null) {
+        runs.push([]);
+      } else {
+        if (runs.length === 0) runs.push([]);
+        runs[runs.length - 1].push({ i, v });
+      }
+    });
+    return runs.filter((r) => r.length > 0);
+  };
+  const valueRuns = runsOf((p) => p.value);
+  const investedRuns = runsOf((p) => p.invested);
 
   const ticks = Array.from({ length: Math.round(max / step) + 1 }, (_, i) => i * step);
   const last = series[series.length - 1];
@@ -230,7 +237,7 @@ function Chart({ series }: { series: SeriesPoint[] }) {
         <svg
           viewBox={`0 0 ${W} ${H}`}
           role="img"
-          aria-label={`Värde ${last.value === null ? 'saknas' : formatKr(last.value)}, investerat ${formatKr(last.invested)} den ${shortDate(last.date)}.`}
+          aria-label={`Värde ${last.value === null ? 'saknas' : formatKr(last.value)}, investerat ${last.invested === null ? 'saknas' : formatKr(last.invested)} den ${shortDate(last.date)}.`}
         >
           {ticks.map((v) => (
             <g key={v}>
@@ -246,7 +253,13 @@ function Chart({ series }: { series: SeriesPoint[] }) {
           <text x={W - pad.r} y={H - 8} textAnchor="end" className="lbl">
             {shortDate(last.date)}
           </text>
-          <polyline points={investedLine} className="loan-line" />
+          {investedRuns.map((run) =>
+            run.length === 1 ? (
+              <circle key={run[0].i} cx={x(run[0].i)} cy={y(run[0].v)} r={2.5} className="loan-dot" />
+            ) : (
+              <polyline key={run[0].i} points={run.map((p) => point(p.i, p.v)).join(' ')} className="loan-line" />
+            ),
+          )}
           {valueRuns.map((run) =>
             run.length === 1 ? (
               <circle key={run[0].i} cx={x(run[0].i)} cy={y(run[0].v)} r={2.5} className="save-dot" />

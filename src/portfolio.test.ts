@@ -262,6 +262,12 @@ describe('valueOverTime', () => {
     ]);
   });
 
+  it('ger invested null tillsammans med value', () => {
+    const prices = { 'A.ST': [{ date: '2026-02-20', close: 120 }] };
+    const s = valueOverTime([h], trades, prices, '2026-03-10');
+    expect(s[0]).toEqual({ date: '2026-01-31', invested: null, value: null });
+  });
+
   it('ger value null när inget innehav har kurs på eller före datumet', () => {
     const prices = { 'A.ST': [{ date: '2026-02-20', close: 120 }] };
     const s = valueOverTime([h], trades, prices, '2026-03-10');
