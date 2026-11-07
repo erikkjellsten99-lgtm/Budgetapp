@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Assets from './Assets';
 import Categories, { sumBudgets } from './Categories';
 import Account from './Account';
@@ -34,6 +34,8 @@ import Room from './Room';
 import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type EconomyView, type Section, type View } from './nav';
 const Nyheter = lazy(() => import('./Nyheter'));
 import { formatKr } from './money';
+import { usePortfolio } from './usePortfolio';
+import { withHoldingValues } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset, Category, MonthlyIncome, SavingsGoal, Wish } from './types';
 
 function readStorage(key: string): string | null {
@@ -99,6 +101,9 @@ export default function App() {
   // Månaden budgeten är sparad på (se getBudget). Visar om vald månad har en egen budget.
   const [budgetFrom, setBudgetFrom] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const portfolio = usePortfolio();
+  // Konton som räknas från innehaven får värdet härifrån. Övriga är exakt som de sparats.
+  const valuedAssets = useMemo(() => withHoldingValues(assets, portfolio.rows), [assets, portfolio.rows]);
   const [income, setIncome] = useState<MonthlyIncome>({ month: budgetMonth(), csn: 0, other: 0 });
   const [selectedMonth, setSelectedMonth] = useState(budgetMonth);
   const [wishes, setWishes] = useState<Wish[]>([]);
@@ -135,10 +140,10 @@ export default function App() {
   const leftForSavings = totalIncome - costs - plannedSavings;
   // Nettovärdet är det som finns på sparkontona. Pengar att använda (hushållskontot) räknas inte.
   const sumAmounts = (list: Asset[]) => list.reduce((sum, asset) => sum + asset.amount, 0);
-  const netWorth = sumAmounts(assets.filter((asset) => !asset.spending));
-  const spendingTotal = sumAmounts(assets.filter((asset) => asset.spending));
+  const netWorth = sumAmounts(valuedAssets.filter((asset) => !asset.spending));
+  const spendingTotal = sumAmounts(valuedAssets.filter((asset) => asset.spending));
 
-  const goalNow = goal ? goalCurrent(goal, assets) : 0;
+  const goalNow = goal ? goalCurrent(goal, valuedAssets) : 0;
   const goalData = useGoalData(goal);
   const goalPlan = goal && goalData ? planGoal(goalNow, goal.target, goal.annualReturn, goalData.rows) : null;
   const goalPercent = goal && goal.target > 0 ? Math.min(100, Math.round((goalNow / goal.target) * 100)) : 0;
@@ -321,7 +326,7 @@ export default function App() {
         </div>
         <div hidden={view !== 'goal'}>
           <Forecast />
-          <Goal assets={assets} onChange={setGoal} />
+          <Goal assets={valuedAssets} onChange={setGoal} />
         </div>
         <div hidden={view !== 'budget'}>
           <div className="view-intro">
@@ -345,7 +350,7 @@ export default function App() {
         </div>
         <div hidden={view !== 'assets'}>
           <BackToOverview onClick={() => showView('overview')} />
-          <Assets onChange={setAssets} />
+          <Assets onChange={setAssets} rows={portfolio.rows} />
         </div>
         <div hidden={view !== 'account'}>
           <Account sync={sync} />

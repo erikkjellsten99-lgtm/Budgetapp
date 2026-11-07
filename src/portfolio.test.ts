@@ -287,6 +287,16 @@ describe('withHoldingValues', () => {
     expect(withHoldingValues([plain], [row('a1', 5)])[0]).toBe(plain);
   });
 
+  it('utan konto med fromHoldings är varje element samma objekt, även utan innehav', () => {
+    const other: Asset = { id: 'a3', name: 'Hushåll', amount: 12.5, updated: '', spending: true };
+    const input = [plain, other];
+    for (const rows of [[], [row('a1', 5)]]) {
+      const res = withHoldingValues(input, rows);
+      expect(res).toHaveLength(2);
+      res.forEach((a, i) => expect(a).toBe(input[i]));
+    }
+  });
+
   it('summerar kontanter och innehavsvärden, null räknas som 0', () => {
     const [res] = withHoldingValues([acct], [row('a2', 1000), row('a2', null), row('a1', 99)]);
     expect(res.amount).toBe(1500);

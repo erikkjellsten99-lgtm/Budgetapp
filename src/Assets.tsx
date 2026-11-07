@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { deleteAsset, getAssets, newId, saveAsset, today, onDataChange } from './db';
 import { formatKr, parseKr, toInputKr } from './money';
+import { withHoldingValues, type HoldingSummary } from '../supabase/functions/inbox/portfolio.ts';
 import type { Asset } from './types';
 
 interface AssetsProps {
   /** Får alla tillgångar varje gång de har lästs in. */
   onChange: (assets: Asset[]) => void;
+  /** Innehaven, för konton vars värde räknas från dem. */
+  rows: HoldingSummary[];
 }
 
 /** Tillgångar, t.ex. Avanza-kontot. Saldot skriver du in själv när du vill. */
-export default function Assets({ onChange }: AssetsProps) {
+export default function Assets({ onChange, rows }: AssetsProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   // Id på tillgången som redigeras, 'new' när en ny läggs till, annars null.
   const [editing, setEditing] = useState<string | null>(null);
@@ -40,7 +43,10 @@ export default function Assets({ onChange }: AssetsProps) {
   }
 
   const sorted = [...assets].sort((a, b) => a.name.localeCompare(b.name, 'sv'));
-  const total = assets
+  // Konton som räknas från innehaven visas med det uträknade värdet (App använder samma uträkning).
+  const valued = withHoldingValues(assets, rows);
+  const shown = new Map(valued.map((asset) => [asset.id, asset.amount]));
+  const total = valued
     .filter((asset) => !asset.spending)
     .reduce((sum, asset) => sum + asset.amount, 0);
 
@@ -67,11 +73,15 @@ export default function Assets({ onChange }: AssetsProps) {
                   <span>
                     {asset.name}
                     <small className="updated">
-                      {asset.updated ? `Uppdaterat ${formatDate(asset.updated)}` : 'Inte ifyllt än'}
+                      {asset.fromHoldings
+                        ? 'Från innehaven'
+                        : asset.updated
+                          ? `Uppdaterat ${formatDate(asset.updated)}`
+                          : 'Inte ifyllt än'}
                       {asset.spending && ' · räknas inte i nettovärdet'}
                     </small>
                   </span>
-                  <span>{formatKr(asset.amount)}</span>
+                  <span>{formatKr(shown.get(asset.id) ?? asset.amount)}</span>
                 </button>
               )}
             </li>
@@ -110,8 +120,12 @@ function AssetForm({ asset, onSave, onCancel, onDelete }: AssetFormProps) {
   const [amountText, setAmountText] = useState(toInputKr(asset?.amount));
   const [spending, setSpending] = useState(asset?.spending ?? false);
 
+  const [fromHoldings, setFromHoldings] = useState(asset?.fromHoldings ?? false);
+  const [cashText, setCashText] = useState(toInputKr(asset?.cash));
+
   const amount = parseKr(amountText);
-  const amountOk = Number.isFinite(amount) && amount >= 0;
+  const cash = parseKr(cashText);
+  const amountOk = fromHoldings ? Number.isFinite(cash) && cash >= 0 : Number.isFinite(amount) && amount >= 0;
   const valid = name.trim() !== '' && amountOk;
 
   return (
@@ -119,7 +133,26 @@ function AssetForm({ asset, onSave, onCancel, onDelete }: AssetFormProps) {
       className="category-form"
       onSubmit={(event) => {
         event.preventDefault();
-        if (valid) onSave({ id: asset?.id ?? newId(), name: name.trim(), amount, updated: today(), spending });
+        if (!valid) return;
+        if (fromHoldings) {
+          // Saldot och datumet rörs inte: värdet räknas från innehaven, kontanterna sparas för sig.
+          onSave({
+            ...asset,
+            id: asset?.id ?? newId(),
+            name: name.trim(),
+            amount: asset?.amount ?? 0,
+            updated: asset?.updated ?? '',
+            spending,
+            fromHoldings: true,
+            cash,
+          });
+        } else {
+          const saved: Asset = { id: asset?.id ?? newId(), name: name.trim(), amount, updated: today(), spending };
+          // Kontanterna behålls om kryssrutan har varit ikryssad tidigare.
+          if (asset?.cash !== undefined) saved.cash = asset.cash;
+          if (asset?.fromHoldings !== undefined) saved.fromHoldings = false;
+          onSave(saved);
+        }
       }}
     >
       <label>
@@ -127,19 +160,28 @@ function AssetForm({ asset, onSave, onCancel, onDelete }: AssetFormProps) {
         <input value={name} onChange={(event) => setName(event.target.value)} autoFocus={!asset} />
       </label>
       <label>
-        Saldo idag (kr)
+        {fromHoldings ? 'Kontanter (kr)' : 'Saldo idag (kr)'}
         <input
-          value={amountText}
-          onChange={(event) => setAmountText(event.target.value)}
+          value={fromHoldings ? cashText : amountText}
+          onChange={(event) => (fromHoldings ? setCashText : setAmountText)(event.target.value)}
           inputMode="decimal"
           placeholder="0"
           autoFocus={!!asset}
         />
       </label>
       <label className="checkbox">
-        <input type="checkbox" checked={spending} onChange={(event) => setSpending(event.target.checked)} />
+        <input type="checkbox" checked={spending} onChange={(event) => {
+            setSpending(event.target.checked);
+            if (event.target.checked) setFromHoldings(false);
+          }} />
         Pengar att använda, t.ex. matpengar (räknas inte i nettovärdet)
       </label>
+      {!spending && (
+        <label className="checkbox">
+          <input type="checkbox" checked={fromHoldings} onChange={(event) => setFromHoldings(event.target.checked)} />
+          Värdet räknas från innehaven
+        </label>
+      )}
       {!amountOk && <p className="error">Skriv ett belopp, till exempel 25000 eller 49,90.</p>}
       <div className="actions">
         <button type="submit" className="primary" disabled={!valid}>
