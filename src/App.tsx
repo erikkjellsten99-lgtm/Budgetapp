@@ -205,7 +205,7 @@ export default function App() {
         )}
         {/* Alla vyer ligger kvar i bakgrunden, så att summorna (t.ex. tillgångar) alltid är uppdaterade. */}
         <div hidden={view !== 'idag'}>
-          <Today active={view === 'idag'} onOpen={showView} onJarvis={openRoom} />
+          <Today active={view === 'idag'} onOpen={showView} />
         </div>
         <div hidden={view !== 'overview'}>
           <div className="view-intro">

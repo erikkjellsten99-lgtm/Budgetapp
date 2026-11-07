@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { JarvisButton } from './JarvisOrb';
 import { loadFacts } from './jarvis';
 import { onDataChange } from './db';
 import { onHabitChange } from './vanor/store';
@@ -8,13 +7,6 @@ import type { SummaryFacts } from '../supabase/functions/inbox/summary';
 import { dayBrief } from '../supabase/functions/inbox/ask';
 
 type Target = 'overview' | 'budget' | 'goal' | 'vanor' | 'nyheter';
-
-const QUICK: { id: Target; label: string; icon: string }[] = [
-  { id: 'overview', label: 'Översikt', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
-  { id: 'budget', label: 'Budget', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
-  { id: 'goal', label: 'Prognos', icon: 'M3 19l5.5-6 4 3.5L21 7M15 7h6v6' },
-  { id: 'nyheter', label: 'Nyheter', icon: 'M5 4h11v15a1 1 0 0 0 2 0V8h2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM8 8h5M8 12h5M8 16h3' },
-];
 
 function greeting(hour: number): string {
   if (hour < 5) return 'God natt';
@@ -31,15 +23,7 @@ const isNegative = (amount: string) => /^[−-]/.test(amount);
  * Siffrorna kommer från summaryFacts (jarvis.ts), samma uträkning som Översikt, Sparmål och Siri.
  * Läser bara.
  */
-export default function Today({
-  active,
-  onOpen,
-  onJarvis,
-}: {
-  active: boolean;
-  onOpen: (target: Target) => void;
-  onJarvis: () => void;
-}) {
+export default function Today({ active, onOpen }: { active: boolean; onOpen: (target: Target) => void }) {
   const [facts, setFacts] = useState<SummaryFacts | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -74,33 +58,8 @@ export default function Today({
         <h2>{greeting(hour)}</h2>
       </div>
 
-      <JarvisButton onOpen={onJarvis} />
-
-      {/* Utan pengameningen: beloppet står redan stort i kortet "Blir över" här nedanför.
-          Samma flagga som visningsläget, så Jarvis egen text är orörd (Siri och morgonbeskedet säger allt). */}
-      {facts && (
-        <section className="card today-say" aria-label="Jarvis säger">
-          <span className="today-say-dot" aria-hidden="true" />
-          <p>
-            <span className="jarvis-eyebrow">Jarvis säger</span>
-            {dayBrief(facts, { hideMoney: true })}
-          </p>
-        </section>
-      )}
-
-      <nav className="today-quick" aria-label="Snabbval">
-        {QUICK.map((q) => (
-          <button key={q.id} type="button" onClick={() => onOpen(q.id)}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d={q.icon} />
-            </svg>
-            {q.label}
-          </button>
-        ))}
-      </nav>
-
       {failed && !facts && (
-        <div className="card today-error" role="alert">
+        <div className="group today-error" role="alert">
           <p>Det gick inte att läsa Groundwork just nu.</p>
           <button type="button" onClick={load}>
             Försök igen
@@ -109,107 +68,133 @@ export default function Today({
       )}
 
       {!facts && !failed && (
-        <div className="today-grid" aria-busy="true">
-          <div className="card today-card today-skeleton" />
-          <div className="card today-card today-skeleton" />
-          <div className="card today-card today-skeleton" />
+        <div className="today-loading" aria-busy="true" aria-label="Laddar">
+          <div className="hero">
+            <span className="skeleton-line short" />
+            <span className="skeleton-line tall" />
+          </div>
+          {[0, 1].map((group) => (
+            <div key={group} className="group">
+              <span className="skeleton-row" />
+              <span className="skeleton-row" />
+              <span className="skeleton-row" />
+            </div>
+          ))}
         </div>
       )}
 
-      {facts && (
-        <div className="today-grid">
-          <button type="button" className="card today-card today-money" onClick={() => onOpen('overview')}>
-            <span className="today-label">Blir över i {facts.month}</span>
-            <strong className={isNegative(facts.left) ? 'today-amount negative' : 'today-amount'}>{facts.left}</strong>
-            <span className="today-rows">
-              <span>
-                <span>Inkomster</span>
-                <span>{facts.income}</span>
-              </span>
-              <span>
-                <span>Kostnader</span>
-                <span>− {facts.costs}</span>
-              </span>
-              <span>
-                <span>Planerat sparande</span>
-                <span>− {facts.plannedSavings}</span>
-              </span>
-            </span>
-            <span className="today-more" aria-hidden="true">
-              Ekonomi ›
-            </span>
-          </button>
-
-          <button type="button" className="card today-card" onClick={() => onOpen('vanor')}>
-            <span className="today-label">Vanor idag</span>
-            <strong className="today-amount small">
-              {facts.total ? `${facts.done} av ${facts.total} klart` : 'Inga vanor än'}
-            </strong>
-            <span className="today-bar" aria-hidden="true">
-              <span style={{ width: `${facts.total ? Math.round((facts.done / facts.total) * 100) : 0}%` }} />
-            </span>
-            <span className="today-meta">
-              {!facts.total
-                ? 'Lägg till vanor och att göra i Vanor.'
-                : facts.paused
-                ? 'Pausad dag, inget måste.'
-                : facts.must.length
-                  ? `Måste: ${facts.must.join(', ')}`
-                  : 'Inget måste idag.'}
-            </span>
-            {facts.first && <span className="today-first">Börja med {facts.first}</span>}
-          </button>
-
-          {facts.goal && (
-            <button type="button" className="card today-card" onClick={() => onOpen('goal')}>
-              <span className="today-label">{facts.goal.name}</span>
-              <strong className="today-amount small">{facts.goal.percent} %</strong>
-              <span className="today-bar" aria-hidden="true">
-                <span style={{ width: `${facts.goal.percent}%` }} />
-              </span>
-              <span className="today-meta">
-                {facts.goal.current} av {facts.goal.target}
-              </span>
-              <span className="today-meta">{facts.goal.status}</span>
-            </button>
-          )}
-
-          {facts.loan && (
-            <button type="button" className="card today-card" onClick={() => onOpen('goal')}>
-              <span className="today-label">{facts.loan.name}</span>
-              <strong className="today-amount small">{facts.loan.left} kvar</strong>
-              <span className="today-meta">
-                Nästa betalning {facts.loan.payment} i {facts.loan.nextMonth}
-              </span>
-            </button>
-          )}
-
-          {facts.health && (
-            <button type="button" className="card today-card" onClick={() => onOpen('vanor')}>
-              <span className="today-label">Hälsa {facts.health.when}</span>
-              <span className="today-rows">
-                {facts.health.values.map((v) => (
-                  <span key={v.metric}>
-                    <span>{v.label}</span>
-                    <span>{v.text}</span>
-                  </span>
-                ))}
-              </span>
-            </button>
-          )}
-
-          {facts.tasks.length > 0 && (
-            <button type="button" className="card today-card" onClick={() => onOpen('vanor')}>
-              <span className="today-label">Att göra idag</span>
-              <span className="today-list">
-                {facts.tasks.map((task) => (
-                  <span key={task}>{task}</span>
-                ))}
-              </span>
-            </button>
-          )}
-        </div>
-      )}
+      {facts && <TodayFacts facts={facts} onOpen={onOpen} />}
     </div>
+  );
+}
+
+/** Huvudsiffran, Jarvis rad och grupperna Idag och Sparande. */
+function TodayFacts({ facts, onOpen }: { facts: SummaryFacts; onOpen: (target: Target) => void }) {
+  const habitValue = facts.total ? `${facts.done} av ${facts.total}` : '';
+  const habitSub = facts.paused
+    ? 'Pausad dag, inget måste.'
+    : facts.first
+      ? `Börja med ${facts.first}`
+      : facts.must.length
+        ? `Måste: ${facts.must.join(', ')}`
+        : 'Inget måste idag.';
+  const hasToday = facts.total > 0 || facts.tasks.length > 0 || !!facts.health;
+
+  return (
+    <>
+      <button type="button" className="hero" onClick={() => onOpen('overview')}>
+        <span className="hero-label">Blir över i {facts.month}</span>
+        <strong className={isNegative(facts.left) ? 'hero-amount negative' : 'hero-amount positive'}>{facts.left}</strong>
+        <span className="hero-text">Efter utgifter och planerat sparande</span>
+      </button>
+
+      {/* Utan vanor och hälsa säger Jarvis bara "Klart idag: 0 av 0." – då visas raden inte. */}
+      {(facts.total > 0 || !!facts.health) && (
+        <p className="today-say">
+          <span className="today-say-dot" aria-hidden="true" />
+          <span>
+            <span className="visually-hidden">Jarvis säger: </span>
+            {dayBrief(facts, { hideMoney: true })}
+          </span>
+        </p>
+      )}
+
+      <section className="group-block" aria-labelledby="today-group-idag">
+        <h3 className="group-title" id="today-group-idag">
+          Idag
+        </h3>
+        {hasToday ? (
+          <div className="group">
+            {facts.total > 0 && (
+              <button type="button" className="group-row" onClick={() => onOpen('vanor')}>
+                <span className="row-main">
+                  <span className="row-name">Vanor</span>
+                  <span className="row-sub">{habitSub}</span>
+                </span>
+                <span className="row-value">{habitValue}</span>
+              </button>
+            )}
+            {facts.tasks.length > 0 && (
+              <button type="button" className="group-row" onClick={() => onOpen('vanor')}>
+                <span className="row-main">
+                  <span className="row-name">Att göra</span>
+                  <span className="row-sub">{facts.tasks.join(', ')}</span>
+                </span>
+                <span className="row-value">{facts.tasks.length}</span>
+              </button>
+            )}
+            {facts.health?.values.map((v) => (
+              <button key={v.metric} type="button" className="group-row" onClick={() => onOpen('vanor')}>
+                <span className="row-main">
+                  <span className="row-name">{v.label}</span>
+                  <span className="row-sub">Hälsa {facts.health?.when}</span>
+                </span>
+                <span className="row-value">{v.text}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="empty">
+            <p>Inga vanor eller att göra än.</p>
+            <button type="button" className="primary" onClick={() => onOpen('vanor')}>
+              Lägg till i Vanor
+            </button>
+          </div>
+        )}
+      </section>
+
+      {(facts.goal || facts.loan) && (
+        <section className="group-block" aria-labelledby="today-group-sparande">
+          <h3 className="group-title" id="today-group-sparande">
+            Sparande
+          </h3>
+          <div className="group">
+            {facts.goal && (
+              <button type="button" className="group-row" onClick={() => onOpen('goal')}>
+                <span className="row-main">
+                  <span className="row-name">{facts.goal.name}</span>
+                  <span className="row-sub">
+                    {facts.goal.current} av {facts.goal.target}
+                  </span>
+                  <span className="row-sub">{facts.goal.status}</span>
+                </span>
+                <span className="row-value">{facts.goal.percent} %</span>
+              </button>
+            )}
+            {facts.loan && (
+              <button type="button" className="group-row" onClick={() => onOpen('goal')}>
+                <span className="row-main">
+                  <span className="row-name">{facts.loan.name}</span>
+                  <span className="row-sub">
+                    Nästa betalning {facts.loan.payment} i {facts.loan.nextMonth}
+                  </span>
+                </span>
+                <span className="row-value">{facts.loan.left} kvar</span>
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+    </>
   );
 }
