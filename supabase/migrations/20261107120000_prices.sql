@@ -11,6 +11,7 @@ create table if not exists public.prices (
 
 alter table public.prices enable row level security;
 
+drop policy if exists prices_read on public.prices;
 create policy prices_read on public.prices
   for select to authenticated
   using (true);

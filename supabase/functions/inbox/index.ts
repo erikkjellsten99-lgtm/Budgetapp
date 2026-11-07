@@ -34,7 +34,7 @@ import { morningText } from './morning.ts'
 import { addDays, weekStart } from './dates.ts'
 import { summaryFacts, summaryText, type SummaryInput } from './summary.ts'
 import { answer } from './ask.ts'
-import { fetchChart, rowsToUpsert, search, toSek } from './prices.ts'
+import { fetchChart, fetchStart, isRealDay, rowsToUpsert, search, toSek } from './prices.ts'
 import { FEEDS, loadNews, type NewsResult } from './news.ts'
 import { monthPlans } from './months.ts'
 import { MAX_MONTHS } from './goalPlan.ts'
@@ -397,7 +397,9 @@ async function news() {
 }
 
 const TICKER = /^[A-Za-z0-9.\-=^]{1,20}$/
-const DAY = /^\d{4}-\d{2}-\d{2}$/
+// Funktionen får köra högst ~150 s, så nya symboler startas inte efter 100 s.
+const PRICE_POOL = 5
+const PRICE_DEADLINE_MS = 100_000
 
 /** Sök innehav hos Yahoo. Kräver inloggning i appen. */
 async function priceSearch(req: Request) {
@@ -417,33 +419,42 @@ async function updatePrices(req: Request) {
   if (!Array.isArray(list) || list.length > 50) return json({ error: 'tickers' }, 400)
   const wanted: { ticker: string; from: string }[] = []
   for (const w of list) {
-    if (typeof w?.ticker !== 'string' || !TICKER.test(w.ticker) || typeof w?.from !== 'string' || !DAY.test(w.from)) {
+    if (typeof w?.ticker !== 'string' || !TICKER.test(w.ticker) || !isRealDay(w?.from)) {
       return json({ error: 'tickers' }, 400)
     }
     wanted.push({ ticker: w.ticker, from: w.from })
   }
   const updated: Record<string, number> = {}
   const failed: string[] = []
-  for (const { ticker, from } of wanted) {
-    try {
-      const { data: last, error: readError } = await admin
-        .from('prices').select('date').eq('ticker', ticker).order('date', { ascending: false }).limit(1)
-      if (readError) throw readError
-      const start = last?.[0]?.date ? addDays(last[0].date, 1) : from
-      const chart = await fetchChart(ticker, start)
-      if (!chart) throw new Error('ingen kurs')
-      const fx = chart.currency === 'SEK' ? null : await fetchChart(`${chart.currency}SEK=X`, start)
-      const rows = rowsToUpsert(ticker, toSek(chart.points, fx?.points ?? null, chart.currency))
-      if (rows.length) {
-        const { error: saveError } = await admin.from('prices').upsert(rows, { onConflict: 'ticker,date' })
-        if (saveError) throw saveError
+  const deadline = Date.now() + PRICE_DEADLINE_MS
+  const queue = [...wanted]
+  const worker = async () => {
+    for (let next = queue.shift(); next; next = queue.shift()) {
+      const { ticker, from } = next
+      // Tiden är slut: resten får vänta till nästa uppdatering.
+      if (Date.now() > deadline) { failed.push(ticker); continue }
+      try {
+        const { data: last, error: readError } = await admin
+          .from('prices').select('date').eq('ticker', ticker).order('date', { ascending: false }).limit(1)
+        if (readError) throw readError
+        const start = fetchStart(last?.[0]?.date ?? null, from)
+        const chart = await fetchChart(ticker, start)
+        if (!chart) throw new Error('ingen kurs')
+        const fx = chart.currency === 'SEK' ? null : await fetchChart(`${chart.currency}SEK=X`, start)
+        if (chart.currency !== 'SEK' && !fx) throw new Error('ingen valutakurs')
+        const rows = rowsToUpsert(ticker, toSek(chart.points, fx?.points ?? null, chart.currency))
+        if (rows.length) {
+          const { error: saveError } = await admin.from('prices').upsert(rows, { onConflict: 'ticker,date' })
+          if (saveError) throw saveError
+        }
+        updated[ticker] = rows.length
+      } catch (e) {
+        console.error('kurser', ticker, e)
+        failed.push(ticker)
       }
-      updated[ticker] = rows.length
-    } catch (e) {
-      console.error('kurser', ticker, e)
-      failed.push(ticker)
     }
   }
+  await Promise.all(Array.from({ length: PRICE_POOL }, worker))
   return json({ updated, failed })
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseChart, parseSearch, rowsToUpsert, toSek } from './prices.ts'
+import { fetchStart, isRealDay, parseChart, parseSearch, rowsToUpsert, toSek } from './prices.ts'
 import sek from './fixtures/chart-inve-b.json'
 import usd from './fixtures/chart-aapl.json'
 import usdSek from './fixtures/chart-usdsek.json'
@@ -80,5 +80,37 @@ describe('rowsToUpsert', () => {
       { ticker: 'AAPL', date: '2026-11-02', close_sek: 3 },
       { ticker: 'AAPL', date: '2026-11-03', close_sek: 2 },
     ])
+  })
+})
+
+describe('tomma intervall och ogiltiga kurser', () => {
+  it('giltig meta utan tidsstämplar ger inga punkter, inte null', () => {
+    const empty = { chart: { result: [{ meta: { currency: 'USD', symbol: 'AAPL' }, indicators: { quote: [{}] } }], error: null } }
+    expect(parseChart(empty)).toEqual({ currency: 'USD', points: [] })
+  })
+
+  it('hoppar över kurser som är 0 eller negativa', () => {
+    const bad = {
+      chart: { result: [{ meta: { currency: 'SEK' }, timestamp: [1793606400, 1793692800, 1793779200], indicators: { quote: [{ close: [0, -3, 5] }] } }] },
+    }
+    expect(parseChart(bad)?.points).toEqual([{ date: '2026-11-04', close: 5 }])
+  })
+})
+
+describe('fetchStart', () => {
+  it('hämtar om den senast sparade dagen, annars from', () => {
+    expect(fetchStart('2026-11-06', '2026-01-01')).toBe('2026-11-06')
+    expect(fetchStart(null, '2026-01-01')).toBe('2026-01-01')
+  })
+})
+
+describe('isRealDay', () => {
+  it('godtar riktiga datum och avvisar omöjliga', () => {
+    expect(isRealDay('2026-11-06')).toBe(true)
+    expect(isRealDay('2028-02-29')).toBe(true)
+    expect(isRealDay('2026-13-45')).toBe(false)
+    expect(isRealDay('2026-02-30')).toBe(false)
+    expect(isRealDay('2026-1-6')).toBe(false)
+    expect(isRealDay(20261106)).toBe(false)
   })
 })

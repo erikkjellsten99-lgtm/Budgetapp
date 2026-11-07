@@ -20,20 +20,21 @@ const dayFormat = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
 
-/** Yahoos chart-svar (v8) till valuta och punkter. Dagar utan kurs (null) hoppas över. */
+/** Yahoos chart-svar (v8) till valuta och punkter. Dagar utan kurs (null, 0 eller negativ) hoppas över. */
 export function parseChart(json: unknown): ChartData | null {
   if (!isRecord(json) || !isRecord(json.chart) || !Array.isArray(json.chart.result)) return null
   const result = json.chart.result[0]
   if (!isRecord(result) || !isRecord(result.meta) || typeof result.meta.currency !== 'string') return null
   const stamps = result.timestamp
   const indicators = result.indicators
-  if (!Array.isArray(stamps) || !isRecord(indicators) || !Array.isArray(indicators.quote) || !isRecord(indicators.quote[0])) return null
-  const closes = indicators.quote[0].close
-  if (!Array.isArray(closes)) return null
+  const quote = isRecord(indicators) && Array.isArray(indicators.quote) ? indicators.quote[0] : null
+  const closes = isRecord(quote) ? quote.close : null
+  // Giltig meta utan tidsstämplar eller kurser: inga handelsdagar i intervallet (helg, helgdag, redan uppdaterad).
+  if (!Array.isArray(stamps) || !Array.isArray(closes)) return { currency: result.meta.currency, points: [] }
   const points: ChartData['points'] = []
   stamps.forEach((t, i) => {
     const close = closes[i]
-    if (typeof t !== 'number' || typeof close !== 'number' || !Number.isFinite(close)) return
+    if (typeof t !== 'number' || typeof close !== 'number' || !Number.isFinite(close) || close <= 0) return
     points.push({ date: dayFormat.format(new Date(t * 1000)), close })
   })
   return { currency: result.meta.currency, points }
@@ -73,6 +74,18 @@ export function rowsToUpsert(ticker: string, points: PricePoint[]): { ticker: st
   const byDate = new Map<string, number>()
   for (const p of points) byDate.set(p.date, p.close)
   return [...byDate].map(([date, close_sek]) => ({ ticker, date, close_sek }))
+}
+
+/** Första dagen att hämta. Den senast sparade dagen hämtas om, för den kan ha sparats mitt under handelsdagen. */
+export function fetchStart(lastStored: string | null, from: string): string {
+  return lastStored ?? from
+}
+
+/** Ett riktigt datum på formen ÅÅÅÅ-MM-DD (alltså inte 2026-13-45). */
+export function isRealDay(day: unknown): day is string {
+  if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return false
+  const d = new Date(`${day}T00:00:00Z`)
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === day
 }
 
 const HEADERS = { 'user-agent': 'Groundwork/1.0 (kurser)' }
