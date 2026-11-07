@@ -55,6 +55,24 @@ describe('refreshPrices', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('nytt innehav samma dag ger nytt anrop', async () => {
+    await refreshPrices(holdings, trades, day1);
+    const hs = [...holdings, h('b', 'AAA')];
+    await refreshPrices(hs, [...trades, t('b', '2025-03-01')], day1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).tickers.map((x: { ticker: string }) => x.ticker)).toEqual([
+      'AAA',
+      'VOLV-B.ST',
+    ]);
+  });
+
+  it('tidigare affär i befintligt innehav samma dag ger nytt anrop', async () => {
+    await refreshPrices(holdings, trades, day1);
+    await refreshPrices(holdings, [...trades, t('a', '2023-06-01')], day1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).tickers[0].from).toBe('2023-06-01');
+  });
+
   it('fetch som kastar ger false och sparar inte pricesRefreshedOn', async () => {
     fetchMock.mockRejectedValue(new Error('offline'));
     expect(await refreshPrices(holdings, trades, day1)).toBe(false);
