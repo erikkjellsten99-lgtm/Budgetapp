@@ -46,6 +46,9 @@ export default function HealthCard({
     .filter((d) => d.date < latest.date && d.date >= addDays(latest.date, -13) && d.values.bedtime !== undefined)
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((d) => d.values.bedtime!)
+  // Bara sömnpoäng utan sömn räcker för sömnrutan; finns varken sömn eller andra mått visas inget kort alls
+  const hasSleep = latest.values.sleepH !== undefined || latest.values.sleepScore !== undefined
+  if (!hasSleep && !groups.length) return null
 
   return (
     <section className="health-card" aria-labelledby="health-title">
@@ -263,7 +266,7 @@ function SleepTile({
   goal?: { min: number; name: string }
 }) {
   const hours = values.sleepH
-  if (hours === undefined) return null
+  if (hours === undefined && values.sleepScore === undefined) return null
   const estimate = estimateSleepScore(values, pastBedtimes)
   const score = values.sleepScore ?? estimate?.score
   const fromWatch = values.sleepScore !== undefined
@@ -274,12 +277,12 @@ function SleepTile({
   const stages = STAGES.filter((st) => values[st.metric] !== undefined)
   const total = stages.reduce((a, st) => a + minutes(st.metric), 0)
   const asleepMin = minutes('sleepRemH') + minutes('sleepCoreH') + minutes('sleepDeepH')
-  const reached = goal ? hours >= goal.min : false
-  const { h, m } = splitHours(hours)
+  const reached = goal && hours !== undefined ? hours >= goal.min : false
+  const { h, m } = splitHours(hours ?? 0)
 
   const hasTimes = values.bedtime !== undefined && values.wakeTime !== undefined
   const span = hasTimes ? (((values.wakeTime! - values.bedtime!) % 24) + 24) % 24 : 0
-  const efficiency = span > 0 ? Math.min(100, Math.round((hours / span) * 100)) : undefined
+  const efficiency = span > 0 && hours !== undefined ? Math.min(100, Math.round((hours / span) * 100)) : undefined
   const mid = hasTimes ? values.bedtime! + span / 2 : undefined
 
   return (
@@ -297,17 +300,21 @@ function SleepTile({
       </div>
 
       <div className="sleep-main">
-        <div className="sleep-big">
-          <b>{h}</b>
-          <u>h</u>
-          <b>{String(m).padStart(2, '0')}</b>
-          <u>min</u>
-          {goal && (
-            <span className="sleep-goal">
-              {reached ? `✓ ${goal.name}` : `${formatHealth('sleepH', Math.max(0, goal.min - hours))} kvar till ${goal.name}`}
-            </span>
-          )}
-        </div>
+        {hours === undefined ? (
+          <p className="sleep-pending">Sömnen har inte kommit från Hälsa än. Kör genvägen igen när klockan har synkat.</p>
+        ) : (
+          <div className="sleep-big">
+            <b>{h}</b>
+            <u>h</u>
+            <b>{String(m).padStart(2, '0')}</b>
+            <u>min</u>
+            {goal && (
+              <span className="sleep-goal">
+                {reached ? `✓ ${goal.name}` : `${formatHealth('sleepH', Math.max(0, goal.min - hours))} kvar till ${goal.name}`}
+              </span>
+            )}
+          </div>
+        )}
         {score !== undefined && (
           <div
             className="sleep-score"
