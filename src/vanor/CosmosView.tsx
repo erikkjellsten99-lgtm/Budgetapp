@@ -749,6 +749,13 @@ export default function CosmosView({ habits, log, paused, today, tasks, health, 
         ))}
       </div>
       <header className="gv-top cv-top">
+        {/* Samma väg ut som i Jarvis-rummet (designspec "Två rum"). Escape stänger också. */}
+        <button type="button" className="room-back" onClick={onClose}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+          Tillbaka
+        </button>
         {header}
         <div className="gv-actions">
           {(level !== 'earth' || away) && (
@@ -766,9 +773,6 @@ export default function CosmosView({ habits, log, paused, today, tasks, health, 
             onClick={() => (guideOpen ? closeGuide() : setGuideOpen(true))}
           >
             ?
-          </button>
-          <button type="button" className="gv-close" aria-label="Stäng galaxen" onClick={onClose}>
-            ×
           </button>
         </div>
       </header>

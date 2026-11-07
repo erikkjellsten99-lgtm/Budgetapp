@@ -318,3 +318,29 @@
   flex: 1 0 100%;
   order: 3;
 }
+
+/* Galaxen: Tillbaka först i sidhuvudet, knapparna till höger, rubriken på raden under */
+.room.galaxy-view .gv-top {
+  flex-wrap: wrap;
+  row-gap: 0.6rem;
+}
+
+.room.galaxy-view .gv-top > .room-back {
+  position: static;
+  pointer-events: auto;
+}
+
+.room.galaxy-view .gv-top > .gv-actions {
+  order: 1;
+  pointer-events: auto;
+}
+
+.room.galaxy-view .gv-top > :not(.room-back):not(.gv-actions) {
+  flex: 1 0 100%;
+  order: 2;
+}
+
+/* Cockpit-hörnet uppe till vänster flyttas ner under Tillbaka */
+.room.galaxy-view::before {
+  top: calc(max(10px, env(safe-area-inset-top)) + 3.5rem);
+}
