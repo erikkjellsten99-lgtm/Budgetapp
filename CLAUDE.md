@@ -1,63 +1,56 @@
 # Groundwork – regler för Claude
 
-Eriks app för ekonomi, vanor, Jarvis och galaxen. Vite + React + TypeScript, IndexedDB lokalt, Supabase för synk och
-servern "inbox", publiceras på GitHub Pages från `main` (`.github/workflows/deploy.yml`). Svara på svenska, kort.
-Läs `STATUS.md` först: där står vad som är klart, halvfärdigt och trasigt.
+Groundwork är en app för budget, sparande, vanor och hälsa, på svenska. Idag används den av två personer i ett
+hushåll (Erik och Cassandra), men den är byggd för att kunna bli en app för fler hushåll. Svara på svenska, kort.
+
+## Vad appen är
+- **Ekonomi:** budget per månad, inkomster, prognos, sparmål, billån, konton och önskelista. Hushållets data.
+- **Vanor:** vanor, bockningar, Att göra och hälsa från Apple Hälsa. Varje person har sina egna.
+- **Jarvis:** frågor om ekonomin och dagen, med röst eller text. Läser bara, ingen AI, inget som kostar.
+- **Galax:** en 3D-vy över vanorna och ekonomin, öppnas från Vanor → Månad.
+- **Nyheter:** rubriker från SVT med ton. Läser bara.
+
+Mer om varje del: `STATUS.md` (vad som funkar och är trasigt) och `src/vanor/CLAUDE.md`,
+`supabase/functions/inbox/CLAUDE.md`.
+
+## Hur det hänger ihop
+- **Lokalt först:** all data sparas i webbläsarens IndexedDB. Appen fungerar utan uppkoppling.
+- **Synk:** Supabase. Konto, hushåll och inloggning finns (`src/sync.ts`, `src/Account.tsx`). Bara inloggade medlemmar
+  i ett hushåll kan läsa dess data (RLS i Supabase).
+- **Server:** edge function `inbox` (`supabase/functions/inbox/`) tar emot från iPhone-genvägar, läser sammanfattningen
+  för Siri och Jarvis, och hämtar nyheter. Delad kod som appen och servern båda använder ligger där.
+- **Ett ställe för siffror:** uträkningar (blir över, sparmål, prognos, vad som ska göras idag) ligger i delad kod.
+  Appen, Siri och Jarvis får därför alltid samma siffror. Ändra aldrig en siffra på bara ett ställe.
+- **Publicering:** GitHub Pages från `main` (`.github/workflows/deploy.yml`). Installeras som app på telefonen (PWA).
+- **Stil:** tre CSS-lager i ordning: `styles.css`, `vanor/vanor.css`, `hud.css`. Färger via variabler, ljust och mörkt läge.
 
 ## Starta, testa, bygga
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # vitest, alla ska vara gröna
-npm run build      # tsc + vite, måste gå igenom före push
+npm test           # vitest, alla gröna
+npm run build      # måste gå igenom före push
 ```
-Skärmbilder: Playwright finns. Kör med 375 px bredd i ljust och mörkt läge och blockera `supabase.co`, så att
-testerna aldrig rör riktiga data. Starta med tom lokal databas.
+Skärmbilder: Playwright, 375 px, ljust och mörkt läge. Blockera `supabase.co` i testerna och använd tom lokal databas.
 
-## Delarna och hur de hänger ihop
-| Del | Kod | Egen CLAUDE.md |
-|---|---|---|
-| Ekonomi | `src/App.tsx` (flikarna), `Categories/Forecast/Goal/Assets/Wishlist/Income.tsx`, `db.ts`, `sync.ts` | föreslagen mapp `src/ekonomi/` (inte flyttat än) |
-| Vanor | `src/vanor/` | `src/vanor/CLAUDE.md` |
-| Jarvis | `src/Jarvis.tsx`, `jarvis.ts`, `speech.ts`, `Today.tsx` | föreslagen mapp `src/jarvis/` (inte flyttat än) |
-| Galax | `src/vanor/CosmosView.tsx`, `Galaxy.tsx`, `*3d.ts`, `CameraRig.ts`, `cosmos*.ts`, `universe.ts` | föreslagen mapp `src/galax/` (inte flyttat än) |
-| Servern | `supabase/functions/inbox/` | `supabase/functions/inbox/CLAUDE.md` |
+## Regler som gäller för alla
+- **Ekonomidatan är verklig.** Ändra, avrunda, flytta, ta bort eller hitta aldrig på något, varken data eller
+  uträkningar. Verkar en uträkning fel: beskriv och fråga.
+- **Testdata** bara i tom lokal databas. Aldrig till Supabase, aldrig i Eriks riktiga data.
+- **Integritet:** en användares personliga data (vanor, hälsa, Att göra) visas aldrig för andra i hushållet utan att
+  det är en medveten funktion. Hälsodata lämnar aldrig appen eller servern.
+- **Pusha aldrig till `main`.** Egen gren, PR med kort svensk beskrivning och "Så testar du". Erik mergar själv.
+- **Testerna och bygget gröna** före varje push.
+- **IndexedDB:** höj aldrig en befintlig version. Lägg till en ny med uppgraderingssteg.
+- **Supabase** (databas, edge function) ändras bara efter att Erik skrivit "Lägg ut".
+- **Kostnader:** inga nya tjänster eller tekniker som kostar pengar utan att fråga. Erik vill inte betala något.
+- **Ett förslag per leverans** på förbättring. Bygg det inte utan att fråga.
+- **Svenska** datum (2026-10-20) och belopp (1 234 kr), å/ä/ö i all text och testdata.
 
-- **Delad kod ligger i `supabase/functions/inbox/`** (ask, summary, priority, habits, health, forecast, goalPlan …).
-  Appen importerar den direkt eller via shims i `src/` (`export * from '../supabase/functions/inbox/X.ts'`).
-  Så räknar app, Siri och Jarvis alltid samma siffror. Ändra aldrig en siffra på bara ett ställe.
-- **Navigationen** är `App.tsx`: Idag, Jarvis, Ekonomi (underflikar Översikt, Budget, Prognos, Konton, Önskelista),
-  Vanor, Nyheter. Galaxen öppnas inifrån Vanor → Månad och är inte en egen flik.
-- **Idag** och **Jarvis** läser allt via `summaryFacts` (`summary.ts`). Jarvis svar byggs i `ask.ts`, utan AI.
-- **Stilen** ligger i tre lager som laddas i ordning: `styles.css` (bas), `vanor/vanor.css`, `hud.css` (HUD-temat
-  ovanpå allt, även galaxens gränssnitt). Färger via CSS-variabler; mörkt läge i både `prefers-color-scheme` och
-  `[data-theme='dark']`.
-
-## Ekonomidatan får aldrig ändras
-- Alla siffror i ekonomidelen är Eriks och Cassandras riktiga. Ändra, avrunda, flytta, ta bort eller hitta aldrig på
-  något: varken data (IndexedDB, Supabase) eller uträkningar (prognos, ränta, sparmål, "blir över").
-- Testdata bara i tom lokal databas. Skriv aldrig testdata till Supabase.
-- Verkar en uträkning fel: beskriv och fråga. Ändra inget själv.
-- PR som rör ekonomin: jämför varje fliks text mot `main` före och efter (skript finns i sessionens scratchpad,
-  gör ett nytt vid behov) och skriv i PR:en att beloppen är identiska.
-
-## Jarvis
-- Läser bara. Får aldrig ändra något i ekonomin, och citerar exakt de siffror som ligger i Groundwork.
-- Ingen AI och inget som kostar pengar. Svaren byggs med nyckelord i `ask.ts`.
-- Visningsläget (ögat) döljer alla belopp; svar märkta `money: true` i `ask.ts` ersätts med `HIDDEN_MONEY`.
-
-## Arbetssätt
-- Pusha aldrig till `main`. Egen gren mot `main` (inte staplade grenar), PR med kort svensk beskrivning och
-  "Så testar du". Erik mergar själv.
-- `npm test` och `npm run build` gröna före push.
-- IndexedDB: höj aldrig en befintlig version i efterhand, lägg till ny version med uppgraderingssteg
-  (`src/db.ts` DB_VERSION, `src/vanor/store.ts` DB_VERSION).
-- Supabase (databas, edge function `inbox`) ändras bara efter att Erik skrivit "Lägg ut".
-- Fråga innan ny teknik eller tjänst som kostar pengar. Erik vill inte betala något.
-- Max ett förslag på förbättring per leverans. Bygg det inte utan att fråga.
-
-## Kvalitet
-- 375 px bredd, ljust och mörkt läge, skrivbord ≥ 900 px (sidomeny). Tomma lägen, laddning och fel ska vara designade.
-- Kantfall: tom input, stora tal, å/ä/ö, dubbelklick, tappad uppkoppling.
-- Svenska datum (2026-10-20) och belopp (1 234 kr).
-- Kontrollera med skärmbilder innan något kallas klart.
+## Om det ska bli en app för fler
+Det här finns inte än, och ska inte byggas utan att Erik beslutar det:
+- Flera hushåll per användare och inbjudningar. Idag finns ett hushåll per konto.
+- Betalning och abonnemang. Kräver att Erik godkänner en tjänst som kostar.
+- Egen domän och App Store/Play. Idag GitHub Pages och PWA.
+- Juridik: personuppgifter, hälsodata (känsliga) och integritetspolicy måste vara klara före publik lansering.
+Föreslå alltid ett steg i taget och säg vad det kostar, tar tid och vad det kräver av Erik.
