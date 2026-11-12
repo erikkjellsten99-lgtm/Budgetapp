@@ -83,8 +83,6 @@ describe('Fråga Groundwork', () => {
 
   it('allmänna frågor får ett samlat svar', () => {
     expect(ask('Hur går det?')).toBe(dayBrief(facts))
-    expect(ask('Hur ser ekonomin ut?')).toContain(`Inkomster ${facts.income}, kostnader ${facts.costs}`)
-    expect(ask('Hur mår jag?')).toContain('sömn 8 h 42 min')
   })
 
   it('tål felstavning och å/ä/ö skrivna som a/o', () => {
@@ -108,17 +106,9 @@ describe('vad ska jag göra', () => {
 })
 
 describe('småprat och visningsläge', () => {
-  it('hälsningar och vad Jarvis kan, utan belopp', () => {
-    expect(ask('Hej Jarvis')).toMatch(/^Hej! Jag är Jarvis/)
-    expect(ask('Vad kan du?')).toMatch(/^Jag är Jarvis i Groundwork/)
-    expect(ask('Tack!')).toBe('Varsågod!')
-    // En fråga efter hälsningen vinner
-    expect(ask('Hej, hur sov jag?')).toBe('Du sov 8 h 42 min enligt Hälsa (idag).')
-  })
-
   it('visningsläge: inga belopp, men vanor och hälsa svarar som vanligt', () => {
     const hidden = (q: string) => answer(q, facts, { hideMoney: true })
-    for (const q of ['Vad blir över?', 'Hur mycket är kvar på billånet?', 'När nås sparmålet?', 'Hur ser ekonomin ut?', 'Inkomster?', 'Önskelistan']) {
+    for (const q of ['Vad blir över?', 'Hur mycket är kvar på billånet?', 'När nås sparmålet?', 'Inkomster?', 'Önskelistan']) {
       expect(hidden(q)).toBe(HIDDEN_MONEY)
     }
     for (const q of ['Hur går det?', 'Vad blir det för väder?']) {

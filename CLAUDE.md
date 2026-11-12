@@ -6,7 +6,8 @@ hushåll (Erik och Cassandra), men den är byggd för att kunna bli en app för 
 ## Vad appen är
 - **Ekonomi:** budget per månad, inkomster, prognos, sparmål, billån, konton och önskelista. Hushållets data.
 - **Vanor:** vanor, bockningar, Att göra och hälsa från Apple Hälsa. Varje person har sina egna.
-- **Jarvis:** frågor om ekonomin och dagen, med röst eller text. Läser bara, ingen AI, inget som kostar.
+- **Jarvis:** frågor om ekonomin och dagen, med röst eller text. Läser bara, ingen AI, inget som kostar. Medvetet liten:
+  bara de vanligaste frågorna och dagens läge för allt annat.
 - **Galax:** en 3D-vy över vanorna och ekonomin, öppnas från Vanor → Månad.
 - **Nyheter:** rubriker från SVT med ton. Läser bara.
 

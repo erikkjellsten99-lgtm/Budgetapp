@@ -1,20 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ask, EXAMPLES } from './jarvis';
-import {
-  canListen,
-  canSpeak,
-  listen,
-  onVoicesChanged,
-  pickVoice,
-  readVoice,
-  saveVoice,
-  speak,
-  stopSpeaking,
-  swedishVoices,
-  unlockSpeech,
-  type Listening,
-  type VoiceSettings,
-} from './speech';
+import { canListen, canSpeak, listen, speak, stopSpeaking, unlockSpeech, type Listening } from './speech';
 
 interface Message {
   id: number;
@@ -91,8 +77,6 @@ export default function JarvisView({ active }: { active: boolean }) {
   const [typing, setTyping] = useState(!voiceInput);
   const [text, setText] = useState('');
   const [voiceOut, setVoiceOut] = useState(readVoiceSetting);
-  const [voice, setVoice] = useState<VoiceSettings>(readVoice);
-  const [voicePanel, setVoicePanel] = useState(false);
   const listening = useRef<Listening | null>(null);
   const nextId = useRef(1);
   const input = useRef<HTMLInputElement>(null);
@@ -165,7 +149,7 @@ export default function JarvisView({ active }: { active: boolean }) {
     setMessages((all) => [{ id: nextId.current++, question: q, reply }, ...all].slice(0, 20));
     if (voiceOut && canSpeak()) {
       setMode('speaking');
-      speak(reply, () => alive.current && setMode((m) => (m === 'speaking' ? 'idle' : m)), voice);
+      speak(reply, () => alive.current && setMode((m) => (m === 'speaking' ? 'idle' : m)));
     } else setMode('idle');
   }
 
@@ -285,9 +269,9 @@ export default function JarvisView({ active }: { active: boolean }) {
           <button
             type="button"
             className={voiceOut ? 'jarvis-icon-button on' : 'jarvis-icon-button'}
-            onClick={() => setVoicePanel(true)}
-            aria-haspopup="dialog"
-            aria-label={voiceOut ? 'Röst och uppläsning (på)' : 'Röst och uppläsning (av)'}
+            onClick={toggleVoiceOut}
+            aria-pressed={voiceOut}
+            aria-label={voiceOut ? 'Uppläsning på. Tryck för att stänga av' : 'Uppläsning av. Tryck för att slå på'}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" />
@@ -374,100 +358,7 @@ export default function JarvisView({ active }: { active: boolean }) {
         )}
       </footer>
 
-      {voicePanel && (
-        <VoicePanel
-          on={voiceOut}
-          onToggle={toggleVoiceOut}
-          settings={voice}
-          onChange={(next) => {
-            setVoice(next);
-            saveVoice(next);
-          }}
-          onClose={() => setVoicePanel(false)}
-        />
-      )}
     </div>
   );
 }
 
-/** Välj Jarvis röst bland telefonens svenska röster, och ton och tempo. */
-function VoicePanel({
-  on,
-  onToggle,
-  settings,
-  onChange,
-  onClose,
-}: {
-  on: boolean;
-  onToggle: () => void;
-  settings: VoiceSettings;
-  onChange: (next: VoiceSettings) => void;
-  onClose: () => void;
-}) {
-  const [voices, setVoices] = useState(swedishVoices);
-  useEffect(() => onVoicesChanged(() => setVoices(swedishVoices())), []);
-  const current = pickVoice(voices, settings.voice);
-
-  return (
-    <div className="jarvis-voice" role="dialog" aria-modal="true" aria-labelledby="jarvis-voice-title">
-      <h3 id="jarvis-voice-title">Jarvis röst</h3>
-      <label className="jarvis-voice-row">
-        <span>Läs upp svaren</span>
-        <input type="checkbox" checked={on} onChange={onToggle} />
-      </label>
-      {voices.length > 0 ? (
-        <label className="jarvis-voice-field">
-          <span>Röst</span>
-          <select value={current?.voiceURI ?? ''} onChange={(e) => onChange({ ...settings, voice: e.target.value })}>
-            {voices.map((v) => (
-              <option key={v.voiceURI} value={v.voiceURI}>
-                {v.name}
-                {v.default ? ' (standard)' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        <p className="jarvis-voice-hint">Inga svenska röster hittades på telefonen.</p>
-      )}
-      <label className="jarvis-voice-field">
-        <span>
-          Ton <small>{settings.pitch < 1 ? 'mörkare' : settings.pitch > 1 ? 'ljusare' : 'normal'}</small>
-        </span>
-        <input
-          type="range"
-          min={0.5}
-          max={1.5}
-          step={0.05}
-          value={settings.pitch}
-          onChange={(e) => onChange({ ...settings, pitch: Number(e.target.value) })}
-        />
-      </label>
-      <label className="jarvis-voice-field">
-        <span>
-          Tempo <small>{settings.rate < 1 ? 'lugnare' : settings.rate > 1 ? 'snabbare' : 'normal'}</small>
-        </span>
-        <input
-          type="range"
-          min={0.7}
-          max={1.4}
-          step={0.05}
-          value={settings.rate}
-          onChange={(e) => onChange({ ...settings, rate: Number(e.target.value) })}
-        />
-      </label>
-      <p className="jarvis-voice-hint">
-        Fler röster, t.ex. Oskar eller Klara i bättre kvalitet: på iPhone, Inställningar → Hjälpmedel → Uppläst innehåll →
-        Röster → Svenska. Starta om appen efteråt.
-      </p>
-      <div className="jarvis-voice-actions">
-        <button type="button" onClick={() => speak('Hej, jag är Jarvis. Vad vill du veta?', () => {}, settings)}>
-          Testa rösten
-        </button>
-        <button type="button" className="primary" onClick={onClose}>
-          Klar
-        </button>
-      </div>
-    </div>
-  );
-}

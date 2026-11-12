@@ -28,9 +28,11 @@
 - Kända buggar: se inbox v17 ovan (hälsosiffror med smalt mellanslag).
 
 ## Jarvis
-- Fungerar: egen flik med röst (telefonens taligenkänning och uppläsning), helskärm när du pratar, skriva,
-  visningsläge som döljer belopp, röstval med ton och tempo (PR #101), svar på vaga frågor och stavfel
-  (`ask.ts`), "Jarvis säger" på Idag, Siri-genvägarna "Fråga Groundwork" och "Jarvis" (Mac, Apple Intelligence).
+- Fungerar: egen flik med röst (telefonens taligenkänning och uppläsning, standardröst), helskärm när du pratar,
+  skriva, visningsläge som döljer belopp, svar på vaga frågor och stavfel (`ask.ts`), "Jarvis säger" på Idag,
+  Siri-genvägarna "Fråga Groundwork" och "Jarvis" (Mac, Apple Intelligence).
+- Borttaget (beslut, minskad Jarvis): röstval, ton och tempo; småprat ("hej", "tack", "vem är du"); de breda
+  svaren för "ekonomi" och "hälsa". Vaga frågor får fortfarande dagens läge.
 - Begränsning (beslut): ingen AI och inget som kostar. Jarvis förstår nyckelord, inte fria samtal.
 - Ej verifierat på riktig iPhone: att vald röst faktiskt används och hur Safari hanterar mikrofon-tillstånd.
 - Kända buggar: inga rapporterade.

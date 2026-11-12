@@ -46,7 +46,7 @@ function has(q: string, words: string[]): boolean {
 }
 
 /** Hur säker träffen är: exakta ämnen först, sedan allmänna, sist de bredaste orden. */
-type Level = 'specific' | 'social' | 'broad' | 'fallback'
+type Level = 'specific' | 'broad' | 'fallback'
 
 interface Intent {
   words: string[]
@@ -72,11 +72,6 @@ const mustText = (f: SummaryFacts) => {
   const must = f.must.length ? `Måste göras idag: ${list(f.must)}.` : 'Inget måste göras idag.'
   return f.first ? `${must} Börja med ${f.first}.` : must
 }
-const healthText = (f: SummaryFacts) =>
-  f.health
-    ? `Hälsa ${f.health.when}: ${f.health.values.map((v) => `${v.label.toLowerCase()} ${v.text}`).join(', ')}.`
-    : 'Det finns ingen hälsodata från idag eller igår än.'
-
 /** Dagens läge i några meningar. Svaret när frågan är allmän eller inte går att tolka. */
 export function dayBrief(f: SummaryFacts, options: AskOptions = {}): string {
   const parts = options.hideMoney ? [] : [leftText(f)]
@@ -167,35 +162,6 @@ const INTENTS: Intent[] = [
     money: true,
     answer: (f) => `Nettovärdet på sparkontona är ${f.netWorth}.`,
   },
-  // Hälsningar och småprat: bara om frågan inte också handlar om något annat.
-  {
-    words: [' hej', ' hallå', ' tjena', ' tja', ' hejsan', ' god morgon', ' god kväll', ' godmorgon'],
-    answer: () => 'Hej! Jag är Jarvis. Fråga mig om dagen, vanorna, hälsan eller ekonomin.',
-    level: 'social',
-  },
-  {
-    words: [' vem är du', ' vad är du', ' vad kan du', ' vad gör du', ' hjälp', ' vad kan jag fråga'],
-    answer: () =>
-      'Jag är Jarvis i Groundwork. Jag kan svara på vad som blir över, inkomster, kostnader, sparmålet, billånet, önskelistan, vad du ska göra idag, vanorna, sömn, steg och vilopuls. Jag läser bara och ändrar ingenting.',
-    level: 'social',
-  },
-  {
-    words: [' tack', ' tackar', ' snyggt', ' bra jobbat'],
-    answer: () => 'Varsågod!',
-    level: 'social',
-  },
-  // Allmänna frågor: bara om inget mer exakt passade.
-  {
-    words: [' ekonomi', ' pengar', ' råd', ' budget', ' plånbok'],
-    money: true,
-    answer: (f) => `${leftText(f)} Inkomster ${f.income}, kostnader ${f.costs}, planerat sparande ${f.plannedSavings}. Nettovärde ${f.netWorth}.`,
-    level: 'broad',
-  },
-  {
-    words: [' hälsa', ' mår', ' kropp', ' form'],
-    answer: healthText,
-    level: 'broad',
-  },
   {
     words: [' idag', ' dagen', ' läget', ' hur går', ' sammanfatt', ' översikt', ' status', ' allt', ' nytt'],
     answer: dayBriefAnswer,
@@ -222,7 +188,7 @@ export function answer(question: string, facts: SummaryFacts, options: AskOption
   const matches = INTENTS.filter((intent) => has(q, intent.words))
   const say = (intent: Intent) =>
     options.hideMoney && intent.money ? HIDDEN_MONEY : intent.answer === dayBriefAnswer ? dayBrief(facts, options) : intent.answer(facts)
-  for (const level of ['specific', 'social', 'broad', 'fallback'] as Level[]) {
+  for (const level of ['specific', 'broad', 'fallback'] as Level[]) {
     const hits = matches.filter((intent) => (intent.level ?? 'specific') === level)
     if (hits.length) return [...new Set(hits.slice(0, MAX_ANSWERS).map(say))].join(' ')
   }
