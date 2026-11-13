@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getMembers, invite, sendPasswordReset, setNewPassword, signIn, signOut, signUp, syncNow, type Member, type SyncState } from './sync';
+import { getMembers, invite, saveFirstName, sendPasswordReset, setNewPassword, signIn, signOut, signUp, syncNow, type Member, type SyncState } from './sync';
 
 const STATUS_TEXT: Record<SyncState['status'], string> = {
   utloggad: 'Inte inloggad. Datan finns bara på den här enheten.',
@@ -227,6 +227,8 @@ function SignedIn({ sync }: { sync: SyncState }) {
         </div>
       </section>
 
+      <FirstName saved={sync.firstName} />
+
       <section className="card">
         <h3>Hushållet</h3>
         <ul>
@@ -291,4 +293,66 @@ function swedishError(err: unknown): string {
   if (/same password|different from the old/i.test(message)) return 'Välj ett annat lösenord än det gamla.';
   if (/fetch|network/i.test(message)) return 'Ingen internetanslutning. Försök igen när du har nät.';
   return message;
+}
+
+/** Förnamnet som Jarvis hälsar med. Sparas på kontot, så att det följer med till andra enheter. */
+function FirstName({ saved }: { saved: string | null }) {
+  const [name, setName] = useState(saved ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  // Namnet kan komma först när inloggningen har lästs in.
+  useEffect(() => {
+    setName(saved ?? '');
+  }, [saved]);
+
+  const changed = name.trim() !== (saved ?? '');
+
+  return (
+    <section className="card">
+      <h3>Förnamn</h3>
+      <form
+        className="category-form"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          if (busy || !changed) return;
+          setBusy(true);
+          setError(null);
+          setDone(false);
+          try {
+            await saveFirstName(name);
+            setDone(true);
+          } catch (err) {
+            setError(swedishError(err));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label>
+          Vad ska Jarvis kalla dig?
+          <input
+            type="text"
+            autoComplete="given-name"
+            maxLength={40}
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              setDone(false);
+            }}
+            placeholder="Erik"
+          />
+        </label>
+        <p className="hint small">Jarvis hälsar med namnet när du öppnar den. Utan namn säger den bara hej.</p>
+        {error && <p className="error">{error}</p>}
+        {done && !changed && <p className="hint small" role="status">Sparat.</p>}
+        <div className="actions">
+          <button type="submit" className="primary" disabled={busy || !changed}>
+            Spara
+          </button>
+        </div>
+      </form>
+    </section>
+  );
 }

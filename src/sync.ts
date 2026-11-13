@@ -51,9 +51,11 @@ export interface SyncState {
   notice: string | null;
   /** Antal ändringar på den här enheten som inte har skickats än. */
   pending: number;
+  /** Förnamnet från kontot (Supabase user metadata), som Jarvis hälsar med. Null om det inte är ifyllt. */
+  firstName: string | null;
 }
 
-let state: SyncState = { status: 'utloggad', email: null, householdId: null, lastSynced: null, error: null, recovering: false, notice: null, pending: 0 };
+let state: SyncState = { status: 'utloggad', email: null, householdId: null, lastSynced: null, error: null, recovering: false, notice: null, pending: 0, firstName: null };
 const listeners = new Set<(state: SyncState) => void>();
 
 export function getSyncState(): SyncState {
@@ -118,10 +120,10 @@ async function handleSession(next: Session | null) {
   const changedUser = next?.user.id !== session?.user.id;
   session = next;
   if (!next) {
-    setState({ status: 'utloggad', email: null, householdId: null, error: null });
+    setState({ status: 'utloggad', email: null, householdId: null, error: null, firstName: null });
     return;
   }
-  setState({ email: next.user.email ?? null });
+  setState({ email: next.user.email ?? null, firstName: firstNameOf(next.user.user_metadata) });
   if (changedUser) await syncNow();
 }
 
@@ -410,6 +412,20 @@ export async function setNewPassword(password: string): Promise<void> {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) throw error;
   setState({ recovering: false });
+}
+
+/** Förnamnet i kontots metadata, eller null. */
+export function firstNameOf(metadata: unknown): string | null {
+  const name = (metadata as { first_name?: unknown } | null | undefined)?.first_name;
+  return typeof name === 'string' && name.trim() ? name.trim().slice(0, 40) : null;
+}
+
+/** Sparar förnamnet på kontot (Supabase user metadata). Tomt namn tar bort det. */
+export async function saveFirstName(name: string): Promise<void> {
+  const first_name = name.trim().slice(0, 40);
+  const { error } = await supabase.auth.updateUser({ data: { first_name } });
+  if (error) throw error;
+  setState({ firstName: first_name || null });
 }
 
 /** Loggar ut. Datan ligger kvar på telefonen. */

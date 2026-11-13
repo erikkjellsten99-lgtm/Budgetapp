@@ -41,7 +41,21 @@
   uppläsning), helskärm när du pratar, skriva,
   visningsläge som döljer belopp, röstval med ton och tempo (PR #101), svar på vaga frågor och stavfel
   (`ask.ts`), "Jarvis säger" på Idag, Siri-genvägarna "Fråga Groundwork" och "Jarvis" (Mac, Apple Intelligence).
-- Begränsning (beslut): ingen AI och inget som kostar. Jarvis förstår nyckelord, inte fria samtal.
+- Nytt 2026-11-13: Jarvis i appen frågar Claude via edge function `jarvis` (verktyg, RLS, 50 frågor per dag). Hälsar
+  med förnamnet (Konto → Förnamn) och börjar lyssna när rummet öppnas. Håll in eller tryck för att prata. Adressen
+  `?jarvis=1&listen=1` öppnar Jarvis direkt. Tal och uppläsning ligger bakom `voice.ts`.
+- **Utlagt 2026-11-13:** migrationen `jarvis_usage` är körd och `jarvis` version 1 ligger ute (verify_jwt på).
+  Räknaren är prövad i en tillbakarullad transaktion: fråga 1–50 går igenom, 51 nekas, räknaren står kvar på 50.
+  Funktionen startar och nekar den som inte är inloggad.
+- Så lades den ut: källfilerna (117 kB med `inbox`-filerna) är för stora för MCP-verktyget, så de slogs ihop till en
+  fil på 27 kB med esbuild (`--bundle --minify --line-limit=160 --external:npm:*`) och lades ut som `index.ts`.
+  Jämförd tecken för tecken mot bygget: ett tecken skiljer, U+00A0 i `formatHealth` blev ett vanligt mellanslag
+  (verktyget tappar osynliga tecken). Raden körs inte av `jarvis`, som inte läser hälsodata.
+- Inte prövat: ett riktigt svar från Claude (kräver en inloggad användare, alltså att PR #114 är mergad och appen
+  publicerad, och att `ANTHROPIC_API_KEY` verkligen finns som hemlighet), och på iPhone om hälsningen och lyssnandet
+  startar utan en tryckning när appen öppnas från en genväg.
+- Beslut: Claude API är tillåtet för Jarvis i appen (kostar per fråga). Siri-genvägarna, Idag och visningsläget
+  använder fortfarande den enkla Jarvis utan AI (`ask.ts`).
 - Ej verifierat på riktig iPhone: att vald röst faktiskt används och hur Safari hanterar mikrofon-tillstånd.
 - Kända buggar: inga rapporterade.
 

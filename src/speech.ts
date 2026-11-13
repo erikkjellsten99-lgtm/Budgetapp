@@ -54,7 +54,7 @@ export function listenError(code: string): string {
 export function listen(handlers: {
   onText: (text: string) => void;
   onDone: (text: string) => void;
-  onError: (message: string) => void;
+  onError: (message: string, code: string) => void;
 }): Listening | null {
   const Ctor = recognitionCtor();
   if (!Ctor) return null;
@@ -74,7 +74,7 @@ export function listen(handlers: {
   rec.onerror = (e) => {
     if (e.error === 'aborted') return;
     failed = true;
-    handlers.onError(listenError(e.error));
+    handlers.onError(listenError(e.error), e.error);
   };
   rec.onend = () => {
     if (!failed) handlers.onDone(text);
@@ -82,7 +82,7 @@ export function listen(handlers: {
   try {
     rec.start();
   } catch {
-    handlers.onError(listenError('start'));
+    handlers.onError(listenError('start'), 'start');
     return null;
   }
   return { stop: () => rec.stop(), abort: () => rec.abort() };
@@ -157,8 +157,11 @@ export function unlockSpeech() {
   window.speechSynthesis.speak(u);
 }
 
-/** Läser upp en text på svenska med vald röst. onEnd körs när uppläsningen är klar eller avbryts. */
-export function speak(text: string, onEnd: () => void, settings: VoiceSettings = readVoice()) {
+/**
+ * Läser upp en text på svenska med vald röst. onEnd körs när uppläsningen är klar eller avbryts,
+ * onStart när rösten faktiskt börjar (iPhone kan tyst vägra läsa upp utan en tryckning först).
+ */
+export function speak(text: string, onEnd: () => void, settings: VoiceSettings = readVoice(), onStart?: () => void) {
   if (!canSpeak()) return onEnd();
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
@@ -171,6 +174,7 @@ export function speak(text: string, onEnd: () => void, settings: VoiceSettings =
     // Rösten gick inte att välja: telefonens standardröst för svenska används.
   }
   u.rate = settings.rate;
+  u.onstart = () => onStart?.();
   u.onend = onEnd;
   u.onerror = onEnd;
   try {
