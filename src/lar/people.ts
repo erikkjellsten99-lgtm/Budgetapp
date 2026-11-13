@@ -61,6 +61,17 @@ const SOBERG_2021_FULL: Source = {
   title: 'Søberg m.fl. 2021, hela artikeln i Cell Reports Medicine (PMC)',
   url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8561167',
 };
+const SOBERG_HUBERMAN: Source = {
+  title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme',
+  url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health',
+  summary: [
+    'Søberg, som disputerade vid Köpenhamns universitet, berättar om sin forskning om hur kyla och värme påverkar ämnesomsättningen.',
+    'De går igenom hur kyla och bastu kan påverka ämnesomsättning, hjärta, hjärna, hormoner och inflammation.',
+    'Hon räknar fram att vinterbadarna i hennes studie kom upp i 11 minuter kallt vatten och 57 minuter bastu i veckan.',
+    'Hon förklarar Søbergprincipen, att avsluta med kyla så att kroppen själv måste värma upp sig.',
+    'De jämför kalla duschar med bad i kallt vatten och vanlig bastu med infraröd.',
+  ],
+};
 const ALMAHAYNI_2024: Source = {
   title: 'Almahayni och Hammond 2024, systematisk genomgång av Wim Hof-metoden i PLOS ONE (PMC)',
   url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10936795',
@@ -219,6 +230,17 @@ export const PEOPLE: Person[] = [
           'Unga män som vinterbadade och bastade regelbundet ökade sin värmeproduktion mer än en kontrollgrupp ' +
           'när de kyldes ner, trots att det bruna fettet aktiverades ungefär lika mycket i båda grupperna.',
         evidence: 'svagt',
+        summary: [
+          'Søberg och kollegor vid Köpenhamns universitet jämförde 8 unga friska män som vinterbadade 2 till 3 ' +
+            'gånger i veckan och var inne på minst sin andra säsong med 8 män som inte gjorde det. Grupperna var ' +
+            'lika i ålder, vikt och kondition.',
+          'När deltagarna kyldes ner med vattenfyllda filtar ökade vinterbadarnas värmeproduktion mer, och de ' +
+            'förbrände fler kalorier. Omräknat till ett dygn låg förbrukningen under nedkylningen på 3 044 ' +
+            'kilokalorier hos vinterbadarna och 2 560 hos de andra.',
+          'Det bruna fettets sockerupptag och musklernas aktivitet ökade däremot ungefär lika mycket i båda ' +
+            'grupperna. Forskarna föreslår vinterbad som ett sätt att öka energiförbrukningen, om man inte äter ' +
+            'mer för att kompensera.',
+        ],
         note:
           'Bara 8 vinterbadare och 8 i kontrollgruppen, alla män. Studien jämför grupper vid ett tillfälle och ' +
           'kan inte visa att det är badandet som orsakar skillnaden.',
@@ -235,6 +257,16 @@ export const PEOPLE: Person[] = [
           'Vinterbadarna hade lägre kroppstemperatur och inaktivt brunt fett när de inte frös. Forskarna tolkar ' +
           'det som att kroppens termostat ställts om.',
         evidence: 'svagt',
+        summary: [
+          'I samma studie mättes deltagarna också i ett läge där de varken frös eller svettades. Då hade ' +
+            'vinterbadarna lägre temperatur inne i kroppen, och deras bruna fett tog inte upp något socker alls, ' +
+            'medan kontrollgruppens bruna fett var aktivt. Forskarna hade väntat sig mer brunt fett hos ' +
+            'vinterbadarna, inte mindre aktivitet.',
+          'Under ett helt dygn i behaglig temperatur nådde vinterbadarna en lägre kroppstemperatur, och huden ' +
+            'nära det bruna fettet hade en tydlig topp mellan halv fem och halv sex på morgonen. Forskarna ser ' +
+            'det som tecken på att kroppen vant sig vid både kyla och värme, och att bastun kan bidra till den ' +
+            'lägre temperaturen.',
+        ],
         note: 'Samma lilla studie. Tolkningen om termostaten är en hypotes som behöver prövas mer.',
         sources: [SOBERG_2021, SOBERG_2021_FULL],
       },
@@ -243,59 +275,79 @@ export const PEOPLE: Person[] = [
           'Vinterbadarna i studien låg i snitt ungefär 11 minuter i kallt vatten och satt ungefär 57 minuter i ' +
           'bastun per vecka.',
         evidence: 'svagt',
-        note:
-          'Siffrorna beskriver vad de 8 vinterbadarna råkade göra, och mängderna har aldrig testats som en dos. ' +
-          'Ingen vet om just den mängden ger bäst effekt, men siffran sprids ofta som ett recept.',
-        sources: [
-          SOBERG_2021_FULL,
-          {
-            title: 'Pressmeddelande om studien (ScienceDaily)',
-            url: 'https://www.sciencedaily.com/releases/2021/10/211011110818.htm',
-          },
+        summary: [
+          'Siffrorna kommer från studiens tabell över vad vinterbadarna faktiskt gjorde månaden före ' +
+            'försöken. De badade i snitt 2,6 gånger i veckan, doppade sig ungefär 2,6 gånger per tillfälle och ' +
+            'låg i snitt 1,4 minuter per dopp. Sammanlagt blev det 11 minuter i kallt vatten och 57 minuter i ' +
+            'bastu per vecka.',
+          'I en intervju hos Andrew Huberman räknar Søberg fram samma siffror och säger att passen i vattnet ' +
+            'kan vara 1 till 2 minuter så länge man kommer upp i 11 minuter i veckan. Huberman gör sedan om ' +
+            'siffran till ett råd om minsta mängd kyla.',
         ],
+        note:
+          'Siffrorna beskriver vad de få vinterbadarna i studien råkade göra, och mängderna har aldrig testats som ' +
+          'en dos. Ingen vet om just den mängden ger bäst effekt, men siffran sprids ofta som ett recept.',
+        sources: [SOBERG_2021_FULL, SOBERG_HUBERMAN],
       },
       {
         text:
           'Søberg menar att man ska avsluta med kyla för att få större nytta, eftersom kroppen då själv måste ' +
           'producera värme efteråt.',
         evidence: 'asikt',
-        note: 'Ett råd som bygger på hur kroppen fungerar, inte en jämförande studie.',
-        sources: [
-          {
-            title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme',
-            url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health',
-          },
-          {
-            title: 'Søbergs egen text om kyla (Goodreads, författarblogg)',
-            url: 'https://www.goodreads.com/author_blog_posts/23271891-the-new-science-of-cold-exposure-reduce-stress-boost-immunity-increa?tab=book',
-          },
+        summary: [
+          'I samtalet med Andrew Huberman förklarar Søberg att kroppen fortsätter att svalna en stund efter att ' +
+            'man gått upp ur det kalla vattnet, eftersom blodet åter strömmar ut i den kalla huden. Kroppen får ' +
+            'då värma upp sig själv, bland annat genom att huttra, och huttringen sätter igång det bruna fettet.',
+          'Därför menar hon att man ska sluta med kyla och inte gå tillbaka in i bastun eller en varm dusch. ' +
+            'Hon beskriver det som att kroppen då tränar i flera timmar efteråt. Huberman kallar regeln ' +
+            'Søbergprincipen och säger att han själv brukar göra tvärtom.',
         ],
+        note: 'Ett råd som bygger på hur kroppen fungerar, inte en jämförande studie.',
+        sources: [SOBERG_HUBERMAN],
       },
       {
         text:
-          'En genomgång av andra forskare (Espeland m.fl. 2022) fann tecken på bättre insulinkänslighet och att ' +
-          'brunt fett aktiveras, men de flesta studierna var små.',
+          'En genomgång av andra forskare (Espeland m.fl. 2022) fann tecken på att kallbad minskar eller ' +
+          'omvandlar kroppsfett och förbättrar insulinkänsligheten, men de flesta studierna var små.',
         evidence: 'svagt',
+        summary: [
+          'Forskarna sökte i flera databaser efter studier om vad frivilliga bad i kallt vatten gör med hälsan ' +
+            'och fann 104 relevanta studier. Många visade tydliga effekter på kroppens funktioner och blodvärden. ' +
+            'En del gjordes på vana vinterbadare, andra på ovana personer eller på kallbad efter träning.',
+          'Kallbad verkar minska eller omvandla kroppsfett och förbättra insulinkänsligheten, vilket enligt ' +
+            'författarna kan skydda mot hjärt-kärlsjukdom och fetma. De beskriver också riskerna: köldchocken ' +
+            'höjer puls, andning och blodtryck och kopplas till rytmrubbningar och drunkning.',
+          'Om vinterbadare som grupp är friskare än andra är oklart, och författarna skriver att frågan kommer ' +
+            'att fortsätta diskuteras tills fler säkra studier finns.',
+        ],
         note:
           'Genomgången säger själv att små grupper, oftast ett kön och olika vattentemperatur gör det svårt att ' +
           'dra säkra slutsatser.',
         sources: [
           {
-            title: 'Espeland m.fl. 2022, hälsoeffekter av frivilliga kallbad (UiT)',
-            url: 'https://munin.uit.no/handle/10037/27902',
+            title: 'Espeland m.fl. 2022, hälsoeffekter av frivilliga kallbad (PubMed)',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/36137565/',
+          },
+          {
+            title: 'Samma genomgång, hela artikeln (PMC)',
+            url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9518606',
           },
         ],
       },
     ],
     startHere: [
       {
-        title: 'Boken Winter Swimming, 2022 (Booktopia)',
+        title: 'Boken Winter Swimming, 2022 (förlagets text hos bokhandeln Booktopia)',
         url: 'https://booktopia.com.au/winter-swimming-susanna-soberg/book/9781529417463.html',
+        summary: [
+          'Boken skildrar traditioner med kallt vatten i Skandinavien och andra delar av världen, med många bilder.',
+          'Søberg förklarar steg för steg vad köldchocken är och hur kroppen vänjer sig vid kallt vatten under en vintersäsong.',
+          'Hon beskriver hur blodomlopp, hjärta, lungor, hud, immunförsvar, ämnesomsättning och psykisk hälsa påverkas.',
+          'Hon förklarar särskilt hur det bruna fettet sätts igång av kylan.',
+          'Bakgrunden är hennes egen forskning om fettminskning genom vinterbad.',
+        ],
       },
-      {
-        title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme',
-        url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health',
-      },
+      SOBERG_HUBERMAN,
     ],
     warning: WARN_COLD,
   },
