@@ -1051,7 +1051,7 @@ export const PEOPLE: Person[] = [
           'För nybörjare föreslår han vipassana, en teknik från Theravada som han menar kan läras ut helt världsligt.',
           'Han beskriver mindfulness som en öppen uppmärksamhet på allt som dyker upp, behagligt eller obehagligt, utan att döma.',
           'Hans instruktion är att låta uppmärksamheten vila i känslan av andningen och gå tillbaka dit när en tanke har tagit över.',
-          'Han berättar att han i 20-årsåldern tillbringade två år på tysta retreater, från en vecka till tre månader långa.',
+          'Han berättar att han i 20-årsåldern tillbringade två år på tysta retreater som var från en vecka till tre månader långa.',
           'Han nämner tre böcker om vipassana, av Bhante Gunaratana, Joseph Goldstein och Jon Kabat-Zinn.',
         ],
       },
