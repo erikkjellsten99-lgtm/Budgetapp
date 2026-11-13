@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, type Ref } from 'react';
 import { larReducer, visiblePerson } from './larState';
-import { AREAS, EVIDENCE_LABEL, PEOPLE, type AreaId, type Claim, type Person, type Source } from './people';
+import { AREAS, EVIDENCE_LABEL, PEOPLE, type AreaId, type Claim, type Person, type Quote, type Source } from './people';
 import './lar.css';
 
 const areaLabel = (id: AreaId) => AREAS.find((a) => a.id === id)?.label ?? id;
@@ -41,6 +41,31 @@ function ClaimItem({ claim }: { claim: Claim }) {
       <p className="lar-sources-heading">{claim.sources.length === 1 ? 'Källa' : 'Källor'}</p>
       <Links sources={claim.sources} />
     </li>
+  );
+}
+
+/** Citat: ordagrant på originalspråket, svensk översättning och källa. Tom lista ger ingen sektion. */
+export function QuoteSection({ quotes }: { quotes: Quote[] }) {
+  if (quotes.length === 0) return null;
+  return (
+    <section className="card lar-section">
+      <h3>Citat</h3>
+      <div className="lar-quotes">
+        {quotes.map((q) => (
+          <figure key={q.text} className="lar-quote">
+            <blockquote lang="en">
+              <p>{q.text}</p>
+            </blockquote>
+            <p className="lar-quote-sv">
+              <span className="lar-quote-label">Översättning:</span> {q.sv}
+            </p>
+            <figcaption>
+              <SourceLink source={q.source} />
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -130,6 +155,7 @@ function PersonPage({
           ))}
         </ul>
       </section>
+      <QuoteSection quotes={person.quotes} />
       <section className="card lar-section">
         <h3>Påståenden</h3>
         <ul className="lar-claims">
