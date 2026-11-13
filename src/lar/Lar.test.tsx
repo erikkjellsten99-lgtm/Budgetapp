@@ -12,6 +12,12 @@ describe('Lär', () => {
     expect(cards(html)).toBe(8);
   });
 
+  it('personsidans rubrik kan få fokus och länkarna nämner ny flik', () => {
+    const html = renderToStaticMarkup(<Lar initialOpenId="wim-hof" />);
+    expect(html).toMatch(/<h2 tabindex="-1">Wim Hof<\/h2>/);
+    expect(html).toContain('(öppnas i ny flik)');
+  });
+
   it('filtret visar bara personer med området', () => {
     const html = renderToStaticMarkup(<Lar initialArea="meditation" />);
     const expected = PEOPLE.filter((p) => p.areas.includes('meditation')).length;

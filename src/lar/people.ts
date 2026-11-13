@@ -71,7 +71,7 @@ export const PEOPLE: Person[] = [
     about:
       'Wim Hof är en nederländsk utövare som blivit känd för att tåla extrem kyla. Han har byggt en metod av ' +
       'andning, kallbad och träget övande, och har låtit forskare mäta vad som händer i kroppen. ' +
-      'Han forskar inte själv, så hans egna löften är större än det studierna visar.',
+      'Han forskar inte själv, och hans egna löften går längre än studierna visar.',
     method: [
       'Andning i omgångar: kraftiga andetag in, avslappnat ut, och sedan en lång andhållning.',
       'Kyla: kalla duschar eller isbad som ökas långsamt.',
@@ -112,7 +112,7 @@ export const PEOPLE: Person[] = [
           'En systematisk genomgång av åtta studier om metoden fann tecken på mer adrenalin och lägre ' +
           'inflammation, men oklara effekter på träning och prestation.',
         evidence: 'svagt',
-        note: 'Författarna bedömde att studierna höll mycket låg kvalitet och att resultaten ska tolkas försiktigt.',
+        note: 'Författarna bedömde att studierna höll låg kvalitet och att resultaten ska tolkas försiktigt.',
         sources: [
           {
             title: 'Almahayni och Hammond 2024, systematisk genomgång i PLOS ONE (PMC)',
@@ -189,10 +189,10 @@ export const PEOPLE: Person[] = [
         text:
           'Vinterbadarna i studien låg i snitt ungefär 11 minuter i kallt vatten och satt ungefär 57 minuter i ' +
           'bastun per vecka.',
-        evidence: 'belagt',
+        evidence: 'svagt',
         note:
-          'Siffrorna beskriver vad de 8 vinterbadarna redan gjorde. Ingen har testat att just den mängden ger bäst ' +
-          'effekt, men siffran sprids ofta som ett recept.',
+          'Siffrorna beskriver vad de 8 vinterbadarna råkade göra, och mängderna har aldrig testats som en dos. ' +
+          'Ingen vet om just den mängden ger bäst effekt, men siffran sprids ofta som ett recept.',
         sources: [
           SOBERG_2021_FULL,
           {
@@ -220,8 +220,8 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'En genomgång av 104 studier om kallbad fann tecken på bättre insulinkänslighet och mindre kroppsfett, ' +
-          'men också att de flesta studierna var små.',
+          'En genomgång av andra forskare (Espeland m.fl. 2022) fann tecken på bättre insulinkänslighet och att ' +
+          'brunt fett aktiveras, men de flesta studierna var små.',
         evidence: 'svagt',
         note:
           'Genomgången säger själv att små grupper, oftast ett kön och olika vattentemperatur gör det svårt att ' +
@@ -629,7 +629,7 @@ export const PEOPLE: Person[] = [
           'tester fann en måttlig till stor effekt av sådana planer.',
         evidence: 'belagt',
         note:
-          'Idén och forskningen kommer från Peter Gollwitzer och Paschal Sheeran.',
+          'Idén kommer från Peter Gollwitzer, genomgången gjorde han med Paschal Sheeran.',
         sources: [
           {
             title: 'Gollwitzer och Sheeran 2006, genomgång om när och var-planer (Konstanz universitet)',
@@ -711,7 +711,7 @@ export const PEOPLE: Person[] = [
       'och författare och sammanfattar vad han lärt sig i återkommande avsnitt med lärdomar.',
     method: [
       'Långa intervjuer med forskare, författare och idrottare.',
-      'Var hundrade avsnitt går han igenom de lärdomar han tagit med sig.',
+      'I återkommande avsnitt går han igenom de lärdomar han tagit med sig.',
       'Han lånar gärna idéer från gästerna och säger varifrån de kommer.',
     ],
     claims: [

@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, type Ref } from 'react';
 import { larReducer, visiblePerson } from './larState';
 import { AREAS, EVIDENCE_LABEL, PEOPLE, type AreaId, type Person, type Source } from './people';
 import './lar.css';
@@ -12,6 +12,7 @@ function Links({ sources }: { sources: Source[] }) {
         <li key={s.url}>
           <a href={s.url} target="_blank" rel="noopener noreferrer">
             {s.title}
+            <span className="visually-hidden"> (öppnas i ny flik)</span>
           </a>
         </li>
       ))}
@@ -48,7 +49,15 @@ export function LarList({
   );
 }
 
-function PersonPage({ person, onBack }: { person: Person; onBack: () => void }) {
+function PersonPage({
+  person,
+  onBack,
+  headingRef,
+}: {
+  person: Person;
+  onBack: () => void;
+  headingRef?: Ref<HTMLHeadingElement>;
+}) {
   return (
     <article className="lar-person">
       <button type="button" className="lar-back" onClick={onBack}>
@@ -57,7 +66,9 @@ function PersonPage({ person, onBack }: { person: Person; onBack: () => void }) 
       <div className="view-intro">
         <div>
           <p className="eyebrow">{[person.kind, ...person.areas.map(areaLabel)].join(', ')}</p>
-          <h2>{person.name}</h2>
+          <h2 tabIndex={-1} ref={headingRef}>
+            {person.name}
+          </h2>
         </div>
       </div>
       <p className="lar-about">{person.about}</p>
@@ -102,11 +113,13 @@ export default function Lar({ initialArea, initialOpenId }: { initialArea?: Area
   const person = visiblePerson(state);
   const cards = useRef(new Map<string, HTMLButtonElement | null>());
   const from = useRef<string | null>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
   const shown = PEOPLE.filter((p) => state.area === 'alla' || p.areas.includes(state.area));
 
   useEffect(() => {
     if (person) {
       window.scrollTo(0, 0);
+      heading.current?.focus({ preventScroll: true });
     } else if (from.current) {
       cards.current.get(from.current)?.focus();
       from.current = null;
@@ -116,7 +129,7 @@ export default function Lar({ initialArea, initialOpenId }: { initialArea?: Area
   if (person)
     return (
       <div className="lar">
-        <PersonPage person={person} onBack={() => dispatch({ type: 'back' })} />
+        <PersonPage person={person} onBack={() => dispatch({ type: 'back' })} headingRef={heading} />
       </div>
     );
 

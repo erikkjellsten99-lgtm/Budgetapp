@@ -17,7 +17,8 @@
 3. Öppna fliken Nyheter en gång och kontrollera i serverloggarna att alla fyra SVT-flöden kom fram.
 4. ~~Lägg ut `reminders` med inbox-filerna~~ Klart: version 6 utlagd 2026-11-06, bootar och svarar 200 var 5:e minut.
    `inbox/health.ts` tappades av verktyget (sista filen, bara typer) och saknas på servern; följer med nästa gång.
-5. Öppna källänkarna i Lär från vanligt nät och byt sammanfattningssidor mot primärkällor.
+5. Öppna källänkarna i Lär från vanligt nät och byt sammanfattningssidor mot primärkällor. Tills det är gjort uppfyller innehållet inte regeln i
+   `src/lar/CLAUDE.md` att varje källa är öppnad och kontrollerad.
 
 ## Ekonomi
 - Fungerar: Översikt, Budget (månad för månad), Prognos med billån och extra på lånet, Sparmål (en uträkning i
@@ -62,7 +63,8 @@
   databas, ingen server.
 - Ej verifierat: källänkarna är kontrollerade via sökresultat, inte öppnade (molnmiljön blockerar sidorna). Öppna
   varje länk en gång från vanligt nät; några källor är sammanfattningssidor (rosetta.to, podscripts.co,
-  globalplayer.com, goodreads, booktopia, read.qxmd.com) och bör bytas mot primärkällor.
+  globalplayer.com, goodreads, booktopia, read.qxmd.com, Stanford-PDF för Tiny Habits, Publishers Weekly) och bör
+  bytas mot primärkällor. Laukkanen 2015 länkas via ScienceDaily i stället för PubMed eller JAMA.
 - Inte med (beslut): loggning av egna pass, flöde med nya avsnitt, Jarvis och Idag läser inte biblioteket, egna
   anteckningar.
 - Design och plan: `docs/superpowers/specs/2026-11-13-lar-design.md`, `docs/superpowers/plans/2026-11-13-lar.md`.

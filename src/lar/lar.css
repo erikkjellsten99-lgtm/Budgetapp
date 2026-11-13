@@ -2,7 +2,8 @@
 .lar-chips {
   display: flex;
   gap: 0.5rem;
-  margin: 0 0 1rem;
+  margin: -0.25rem 0 0.75rem;
+  padding-block: 0.25rem;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -154,4 +155,8 @@
   .lar-list {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.lar-person h2:focus {
+  outline: none;
 }
