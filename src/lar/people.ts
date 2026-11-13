@@ -19,8 +19,13 @@ export const EVIDENCE_LABEL: Record<Evidence, string> = {
   asikt: 'Egen åsikt',
 };
 
-export type Source = { title: string; url: string };
-export type Claim = { text: string; evidence: Evidence; note?: string; sources: Source[] };
+/** En källa. `summary` är bokens, artikelns eller avsnittets huvudpunkter (krävs för Börja här). */
+export type Source = { title: string; url: string; summary?: string[] };
+/**
+ * Ett påstående. `text` är rubriken på en rad, `summary` en sammanfattning i 2 till 4 stycken skriven från
+ * den öppnade källan, `note` förbehållet.
+ */
+export type Claim = { text: string; evidence: Evidence; summary?: string[]; note?: string; sources: Source[] };
 export type Person = {
   id: string;
   name: string;
@@ -56,6 +61,10 @@ const SOBERG_2021_FULL: Source = {
   title: 'Søberg m.fl. 2021, hela artikeln i Cell Reports Medicine (PMC)',
   url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8561167',
 };
+const ALMAHAYNI_2024: Source = {
+  title: 'Almahayni och Hammond 2024, systematisk genomgång av Wim Hof-metoden i PLOS ONE (PMC)',
+  url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10936795',
+};
 const LAUKKANEN_2015: Source = {
   title: 'Laukkanen m.fl. 2015, bastu och dödlighet i JAMA Internal Medicine (ScienceDaily)',
   url: 'https://sciencedaily.com/releases/2015/02/150223122602.htm',
@@ -84,6 +93,17 @@ export const PEOPLE: Person[] = [
           'träning. De tränade fick mer adrenalin i blodet, färre influensalika symtom och lägre inflammation när ' +
           'de fick ett ämne från bakterier som framkallar en tillfällig immunreaktion.',
         evidence: 'svagt',
+        summary: [
+          'Forskare vid Radboud universitetssjukhus i Nederländerna lottade 24 friska män i åldern 19 till 27 år ' +
+            'till två lika stora grupper. Tolv tränade i tio dagar meditation, andning med upprepad överandning ' +
+            'och andhållning samt kyla, bland annat bad i iskallt vatten. Tolv tränade inte alls.',
+          'Sedan fick alla en dos bakteriegift i blodet, som ger en kort inflammation och ' +
+            'influensaliknande symtom. Medan de tränade andades enligt metoden steg adrenalinet kraftigt. I deras blod ' +
+            'steg det inflammationsdämpande ämnet IL-10 snabbare och högre, och tre ämnen som driver ' +
+            'inflammation låg lägre.',
+          'En senare genomgång anger att IL-10 var 194 procent högre och att de tre ämnena var 51 till 57 ' +
+            'procent lägre än i gruppen som inte tränat. De tränade kände också mindre av symtomen.',
+        ],
         note:
           'Slumpad studie men liten, bara unga män och ett konstgjort test i labbet. Den visar inte att metoden ' +
           'skyddar mot sjukdom i vardagen.',
@@ -92,6 +112,7 @@ export const PEOPLE: Person[] = [
             title: 'Kox m.fl. 2014, frivillig påverkan på nervsystem och immunförsvar, PNAS (PubMed)',
             url: 'https://pubmed.ncbi.nlm.nih.gov/24799686/',
           },
+          ALMAHAYNI_2024,
         ],
       },
       {
@@ -99,7 +120,16 @@ export const PEOPLE: Person[] = [
           'När forskare testade Wim Hof själv dämpades immunreaktionen och han fick höga halter av stresshormoner, ' +
           'som om han själv kunde starta en kontrollerad stressreaktion.',
         evidence: 'svagt',
-        note: 'Fallstudie på en enda person. Forskarna skrev själva att större studier behövs.',
+        summary: [
+          'Forskarna gjorde två försök med Wim Hof. I det första låg han 80 minuter i is medan han använde sin ' +
+            'teknik för koncentration och meditation. Blod togs före och efter, och hans vita blodkroppar ' +
+            'utsattes för bakterieämne i provrör. Efter isbadet blev svaret kraftigt mindre, både av ämnen som ' +
+            'driver inflammation och av dämpande ämnen, och kortisolet var högt.',
+          'I det andra försöket fick han bakterieämnet direkt i blodet. Han fick mer adrenalin och liknande ' +
+            'hormoner, kortisolet blev högre än hos någon tidigare försöksperson, och både inflammationen och ' +
+            'symtomen var påfallande låga jämfört med 112 personer som tidigare gjort samma försök.',
+        ],
+        note: 'Fallstudie på en enda person, jämförd med tidigare försökspersoner som inte använde tekniken.',
         sources: [
           {
             title: 'Kox m.fl. 2012, fallstudie om koncentration och meditation, Psychosomatic Medicine (PubMed)',
@@ -112,15 +142,22 @@ export const PEOPLE: Person[] = [
           'En systematisk genomgång av åtta studier om metoden fann tecken på mer adrenalin och lägre ' +
           'inflammation, men oklara effekter på träning och prestation.',
         evidence: 'svagt',
-        note: 'Författarna bedömde att studierna höll låg kvalitet och att resultaten ska tolkas försiktigt.',
+        summary: [
+          'Två forskare sökte studier om Wim Hof-metoden publicerade från 2014 till juli 2022. Nio artiklar från ' +
+            'åtta försök kom med. Varje studie hade 15 till 48 deltagare, och 86,4 procent av alla deltagare var män.',
+          'Det tydligaste fyndet gällde inflammation. Andningen höjde adrenalinet, och det följdes av mer av det ' +
+            'dämpande ämnet IL-10 och mindre av ämnen som driver inflammation, både hos friska och hos patienter ' +
+            'med en inflammatorisk ryggsjukdom. När andningen gjordes före träning blev resultaten för prestation ' +
+            'och andning blandade.',
+          'Nästan alla de slumpade studierna bedömdes ha hög risk för snedvridning, bland annat för att deltagarna ' +
+            'visste vilken grupp de var i. Författarna vill se fler studier på personer med inflammatoriska sjukdomar.',
+        ],
+        note: 'Författarna bedömde att studierna höll mycket låg kvalitet och att alla resultat ska tolkas försiktigt.',
         sources: [
+          ALMAHAYNI_2024,
           {
-            title: 'Almahayni och Hammond 2024, systematisk genomgång i PLOS ONE (PMC)',
-            url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10936795',
-          },
-          {
-            title: 'Pressmeddelande om genomgången (EurekAlert)',
-            url: 'https://www.eurekalert.org/news-releases/1036707',
+            title: 'Samma genomgång hos tidskriften PLOS ONE',
+            url: 'https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0286933',
           },
         ],
       },
@@ -128,6 +165,15 @@ export const PEOPLE: Person[] = [
         text:
           'Wim Hof menar att den som övar regelbundet får mer energi, sover bättre och klarar stress bättre.',
         evidence: 'asikt',
+        summary: [
+          'På metodens egen sida beskrivs andningen så här: ungefär 30 djupa andetag, sedan håller man andan ' +
+            'efter sista utandningen tills kroppen själv vill andas, tar ett djupt andetag och håller det 10 till ' +
+            '15 sekunder. Omgången görs 3 till 4 gånger. Sidan säger att yrsel och stickningar är vanligt och att ' +
+            'man aldrig ska öva i vatten, i duschen eller när man kör bil.',
+          'För kylan föreslår sidan 30 sekunder kallt vatten i slutet av duschen och lite mer varje vecka. Med ' +
+            'tiden ska man enligt sidan vakna lättare, sova djupare och få jämnare energi. Den tredje delen, ' +
+            'tankesättet, handlar om att märka obehag utan att genast reagera.',
+        ],
         note: 'Det här är metodens egna löften. De har inte prövats i stora oberoende studier.',
         sources: [
           {
@@ -139,8 +185,15 @@ export const PEOPLE: Person[] = [
     ],
     startHere: [
       {
-        title: 'Boken The Wim Hof Method, 2020 (Sounds True)',
+        title: 'Boken The Wim Hof Method (förlaget Sounds True)',
         url: 'https://www.soundstrue.com/products/the-wim-hof-method-1',
+        summary: [
+          'Boken går igenom metodens tre delar: kyla, andning och tankesätt.',
+          'Andningsövningarna ska enligt förlaget ge energi och skärpa fokus.',
+          'Kylövningarna beskrivs som kontrollerade och utan chock för kroppen.',
+          'Den återger studier om metoden och berättelser från personer som använt den vid sjukdom.',
+          'Den berättar också Wim Hofs egen historia.',
+        ],
       },
     ],
     warning: WARN_BREATH_COLD,
