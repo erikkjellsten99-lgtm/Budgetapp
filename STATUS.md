@@ -59,8 +59,8 @@
   en ton.
 
 ## Lär (ny flik)
-- Fungerar: bibliotek med åtta personer (Wim Hof, Susanna Søberg, Jari Laukkanen, Andrew Huberman, Rhonda Patrick,
-  Jon Kabat-Zinn, James Clear, Chris Williamson), filter på område, sida per person med metod, påståenden märkta
+- Fungerar: bibliotek med nio personer (Wim Hof, Susanna Søberg, Jari Laukkanen, Andrew Huberman, Rhonda Patrick,
+  Jon Kabat-Zinn, Sam Harris, James Clear, Chris Williamson), filter på område, sida per person med metod, påståenden märkta
   Väl belagt / Svagt stöd / Egen åsikt, källänkar och varningsrad. Fast innehåll i `src/lar/people.ts`, ingen
   databas, ingen server.
 - Sammanfattningar (2026-11-13): varje påstående har 2 till 4 stycken skrivna från den öppnade källan, och varje
@@ -71,6 +71,13 @@
   Goodreads, QxMD, Stanford-PDF:en, EurekAlert, ScienceDaily och The Psychologist är borttagna eller utbytta mot
   PubMed, PMC, tidskriften, personens egen sajt eller tinyhabits.com. Påståendet om 66 dagar (James Clear) togs bort
   (ingen öppnad källa utanför hans sajt). Williamsons tre påståenden skrevs om efter hans egna nyhetsbrev.
+- Sam Harris (tillagd 2026-11-13, område Meditation): fem påståenden, fyra Egen åsikt och ett Väl belagt. Alla
+  hans sidor är öppnade (samharris.org: om honom, How to Meditate, essän om ett medvetande utan jag, bokens sida;
+  wakingup.com: startsidan, om appen, sidan om mindfulness, introduktionen, stipendier), och Goyal 2014 lästes
+  via NCBI:s gränssnitt. Ej verifierat: boken Waking Up är inte läst, bara bokens sida; de fem studier från 2010
+  och 2011 som han hänvisar till är bara kontrollerade till titel. Sidan om mindfulness är skriven av Waking Up
+  och tillskrivs appen, inte honom. Podden Making Sense är inte med i Börja här, eftersom sidan bara listar
+  avsnitt och de flesta inte handlar om meditation.
 - Ej verifierat: PubMed- och PMC-sidorna visar en webbläsarkontroll för skript, så posterna lästes via NCBI:s
   exportgränssnitt (MEDLINE) och PMC:s OAI-gränssnitt på samma värd, inte som sidor. Booktopia och Publishers
   Weekly är kvar för böckerna eftersom förlagens sidor inte gick att nå; böckerna själva är inte lästa.

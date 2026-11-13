@@ -9,7 +9,7 @@ describe('Lär', () => {
   it('visar rubriken och ett kort per person', () => {
     const html = renderToStaticMarkup(<Lar />);
     expect(html).toContain('>Lär</h2>');
-    expect(cards(html)).toBe(8);
+    expect(cards(html)).toBe(9);
   });
 
   it('personsidans rubrik kan få fokus och länkarna nämner ny flik', () => {
@@ -61,7 +61,7 @@ describe('Lär', () => {
 
   it('okänt id visar listan', () => {
     const html = renderToStaticMarkup(<Lar initialOpenId="finns-inte" />);
-    expect(cards(html)).toBe(8);
+    expect(cards(html)).toBe(9);
   });
 
   it('tom lista har en förklaring', () => {

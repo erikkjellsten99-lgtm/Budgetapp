@@ -8,6 +8,7 @@ const NAMES = [
   'Andrew Huberman',
   'Rhonda Patrick',
   'Jon Kabat-Zinn',
+  'Sam Harris',
   'James Clear',
   'Chris Williamson',
 ];
@@ -26,7 +27,7 @@ const words = (paras: string[]) => paras.join(' ').split(/\s+/).filter(Boolean).
 
 
 describe('Lär: innehållet', () => {
-  it('har exakt de åtta personerna', () => {
+  it('har exakt de nio personerna', () => {
     expect([...PEOPLE.map(p => p.name)].sort()).toEqual([...NAMES].sort());
   });
 
@@ -49,8 +50,8 @@ describe('Lär: innehållet', () => {
     for (const a of AREAS) for (const p of peopleIn(a.id)) expect(p.areas).toContain(a.id);
   });
 
-  it('peopleIn(alla) ger alla åtta', () => {
-    expect(peopleIn('alla')).toHaveLength(8);
+  it('peopleIn(alla) ger alla nio', () => {
+    expect(peopleIn('alla')).toHaveLength(9);
   });
 
   it('varje person har tillräckligt innehåll', () => {

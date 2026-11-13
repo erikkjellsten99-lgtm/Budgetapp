@@ -39,6 +39,7 @@ och bastu. Han vill lära sig mer av kända människor inom områdena, direkt i 
 | Andrew Huberman | Forskare och poddare | Andning och kyla, Kallbad och bastu |
 | Rhonda Patrick | Forskare och poddare | Kallbad och bastu |
 | Jon Kabat-Zinn | Forskare | Meditation |
+| Sam Harris | Författare och poddare | Meditation (tillagd 2026-11-13) |
 | James Clear | Författare | Personlig utveckling |
 | Chris Williamson | Poddare | Personlig utveckling |
 

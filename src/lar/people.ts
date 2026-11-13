@@ -865,6 +865,197 @@ export const PEOPLE: Person[] = [
     ],
   },
   {
+    id: 'sam-harris',
+    name: 'Sam Harris',
+    kind: 'Författare och poddare',
+    areas: ['meditation'],
+    teaser: 'Neuroforskaren som lär ut meditation utan religion i appen Waking Up.',
+    about:
+      'Sam Harris har en examen i filosofi från Stanford och en doktorsexamen i neurovetenskap från UCLA. Han ' +
+      'har mediterat i mer än 30 år och studerat för lärare från Tibet, Indien, Burma och västvärlden. Han har ' +
+      'skrivit fem bästsäljare på New York Times lista och leder podden Making Sense. Han skriver och föreläser ' +
+      'också om många andra ämnen. År 2018 grundade han meditationsappen Waking Up.',
+    method: [
+      'En introduktionskurs i appen Waking Up med en kort meditation och en kort lektion från honom varje dag i en månad.',
+      'En ny guidad meditation från honom varje dag, och en timer för den som vill sitta utan vägledning.',
+      'Teori vid sidan av övningen: föredrag och arkivinspelningar med kända lärare om filosofin bakom meditationen.',
+      'Vipassana, en teknik från den äldsta grenen av buddhismen som han menar går att lära ut helt världsligt.',
+    ],
+    claims: [
+      {
+        text:
+          'Han menar att mindfulness är en färdighet i uppmärksamhet som går att träna utan att tro på något, ' +
+          'och han föreslår vipassana för nybörjare.',
+        evidence: 'asikt',
+        summary: [
+          'I sin text om hur man mediterar skriver Harris att många av hans läsare oroar sig för att meditation ' +
+            'kräver religiös tro. Han menar att det finns metoder som kan öka välbefinnandet utan att man behöver ' +
+            'tro på något utan tillräckliga skäl.',
+          'Vipassana betyder insikt och kommer från Theravada, den äldsta grenen av buddhismen. Fördelen är enligt ' +
+            'honom att den kan läras ut helt världsligt. Mindfulness beskriver han som en öppen uppmärksamhet på ' +
+            'allt som dyker upp i medvetandet, behagligt eller obehagligt, utan att döma och utan att fastna i ' +
+            'tankar om det.',
+          'Han skriver att övningen är mycket enkel att beskriva men inte alls lätt, och att verklig skicklighet ' +
+            'kanske kräver talang och ett helt liv. Hans app Waking Up beskriver sig som världslig, utan krav på tro.',
+        ],
+        sources: [
+          {
+            title: 'Sam Harris om hur man mediterar (samharris.org, 2011)',
+            url: 'https://www.samharris.org/blog/how-to-meditate',
+          },
+          {
+            title: 'Waking Up, frågor och svar på startsidan',
+            url: 'https://www.wakingup.com/',
+          },
+        ],
+      },
+      {
+        text:
+          'Han menar att problemet inte är tankarna utan att tänka utan att veta om att man tänker, och att ' +
+          'meditation tränar förmågan att se en tanke som just en tanke.',
+        evidence: 'asikt',
+        summary: [
+          'Harris liknar mindfulness vid att gå på lina. Att falla är att försvinna in i tankar, och det händer ' +
+            'enligt honom hela tiden, i glada dagdrömmar lika väl som i rädsla, ilska och självförakt. Han menar ' +
+            'att det är sinnets normala tillstånd.',
+          'Hans instruktion går ut på att sitta bekvämt med rak rygg, blunda och låta uppmärksamheten vila i ' +
+            'känslan av andningen, vid näsan eller i magen, utan att styra den. Ljud, känslor i kroppen och andra ' +
+            'intryck får komma och gå. När den som mediterar märker att den har tappat bort sig i en tanke blir ' +
+            'själva tanken något att iaktta, och sedan går uppmärksamheten tillbaka till andningen.',
+          'Waking Up beskriver samma sak: meditation tränar uppmärksamheten genom att lägga märke till tankarna ' +
+            'när de kommer och går, utan att döma eller reagera.',
+        ],
+        sources: [
+          {
+            title: 'Sam Harris om hur man mediterar (samharris.org, 2011)',
+            url: 'https://www.samharris.org/blog/how-to-meditate',
+          },
+          {
+            title: 'Waking Up om mindfulness och meditation',
+            url: 'https://www.wakingup.com/topic/understanding-mindfulness-and-meditation',
+          },
+        ],
+      },
+      {
+        text:
+          'Han menar att känslan av ett jag som sitter bakom ögonen är en illusion, och att den med träning i ' +
+          'meditation går att se igenom.',
+        evidence: 'asikt',
+        summary: [
+          'Harris skriver att både hjärnforskningen och flera kontemplativa traditioner ger skäl att se den ' +
+            'vanliga känslan av ett jag som en sorts kognitiv illusion. Det finns enligt honom inget avgränsat jag ' +
+            'i hjärnan och inget område som har en särskild ställning för vår person.',
+          'Ändå känns det för de flesta som om de färdas runt inuti kroppen. Han jämför med den blinda fläcken i ' +
+            'synfältet, som alltid finns där men sällan märks. På samma sätt krävs det för de flesta mycket ' +
+            'träning i meditation för att märka att det som är medvetet inte känns som ett jag.',
+          'På bokens sida skriver han att känslan av att titta ut bakom ögonen kan förändras eller försvinna ' +
+            'helt, och att det är en klarare förståelse av hur saker är.',
+        ],
+        note: 'Han beskriver egna upplevelser och en tolkning av forskningen. Det är en tankegång, inte en studie.',
+        sources: [
+          {
+            title: 'Sam Harris om ett medvetande utan jag (samharris.org, 2007)',
+            url: 'https://www.samharris.org/blog/selfless-consciousness-without-faith',
+          },
+          {
+            title: 'Boken Waking Up (bokens sida på samharris.org)',
+            url: 'https://www.samharris.org/books/waking-up',
+          },
+        ],
+      },
+      {
+        text:
+          'Han menar att meditation är till för mer än att minska stress: att förstå sitt eget sinne och vakna ' +
+          'ur vanan att tänka utan uppehåll.',
+        evidence: 'asikt',
+        summary: [
+          'Harris skriver att målet är att vakna ur tänkandets trans och ur vanan att gripa efter det behagliga ' +
+            'och dra sig undan det obehagliga, så att sinnet blir öppet och ostört av oro. Fördelarna kommer ' +
+            'enligt honom långt innan man blivit skicklig.',
+          'Hans app Waking Up skriver att många tror att meditation främst handlar om att bli lugnare, men att ' +
+            'målet är att förstå sinnet. Den som ser att tankarna är tillfälliga får enligt appen mer utrymme ' +
+            'mellan det som händer och reaktionen, och lidandet beskrivs som något som kommer ur tolkningen av ' +
+            'händelser snarare än ur händelserna själva.',
+          'I en äldre essä skriver han att alla söker lycka i en tillvaro som inte går att lita på, och att det ' +
+            'kontemplativa livet har viktiga insikter om hur lycklig man kan bli.',
+        ],
+        sources: [
+          {
+            title: 'Sam Harris om hur man mediterar (samharris.org, 2011)',
+            url: 'https://www.samharris.org/blog/how-to-meditate',
+          },
+          {
+            title: 'Waking Up om mindfulness och meditation',
+            url: 'https://www.wakingup.com/topic/understanding-mindfulness-and-meditation',
+          },
+          {
+            title: 'Sam Harris om ett medvetande utan jag (samharris.org, 2007)',
+            url: 'https://www.samharris.org/blog/selfless-consciousness-without-faith',
+          },
+        ],
+      },
+      {
+        text:
+          'Han skriver att mindfulness kan dämpa smärta, ångest och nedstämdhet. En stor genomgång av 47 ' +
+          'slumpade studier fann små till måttliga förbättringar för just de tre.',
+        evidence: 'belagt',
+        summary: [
+          'I sin text från 2011 skriver Harris att mindfulness har visats påverka smärta, minska ångest och ' +
+            'nedstämdhet, förbättra tankeförmågan och förändra den grå substansen i delar av hjärnan. Han ' +
+            'hänvisar till en enskild studie för varje effekt.',
+          'En genomgång i JAMA Internal Medicine 2014 gick igenom 18 753 träffar och tog med 47 slumpade studier ' +
+            'med sammanlagt 3 515 vuxna, alla med en aktiv kontrollgrupp. Program med mindfulness gav måttligt ' +
+            'säkra förbättringar av ångest, nedstämdhet och smärta, och mindre säkra av stress och psykisk ' +
+            'livskvalitet.',
+          'För uppmärksamhet, positiva känslor, sömn, missbruk, matvanor och vikt fanns ingen eller för lite ' +
+            'effekt, och det fanns inga belägg för att meditation var bättre än annan aktiv behandling som ' +
+            'läkemedel, motion eller beteendeterapi.',
+        ],
+        note:
+          'Genomgången stöder smärta, ångest och nedstämdhet men inte hans uppgifter om tankeförmåga och grå ' +
+          'substans. De fem studier han hänvisar till är inte granskade här.',
+        sources: [
+          {
+            title: 'Sam Harris om hur man mediterar (samharris.org, 2011)',
+            url: 'https://www.samharris.org/blog/how-to-meditate',
+          },
+          {
+            title: 'Goyal m.fl. 2014, meditation och stress, JAMA Internal Medicine (PubMed)',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/24395196/',
+          },
+          {
+            title: 'Samma genomgång, hela artikeln (PMC)',
+            url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4142584',
+          },
+        ],
+      },
+    ],
+    startHere: [
+      {
+        title: 'Boken Waking Up, 2014 (bokens sida på samharris.org)',
+        url: 'https://www.samharris.org/books/waking-up',
+        summary: [
+          'Harris skriver att han velat skriva boken i mer än tio år, eftersom han länge intresserat sig för medvetandet och för andliga upplevelser.',
+          'Han vill visa att en viss sorts andlighet hör till att förstå hur sinnet fungerar.',
+          'Han menar att det inte finns något avgränsat jag i hjärnan, och att känslan av ett jag kan förändras eller försvinna.',
+          'Syftet är att ge läsaren en klar bild av problemet och verktyg att lösa det själv.',
+          'Psykologen Paul Bloom beskriver på samma sida boken som en memoar, en utforskning av jaget och en vägledning i att meditera.',
+        ],
+      },
+      {
+        title: 'Appen Waking Up (wakingup.com)',
+        url: 'https://www.wakingup.com/',
+        summary: [
+          'Nybörjare börjar med en introduktionskurs som blandar daglig meditation med korta lektioner om teorin bakom.',
+          'Varje dag finns en ny guidad meditation från Harris, och en timer för den som vill sitta utan vägledning.',
+          'Appen beskriver sig som världslig, och ingen tro krävs.',
+          'Förutom Harris finns över 100 lärare och mer än 600 timmar ljud, bland annat om zen, vipassana och stoicism.',
+          'Appen är ett betalt årsabonnemang efter en gratis provperiod, och enligt sidan kan den som inte har råd få ett gratis medlemskap.',
+        ],
+      },
+    ],
+  },
+  {
     id: 'james-clear',
     name: 'James Clear',
     kind: 'Författare',
