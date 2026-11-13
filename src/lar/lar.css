@@ -1,0 +1,157 @@
+/* Lär, vardagsrummet. Bara tokens, inga egna färger. */
+.lar-chips {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lar-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.lar-list {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr;
+}
+
+.lar-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 1rem;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lar-card:focus-visible,
+.lar-back:focus-visible,
+.lar-person a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.lar-card-name {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.lar-kind {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.lar-teaser {
+  line-height: 1.45;
+}
+
+.lar-back {
+  min-height: 2.75rem;
+  margin: 0 0 0.5rem;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lar-about {
+  margin: 0 0 1rem;
+  line-height: 1.55;
+}
+
+.lar-warning {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-left: 4px solid var(--lingon);
+  border-radius: var(--radius-control);
+  background: var(--danger-soft);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.lar-section h3 {
+  display: block;
+  min-height: 0;
+  padding: 1rem 1rem 0;
+}
+
+.lar-method,
+.lar-claims,
+.lar-links {
+  margin: 0;
+  padding: 0.5rem 1rem 1rem 2.25rem;
+  line-height: 1.5;
+}
+
+.lar-claims {
+  padding-left: 1rem;
+  list-style: none;
+}
+
+.lar-claim {
+  padding: 0.75rem 0;
+}
+
+.lar-claim + .lar-claim {
+  border-top: 1px solid var(--line);
+}
+
+.lar-claim p {
+  margin: 0.4rem 0 0;
+}
+
+.lar-claim .lar-links {
+  padding: 0.25rem 0 0 1.25rem;
+}
+
+.lar-note {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.lar-evidence {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.lar-evidence.belagt {
+  border: 2px solid var(--pine);
+  color: var(--pine);
+}
+
+.lar-evidence.svagt {
+  border-style: dashed;
+}
+
+.lar-evidence.asikt {
+  border-color: var(--ink);
+  color: var(--ink);
+  font-style: italic;
+}
+
+.lar-person a {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 900px) {
+  .lar-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
