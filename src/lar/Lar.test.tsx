@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import Lar, { LarList } from './Lar';
+import Lar, { LarList, QuoteSection } from './Lar';
 import { EVIDENCE_LABEL, PEOPLE } from './people';
 
 const cards = (html: string) => (html.match(/class="card lar-card"/g) ?? []).length;
@@ -9,7 +9,7 @@ describe('Lär', () => {
   it('visar rubriken och ett kort per person', () => {
     const html = renderToStaticMarkup(<Lar />);
     expect(html).toContain('>Lär</h2>');
-    expect(cards(html)).toBe(8);
+    expect(cards(html)).toBe(9);
   });
 
   it('personsidans rubrik kan få fokus och länkarna nämner ny flik', () => {
@@ -39,9 +39,56 @@ describe('Lär', () => {
     }
   });
 
+  it('personsidan visar sammanfattning, källrubrik och huvudpunkter för Börja här utan klick', () => {
+    const person = PEOPLE.find((p) => p.id === 'wim-hof')!;
+    const html = renderToStaticMarkup(<Lar initialOpenId={person.id} />);
+    const esc = (t: string) => renderToStaticMarkup(<>{t}</>);
+    expect(html).toContain(`<p>${esc(person.claims[0].summary[0])}</p>`);
+    expect(html).toContain(`<li>${esc(person.startHere[0].summary![0])}</li>`);
+    expect(html).toContain(`<h4 class="lar-claim-text">${esc(person.claims[0].text)}</h4>`);
+    expect(html).toMatch(/<p class="lar-sources-heading">Källor?<\/p>/);
+    expect(html).not.toContain('<details');
+  });
+
+  it('källrubriken är Källa för en källa och Källor för flera', () => {
+    for (const p of PEOPLE) {
+      const html = renderToStaticMarkup(<Lar initialOpenId={p.id} />);
+      const headings = html.match(/<p class="lar-sources-heading">([^<]*)<\/p>/g) ?? [];
+      expect(headings.length, p.name).toBe(p.claims.length);
+      p.claims.forEach((c, i) => expect(headings[i], c.text).toContain(c.sources.length === 1 ? '>Källa<' : '>Källor<'));
+    }
+  });
+
+  it('personsidan visar citat med originalspråk, översättning och källa mellan metod och påståenden', () => {
+    const person = PEOPLE.find((p) => p.id === 'sam-harris')!;
+    expect(person.quotes.length).toBeGreaterThan(0);
+    const html = renderToStaticMarkup(<Lar initialOpenId={person.id} />);
+    const esc = (t: string) => renderToStaticMarkup(<>{t}</>);
+    expect(html).toContain('>Citat</h3>');
+    expect(html).toContain('<blockquote lang="en">');
+    expect(html).toContain('Översättning:');
+    expect(html).toContain(esc(person.quotes[0].text));
+    expect(html).toContain(esc(person.quotes[0].sv));
+    expect(html).toMatch(/<figcaption><a [^>]*href="https:/);
+    const order = ['>Metod</h3>', '>Citat</h3>', '>Påståenden</h3>'].map((h) => html.indexOf(h));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
+  it('varje person med citat får en citatsektion', () => {
+    for (const p of PEOPLE) {
+      const html = renderToStaticMarkup(<Lar initialOpenId={p.id} />);
+      expect(html.includes('>Citat</h3>'), p.name).toBe(p.quotes.length > 0);
+      expect((html.match(/<figure /g) ?? []).length, p.name).toBe(p.quotes.length);
+    }
+  });
+
+  it('citatsektionen visas inte utan citat', () => {
+    expect(renderToStaticMarkup(<QuoteSection quotes={[]} />)).toBe('');
+  });
+
   it('okänt id visar listan', () => {
     const html = renderToStaticMarkup(<Lar initialOpenId="finns-inte" />);
-    expect(cards(html)).toBe(8);
+    expect(cards(html)).toBe(9);
   });
 
   it('tom lista har en förklaring', () => {

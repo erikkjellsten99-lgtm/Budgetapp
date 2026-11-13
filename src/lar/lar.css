@@ -101,7 +101,7 @@
 }
 
 .lar-claim {
-  padding: 0.75rem 0;
+  padding: 1rem 0 1.1rem;
 }
 
 .lar-claim + .lar-claim {
@@ -112,13 +112,120 @@
   margin: 0.4rem 0 0;
 }
 
-.lar-claim .lar-links {
-  padding: 0.25rem 0 0 1.25rem;
+/* Rubriken på påståendet, sedan sammanfattningen i vanlig lässtorlek. */
+.lar-claim-text {
+  margin: 0.4rem 0 0;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.lar-summary p {
+  margin-top: 0.6rem;
+  line-height: 1.6;
 }
 
 .lar-note {
+  margin-top: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--line);
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.lar-claim .lar-sources-heading {
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.lar-claim .lar-links {
+  padding: 0.2rem 0 0 1.25rem;
+  font-size: 0.9rem;
+}
+
+/* Citat: originalet avskilt med en linje i kontrastfärgen, översättning och källa under. */
+.lar-quotes {
+  padding: 0.25rem 1rem 1rem;
+}
+
+.lar-quote {
+  margin: 0;
+  padding: 0.85rem 0;
+}
+
+.lar-quote + .lar-quote {
+  border-top: 1px solid var(--line);
+}
+
+.lar-quote blockquote {
+  margin: 0;
+  padding: 0.1rem 0 0.1rem 0.9rem;
+  border-left: 3px solid var(--cobalt);
+}
+
+.lar-quote blockquote p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+
+.lar-quote-sv {
+  margin: 0.55rem 0 0;
+  padding-left: calc(0.9rem + 3px);
+  line-height: 1.55;
+}
+
+.lar-quote-label {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.lar-quote figcaption {
+  margin-top: 0.4rem;
+  padding-left: calc(0.9rem + 3px);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+/* Börja här: titel som länk och huvudpunkterna under. */
+.lar-start {
+  margin: 0;
+  padding: 0.25rem 1rem 1rem;
+  list-style: none;
+  line-height: 1.5;
+}
+
+.lar-start-item {
+  padding: 0.75rem 0;
+  border-top: 0;
+}
+
+.lar-start-item + .lar-start-item {
+  border-top: 1px solid var(--line);
+}
+
+.lar-start-item > a {
+  font-weight: 600;
+}
+
+.lar-points {
+  margin: 0.4rem 0 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.lar-points li {
+  border-top: 0;
+}
+
+.lar-points li + li {
+  margin-top: 0.3rem;
 }
 
 .lar-evidence {

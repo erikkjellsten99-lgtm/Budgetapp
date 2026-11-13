@@ -8,6 +8,7 @@ const NAMES = [
   'Andrew Huberman',
   'Rhonda Patrick',
   'Jon Kabat-Zinn',
+  'Sam Harris',
   'James Clear',
   'Chris Williamson',
 ];
@@ -22,8 +23,11 @@ const FORBIDDEN = /["”—–]/;
 
 const hostOf = (url: string) => new URL(url).hostname.replace(/^www\./, '');
 
+const words = (paras: string[]) => paras.join(' ').split(/\s+/).filter(Boolean).length;
+
+
 describe('Lär: innehållet', () => {
-  it('har exakt de åtta personerna', () => {
+  it('har exakt de nio personerna', () => {
     expect([...PEOPLE.map(p => p.name)].sort()).toEqual([...NAMES].sort());
   });
 
@@ -46,8 +50,8 @@ describe('Lär: innehållet', () => {
     for (const a of AREAS) for (const p of peopleIn(a.id)) expect(p.areas).toContain(a.id);
   });
 
-  it('peopleIn(alla) ger alla åtta', () => {
-    expect(peopleIn('alla')).toHaveLength(8);
+  it('peopleIn(alla) ger alla nio', () => {
+    expect(peopleIn('alla')).toHaveLength(9);
   });
 
   it('varje person har tillräckligt innehåll', () => {
@@ -81,10 +85,12 @@ describe('Lär: innehållet', () => {
         p.teaser,
         p.about,
         ...p.method,
-        ...p.claims.flatMap(c => [c.text, c.note ?? '']),
+        ...p.claims.flatMap(c => [c.text, c.note ?? '', ...c.summary]),
         p.warning ?? '',
         ...p.claims.flatMap(c => c.sources.map(s => s.title)),
-        ...p.startHere.map(s => s.title),
+        ...p.startHere.flatMap(s => [s.title, ...(s.summary ?? [])]),
+        // Citatets text står som på sidan och är undantagen; översättning och källtitel följer regeln.
+        ...p.quotes.flatMap(q => [q.sv, q.source.title]),
       ];
       for (const t of texts) expect(t, `${p.name}: ${t}`).not.toMatch(FORBIDDEN);
     }
@@ -115,6 +121,74 @@ describe('Lär: innehållet', () => {
       for (const c of p.claims) {
         if (c.evidence === 'svagt') expect(c.note?.trim().length ?? 0, c.text).toBeGreaterThan(0);
       }
+    }
+  });
+
+  it('varje påstående har en sammanfattning på 2 till 4 stycken och 60 till 140 ord', () => {
+    for (const p of PEOPLE) {
+      for (const c of p.claims) {
+        const sum = c.summary;
+        expect(sum.length, `${p.name}: ${c.text}`).toBeGreaterThanOrEqual(2);
+        expect(sum.length, `${p.name}: ${c.text}`).toBeLessThanOrEqual(4);
+        for (const para of sum) expect(para.trim().length, c.text).toBeGreaterThan(0);
+        const n = words(sum);
+        expect(n, `${p.name}: ${c.text} (${n} ord)`).toBeGreaterThanOrEqual(60);
+        expect(n, `${p.name}: ${c.text} (${n} ord)`).toBeLessThanOrEqual(140);
+      }
+    }
+  });
+
+  it('ingen sammanfattning upprepar rubriken eller noten ordagrant', () => {
+    for (const p of PEOPLE) {
+      for (const c of p.claims) {
+        for (const para of c.summary) {
+          expect(para.trim(), c.text).not.toBe(c.text.trim());
+          if (c.note) expect(para.trim(), c.text).not.toBe(c.note.trim());
+        }
+      }
+    }
+  });
+
+  it('varje Börja här har 3 till 5 huvudpunkter på en mening var', () => {
+    for (const p of PEOPLE) {
+      for (const s of p.startHere) {
+        const pts = s.summary ?? [];
+        expect(pts.length, `${p.name}: ${s.title}`).toBeGreaterThanOrEqual(3);
+        expect(pts.length, `${p.name}: ${s.title}`).toBeLessThanOrEqual(5);
+        for (const pt of pts) {
+          expect(pt.trim().length, s.title).toBeGreaterThan(0);
+          // En mening: slutar med punkt och har ingen punkt följd av mellanslag och versal inuti.
+          expect(pt, s.title).toMatch(/\.$/);
+          expect(pt.slice(0, -1), s.title).not.toMatch(/\. [A-ZÅÄÖ]/);
+        }
+      }
+    }
+  });
+
+  it('varje citat har text på högst 40 ord, översättning och https-källa med titel', () => {
+    for (const p of PEOPLE) {
+      expect(p.quotes.length, p.name).toBeGreaterThanOrEqual(2);
+      expect(p.quotes.length, p.name).toBeLessThanOrEqual(4);
+      for (const q of p.quotes) {
+        const n = q.text.trim().split(/\s+/).filter(Boolean).length;
+        expect(n, `${p.name}: ${q.text}`).toBeGreaterThan(0);
+        expect(n, `${p.name}: ${q.text} (${n} ord)`).toBeLessThanOrEqual(40);
+        expect(q.sv.trim().length, `${p.name}: ${q.text}`).toBeGreaterThan(0);
+        expect(q.source.url, `${p.name}: ${q.text}`).toMatch(/^https:\/\//);
+        expect(q.source.title.trim().length, `${p.name}: ${q.text}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('citat börjar och slutar inte med citattecken och upprepas inte', () => {
+    const QUOTE_MARK = /^["“”'‘’]|["“”'‘’]$/;
+    for (const p of PEOPLE) {
+      for (const q of p.quotes) {
+        expect(q.text.trim(), `${p.name}: ${q.text}`).not.toMatch(QUOTE_MARK);
+        expect(q.text, `${p.name}: ${q.text}`).toBe(q.text.trim());
+      }
+      const texts = p.quotes.map(q => q.text);
+      expect(new Set(texts).size, p.name).toBe(texts.length);
     }
   });
 

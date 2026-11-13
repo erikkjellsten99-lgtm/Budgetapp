@@ -1,6 +1,8 @@
 // Lär: fast innehåll om personer inom andning, kyla, bastu, meditation och personlig utveckling.
-// Inga citat, bara sammanfattningar med egna ord. Varje påstående har märkning och minst en https-källa
-// som kontrollerats på nätet när den skrevs in. Regler: se CLAUDE.md i den här mappen.
+// Sammanfattningar med egna ord. Varje påstående har märkning, en sammanfattning skriven från den öppnade
+// källan och minst en https-källa som öppnats och kontrollerats (2026-11-13). Citat finns bara i `quotes`:
+// ordagrant från en öppnad sida, personens egna ord, kontrollerade mot den sparade sidtexten.
+// Regler: se CLAUDE.md i den här mappen.
 
 export type AreaId = 'andning' | 'kallbad' | 'meditation' | 'utveckling';
 
@@ -19,8 +21,18 @@ export const EVIDENCE_LABEL: Record<Evidence, string> = {
   asikt: 'Egen åsikt',
 };
 
-export type Source = { title: string; url: string };
-export type Claim = { text: string; evidence: Evidence; note?: string; sources: Source[] };
+/** En källa. `summary` är bokens, artikelns eller avsnittets huvudpunkter (krävs för Börja här). */
+export type Source = { title: string; url: string; summary?: string[] };
+/**
+ * Ett påstående. `text` är rubriken på en rad, `summary` en sammanfattning i 2 till 4 stycken skriven från
+ * den öppnade källan, `note` förbehållet.
+ */
+export type Claim = { text: string; evidence: Evidence; summary: string[]; note?: string; sources: Source[] };
+/**
+ * Ett citat. `text` står ordagrant som på sidan i `source`, på originalspråket (engelska), utan omgivande
+ * citattecken och högst 40 ord. `sv` är en trogen svensk översättning.
+ */
+export type Quote = { text: string; sv: string; source: Source };
 export type Person = {
   id: string;
   name: string;
@@ -29,6 +41,7 @@ export type Person = {
   teaser: string;
   about: string;
   method: string[];
+  quotes: Quote[];
   claims: Claim[];
   startHere: Source[];
   warning?: string;
@@ -56,9 +69,78 @@ const SOBERG_2021_FULL: Source = {
   title: 'Søberg m.fl. 2021, hela artikeln i Cell Reports Medicine (PMC)',
   url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8561167',
 };
+const SOBERG_HUBERMAN: Source = {
+  title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme',
+  url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health',
+  summary: [
+    'Søberg, som disputerade vid Köpenhamns universitet, berättar om sin forskning om hur kyla och värme påverkar ämnesomsättningen.',
+    'De går igenom hur kyla och bastu kan påverka ämnesomsättning, hjärta, hjärna, hormoner och inflammation.',
+    'Hon räknar fram att vinterbadarna i hennes studie kom upp i 11 minuter kallt vatten och 57 minuter bastu i veckan.',
+    'Hon förklarar Søbergprincipen, att avsluta med kyla så att kroppen själv måste värma upp sig.',
+    'De jämför kalla duschar med bad i kallt vatten och vanlig bastu med infraröd.',
+  ],
+};
+const HUBERMAN_COLD: Source = {
+  title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)',
+  url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance',
+  summary: [
+    'Han sätter säkerheten först: aldrig farligt vatten, aldrig överandning före eller i vattnet, och hellre för varmt än för kallt i början.',
+    'Han beskriver rätt temperatur som så kall att man vill upp men säkert kan stanna, och skriver att ju kallare vattnet är desto kortare tid behövs.',
+    'Han skriver att kyla frisätter adrenalin, noradrenalin och dopamin och att det ger mer energi, fokus och bättre humör efteråt.',
+    'Hans protokoll är 11 minuter i veckan fördelat på 2 till 4 korta pass, och att avsluta med kyla enligt Søbergprincipen.',
+    'Han skriver att kallbad inom ungefär fyra timmar efter träning kan minska vinsten av träningen och att kyla sent på dagen kan störa sömnen.',
+  ],
+};
+const FMF_COLD: Source = {
+  title: 'FoundMyFitness: kallbad, kylbehandling och noradrenalin',
+  url: 'https://foundmyfitness.com/episodes/cold-shock-norepinephrine',
+  summary: [
+    'Sidan förklarar hur kallbad och kylbehandling ger en kraftig frisättning av noradrenalin.',
+    'Den beskriver kyla som hormesis, en mild stress som förbereder kroppen för större påfrestningar.',
+    'Den tar upp möjliga effekter på blodsocker, blodfetter, inflammation, tankeförmåga och immunförsvar.',
+    'Den jämför olika doser, från en timme i 14 grader till 20 sekunder i ungefär 4 grader.',
+    'Den påpekar att forskningen är ung och att kyla har risker, särskilt utan tillsyn.',
+  ],
+};
+const ATOMIC_SUMMARY: Source = {
+  title: 'Sammanfattning av Atomic Habits (jamesclear.com)',
+  url: 'https://jamesclear.com/atomic-habits-summary',
+  summary: [
+    'Boken menar att små förbättringar varje dag växer som ränta på ränta, och att en procent bättre om dagen i ett år blir ungefär 37 gånger bättre.',
+    'Clear menar att systemet, alltså de vanor och processer som leder dit, betyder mer än själva målen.',
+    'Han menar att vanor som bygger på identitet håller bäst, och kallar varje handling en röst för den person man vill bli.',
+    'En vana har enligt boken fyra steg: signal, begär, handling och belöning.',
+    'De fyra lagarna för nya vanor är att göra dem synliga, lockande, lätta och tillfredsställande.',
+  ],
+};
+const MW_CLEAR: Source = {
+  title: 'Modern Wisdom #064: James Clear om vanor som håller',
+  url: 'https://chriswillx.com/064-james-clear-how-to-build-habits-that-last/',
+  summary: [
+    'Chris Williamson intervjuar James Clear om boken Atomic Habits, som han kallar sin mest rekommenderade bok 2019.',
+    'Avsnittet handlar om hur man bygger nya vanor och bryter gamla.',
+    'Utgångspunkten är att framgång och misslyckande är eftersläpande mått på det man gör varje dag, och att vanorna styr de handlingarna.',
+    'De pratar också om hur man hittar sin passion och kopplar den till ett syfte.',
+  ],
+};
+const ALMAHAYNI_2024: Source = {
+  title: 'Almahayni och Hammond 2024, systematisk genomgång av Wim Hof-metoden i PLOS ONE (PMC)',
+  url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10936795',
+};
 const LAUKKANEN_2015: Source = {
-  title: 'Laukkanen m.fl. 2015, bastu och dödlighet i JAMA Internal Medicine (ScienceDaily)',
-  url: 'https://sciencedaily.com/releases/2015/02/150223122602.htm',
+  title: 'Laukkanen m.fl. 2015, bastu och dödlighet, JAMA Internal Medicine (PubMed)',
+  url: 'https://pubmed.ncbi.nlm.nih.gov/25705824/',
+};
+const FMF_LAUKKANEN: Source = {
+  title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu',
+  url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen',
+  summary: [
+    'Laukkanen berättar om studien där över 2 300 medelålders män i östra Finland följdes i ungefär 20 år.',
+    'Män som bastade 2 till 3 gånger i veckan hade 27 procent lägre dödlighet i hjärt-kärlsjukdom än de som bastade en gång, och de som bastade 4 till 7 gånger hade 50 procent lägre.',
+    'För död av alla orsaker var skillnaden 24 och 40 procent, och för Alzheimers ungefär 65 procent i gruppen som bastade oftast.',
+    'I avsnittet säger Laukkanen att minst 20 minuter i 79 grader 4 till 7 gånger i veckan var det läge som hängde ihop med lägst risk i de finska sambandsstudierna.',
+    'De pratar om möjliga förklaringar som lägre blodtryck och värmechockproteiner, och Laukkanen varnar för kallbad efter bastun för den som har ett instabilt hjärta.',
+  ],
 };
 
 export const PEOPLE: Person[] = [
@@ -75,7 +157,19 @@ export const PEOPLE: Person[] = [
     method: [
       'Andning i omgångar: kraftiga andetag in, avslappnat ut, och sedan en lång andhållning.',
       'Kyla: kalla duschar eller isbad som ökas långsamt.',
-      'Engagemang: att öva varje dag och hålla fast vid det över tid.',
+      'Engagemang: att hålla fast vid övningen över tid.',
+    ],
+    quotes: [
+      {
+        text: 'This is how we will change the world, one soul at a time',
+        sv: 'Det är så vi ska förändra världen, en själ i taget.',
+        source: { title: 'Boken The Wim Hof Method (förlaget Sounds True)', url: 'https://www.soundstrue.com/products/the-wim-hof-method-1' },
+      },
+      {
+        text: 'We alter the collective consciousness by awakening to our own boundless potential. We are limited only by the depth of our imagination and the strength of our conviction.',
+        sv: 'Vi förändrar det kollektiva medvetandet genom att vakna till insikt om vår egen gränslösa potential. Vi begränsas bara av hur djup vår fantasi är och hur stark vår övertygelse är.',
+        source: { title: 'Boken The Wim Hof Method (förlaget Sounds True)', url: 'https://www.soundstrue.com/products/the-wim-hof-method-1' },
+      },
     ],
     claims: [
       {
@@ -84,6 +178,17 @@ export const PEOPLE: Person[] = [
           'träning. De tränade fick mer adrenalin i blodet, färre influensalika symtom och lägre inflammation när ' +
           'de fick ett ämne från bakterier som framkallar en tillfällig immunreaktion.',
         evidence: 'svagt',
+        summary: [
+          'Forskare vid Radboud universitetssjukhus i Nederländerna lottade 24 friska män i åldern 19 till 27 år ' +
+            'till två lika stora grupper. Tolv tränade i tio dagar meditation, andning med upprepad överandning ' +
+            'och andhållning samt kyla, bland annat bad i iskallt vatten. Tolv tränade inte alls.',
+          'Sedan fick alla en dos bakteriegift i blodet, som ger en kort inflammation och ' +
+            'influensaliknande symtom. Medan de tränade andades enligt metoden steg adrenalinet kraftigt. I deras blod ' +
+            'steg det inflammationsdämpande ämnet IL-10 snabbare och högre, och tre ämnen som driver ' +
+            'inflammation låg lägre.',
+          'En senare genomgång anger att IL-10 var 194 procent högre och att de tre ämnena var 51 till 57 ' +
+            'procent lägre än i gruppen som inte tränat. De tränade kände också mindre av symtomen.',
+        ],
         note:
           'Slumpad studie men liten, bara unga män och ett konstgjort test i labbet. Den visar inte att metoden ' +
           'skyddar mot sjukdom i vardagen.',
@@ -92,6 +197,7 @@ export const PEOPLE: Person[] = [
             title: 'Kox m.fl. 2014, frivillig påverkan på nervsystem och immunförsvar, PNAS (PubMed)',
             url: 'https://pubmed.ncbi.nlm.nih.gov/24799686/',
           },
+          ALMAHAYNI_2024,
         ],
       },
       {
@@ -99,7 +205,16 @@ export const PEOPLE: Person[] = [
           'När forskare testade Wim Hof själv dämpades immunreaktionen och han fick höga halter av stresshormoner, ' +
           'som om han själv kunde starta en kontrollerad stressreaktion.',
         evidence: 'svagt',
-        note: 'Fallstudie på en enda person. Forskarna skrev själva att större studier behövs.',
+        summary: [
+          'Forskarna gjorde två försök med Wim Hof. I det första låg han 80 minuter i is medan han använde sin ' +
+            'teknik för koncentration och meditation. Blod togs före och efter, och hans vita blodkroppar ' +
+            'utsattes för bakterieämne i provrör. Efter isbadet blev svaret kraftigt mindre, både av ämnen som ' +
+            'driver inflammation och av dämpande ämnen, och kortisolet var högt.',
+          'I det andra försöket fick han bakterieämnet direkt i blodet. Han fick mer adrenalin och liknande ' +
+            'hormoner, kortisolet blev högre än hos någon tidigare försöksperson, och både inflammationen och ' +
+            'symtomen var påfallande låga jämfört med 112 personer som tidigare gjort samma försök.',
+        ],
+        note: 'Fallstudie på en enda person, jämförd med tidigare försökspersoner som inte använde tekniken.',
         sources: [
           {
             title: 'Kox m.fl. 2012, fallstudie om koncentration och meditation, Psychosomatic Medicine (PubMed)',
@@ -112,15 +227,22 @@ export const PEOPLE: Person[] = [
           'En systematisk genomgång av åtta studier om metoden fann tecken på mer adrenalin och lägre ' +
           'inflammation, men oklara effekter på träning och prestation.',
         evidence: 'svagt',
-        note: 'Författarna bedömde att studierna höll låg kvalitet och att resultaten ska tolkas försiktigt.',
+        summary: [
+          'Två forskare sökte studier om Wim Hof-metoden publicerade från 2014 till juli 2022. Nio artiklar från ' +
+            'åtta försök kom med. Varje studie hade 15 till 48 deltagare, och 86,4 procent av alla deltagare var män.',
+          'Det tydligaste fyndet gällde inflammation. Andningen höjde adrenalinet, och det följdes av mer av det ' +
+            'dämpande ämnet IL-10 och mindre av ämnen som driver inflammation, både hos friska och hos patienter ' +
+            'med en inflammatorisk ryggsjukdom. När andningen gjordes före träning blev resultaten för prestation ' +
+            'och andning blandade.',
+          'Nästan alla de slumpade studierna bedömdes ha hög risk för snedvridning, bland annat för att deltagarna ' +
+            'visste vilken grupp de var i. Författarna vill se fler studier på personer med inflammatoriska sjukdomar.',
+        ],
+        note: 'Författarna bedömde att studierna höll mycket låg kvalitet och att alla resultat ska tolkas försiktigt.',
         sources: [
+          ALMAHAYNI_2024,
           {
-            title: 'Almahayni och Hammond 2024, systematisk genomgång i PLOS ONE (PMC)',
-            url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10936795',
-          },
-          {
-            title: 'Pressmeddelande om genomgången (EurekAlert)',
-            url: 'https://www.eurekalert.org/news-releases/1036707',
+            title: 'Samma genomgång hos tidskriften PLOS ONE',
+            url: 'https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0286933',
           },
         ],
       },
@@ -128,6 +250,15 @@ export const PEOPLE: Person[] = [
         text:
           'Wim Hof menar att den som övar regelbundet får mer energi, sover bättre och klarar stress bättre.',
         evidence: 'asikt',
+        summary: [
+          'På metodens egen sida beskrivs andningen så här: ungefär 30 djupa andetag, sedan håller man andan ' +
+            'efter sista utandningen tills kroppen själv vill andas, tar ett djupt andetag och håller det 10 till ' +
+            '15 sekunder. Omgången görs 3 till 4 gånger. Sidan säger att yrsel och stickningar är vanligt och att ' +
+            'man aldrig ska öva i vatten, i duschen eller när man kör bil.',
+          'För kylan föreslår sidan 30 sekunder kallt vatten i slutet av duschen och lite mer varje vecka. Med ' +
+            'tiden ska man enligt sidan vakna lättare, sova djupare och få jämnare energi. Den tredje delen, ' +
+            'tankesättet, handlar om att märka obehag utan att genast reagera.',
+        ],
         note: 'Det här är metodens egna löften. De har inte prövats i stora oberoende studier.',
         sources: [
           {
@@ -139,8 +270,15 @@ export const PEOPLE: Person[] = [
     ],
     startHere: [
       {
-        title: 'Boken The Wim Hof Method, 2020 (Sounds True)',
+        title: 'Boken The Wim Hof Method (förlaget Sounds True)',
         url: 'https://www.soundstrue.com/products/the-wim-hof-method-1',
+        summary: [
+          'Boken går igenom metodens tre delar: kyla, andning och tankesätt.',
+          'Andningsövningarna ska enligt förlaget ge energi och skärpa fokus.',
+          'Kylövningarna beskrivs som kontrollerade och utan chock för kroppen.',
+          'Den återger studier om metoden och, enligt förlaget, berättelser från personer som använt den vid sjukdom.',
+          'Den berättar också Wim Hofs egen historia.',
+        ],
       },
     ],
     warning: WARN_BREATH_COLD,
@@ -156,9 +294,26 @@ export const PEOPLE: Person[] = [
       'vinterbadare som växlar mellan kallt vatten och bastu, och hon har skrivit boken Winter Swimming om ' +
       'hur kroppen reagerar på kyla och värme.',
     method: [
-      'Växla mellan kallt vatten och bastu i flera omgångar.',
-      'Avsluta med kyla och låt kroppen värma upp sig själv efteråt, det hon kallar Søbergprincipen.',
-      'Korta stunder räcker: hennes vinterbadare låg bara några minuter i vattnet åt gången.',
+      'Vinterbad: kallt vatten och bastu i växling, flera gånger per tillfälle.',
+      'Søbergprincipen: hon menar att man ska sluta med kyla och låta kroppen värma upp sig själv.',
+      'Korta dopp: vinterbadarna i hennes studie låg i snitt under två minuter per dopp.',
+    ],
+    quotes: [
+      {
+        text: 'We expected winter swimmers to have more brown fat than the control subjects, but it turned out that they instead had better thermoregulation',
+        sv: 'Vi trodde att vinterbadarna skulle ha mer brunt fett än kontrollpersonerna, men det visade sig att de i stället hade bättre temperaturreglering.',
+        source: { title: 'Köpenhamns universitet om studien av vinterbadare', url: 'https://cbmr.ku.dk/news/2021/winter-swimming-scandinavian-men-can-teach-us-how-the-body-adapts-to-extreme-heat-and-cold' },
+      },
+      {
+        text: 'We compared experienced winter swimmers with control subjects, which allows for the possibility that other lifestyle factors or genetic factors not measured in the current study also could impact the differences between the groups',
+        sv: 'Vi jämförde erfarna vinterbadare med kontrollpersoner, vilket lämnar öppet att andra levnadsvanor eller genetiska faktorer som inte mättes i studien också kan påverka skillnaderna mellan grupperna.',
+        source: { title: 'Köpenhamns universitet om studien av vinterbadare', url: 'https://cbmr.ku.dk/news/2021/winter-swimming-scandinavian-men-can-teach-us-how-the-body-adapts-to-extreme-heat-and-cold' },
+      },
+      {
+        text: 'So of course, we don\'t know yet whether brown fat decreases with age and therefore we get obese, or we get obese and therefore, we have less brown fat.',
+        sv: 'Så vi vet förstås inte ännu om brunt fett minskar med åldern och vi därför blir feta, eller om vi blir feta och därför har mindre brunt fett.',
+        source: { title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme', url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health' },
+      },
     ],
     claims: [
       {
@@ -166,8 +321,19 @@ export const PEOPLE: Person[] = [
           'Unga män som vinterbadade och bastade regelbundet ökade sin värmeproduktion mer än en kontrollgrupp ' +
           'när de kyldes ner, trots att det bruna fettet aktiverades ungefär lika mycket i båda grupperna.',
         evidence: 'svagt',
+        summary: [
+          'Søberg och kollegor vid Köpenhamns universitet jämförde 8 unga män som vinterbadade 2 till 3 gånger i ' +
+            'veckan och var inne på minst sin andra säsong (7 kom med i analyserna) med 8 som inte gjorde det. ' +
+            'Grupperna var lika i ålder, BMI och kondition, men vinterbadarna hade lägre fettprocent, 12 mot 18.',
+          'När deltagarna kyldes ner med vattenfyllda filtar ökade vinterbadarnas värmeproduktion mer, och de ' +
+            'förbrände fler kalorier. Omräknat till ett dygn låg förbrukningen under nedkylningen på 3 044 ' +
+            'kilokalorier hos vinterbadarna och 2 560 hos de andra.',
+          'Det bruna fettets sockerupptag och musklernas aktivitet ökade däremot ungefär lika mycket i båda ' +
+            'grupperna. Forskarna föreslår vinterbad som ett sätt att öka energiförbrukningen, om man inte äter ' +
+            'mer för att kompensera.',
+        ],
         note:
-          'Bara 8 vinterbadare och 8 i kontrollgruppen, alla män. Studien jämför grupper vid ett tillfälle och ' +
+          'Bara 7 vinterbadare och 8 i kontrollgruppen, alla män. Studien jämför grupper vid ett tillfälle och ' +
           'kan inte visa att det är badandet som orsakar skillnaden.',
         sources: [
           SOBERG_2021,
@@ -182,6 +348,16 @@ export const PEOPLE: Person[] = [
           'Vinterbadarna hade lägre kroppstemperatur och inaktivt brunt fett när de inte frös. Forskarna tolkar ' +
           'det som att kroppens termostat ställts om.',
         evidence: 'svagt',
+        summary: [
+          'I samma studie mättes deltagarna också i ett läge där de varken frös eller svettades. Då hade ' +
+            'vinterbadarna lägre temperatur inne i kroppen, och deras bruna fett tog inte upp något socker alls, ' +
+            'medan kontrollgruppens bruna fett var aktivt. Forskarna hade väntat sig mer brunt fett hos ' +
+            'vinterbadarna, inte mindre aktivitet.',
+          'Under ett helt dygn i behaglig temperatur nådde vinterbadarna en lägre kroppstemperatur, och huden ' +
+            'nära det bruna fettet hade en tydlig topp mellan halv fem och halv sex på morgonen. Forskarna ser ' +
+            'det som tecken på att kroppen vant sig vid både kyla och värme, och att bastun kan bidra till den ' +
+            'lägre temperaturen.',
+        ],
         note: 'Samma lilla studie. Tolkningen om termostaten är en hypotes som behöver prövas mer.',
         sources: [SOBERG_2021, SOBERG_2021_FULL],
       },
@@ -190,59 +366,81 @@ export const PEOPLE: Person[] = [
           'Vinterbadarna i studien låg i snitt ungefär 11 minuter i kallt vatten och satt ungefär 57 minuter i ' +
           'bastun per vecka.',
         evidence: 'svagt',
-        note:
-          'Siffrorna beskriver vad de 8 vinterbadarna råkade göra, och mängderna har aldrig testats som en dos. ' +
-          'Ingen vet om just den mängden ger bäst effekt, men siffran sprids ofta som ett recept.',
-        sources: [
-          SOBERG_2021_FULL,
-          {
-            title: 'Pressmeddelande om studien (ScienceDaily)',
-            url: 'https://www.sciencedaily.com/releases/2021/10/211011110818.htm',
-          },
+        summary: [
+          'Siffrorna kommer från studiens tabell över vad de 7 vinterbadarna faktiskt gjorde månaden före ' +
+            'försöken. De badade i snitt 2,6 gånger i veckan, doppade sig ungefär 2,6 gånger per tillfälle och ' +
+            'låg i snitt 1,4 minuter per dopp. Sammanlagt blev det 11 minuter i kallt vatten och 57 minuter i ' +
+            'bastu per vecka.',
+          'I en intervju hos Andrew Huberman räknar Søberg fram samma siffror och säger att passen i vattnet ' +
+            'kan vara 1 till 2 minuter så länge man kommer upp i 11 minuter i veckan. Huberman gör sedan om ' +
+            'siffran till ett råd om minsta mängd kyla.',
         ],
+        note:
+          'Siffran är vad de 7 vinterbadarna i studien redan gjorde. Studien prövade inte olika mängder, så den ' +
+          'visar inte att just den mängden behövs eller räcker.',
+        sources: [SOBERG_2021_FULL, SOBERG_HUBERMAN],
       },
       {
         text:
           'Søberg menar att man ska avsluta med kyla för att få större nytta, eftersom kroppen då själv måste ' +
           'producera värme efteråt.',
         evidence: 'asikt',
-        note: 'Ett råd som bygger på hur kroppen fungerar, inte en jämförande studie.',
-        sources: [
-          {
-            title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme',
-            url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health',
-          },
-          {
-            title: 'Søbergs egen text om kyla (Goodreads, författarblogg)',
-            url: 'https://www.goodreads.com/author_blog_posts/23271891-the-new-science-of-cold-exposure-reduce-stress-boost-immunity-increa?tab=book',
-          },
+        summary: [
+          'I samtalet med Andrew Huberman förklarar Søberg att kroppen fortsätter att svalna en stund efter att ' +
+            'man gått upp ur det kalla vattnet, eftersom blodet åter strömmar ut i den kalla huden. Kroppen får ' +
+            'då värma upp sig själv, bland annat genom att huttra, och huttringen sätter igång det bruna fettet.',
+          'Därför menar hon att man ska sluta med kyla och inte gå tillbaka in i bastun eller en varm dusch. ' +
+            'Hon beskriver det som att kroppen då tränar i flera timmar efteråt. Huberman kallar regeln ' +
+            'Søbergprincipen och säger att han själv brukar göra tvärtom.',
         ],
+        note: 'Ett råd som bygger på hur kroppen fungerar, inte en jämförande studie.',
+        sources: [SOBERG_HUBERMAN],
       },
       {
         text:
-          'En genomgång av andra forskare (Espeland m.fl. 2022) fann tecken på bättre insulinkänslighet och att ' +
-          'brunt fett aktiveras, men de flesta studierna var små.',
+          'En genomgång av andra forskare (Espeland m.fl. 2022) fann tecken på att kallbad påverkar ' +
+          'kroppsfettet och förbättrar insulinkänsligheten, men resultaten var blandade och de flesta studierna ' +
+          'var små.',
         evidence: 'svagt',
+        summary: [
+          'Forskarna sökte i flera databaser efter studier om vad frivilliga bad i kallt vatten gör med hälsan ' +
+            'och fann 104 relevanta studier. Många visade mätbara effekter på kroppens funktioner och blodvärden. ' +
+            'En del gjordes på vana vinterbadare, andra på ovana personer eller på kallbad efter träning.',
+          'Kallbad verkar minska eller omvandla kroppsfett och förbättra insulinkänsligheten, vilket enligt ' +
+            'författarna kan skydda mot hjärt-kärlsjukdom och fetma. De beskriver också riskerna: köldchocken ' +
+            'höjer puls, andning och blodtryck och kopplas till rytmrubbningar och drunkning.',
+          'Om vinterbadare som grupp är friskare än andra är oklart, och författarna skriver att frågan kommer ' +
+            'att fortsätta diskuteras tills fler säkra studier finns.',
+        ],
         note:
           'Genomgången säger själv att små grupper, oftast ett kön och olika vattentemperatur gör det svårt att ' +
-          'dra säkra slutsatser.',
+          'dra säkra slutsatser. Författarna skriver också att många av de hälsovinster som tillskrivs kallbad ' +
+          'kanske inte beror på kylan utan på livsstil, socialt umgänge och inställning.',
         sources: [
           {
-            title: 'Espeland m.fl. 2022, hälsoeffekter av frivilliga kallbad (UiT)',
-            url: 'https://munin.uit.no/handle/10037/27902',
+            title: 'Espeland m.fl. 2022, hälsoeffekter av frivilliga kallbad (PubMed)',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/36137565/',
+          },
+          {
+            title: 'Samma genomgång, hela artikeln (PMC)',
+            url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9518606',
           },
         ],
       },
     ],
     startHere: [
       {
-        title: 'Boken Winter Swimming, 2022 (Booktopia)',
+        title: 'Boken Winter Swimming, 2022 (förlagets text hos bokhandeln Booktopia)',
         url: 'https://booktopia.com.au/winter-swimming-susanna-soberg/book/9781529417463.html',
+        summary: [
+          'Boken skildrar traditioner med kallt vatten i Skandinavien och andra delar av världen, med många bilder.',
+          'Søberg förklarar steg för steg vad köldchocken är och hur kroppen vänjer sig vid kallt vatten under en vintersäsong.',
+          'Hon beskriver hur blodomlopp, hjärta, lungor, hud, immunförsvar, ämnesomsättning och psykisk hälsa påverkas.',
+          'Hon förklarar särskilt hur det bruna fettet sätts igång av kylan.',
+          'Bakgrunden är hennes egen forskning om fettminskning genom vinterbad.',
+        ],
       },
-      {
-        title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme',
-        url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health',
-      },
+      SOBERG_HUBERMAN,
     ],
     warning: WARN_COLD,
   },
@@ -261,28 +459,55 @@ export const PEOPLE: Person[] = [
       'Mäta blodtryck, puls och kärl före och efter ett bastubad för att förstå vad som händer i kroppen.',
       'Den traditionella finska bastun är utgångspunkten, ofta 4 till 7 gånger i veckan i grupperna med lägst risk.',
     ],
+    quotes: [
+      {
+        text: 'Also, in Finland, I think quite many use it for that purpose. They want some relaxation, you know, after working all day and so on.',
+        sv: 'Dessutom tror jag att ganska många i Finland använder bastun till just det. De vill ha lite avkoppling, du vet, efter att ha jobbat hela dagen och så vidare.',
+        source: { title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu', url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen' },
+      },
+      {
+        text: 'Of course, we have to take care of other risk factors like blood pressure, lipids, smoking, obesity in addition to that.',
+        sv: 'Vi måste förstås ta hand om andra riskfaktorer som blodtryck, blodfetter, rökning och fetma utöver det.',
+        source: { title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu', url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen' },
+      },
+    ],
     claims: [
       {
         text:
-          'Bland 2 315 finska män som följdes i ungefär 20 år hade de som bastade 4 till 7 gånger i veckan lägre ' +
+          'Bland 2 315 finska män som följdes i ungefär 20 år hade de som bastade 4 till 7 gånger i veckan lägre ' +
           'risk att dö av hjärtsjukdom och av alla orsaker än de som bastade en gång i veckan.',
         evidence: 'belagt',
+        summary: [
+          'Studien bygger på Kuopiostudien om hjärtsjukdom: ett urval av 2 315 män mellan 42 och 60 år från ' +
+            'östra Finland som undersöktes 1984 till 1989. Männen fick uppge hur ofta och hur länge de bastade och ' +
+            'följdes sedan i median 20,7 år.',
+          'Under tiden dog 929 av männen. Bland dem som bastade en gång i veckan dog 49,1 procent, bland dem som ' +
+            'bastade 4 till 7 gånger 30,8 procent. Efter justering för andra riskfaktorer var risken för plötslig ' +
+            'hjärtdöd ungefär 63 procent lägre i den gruppen, och sambanden var liknande för död i hjärtsjukdom ' +
+            'och död av alla orsaker.',
+          'Längre bad, över 19 minuter, hängde också ihop med lägre risk för hjärtdöd men inte för död av alla ' +
+            'orsaker. Forskarna skriver att fler studier behövs för att förstå varför.',
+        ],
         note:
           'Stor studie med lång uppföljning, men den är observerande: den visar ett samband, inte att bastun är ' +
           'orsaken. Bara medelålders män från östra Finland.',
-        sources: [
-          LAUKKANEN_2015,
-          {
-            title: 'Pressmeddelande om studien (EurekAlert)',
-            url: 'https://www.eurekalert.org/news-releases/862302',
-          },
-        ],
+        sources: [LAUKKANEN_2015],
       },
       {
         text:
           'I samma grupp män hade de som bastade 4 till 7 gånger i veckan lägre risk för demens och Alzheimers ' +
           'sjukdom än de som bastade en gång i veckan.',
         evidence: 'belagt',
+        summary: [
+          'Forskarna använde samma 2 315 till synes friska män från Kuopio, undersökta 1984 till 1989 och följda ' +
+            'i median 20,7 år. Under den tiden fick 204 av dem diagnosen demens och 123 diagnosen Alzheimers sjukdom.',
+          'Efter justering för bland annat ålder, alkohol, vikt, blodtryck, rökning, diabetes och tidigare ' +
+            'hjärtinfarkt var risken för demens 66 procent lägre för dem som bastade 4 till 7 gånger i veckan än ' +
+            'för dem som bastade en gång. För Alzheimers var den 65 procent lägre. För 2 till 3 gånger i veckan ' +
+            'var skillnaden mindre och inte säker.',
+          'Forskarna skriver att det är den första studien om bastu och minnessjukdomar och att mekanismerna ' +
+            'behöver studeras.',
+        ],
         note: 'Observerande studie med samband, inte bevisad orsak. Bara män.',
         sources: [
           {
@@ -293,9 +518,20 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Bland 1 628 män och kvinnor hade de som bastade 4 till 7 gånger i veckan ungefär 60 procent lägre risk ' +
+          'Bland 1 628 män och kvinnor hade de som bastade 4 till 7 gånger i veckan ungefär 60 procent lägre risk ' +
           'för stroke, även när man tagit hänsyn till motion, blodtryck och annat.',
         evidence: 'belagt',
+        summary: [
+          'Här följdes 1 628 män och kvinnor mellan 53 och 74 år ur samma Kuopiostudie, ingen av dem med tidigare ' +
+            'stroke. De delades in efter om de bastade en gång, 2 till 3 gånger eller 4 till 7 gånger i veckan. ' +
+            'Under i median 14,9 år fick 155 personer stroke.',
+          'Jämfört med en gång i veckan var risken 61 procent lägre för 4 till 7 gånger, och det sambandet höll ' +
+            'även efter justering för ålder, kön, diabetes, vikt, blodfetter, alkohol, motion och socioekonomisk ' +
+            'ställning. För 2 till 3 gånger anger universitetet 14 procent lägre risk, men den skillnaden ' +
+            'redovisas inte som säker.',
+          'Forskarna tror att lägre blodtryck, påverkan på immunförsvaret och nervsystemet och bättre ' +
+            'fungerande hjärta och kärl kan ligga bakom.',
+        ],
         note: 'Observerande studie. Sambandet var lika starkt för kvinnor och män.',
         sources: [
           {
@@ -313,17 +549,21 @@ export const PEOPLE: Person[] = [
           'Direkt efter 30 minuter i bastu sjönk blodtrycket och kärlen blev mindre stela hos 100 personer, ' +
           'medan pulsen steg ungefär som vid måttlig träning.',
         evidence: 'svagt',
+        summary: [
+          'Forskargruppen lät 100 personer, kunder hos en vårdgivare, sitta 30 minuter i en finsk bastu och mätte ' +
+            'före, direkt efter och efter 30 minuters vila. Det övre blodtrycket sjönk i snitt från 137 till 130 ' +
+            'och det nedre från 82 till 75, och det övre låg kvar lägre efter vilan.',
+          'Pulsvågens hastighet, ett mått på hur stela kärlen är, sjönk från 9,8 till 8,6 meter per sekund. ' +
+            'Under badet steg pulsen ungefär som vid måttlig träning och kroppstemperaturen med ungefär 2 grader. ' +
+            'Forskarna menar att det kan förklara sambanden i befolkningsstudierna, men att fler försök behövs.',
+        ],
         note:
-          'Ej slumpad studie som bara mätte direkt efter ett pass. Studien gjordes i bastur från en ' +
-          'tillverkare som var partner i projektet.',
+          'Samma personer mättes före och efter ett enda pass, utan jämförelsegrupp. Studien gjordes i bastur från ' +
+          'en tillverkare som var partner i projektet.',
         sources: [
           {
             title: 'Östra Finlands universitet om studien',
             url: 'https://www.uef.fi/en/article/scientists-uncover-why-sauna-bathing-is-good-for-your-health',
-          },
-          {
-            title: 'Om studien (ScienceDaily)',
-            url: 'https://www.sciencedaily.com/releases/2018/01/180105124005.htm',
           },
         ],
       },
@@ -332,11 +572,15 @@ export const PEOPLE: Person[] = [
       {
         title: 'Laukkanen m.fl. 2018, genomgång av bastu och hälsa, Mayo Clinic Proceedings (Bristols universitet)',
         url: 'https://research-information.bris.ac.uk/en/publications/875f218f-f6a3-46e8-bdbc-ea005e174ab9',
+        summary: [
+          'Genomgången samlar befolkningsstudier, försök och behandlingsstudier om finsk bastu som publicerats fram till februari 2018.',
+          'Bastu kopplas där till lägre risk för högt blodtryck, hjärt-kärlsjukdom, minnessjukdomar och lungsjukdomar och till lägre dödlighet.',
+          'Den tar också upp studier om lindring vid ledsjukdom, huvudvärk och influensa.',
+          'Författarna beskriver möjliga förklaringar som bättre kärlfunktion, mindre stela artärer, påverkan på nervsystemet, blodfetterna och ett lägre blodtryck.',
+          'Den pekar också ut vad som fortfarande är osäkert och vad det betyder för vården.',
+        ],
       },
-      {
-        title: 'Rhonda Patrick intervjuar Jari Laukkanen (FoundMyFitness)',
-        url: 'https://www.foundmyfitness.com/episodes/sauna-use-associated-with-decreased-risk-of-heart-disease-and-alzheimer-s-disease-jari-laukkanen',
-      },
+      FMF_LAUKKANEN,
     ],
     warning: WARN_COLD,
   },
@@ -347,14 +591,30 @@ export const PEOPLE: Person[] = [
     areas: ['andning', 'kallbad'],
     teaser: 'Hjärnforskare och poddare med konkreta råd om andning och kyla.',
     about:
-      'Andrew Huberman är docent (associate professor) i neurobiologi vid Stanford och driver podden Huberman Lab sedan 2021. ' +
-      'Han forskar själv om synen och om andning och stress, men i podden pratar han ofta om områden ' +
-      'utanför sitt eget. ' +
-      'Han har fått kritik för att dra för långa slutsatser av små studier.',
+      'Andrew Huberman är forskare i neurobiologi vid Stanford och driver podden Huberman Lab. Hans egen ' +
+      'forskning gäller främst synen och hur stress, syn och andning påverkar hjärnans tillstånd, men i podden ' +
+      'pratar han ofta om områden utanför sitt eget.',
     method: [
       'Cyklisk suck: andning med långa utandningar, fem minuter om dagen.',
       'Kyla i korta pass utspridda över veckan i stället för ett långt pass.',
-      'Gör om forskning till enkla dagliga vanor, så kallade protokoll.',
+      'Han gör om forskning till dagliga rutiner som han kallar protokoll.',
+    ],
+    quotes: [
+      {
+        text: 'Never get into a dangerous body of water.',
+        sv: 'Gå aldrig ner i ett vatten som är farligt.',
+        source: { title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)', url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance' },
+      },
+      {
+        text: 'The total calories burned from the cold exposure are not that significant.',
+        sv: 'Den totala mängden kalorier som kylan förbränner är inte särskilt stor.',
+        source: { title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)', url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance' },
+      },
+      {
+        text: 'After all, if it were easy, then there is no stimulus for your body to change (adapt).',
+        sv: 'När allt kommer omkring: om det vore lätt fanns det ingen stimulans för kroppen att förändras (anpassa sig).',
+        source: { title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)', url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance' },
+      },
     ],
     claims: [
       {
@@ -362,9 +622,20 @@ export const PEOPLE: Person[] = [
           'I hans grupps studie gav fem minuter cyklisk suck om dagen i en månad bättre humör och lugnare ' +
           'andning än lika lång tid mindfulnessmeditation.',
         evidence: 'svagt',
+        summary: [
+          'Studien gjordes på distans av forskare vid Stanford, med Huberman som en av författarna. 108 vuxna, ' +
+            'de flesta studenter, lottades till fem minuter om dagen i en månad av antingen mindfulnessmeditation ' +
+            'eller en av tre andningsövningar: cyklisk suck med långa utandningar, boxandning med lika långa ' +
+            'faser, eller snabb andning följd av andhållning.',
+          'Alla grupper kände sig mindre oroliga efter övningarna. Andningsgrupperna, och mest cyklisk suck, fick ' +
+            'en större ökning av positiva känslor än meditationsgruppen, och skillnaden växte ju fler dagar de ' +
+            'övat. Andningsfrekvensen i vila, mätt med ett armband, sjönk också mer. Sömnen ändrades inte i någon grupp.',
+          'Forskarna skriver själva att studien var tänkt som en förstudie inför en större prövning och att ' +
+            'grupperna var små.',
+        ],
         note:
-          'Slumpad studie med drygt hundra deltagare, men en enda studie från hans eget labb, små effekter och ' +
-          'humöret rapporterades av deltagarna själva.',
+          'Slumpad studie med 108 deltagare, men en enda studie från hans eget labb, och de positiva känslorna ' +
+          'rapporterades av deltagarna själva.',
         sources: [
           {
             title: 'Balban m.fl. 2023, korta andningsövningar och humör, Cell Reports Medicine (PMC)',
@@ -376,45 +647,42 @@ export const PEOPLE: Person[] = [
         text:
           'Han rekommenderar ungefär 11 minuter kyla i veckan totalt, fördelat på två till fyra korta pass.',
         evidence: 'asikt',
-        note:
-          'Siffran kommer från vad vinterbadarna i Søbergs lilla studie redan gjorde. Den har aldrig testats som ' +
-          'dos.',
-        sources: [
-          {
-            title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)',
-            url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance',
-          },
-          SOBERG_2021_FULL,
+        summary: [
+          'I sitt nyhetsbrev om kyla föreslår Huberman 11 minuter i veckan totalt, fördelat på 2 till 4 pass om ' +
+            '1 till 5 minuter. Enligt honom ska vattnet vara så kallt att man vill upp men ändå säkert kan stanna. Han kallar ' +
+            'det ett minimum och skriver att siffran bygger på en ny studie.',
+          'I hans samtal med Susanna Søberg framgår att det är hennes studie, där 11 minuter var vad vinterbadarna ' +
+            'själva råkade göra. Han skriver också att man kan avsluta med kyla och låta kroppen värma upp sig ' +
+            'själv för större effekt på ämnesomsättningen, och att kallbad strax efter träning kan minska vinsten ' +
+            'av träningen.',
         ],
+        note:
+          'Siffran är vad vinterbadarna i Søbergs lilla studie redan gjorde. Studien prövade inte olika mängder, ' +
+          'så den visar inte att just den mängden behövs eller räcker.',
+        sources: [HUBERMAN_COLD, SOBERG_HUBERMAN, SOBERG_2021_FULL],
       },
       {
         text:
-          'Han lyfter fram att kallt vatten ger en stor och långvarig ökning av dopamin och noradrenalin. ' +
-          'Studien bakom visade att en timme i 14 grader varmt vatten ökade noradrenalin ungefär sex gånger ' +
-          'och dopamin ungefär tre och en halv gånger.',
+          'Han lyfter fram att kallt vatten ger en stor ökning av dopamin och noradrenalin som han beskriver som ' +
+          'långvarig. I en studie där unga män låg en timme i 14 grader varmt vatten var noradrenalin 530 ' +
+          'procent och dopamin 250 procent högre än före badet.',
         evidence: 'svagt',
+        summary: [
+          'I nyhetsbrevet skriver Huberman att kyla frisätter adrenalin och noradrenalin, som gör en vaken och ' +
+            'kan ge energi och fokus en tid efteråt. Han skriver också att kyla ger en långvarig ökning av ' +
+            'dopamin och hänvisar till en studie där människor låg ungefär en timme i vatten på omkring 15 grader.',
+          'Studien från 2000 lät unga män ligga en timme i vatten på 32, 20 och 14 grader. Bara vid 14 grader ' +
+            'steg noradrenalin och dopamin, medan adrenalinet inte ändrades. Ämnesomsättningen steg med 350 ' +
+            'procent och puls och blodtryck steg något.',
+          'Nyhetsbrevet namnger inte studien, så kopplingen till just den här görs här i Lär.',
+        ],
         note:
           'En liten studie med unga män som låg en hel timme i vattnet, mycket längre än de korta pass han ' +
           'själv föreslår.',
-        sources: [
-          SRAMEK_2000,
-          {
-            title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)',
-            url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance',
-          },
-        ],
+        sources: [SRAMEK_2000, HUBERMAN_COLD],
       },
     ],
-    startHere: [
-      {
-        title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)',
-        url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance',
-      },
-      {
-        title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme',
-        url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health',
-      },
-    ],
+    startHere: [HUBERMAN_COLD, SOBERG_HUBERMAN],
     warning: WARN_BREATH_COLD,
   },
   {
@@ -424,13 +692,25 @@ export const PEOPLE: Person[] = [
     areas: ['kallbad'],
     teaser: 'Biomedicinsk forskare som förklarar vad bastu och kyla gör i cellerna.',
     about:
-      'Rhonda Patrick har en doktorsexamen i biomedicin och driver sajten och podden FoundMyFitness, podden sedan 2014. ' +
+      'Rhonda Patrick har en doktorsexamen i biomedicin och driver sajten och podden FoundMyFitness. ' +
       'Hon sammanfattar studier och intervjuar forskare som Jari Laukkanen. Hon pratar ofta om bastu som ' +
       'ett sätt att belasta kroppen ungefär som träning.',
     method: [
-      'Hon förordar bastu flera gånger i veckan som ett komplement till träning.',
+      'Bastu efter träningen, som hon själv brukar göra.',
       'Förklara mekanismer: värmechockproteiner efter bastu och noradrenalin efter kyla.',
-      'Bygga på stora befolkningsstudier och visa var bevisen tar slut.',
+      'Bygga på stora befolkningsstudier och säga när forskningen ännu är ung.',
+    ],
+    quotes: [
+      {
+        text: 'Humans have used cold exposure, often with the expectation that it promotes health, for centuries.',
+        sv: 'Människor har använt kyla i århundraden, ofta i förväntan att det främjar hälsan.',
+        source: { title: 'FoundMyFitness: kallbad, kylbehandling och noradrenalin', url: 'https://foundmyfitness.com/episodes/cold-shock-norepinephrine' },
+      },
+      {
+        text: 'We all want to reduce stress and make our lives easier, but is that always the best approach?',
+        sv: 'Vi vill alla minska stressen och göra livet lättare, men är det alltid det bästa sättet?',
+        source: { title: 'FoundMyFitness: kallbad, kylbehandling och noradrenalin', url: 'https://foundmyfitness.com/episodes/cold-shock-norepinephrine' },
+      },
     ],
     claims: [
       {
@@ -438,29 +718,44 @@ export const PEOPLE: Person[] = [
           'Hon lyfter fram de finska studierna där män som bastade ofta hade lägre risk att dö av hjärtsjukdom ' +
           'och lägre risk för demens.',
         evidence: 'belagt',
+        summary: [
+          'I intervjun med Jari Laukkanen går hon igenom Kuopiostudien med över 2 300 medelålders män. Den som ' +
+            'bastade 2 till 3 gånger i veckan hade 27 procent lägre risk att dö av hjärt-kärlsjukdom än den som ' +
+            'bastade en gång, och 4 till 7 gånger gav 50 procent lägre risk. För död av alla orsaker var ' +
+            'skillnaden 24 och 40 procent.',
+          'De tar också upp att männen som bastade oftast hade ungefär 65 procent lägre risk för Alzheimers. ' +
+            'Själv är hon mest intresserad av värmechockproteiner, som hon tror kan vara en av förklaringarna.',
+        ],
         note: 'Stora observerande studier som visar samband, inte bevisad orsak. Mest män från östra Finland.',
         sources: [
           {
-            title: 'FoundMyFitness: bastu och lägre risk för hjärtsjukdom och demens',
+            title: 'FoundMyFitness: klipp om bastu och lägre risk för hjärtsjukdom och demens',
             url: 'https://www.foundmyfitness.com/episodes/sauna-use-decreased-risk-of-heart-and-neurodegenerative-diseases',
           },
+          FMF_LAUKKANEN,
           LAUKKANEN_2015,
         ],
       },
       {
         text:
-          'Hon beskriver bastu som en form av träning för hjärtat. I en tysk studie med 19 personer steg puls ' +
-          'och blodtryck i bastun till samma nivå som vid cykling med måttlig belastning, och sjönk sedan under utgångsläget.',
+          'Hon beskriver bastu som en belastning på hjärtat som liknar måttlig träning. I en studie med 19 ' +
+          'personer steg puls och blodtryck i bastun till samma nivå som vid ett arbetsprov med måttlig belastning, och ' +
+          'blodtrycket sjönk sedan under utgångsläget.',
         evidence: 'svagt',
+        summary: [
+          'På hennes sajt beskrivs hur pulsen stiger i bastun, upp till 150 slag i minuten, så att bastun på ' +
+            'vissa sätt liknar måttlig konditionsträning. Laukkanen påpekar där att många av bastuns samband med ' +
+            'hälsa liknar dem för träning.',
+          'I studien satt 19 friska vuxna, varav 7 kvinnor och i snitt 46 år, 25 minuter i en bastu på 93 grader. ' +
+            'Blodtryck och puls steg hela tiden under badet och sjönk sedan stadigt, och efter badet låg ' +
+            'blodtrycket lägre än före. Belastningen på hjärtat motsvarade ett arbetsprov med måttlig belastning, 60 till 100 watt.',
+        ],
         note: 'Liten studie som bara mätte direkt under och efter ett pass. Ingen visar att bastu ersätter träning.',
         sources: [
+          FMF_LAUKKANEN,
           {
-            title: 'FoundMyFitness: bastu som träning för hjärtat (Rosetta)',
-            url: 'https://rosetta.to/u/foundmyfitness/sauna-use-as-an-exercise-mimetic-for-heart-and-healthspan',
-          },
-          {
-            title: 'Ketelhut och Ketelhut 2019, bastu och puls (ScienceDaily)',
-            url: 'https://www.sciencedaily.com/releases/2019/06/190612093900.htm',
+            title: 'Ketelhut och Ketelhut 2019, blodtryck och puls i bastun (PubMed)',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/31126559/',
           },
         ],
       },
@@ -469,6 +764,15 @@ export const PEOPLE: Person[] = [
           'Hon menar att värmen i bastun ökar värmechockproteiner, som hjälper cellerna att hålla proteiner i ' +
           'rätt form, och att det kan bidra till att bevara muskler.',
         evidence: 'svagt',
+        summary: [
+          'I ett klipp från en intervju berättar hon om en studie där bastu efter hård träning minskade ' +
+            'träningsvärken och förbättrade styrkan. I en annan studie fick personer som hölls orörliga i en ' +
+            'vecka lokal värme eller inte, och värmen minskade muskelförlusten med ungefär 40 procent.',
+          'Hon tror att det främst beror på värmechockproteiner och tillväxthormon, och säger att djurstudier ' +
+            'visat att skyddet hängde på värmechockproteinerna. Hon nämner också studier där 30 minuter i ' +
+            'ungefär 73 grader höjde värmechockproteinerna med 50 procent och att de kan vara förhöjda i ungefär ' +
+            '48 timmar.',
+        ],
         note:
           'Mekanismen är rimlig, men att den ger bättre hälsa på lång sikt är inte visat i stora studier med ' +
           'människor.',
@@ -482,28 +786,21 @@ export const PEOPLE: Person[] = [
       {
         text:
           'Hon förklarar att kallt vatten ger en kraftig ökning av noradrenalin, och hänvisar till studien där en ' +
-          'timme i 14 grader varmt vatten ökade noradrenalin ungefär sex gånger.',
+          'timme i 14 grader varmt vatten ökade noradrenalin med 530 procent.',
         evidence: 'svagt',
-        note: 'Bygger på en liten studie med långa pass i vattnet.',
-        sources: [
-          {
-            title: 'FoundMyFitness: kallbad, kylbehandling och noradrenalin',
-            url: 'https://foundmyfitness.com/episodes/cold-shock-norepinephrine',
-          },
-          SRAMEK_2000,
+        summary: [
+          'På hennes sida om kyla beskrivs hur kallbad och kylbehandling frisätter mycket noradrenalin, som ' +
+            'sätter igång anpassningar i ämnesomsättningen, hjärnan och generna. Hon ser det som hormesis, en ' +
+            'mild stress som gör kroppen tåligare mot större påfrestningar.',
+          'Hon jämför olika sätt. En timme upp till halsen i 14 grader gav också 250 procent mer dopamin, medan ' +
+            '20 sekunder i ungefär 4 grader ökade noradrenalinet med 200 till 300 procent. Sidan påpekar att ' +
+            'forskningen är ung och att kyla har risker.',
         ],
+        note: 'Bygger på en liten studie med långa pass i vattnet.',
+        sources: [FMF_COLD, SRAMEK_2000],
       },
     ],
-    startHere: [
-      {
-        title: 'FoundMyFitness: intervjun med Jari Laukkanen om bastu',
-        url: 'https://www.foundmyfitness.com/episodes/sauna-use-associated-with-decreased-risk-of-heart-disease-and-alzheimer-s-disease-jari-laukkanen',
-      },
-      {
-        title: 'FoundMyFitness: allt om bastu',
-        url: 'https://www.foundmyfitness.com/tags/sauna',
-      },
-    ],
+    startHere: [FMF_LAUKKANEN, FMF_COLD],
     warning: WARN_COLD,
   },
   {
@@ -511,29 +808,65 @@ export const PEOPLE: Person[] = [
     name: 'Jon Kabat-Zinn',
     kind: 'Forskare',
     areas: ['meditation'],
-    teaser: 'Grundade kursen MBSR och tog in mindfulness i vården.',
+    teaser: 'Grundade kursen MBSR för kroniskt sjuka patienter.',
     about:
-      'Jon Kabat-Zinn startade 1979 en klinik för stresshantering vid University of ' +
-      'Massachusetts. Där byggde han den åtta veckor långa kursen Mindfulness-Based Stress Reduction, MBSR, ' +
-      'för patienter med långvarig smärta och sjukdom. Kursen har sedan spridits över hela världen.',
+      'Jon Kabat-Zinn grundade och ledde programmet för stresshantering vid University of Massachusetts ' +
+      'Medical Center. Där startade han 1979 den åtta veckor långa kursen Mindfulness-Based Stress Reduction, ' +
+      'MBSR, för kroniskt sjuka patienter. Kursen har sedan använts i många studier.',
     method: [
       'Mindfulness: att medvetet rikta uppmärksamheten mot nuet utan att döma det man märker.',
-      'En kurs på åtta veckor med träffar varje vecka och en heldag med övning.',
-      'Övningar i meditation och medveten närvaro som man fortsätter med hemma.',
+      'En kurs på åtta veckor, vanligen med åtta träffar.',
+      'Övningar som kroppsskanning och meditation, som många deltagare fortsätter med i vardagen.',
+    ],
+    quotes: [
+      {
+        text: 'Mindfulness is awareness that arises through paying attention, on purpose, in the present moment, non-judgementally',
+        sv: 'Mindfulness är den medvetenhet som uppstår genom att vara uppmärksam, avsiktligt, i nuet och utan att döma.',
+        source: { title: 'Kabat-Zinn om hur han definierar mindfulness (Mindful)', url: 'https://www.mindful.org/jon-kabat-zinn-defining-mindfulness/' },
+      },
+      {
+        text: 'Instead, we befriend ourselves as we are. We learn how to drop in on ourselves, visit, and hang out in awareness.',
+        sv: 'I stället blir vi vänner med oss själva som vi är. Vi lär oss att titta in hos oss själva, hälsa på och stanna en stund i medvetenheten.',
+        source: { title: 'Kabat-Zinn om mindfulness i vardagen, intervju (Mindful)', url: 'https://www.mindful.org/everyday-mindfulness-with-jon-kabat-zinn/' },
+      },
+      {
+        text: 'The price of success is that more and more people want something. But of course, mindfulness is not a something.',
+        sv: 'Priset för framgången är att allt fler vill ha något. Men mindfulness är förstås inte ett något.',
+        source: { title: 'Kabat-Zinn om mindfulness i vardagen, intervju (Mindful)', url: 'https://www.mindful.org/everyday-mindfulness-with-jon-kabat-zinn/' },
+      },
+      {
+        text: 'If it were up to me to be breathing, I would have died a long time ago.',
+        sv: 'Om det hade hängt på mig att andas hade jag dött för länge sedan.',
+        source: { title: 'Kabat-Zinn om hur han definierar mindfulness (Mindful)', url: 'https://www.mindful.org/jon-kabat-zinn-defining-mindfulness/' },
+      },
     ],
     claims: [
       {
         text:
-          'En stor genomgång av 47 slumpade studier med över 3 500 vuxna fann att program med mindfulness ' +
+          'En stor genomgång av 47 slumpade studier med över 3 500 vuxna fann att program med mindfulness ' +
           'minskade ångest, nedstämdhet och smärta något.',
         evidence: 'belagt',
+        summary: [
+          'Forskare vid Johns Hopkins gick igenom 18 753 träffar fram till november 2012 och tog med 47 slumpade ' +
+            'studier med sammanlagt 3 515 vuxna. Alla studier jämförde med en aktiv kontrollgrupp, så att ' +
+            'förväntningar och uppmärksamhet inte ensamma skulle förklara resultatet.',
+          'Program med mindfulness gav måttligt säkra förbättringar av ångest, nedstämdhet och smärta, och mindre ' +
+            'säkra förbättringar av stress och psykisk livskvalitet. För positiva känslor, uppmärksamhet, missbruk, ' +
+            'matvanor, sömn och vikt var underlaget svagt eller för litet för att visa någon effekt.',
+          'Enligt NPR handlade det om ungefär två och en halv timmes övning i veckan, och kursen MBSR fanns med ' +
+            'i många av studierna.',
+        ],
         note:
-          'Effekterna var små till måttliga, och meditation var inte bättre än annan aktiv behandling som ' +
+          'Effekterna var små till måttliga, och det fanns inga belägg för att meditation var bättre än annan aktiv behandling som ' +
           'motion eller terapi.',
         sources: [
           {
-            title: 'Goyal m.fl. 2014, meditation och stress, JAMA Internal Medicine (QxMD)',
-            url: 'https://read.qxmd.com/read/24395196/meditation-programs-for-psychological-stress-and-well-being-a-systematic-review-and-meta-analysis',
+            title: 'Goyal m.fl. 2014, meditation och stress, JAMA Internal Medicine (PubMed)',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/24395196/',
+          },
+          {
+            title: 'Samma genomgång, hela artikeln (PMC)',
+            url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4142584',
           },
           {
             title: 'NPR om genomgången',
@@ -546,7 +879,19 @@ export const PEOPLE: Person[] = [
           'I hans tidiga studie med 90 patienter med långvarig smärta minskade smärtan, oron och behovet av ' +
           'smärtstillande efter kursen, medan en jämförelsegrupp inte blev bättre.',
         evidence: 'svagt',
-        note: 'Grupperna var inte slumpade, och studien gjordes av den som skapat kursen.',
+        summary: [
+          'Kabat-Zinn och kollegor lät 90 patienter med långvarig smärta gå ett tio veckor långt program för ' +
+            'stressminskning och avslappning, med träning i mindfulnessmeditation.',
+          'Efteråt hade de mindre smärta i stunden, en bättre bild av sin kropp, mindre begränsning av vad de ' +
+            'kunde göra, färre symtom och mindre ångest och nedstämdhet. De tog mindre smärtstillande, var mer ' +
+            'aktiva och fick bättre självkänsla, oavsett kön och typ av smärta. En jämförelsegrupp med vanlig ' +
+            'smärtbehandling förbättrades inte.',
+          'Upp till 15 månader senare höll förbättringarna i sig, utom för smärtan i stunden, och de flesta ' +
+            'sade att de fortsatt meditera.',
+        ],
+        note:
+          'Jämförelsegruppen fick vanlig behandling, och studien beskriver ingen lottning. Den gjordes av den som ' +
+          'skapat kursen.',
         sources: [
           {
             title: 'Kabat-Zinn m.fl. 1985, mindfulness vid långvarig smärta (PubMed)',
@@ -559,6 +904,14 @@ export const PEOPLE: Person[] = [
           'Anställda som gick kursen fick ett starkare antikroppssvar på en influensavaccination än en grupp ' +
           'som fick vänta, och mätningar visade förändrad aktivitet i hjärnan.',
         evidence: 'svagt',
+        summary: [
+          'Forskarna lottade friska anställda på en arbetsplats till en åtta veckor lång klinisk kurs i ' +
+            'mindfulnessmeditation eller till att vänta. Hjärnans elektriska aktivitet mättes före, direkt efter ' +
+            'och fyra månader efter kursen, och när kursen var slut fick alla influensavaccin.',
+          'De som mediterat fick mer aktivitet i främre vänstra delen av hjärnan, ett mönster som tidigare ' +
+            'kopplats till positiva känslor, och fler antikroppar mot vaccinet än de som väntade. Ju större ' +
+            'förändringen i hjärnan var, desto större blev ökningen av antikroppar.',
+        ],
         note:
           'Liten studie med 25 i kursen och 16 som väntade. Forskarna efterlyste mer forskning. Kabat-Zinn var en ' +
           'av författarna.',
@@ -571,25 +924,257 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Han beskriver mindfulness som uppmärksamhet med avsikt, i nuet och utan att döma, och säger själv att ' +
-          'det är en arbetsdefinition och inte den slutliga.',
+          'Han beskriver mindfulness som uppmärksamhet med avsikt, i nuet och utan att döma, och lägger ibland ' +
+          'till att det sker för att förstå sig själv och bli klokare.',
         evidence: 'asikt',
+        summary: [
+          'Tidningen Mindful berättar att han 1979 tog in kroniskt sjuka patienter som inte blev hjälpta av vanlig ' +
+            'vård i sitt nya program på åtta veckor, det som i dag kallas MBSR. För NPR har han beskrivit ' +
+            'metoden som buddhistisk meditation utan buddhismen, helt världslig.',
+          'En av hans huvudtankar är att vi tar oss själva på för stort allvar, eftersom vi tror att det finns ' +
+            'ett jag att ta på allvar. Berättelsen om mig är enligt honom en konstruktion, och när vi släpper den ' +
+            'finns bara nuet kvar.',
+          'Kroppen andas av sig själv, så det medvetna är vår uppmärksamhet på andningen. Att lägga märke till, ' +
+            'vara tacksam och vara vaken ger enligt honom en levande känsla som inte fanns där förut.',
+        ],
         sources: [
           {
             title: 'Kabat-Zinn om hur han definierar mindfulness (Mindful)',
             url: 'https://www.mindful.org/jon-kabat-zinn-defining-mindfulness/',
           },
           {
-            title: 'Intervju i The Psychologist (BPS)',
-            url: 'https://thepsychologist.bps.org.uk/not-mcmindfulness-any-stretch-imagination',
+            title: 'NPR om mindfulness och kursen MBSR',
+            url: 'https://www.npr.org/blogs/health/2014/01/07/260470831/mindfulness-meditation-can-help-relieve-anxiety-and-depression',
           },
         ],
       },
     ],
     startHere: [
       {
-        title: 'Boken Full Catastrophe Living, 1990 (Publishers Weekly)',
+        title: 'Boken Full Catastrophe Living, 1990 (recension i Publishers Weekly)',
         url: 'https://www.publishersweekly.com/9780385298971',
+        summary: [
+          'Boken bygger på programmet för stresshantering som Kabat-Zinn grundade och ledde vid University of Massachusetts Medical Center.',
+          'Ämnet är hela spektrumet av stress i livet och hur medveten närvaro kan lugna reaktionerna utan att trubba av känslorna.',
+          'Först förklarar han hur man lägger upp ett schema för meditation, och sedan använder han det på de vanligaste källorna till stress.',
+          'En del i mitten går igenom vetenskapliga och anekdotiska belägg för hur sinnestillstånd hänger ihop med hälsa.',
+          'Enligt recensenten lovar han inte för mycket om vad meditation kan läka.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'sam-harris',
+    name: 'Sam Harris',
+    kind: 'Författare och poddare',
+    areas: ['meditation'],
+    teaser: 'Neuroforskare och författare som beskriver meditation utan religion.',
+    about:
+      'Sam Harris har en examen i filosofi från Stanford och en doktorsexamen i neurovetenskap från UCLA. Han ' +
+      'har mediterat i mer än 30 år och studerat för lärare från Tibet, Indien, Burma och västvärlden. Han har ' +
+      'skrivit fem bästsäljare på New York Times lista, leder podden Making Sense och skriver och föreläser ' +
+      'också om många andra ämnen. År 2018 grundade han Waking Up, en betald app med årsabonnemang efter en ' +
+      'gratis provperiod, där den som inte har råd kan få ett gratis medlemskap.',
+    method: [
+      'Han utgår från vipassana, en teknik från den äldsta grenen av buddhismen som han menar går att lära ut helt världsligt.',
+      'Hans grundinstruktion är att låta uppmärksamheten vila i andningen och gå tillbaka dit när en tanke har tagit över.',
+      'I appen Waking Up har han en introduktionskurs med en kort meditation och en kort lektion varje dag i en månad.',
+    ],
+    quotes: [
+      {
+        text: 'Mindfulness is simply a state of open, nonjudgmental, and nondiscursive attention to the contents of consciousness, whether pleasant or unpleasant.',
+        sv: 'Mindfulness är helt enkelt ett tillstånd av öppen, icke-dömande och icke-diskursiv uppmärksamhet på medvetandets innehåll, vare sig det är behagligt eller obehagligt.',
+        source: { title: 'Sam Harris om hur man mediterar (samharris.org, 2011)', url: 'https://www.samharris.org/blog/how-to-meditate' },
+      },
+      {
+        text: 'The practice of mindfulness is extraordinarily simple to describe, but it is in no sense easy.',
+        sv: 'Att öva mindfulness är utomordentligt enkelt att beskriva, men det är inte på något sätt lätt.',
+        source: { title: 'Sam Harris om hur man mediterar (samharris.org, 2011)', url: 'https://www.samharris.org/blog/how-to-meditate' },
+      },
+      {
+        text: 'The problem is not thoughts themselves but the state of thinking without knowing that one is thinking.',
+        sv: 'Problemet är inte tankarna i sig, utan att tänka utan att veta om att man tänker.',
+        source: { title: 'Sam Harris om hur man mediterar (samharris.org, 2011)', url: 'https://www.samharris.org/blog/how-to-meditate' },
+      },
+      {
+        text: 'Selflessness is a quality of consciousness that can be subjectively discovered. Indeed, it is in plain view in every present moment, and yet it remains difficult to see.',
+        sv: 'Jaglöshet är en egenskap hos medvetandet som kan upptäckas i den egna upplevelsen. Den ligger faktiskt i öppen dager i varje ögonblick, och ändå är den svår att se.',
+        source: { title: 'Sam Harris om ett medvetande utan jag (samharris.org, 2007)', url: 'https://www.samharris.org/blog/selfless-consciousness-without-faith' },
+      },
+    ],
+    claims: [
+      {
+        text:
+          'Han menar att mindfulness är en färdighet i uppmärksamhet som går att träna utan att tro på något, ' +
+          'och han föreslår vipassana för nybörjare.',
+        evidence: 'asikt',
+        summary: [
+          'I sin text om hur man mediterar skriver Harris att många av hans läsare oroar sig för att meditation ' +
+            'kräver religiös tro. Han menar att det finns metoder som kan öka välbefinnandet utan att man behöver ' +
+            'tro på något utan tillräckliga skäl.',
+          'Vipassana betyder insikt och kommer från Theravada, den äldsta grenen av buddhismen. Fördelen är enligt ' +
+            'honom att den kan läras ut helt världsligt. Mindfulness beskriver han som en öppen uppmärksamhet på ' +
+            'allt som dyker upp i medvetandet, behagligt eller obehagligt, utan att döma och utan att fastna i ' +
+            'tankar om det.',
+          'Han skriver att övningen är mycket enkel att beskriva men inte alls lätt, och att verklig skicklighet ' +
+            'troligen kräver särskild talang och ett helt liv av övning. Hans app Waking Up beskriver sig som världslig, utan krav på tro.',
+        ],
+        sources: [
+          {
+            title: 'Sam Harris om hur man mediterar (samharris.org, 2011)',
+            url: 'https://www.samharris.org/blog/how-to-meditate',
+          },
+          {
+            title: 'Waking Up, frågor och svar på startsidan',
+            url: 'https://www.wakingup.com/',
+          },
+        ],
+      },
+      {
+        text:
+          'Han menar att det svåra inte är att tankar dyker upp, utan att gå vilse i dem utan att märka det, och ' +
+          'att meditation tränar förmågan att se en tanke som en tanke.',
+        evidence: 'asikt',
+        summary: [
+          'Harris liknar mindfulness vid att gå på lina. Att falla är att försvinna in i tankar, och det händer ' +
+            'enligt honom hela tiden, i glada dagdrömmar lika väl som i rädsla, ilska och självförakt. Han menar ' +
+            'att det är sinnets normala tillstånd.',
+          'Hans instruktion går ut på att sitta bekvämt med rak rygg, blunda och låta uppmärksamheten vila i ' +
+            'känslan av andningen, vid näsan eller i magen, utan att styra den. Ljud, känslor i kroppen och andra ' +
+            'intryck får komma och gå. När den som mediterar märker att den har tappat bort sig i en tanke blir ' +
+            'själva tanken något att iaktta, och sedan går uppmärksamheten tillbaka till andningen.',
+          'Waking Up beskriver samma sak: meditation tränar uppmärksamheten genom att lägga märke till tankarna ' +
+            'när de kommer och går, utan att döma eller reagera.',
+        ],
+        sources: [
+          {
+            title: 'Sam Harris om hur man mediterar (samharris.org, 2011)',
+            url: 'https://www.samharris.org/blog/how-to-meditate',
+          },
+          {
+            title: 'Waking Up om mindfulness och meditation',
+            url: 'https://www.wakingup.com/topic/understanding-mindfulness-and-meditation',
+          },
+        ],
+      },
+      {
+        text:
+          'Han menar att känslan av ett jag som sitter bakom ögonen är en illusion, och att den med träning i ' +
+          'meditation går att se igenom.',
+        evidence: 'asikt',
+        summary: [
+          'Harris skriver att både hjärnforskningen och flera kontemplativa traditioner ger skäl att se den ' +
+            'vanliga känslan av ett jag som en sorts kognitiv illusion. Det finns enligt honom inget avgränsat jag ' +
+            'i hjärnan och inget område som har en särskild ställning för vår person.',
+          'Enligt honom känns det ändå för de flesta som om de färdas runt inuti kroppen. Han jämför med den blinda fläcken i ' +
+            'synfältet, som alltid finns där men sällan märks. På samma sätt krävs det för de flesta mycket ' +
+            'träning i meditation för att märka att det som är medvetet inte känns som ett jag.',
+          'På bokens sida skriver han att känslan av att titta ut bakom ögonen kan förändras eller försvinna ' +
+            'helt, och att det är en klarare förståelse av hur saker är.',
+        ],
+        note:
+          'Han beskriver egna upplevelser och sin egen tolkning av hjärnforskningen. Essän hänvisar inte till någon ' +
+          'studie som visar att jaget är en illusion.',
+        sources: [
+          {
+            title: 'Sam Harris om ett medvetande utan jag (samharris.org, 2007)',
+            url: 'https://www.samharris.org/blog/selfless-consciousness-without-faith',
+          },
+          {
+            title: 'Boken Waking Up (bokens sida på samharris.org)',
+            url: 'https://www.samharris.org/books/waking-up',
+          },
+        ],
+      },
+      {
+        text:
+          'Han menar att målet med meditation är att vakna ur vanan att gå vilse i tankar och förstå sitt eget ' +
+          'sinne. Hans app skriver att det handlar om mer än att minska stress.',
+        evidence: 'asikt',
+        summary: [
+          'Harris skriver att målet är att vakna ur tänkandets trans och ur vanan att gripa efter det behagliga ' +
+            'och dra sig undan det obehagliga, så att sinnet blir öppet och ostört av oro. Fördelarna kommer ' +
+            'enligt honom långt innan man blivit skicklig.',
+          'Hans app Waking Up skriver att många tror att meditation främst handlar om att bli lugnare, men att ' +
+            'målet är att förstå sinnet. Den som ser att tankarna är tillfälliga får enligt appen mer utrymme ' +
+            'mellan det som händer och reaktionen, och lidandet beskrivs som något som kommer ur tolkningen av ' +
+            'händelser snarare än ur händelserna själva.',
+          'I en äldre essä skriver han att alla söker lycka i en tillvaro som inte går att lita på, och att det ' +
+            'kontemplativa livet har viktiga insikter om hur lycklig man kan bli.',
+        ],
+        sources: [
+          {
+            title: 'Sam Harris om hur man mediterar (samharris.org, 2011)',
+            url: 'https://www.samharris.org/blog/how-to-meditate',
+          },
+          {
+            title: 'Waking Up om mindfulness och meditation',
+            url: 'https://www.wakingup.com/topic/understanding-mindfulness-and-meditation',
+          },
+          {
+            title: 'Sam Harris om ett medvetande utan jag (samharris.org, 2007)',
+            url: 'https://www.samharris.org/blog/selfless-consciousness-without-faith',
+          },
+        ],
+      },
+      {
+        text:
+          'Han skriver att mindfulness kan dämpa smärta, ångest och nedstämdhet. En stor genomgång av 47 ' +
+          'slumpade studier med vuxna patienter fann små till måttliga förbättringar för just de tre.',
+        evidence: 'belagt',
+        summary: [
+          'I sin text från 2011 skriver Harris att mindfulness har visats påverka smärta, minska ångest och ' +
+            'nedstämdhet, förbättra tankeförmågan och förändra den grå substansen i delar av hjärnan. Han ' +
+            'hänvisar till en enskild studie för varje effekt.',
+          'En genomgång i JAMA Internal Medicine 2014 gick igenom 18 753 träffar och tog med 47 slumpade studier ' +
+            'med sammanlagt 3 515 vuxna, alla med en aktiv kontrollgrupp. Program med mindfulness gav måttligt ' +
+            'säkra förbättringar av ångest, nedstämdhet och smärta, och mindre säkra av stress och psykisk ' +
+            'livskvalitet.',
+          'För uppmärksamhet, positiva känslor, sömn, missbruk, matvanor och vikt var underlaget svagt eller för ' +
+            'litet för att visa någon effekt, och det fanns inga belägg för att meditation var bättre än annan aktiv behandling som ' +
+            'läkemedel, motion eller beteendeterapi.',
+        ],
+        note:
+          'Genomgången stöder smärta, ångest och nedstämdhet. Den mätte inte grå substans och fann inget säkert ' +
+          'stöd för bättre uppmärksamhet. De fem studier han hänvisar till är bara kontrollerade till titel.',
+        sources: [
+          {
+            title: 'Sam Harris om hur man mediterar (samharris.org, 2011)',
+            url: 'https://www.samharris.org/blog/how-to-meditate',
+          },
+          {
+            title: 'Goyal m.fl. 2014, meditation och stress, JAMA Internal Medicine (PubMed)',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/24395196/',
+          },
+          {
+            title: 'Samma genomgång, hela artikeln (PMC)',
+            url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4142584',
+          },
+        ],
+      },
+    ],
+    startHere: [
+      {
+        title: 'Boken Waking Up, 2014 (bokens sida på samharris.org)',
+        url: 'https://www.samharris.org/books/waking-up',
+        summary: [
+          'Harris skriver att han väntat i mer än tio år på att skriva boken, och att han långt innan dess intresserade sig för medvetandet och andliga upplevelser.',
+          'Han vill visa att en viss sorts andlighet hör till att förstå hur sinnet fungerar.',
+          'Han menar att det inte finns något avgränsat jag i hjärnan, och att känslan av ett jag kan förändras eller försvinna.',
+          'Syftet är att ge läsaren en klar bild av problemet och verktyg att lösa det själv.',
+          'Psykologen Paul Bloom beskriver på samma sida boken som en memoar, en utforskning av jaget och en vägledning till att överskrida jaget, som också förklarar hur man mediterar.',
+        ],
+      },
+      {
+        title: 'Sam Harris om hur man mediterar (samharris.org, 2011)',
+        url: 'https://www.samharris.org/blog/how-to-meditate',
+        summary: [
+          'För nybörjare föreslår han vipassana, en teknik från Theravada som han menar kan läras ut helt världsligt.',
+          'Han beskriver mindfulness som en öppen uppmärksamhet på allt som dyker upp, behagligt eller obehagligt, utan att döma.',
+          'Hans instruktion är att låta uppmärksamheten vila i känslan av andningen och gå tillbaka dit när en tanke har tagit över.',
+          'Han berättar att han i 20-årsåldern tillbringade två år på tysta retreater som var från en vecka till tre månader långa.',
+          'Han nämner tre böcker om vipassana, av Bhante Gunaratana, Joseph Goldstein och Jon Kabat-Zinn.',
+        ],
       },
     ],
   },
@@ -600,26 +1185,62 @@ export const PEOPLE: Person[] = [
     areas: ['utveckling'],
     teaser: 'Små vanor som växer över tid. Författaren till Atomic Habits.',
     about:
-      'James Clear är författare och skriver om vanor och beslut. Hans bok Atomic Habits från 2018 har sålt i ' +
-      'tiotals miljoner exemplar. Han forskar inte själv utan samlar idéer från forskning och andra författare ' +
+      'James Clear är författare och skriver om vanor och beslut. Hans bok Atomic Habits har enligt hans egen ' +
+      'sida sålt i mer än 30 miljoner exemplar. Han forskar inte själv utan samlar idéer från forskning och andra författare ' +
       'och gör dem praktiska.',
     method: [
-      'Fyra lagar för nya vanor: gör det synligt, lockande, lätt och tillfredsställande.',
-      'Vänd på lagarna för att bryta en dålig vana: gör den osynlig, olockande, svår och otillfredsställande.',
-      'Börja med vem du vill vara, och låt varje litet beslut bli en röst för den personen.',
-      'Haka på en ny vana direkt efter en du redan har.',
+      'Fyra lagar för nya vanor: att göra dem synliga, lockande, lätta och tillfredsställande.',
+      'Lagarna omvända för att bryta en dålig vana: att göra den osynlig, olockande, svår och otillfredsställande.',
+      'Identitet först: varje handling ser han som en röst för den person man vill bli.',
+      'Vanestapling: en ny vana kopplas direkt efter en man redan har.',
+    ],
+    quotes: [
+      {
+        text: 'Your identity emerges out of your habits. Every action is a vote for the type of person you wish to become.',
+        sv: 'Din identitet växer fram ur dina vanor. Varje handling är en röst för den sortens person du vill bli.',
+        source: { title: 'Sammanfattning av Atomic Habits (jamesclear.com)', url: 'https://jamesclear.com/atomic-habits-summary' },
+      },
+      {
+        text: 'Goals are about the results you want to achieve. Systems are about the processes that lead to those results.',
+        sv: 'Mål handlar om de resultat du vill nå. System handlar om processerna som leder till de resultaten.',
+        source: { title: 'Sammanfattning av Atomic Habits (jamesclear.com)', url: 'https://jamesclear.com/atomic-habits-summary' },
+      },
+      {
+        text: 'If you’re having trouble changing your habits, the problem isn’t you. The problem is your system.',
+        sv: 'Om du har svårt att ändra dina vanor är det inte du som är problemet. Problemet är ditt system.',
+        source: { title: 'Sammanfattning av Atomic Habits (jamesclear.com)', url: 'https://jamesclear.com/atomic-habits-summary' },
+      },
+      {
+        text: 'It is so easy to dismiss the value of making slightly better decisions on a daily basis.',
+        sv: 'Det är så lätt att avfärda värdet av att fatta lite bättre beslut varje dag.',
+        source: { title: 'Continuous Improvement (jamesclear.com)', url: 'https://jamesclear.com/continuous-improvement' },
+      },
     ],
     claims: [
       {
         text:
-          'Små förbättringar varje dag växer som ränta på ränta. En procent bättre varje dag blir ungefär 37 ' +
-          'gånger bättre på ett år.',
+          'Clear menar att små förbättringar varje dag växer som ränta på ränta. En procent bättre varje dag ' +
+          'blir ungefär 37 gånger bättre på ett år.',
         evidence: 'asikt',
+        summary: [
+          'Clear beskriver ständig förbättring som att göra små ändringar varje dag och räkna med att de till ' +
+            'slut blir något stort. Den vanliga vägen, ett stort mål och stora kliv, slutar enligt honom ofta i ' +
+            'utbrändhet och misslyckande.',
+          'Hans exempel är brittiska cykelförbundet, där Dave Brailsford letade efter en procents förbättring i ' +
+            'allt från sadlar och däck till massagegel, kuddar och handtvätt. Fem år senare tog britterna 8 av ' +
+            '14 guldmedaljer i cykel vid OS 2008.',
+          'Han föreslår också att mäta bakåt, alltså att utgå från vad man gjorde förra veckan och bli lite ' +
+            'bättre den här veckan, och att ofta förbättra genom att ta bort fel i stället för att lägga till mer.',
+        ],
         note: 'Räkningen stämmer, men livet växer sällan så jämnt. Idén lånar han från Dave Brailsfords cykellag.',
         sources: [
           {
             title: 'Continuous Improvement (jamesclear.com)',
             url: 'https://jamesclear.com/continuous-improvement',
+          },
+          {
+            title: 'Marginal Gains, om Brailsford och brittisk cykel (jamesclear.com)',
+            url: 'https://jamesclear.com/marginal-gains',
           },
         ],
       },
@@ -628,8 +1249,17 @@ export const PEOPLE: Person[] = [
           'Den som bestämmer exakt när och var en sak ska göras blir mer benägen att göra den. En genomgång av 94 ' +
           'tester fann en måttlig till stor effekt av sådana planer.',
         evidence: 'belagt',
-        note:
-          'Idén kommer från Peter Gollwitzer, genomgången gjorde han med Paschal Sheeran.',
+        summary: [
+          'Peter Gollwitzer och Paschal Sheeran gick 2006 igenom 94 oberoende tester av planer där man i förväg ' +
+            'bestämmer när, var och hur man ska göra något, ofta i formen om Y händer gör jag X. Planerna hade ' +
+            'en måttlig till stor effekt på om folk nådde sina mål.',
+          'De hjälpte folk att komma igång, att stå emot störningar, att släppa det som inte fungerade och att ' +
+            'spara kraft till senare. Planen gjorde att man lättare såg tillfället och att handlingen kom mer ' +
+            'automatiskt.',
+          'Clear lyfter fram en brittisk studie med 248 personer där 91 procent av dem som skrivit ner dag, tid ' +
+            'och plats tränade minst en gång i veckan, mot 35 till 38 procent i de andra grupperna.',
+        ],
+        note: 'Clear hänvisar till genomgången. Den brittiska studien han beskriver pågick bara i två veckor.',
         sources: [
           {
             title: 'Gollwitzer och Sheeran 2006, genomgång om när och var-planer (Konstanz universitet)',
@@ -643,61 +1273,52 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Det finns inget magiskt antal dagar för en ny vana. I en studie var medianen 66 dagar innan ' +
-          'en ny vana kändes automatisk, med stor spridning mellan personer.',
-        evidence: 'svagt',
-        note:
-          'En studie med 96 personer som själva skattade hur automatisk vanan kändes. Spridningen var från 18 ' +
-          'till 254 dagar.',
-        sources: [
-          {
-            title: 'How Long Does it Actually Take to Form a New Habit? (jamesclear.com)',
-            url: 'https://jamesclear.com/new-habit',
-          },
-          {
-            title: 'Lally m.fl. 2010 om hur vanor bildas (BPS Research Digest)',
-            url: 'https://bps.org.uk/research-digest/how-form-habit',
-          },
-        ],
-      },
-      {
-        text:
-          'Vanor fastnar bättre om de bygger på vem man vill vara än på vad man vill uppnå.',
+          'Clear menar att vanor fastnar bättre om de bygger på vem man vill vara än på vad man vill uppnå.',
         evidence: 'asikt',
+        summary: [
+          'Clear beskriver tre lager av förändring: resultat, alltså vad man får, process, alltså vad man gör, ' +
+            'och identitet, alltså vad man tror om sig själv. De flesta börjar med resultatet. Han menar att det ' +
+            'håller bättre att börja med vem man vill bli.',
+          'Han beskriver två steg: att bestämma vem man vill vara och att bevisa det för sig själv med små ' +
+            'vinster. Den som inte vet var den ska börja kan enligt honom utgå från resultatet och fråga vilken sorts person ' +
+            'som skulle nå det. I sammanfattningen av boken kallar han varje handling en röst för den person man ' +
+            'vill bli.',
+        ],
         sources: [
           {
             title: 'Identity-Based Habits (jamesclear.com)',
             url: 'https://jamesclear.com/identity-based-habits',
           },
+          ATOMIC_SUMMARY,
         ],
       },
       {
         text:
-          'Att haka på en ny vana direkt efter en befintlig gör den lättare att komma ihåg. Idén kommer från BJ ' +
-          'Foggs metod Tiny Habits.',
+          'Clear menar att en ny vana blir lättare att komma ihåg om den hakas på direkt efter en befintlig. ' +
+          'Idén kommer från BJ Foggs metod Tiny Habits.',
         evidence: 'asikt',
+        summary: [
+          'Clear förklarar att hjärnan stärker kopplingar som används ofta och rensar bort dem som inte används. ' +
+            'Vanor man redan har är därför starka och kan bli utlösare för nya.',
+          'Han kallar det att stapla vanor: efter en vana jag redan har gör jag den nya, till exempel byter om ' +
+            'till träningskläder direkt efter att ha tagit av jobbskorna. Han ser det som en sorts plan för när ' +
+            'och var, där den nya vanan kopplas till en gammal vana i stället för till en tid och plats.',
+          'Metoden skapades enligt honom av BJ Fogg inom Tiny Habits. På Tiny Habits egen sida står att Clear ' +
+            'själv gick deras gratis femdagarsprogram 2012.',
+        ],
         sources: [
           {
             title: 'Habit Stacking (jamesclear.com)',
             url: 'https://jamesclear.com/habit-stacking',
           },
           {
-            title: 'Tiny Habits, introduktion (Stanford Medicine)',
-            url: 'https://med.stanford.edu/content/dam/sm/ascend/documents/Introduction_%20Tiny%20Habits%20for%20Self%20Compassion,%20Getting%20Started.pdf',
+            title: 'Tiny Habits, BJ Foggs femdagarsprogram (tinyhabits.com)',
+            url: 'https://tinyhabits.com/join/',
           },
         ],
       },
     ],
-    startHere: [
-      {
-        title: 'Sammanfattning av Atomic Habits (jamesclear.com)',
-        url: 'https://jamesclear.com/atomic-habits-summary',
-      },
-      {
-        title: 'Modern Wisdom #064: James Clear om vanor som håller',
-        url: 'https://chriswillx.com/064-james-clear-how-to-build-habits-that-last/',
-      },
-    ],
+    startHere: [ATOMIC_SUMMARY, MW_CLEAR],
   },
   {
     id: 'chris-williamson',
@@ -706,43 +1327,82 @@ export const PEOPLE: Person[] = [
     areas: ['utveckling'],
     teaser: 'Poddaren bakom Modern Wisdom samlar idéer om lycka, driv och vanor.',
     about:
-      'Chris Williamson är en brittisk poddare som driver Modern Wisdom sedan 2018. Han var tidigare ' +
-      'klubbarrangör och deltog i första säsongen av Love Island. Han forskar inte, utan intervjuar forskare ' +
-      'och författare och sammanfattar vad han lärt sig i återkommande avsnitt med lärdomar.',
+      'Chris Williamson driver podden Modern Wisdom, med tre avsnitt i veckan och över 900 avsnitt, och ' +
+      'nyhetsbrevet 3 Minute Monday. Han forskar inte, utan intervjuar forskare och författare och samlar det ' +
+      'han lärt sig i nyhetsbrevet.',
     method: [
       'Långa intervjuer med forskare, författare och idrottare.',
-      'I återkommande avsnitt går han igenom de lärdomar han tagit med sig.',
+      'Varje måndag delar han i nyhetsbrevet saker han lärt sig.',
       'Han lånar gärna idéer från gästerna och säger varifrån de kommer.',
+    ],
+    quotes: [
+      {
+        text: 'Your brain does not care about you feeling good, it only cares about you being successful.',
+        sv: 'Din hjärna bryr sig inte om att du mår bra, den bryr sig bara om att du lyckas.',
+        source: { title: 'Chris Williamson om att aldrig känna sig nöjd (nyhetsbrevet 3 Minute Monday)', url: 'https://chriswillx.com/3-minute-monday-enoughness-dogs-lessons/' },
+      },
+      {
+        text: 'We don’t just judge what we are in isolation, we judge it as a part of the entire hierarchy of those around us.',
+        sv: 'Vi bedömer inte bara vad vi är för sig, vi bedömer det som en del av hela rangordningen bland dem omkring oss.',
+        source: { title: 'Chris Williamson om jämförelse och status (nyhetsbrevet 3 Minute Monday)', url: 'https://chriswillx.com/3-minute-monday-staring-men-comparison-status-symbols/' },
+      },
+      {
+        text: 'Dealing with problems is the cost of doing business as a human, not a personal curse.',
+        sv: 'Att hantera problem är priset för att vara människa, inte en personlig förbannelse.',
+        source: { title: 'Chris Williamson om stress och överpresterare (nyhetsbrevet 3 Minute Monday)', url: 'https://chriswillx.com/3-minute-monday-stress-overachievers-amp-bad-deals/' },
+      },
     ],
     claims: [
       {
         text:
-          'Han varnar ofta för att vara en osäker överpresterare: att jaga mål för att laga en inre känsla av ' +
-          'att inte räcka till, och att tro att oro gör en bättre.',
+          'Han varnar för det han kallar kompetensens förbannelse: den som är duktig och har höga krav ser ' +
+          'framgång som det minsta som krävs och känner sig aldrig nöjd.',
         evidence: 'asikt',
-        note: 'Begreppet kommer från forskaren Laura Empson, som studerat personer på kunskapsföretag som konsult- och advokatbyråer.',
+        summary: [
+          'I sitt nyhetsbrev skriver han att en av de vanligaste frågorna på hans turné var hur man ger sig själv ' +
+            'erkännande och varför man aldrig känner sig klar. Hans svar är att den som är duktig räknar med att ' +
+            'lyckas, så att seger bara blir godtagbar och allt annat ett misslyckande.',
+          'Han menar att vi är byggda så, eftersom våra förfäder var de mest målinriktade och osäkra ' +
+            'överpresterarna, och att hjärnan bryr sig om framgång, inte om att vi mår bra. Det finns inga ' +
+            'lösningar, bara avvägningar: den som är besatt av ett område kan inte stänga av det när den vill.',
+          'I ett annat nyhetsbrev lyfter han fram Oliver Burkemans iakttagelse att toppen av näringslivet ' +
+            'domineras av osäkra överpresterare, som drivs av en känsla av att inte räcka till och inte har roligt.',
+        ],
+        note:
+          'Han inleder med Rich Rolls tvivel på att framgång måste förtjänas med smärta, en tanke Roll själv tror ' +
+          'är fel. Ordet osäkra överpresterare finns också hos Oliver Burkeman.',
         sources: [
           {
-            title: 'Modern Wisdom #879: 16 lärdomar från 2024 (Podscripts)',
-            url: 'https://podscripts.co/podcasts/modern-wisdom/879-16-lessons-from-2024-chris-bumstead-elon-musk-alex-hormozi',
+            title: 'Chris Williamson om att aldrig känna sig nöjd (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-enoughness-dogs-lessons/',
           },
           {
-            title: 'Laura Empson om osäkra överpresterare (City St Georges, University of London)',
-            url: 'https://www.citystgeorges.ac.uk/news-and-events/news/2018/02/if-youre-so-successful-why-are-you-still-working-70-hours-a-week',
+            title: 'Chris Williamson om stress och överpresterare (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-stress-overachievers-amp-bad-deals/',
           },
         ],
       },
       {
         text:
-          'Han menar att många börjar varje dag med en känsla av skuld över allt som inte är gjort, och att den ' +
-          'skulden aldrig går att betala av. En lista över det man faktiskt gjort hjälper mer än en lista över ' +
-          'det som återstår.',
+          'Han lyfter fram Oliver Burkemans tanke att många börjar varje dag med en skuld över allt som inte är ' +
+          'gjort, en skuld som aldrig går att betala av.',
         evidence: 'asikt',
-        note: 'Både skulden och listan över det gjorda kommer från författaren Oliver Burkeman.',
+        summary: [
+          'I nyhetsbrevet återger Williamson hur Matthew Hussey beskriver att han inte känner sig värd glädje och ' +
+            'lugn förrän han pressat sig genom ett brutalt schema. Williamson skriver att han känner igen sig, och ' +
+            'att Burkeman har ett namn för känslan: produktivitetsskuld.',
+          'Burkeman beskriver det som att börja varje morgon på minus och försöka arbeta sig upp till noll före ' +
+            'kvällen. Eftersom mejl, krav och ambitioner aldrig tar slut går skulden aldrig att betala av.',
+          'Hans förslag är att börja dagen på noll och föra en lista över det man faktiskt gjort, som fylls på ' +
+            'under dagen. Det gör det enligt honom lättare att slappna av och att välja vad man ska lägga kraft på.',
+        ],
+        note:
+          'Både skulden och listan över det gjorda kommer från författaren Oliver Burkeman. Williamsons ' +
+          'nyhetsbrev tar upp skulden, inte listan.',
         sources: [
           {
-            title: 'Chris Williamson om produktivitetsskuld (Rosetta)',
-            url: 'https://rosetta.to/u/chriswillx/productivity-debt',
+            title: 'Chris Williamson om produktivitetsskuld (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-productivity-debt-taboos-amp-anxiety/',
           },
           {
             title: 'Oliver Burkeman om listan över det gjorda',
@@ -752,30 +1412,42 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Han menar att förväntningar styr hur lycklig man känner sig mer än vad som faktiskt händer, eftersom ' +
-          'vi jämför oss med andra och med det vi väntat oss.',
+          'Han menar att vi bedömer våra liv i jämförelse med andra, och att ett uppkopplat liv med fler att ' +
+          'jämföra sig med därför ger mer avund och mindre glädje.',
         evidence: 'asikt',
-        note: 'Han lånar tanken från bland andra författaren Morgan Housel.',
+        summary: [
+          'Williamson utgår från en tanke av Montesquieu som han hittat hos Tim Urban: att bli lycklig vore lätt, ' +
+            'men vi vill bli lyckligare än andra, och vi tror att andra är lyckligare än de är. Vi bedömer vårt ' +
+            'läge mot dem omkring oss, mot hur det var förut och mot hur föräldrarna hade det.',
+          'Eftersom de flesta bara visar upp sina bästa stunder ser vi våra egna misslyckanden på nära håll men ' +
+            'bara andras höjdpunkter. Han lyfter också Charlie Mungers tanke att det är avund snarare än girighet ' +
+            'som driver världen, och drar slutsatsen att ju mer vi kan jämföra oss, desto mindre glädje. Själv ' +
+            'följer han högst 100 personer på Twitter.',
+        ],
+        note: 'Han bygger på Montesquieu via Tim Urban och på Charlie Munger. Det är en tankegång, inte en studie.',
         sources: [
           {
-            title: 'Modern Wisdom #702: 16 lärdomar från 700 avsnitt (Global Player)',
-            url: 'https://globalplayer.com/podcasts/episodes/7Drih6n',
+            title: 'Chris Williamson om jämförelse och status (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-staring-men-comparison-status-symbols/',
           },
           {
-            title: 'Chris Williamson om förväntningar och lycka (Rosetta)',
-            url: 'https://rosetta.to/u/chriswillx/if-only-you-really-wanted-to-be-happy',
+            title: 'Chris Williamson om jämförelse och avund (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-comparison-sexy-men-mistakes/',
           },
         ],
       },
     ],
     startHere: [
-      {
-        title: 'Modern Wisdom #064: James Clear om vanor som håller',
-        url: 'https://chriswillx.com/064-james-clear-how-to-build-habits-that-last/',
-      },
+      MW_CLEAR,
       {
         title: 'Modern Wisdom, alla avsnitt',
         url: 'https://chriswillx.com/podcast/',
+        summary: [
+          'Sidan samlar alla avsnitt av Modern Wisdom, och de går att lyssna på direkt eller i Apple Podcasts och Spotify.',
+          'Podden beskriver sig som lärdomar från kloka tänkare, eftersom livet är svårt.',
+          'Gästerna har varit bland andra David Goggins, Jordan Peterson, Naval Ravikant, Sam Harris och Andrew Huberman.',
+          'Varje avsnitt har en beskrivning av vad man lär sig och tidsmarkeringar för samtalets delar.',
+        ],
       },
     ],
   },

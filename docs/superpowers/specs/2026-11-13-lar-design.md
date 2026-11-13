@@ -9,6 +9,10 @@ och bastu. Han vill lära sig mer av kända människor inom områdena, direkt i 
   viktigaste påståenden och länkar till källan (bok, studie, poddavsnitt).
 - Varje påstående är märkt: **Väl belagt**, **Svagt stöd** eller **Egen åsikt**. Fakta och åsikt blandas aldrig.
 - Filter på område: Andning och kyla, Kallbad och bastu, Meditation, Personlig utveckling.
+- Allt Erik behöver finns i appen: varje påstående har en sammanfattning på några stycken skriven från den öppnade
+  källan, och varje Börja här har bokens, artikelns eller avsnittets huvudpunkter. Länken finns kvar som referens.
+- Några citat per person (sektionen Citat): personens egna ord på originalspråket med svensk översättning och
+  länk till sidan där de står, kontrollerade ordagrant mot sidan.
 
 ## Inte mål (första versionen)
 - Ingen loggning av egna pass, inga vanor skapas automatiskt.
@@ -17,7 +21,8 @@ och bastu. Han vill lära sig mer av kända människor inom områdena, direkt i 
 - Inga egna anteckningar, ingen "läst"-markering.
 
 ## Får inte hända
-- Påhittade citat. Bara sammanfattningar med egna ord och länk till källan.
+- Påhittade eller okontrollerade citat. Sammanfattningar skrivs med egna ord. Sedan 2026-11-13 (Eriks beslut) är
+  citat tillåtna om de står ordagrant på en öppnad sida och är personens egna ord.
 - Påståenden utan källa. Det som inte går att belägga med en länk tas inte med.
 - Medicinska råd. Kallbad, bastu och andhållning har risker; sidan för de personerna har en kort varningsrad.
 - Ekonomidelen rörs inte.
@@ -37,6 +42,7 @@ och bastu. Han vill lära sig mer av kända människor inom områdena, direkt i 
 | Andrew Huberman | Forskare och poddare | Andning och kyla, Kallbad och bastu |
 | Rhonda Patrick | Forskare och poddare | Kallbad och bastu |
 | Jon Kabat-Zinn | Forskare | Meditation |
+| Sam Harris | Författare och poddare | Meditation (tillagd 2026-11-13) |
 | James Clear | Författare | Personlig utveckling |
 | Chris Williamson | Poddare | Personlig utveckling |
 

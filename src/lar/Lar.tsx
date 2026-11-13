@@ -1,19 +1,88 @@
 import { useEffect, useReducer, useRef, type Ref } from 'react';
 import { larReducer, visiblePerson } from './larState';
-import { AREAS, EVIDENCE_LABEL, PEOPLE, type AreaId, type Person, type Source } from './people';
+import { AREAS, EVIDENCE_LABEL, PEOPLE, type AreaId, type Claim, type Person, type Quote, type Source } from './people';
 import './lar.css';
 
 const areaLabel = (id: AreaId) => AREAS.find((a) => a.id === id)?.label ?? id;
+
+function SourceLink({ source }: { source: Source }) {
+  return (
+    <a href={source.url} target="_blank" rel="noopener noreferrer">
+      {source.title}
+      <span className="visually-hidden"> (öppnas i ny flik)</span>
+    </a>
+  );
+}
 
 function Links({ sources }: { sources: Source[] }) {
   return (
     <ul className="lar-links">
       {sources.map((s) => (
         <li key={s.url}>
-          <a href={s.url} target="_blank" rel="noopener noreferrer">
-            {s.title}
-            <span className="visually-hidden"> (öppnas i ny flik)</span>
-          </a>
+          <SourceLink source={s} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Ett påstående som en enhet: märkning, rubrik, sammanfattning, förbehåll och källor. */
+function ClaimItem({ claim }: { claim: Claim }) {
+  return (
+    <li className="lar-claim">
+      <span className={`lar-evidence ${claim.evidence}`}>{EVIDENCE_LABEL[claim.evidence]}</span>
+      <h4 className="lar-claim-text">{claim.text}</h4>
+      <div className="lar-summary">
+        {claim.summary.map((para) => (
+          <p key={para}>{para}</p>
+        ))}
+      </div>
+      {claim.note && <p className="lar-note">{claim.note}</p>}
+      <p className="lar-sources-heading">{claim.sources.length === 1 ? 'Källa' : 'Källor'}</p>
+      <Links sources={claim.sources} />
+    </li>
+  );
+}
+
+/** Citat: ordagrant på originalspråket, svensk översättning och källa. Tom lista ger ingen sektion. */
+export function QuoteSection({ quotes }: { quotes: Quote[] }) {
+  if (quotes.length === 0) return null;
+  return (
+    <section className="card lar-section">
+      <h3>Citat</h3>
+      <div className="lar-quotes">
+        {quotes.map((q) => (
+          <figure key={q.text} className="lar-quote">
+            <blockquote lang="en">
+              <p>{q.text}</p>
+            </blockquote>
+            <p className="lar-quote-sv">
+              <span className="lar-quote-label">Översättning:</span> {q.sv}
+            </p>
+            <figcaption>
+              <SourceLink source={q.source} />
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Börja här: varje titel följs av sina huvudpunkter, synliga utan klick. */
+function StartHere({ sources }: { sources: Source[] }) {
+  return (
+    <ul className="lar-start">
+      {sources.map((s) => (
+        <li key={s.url} className="lar-start-item">
+          <SourceLink source={s} />
+          {s.summary && s.summary.length > 0 && (
+            <ul className="lar-points">
+              {s.summary.map((pt) => (
+                <li key={pt}>{pt}</li>
+              ))}
+            </ul>
+          )}
         </li>
       ))}
     </ul>
@@ -86,22 +155,18 @@ function PersonPage({
           ))}
         </ul>
       </section>
+      <QuoteSection quotes={person.quotes} />
       <section className="card lar-section">
         <h3>Påståenden</h3>
         <ul className="lar-claims">
           {person.claims.map((c) => (
-            <li key={c.text} className="lar-claim">
-              <span className={`lar-evidence ${c.evidence}`}>{EVIDENCE_LABEL[c.evidence]}</span>
-              <p>{c.text}</p>
-              {c.note && <p className="lar-note">{c.note}</p>}
-              <Links sources={c.sources} />
-            </li>
+            <ClaimItem key={c.text} claim={c} />
           ))}
         </ul>
       </section>
       <section className="card lar-section">
         <h3>Börja här</h3>
-        <Links sources={person.startHere} />
+        <StartHere sources={person.startHere} />
       </section>
     </article>
   );

@@ -17,8 +17,10 @@
 3. Öppna fliken Nyheter en gång och kontrollera i serverloggarna att alla fyra SVT-flöden kom fram.
 4. ~~Lägg ut `reminders` med inbox-filerna~~ Klart: version 6 utlagd 2026-11-06, bootar och svarar 200 var 5:e minut.
    `inbox/health.ts` tappades av verktyget (sista filen, bara typer) och saknas på servern; följer med nästa gång.
-5. Öppna källänkarna i Lär från vanligt nät och byt sammanfattningssidor mot primärkällor. Tills det är gjort uppfyller innehållet inte regeln i
-   `src/lar/CLAUDE.md` att varje källa är öppnad och kontrollerad.
+5. ~~Öppna källänkarna i Lär~~ Klart 2026-11-13: alla länkar i `src/lar/people.ts` är öppnade, sammanfattningarna är
+   granskade mot sidorna av en andra granskare och rättade, och sammanfattningssidorna är utbytta. Kvar: PubMed- och PMC-sidorna lästes via NCBI:s egna gränssnitt på samma värd
+   (sidorna visar en webbläsarkontroll för skript), och böckerna är sammanfattade bara från förlagets eller
+   bokhandelns text. Öppna gärna några PubMed-länkar i en vanlig webbläsare.
 
 ## Ekonomi
 - Fungerar: Översikt, Budget (månad för månad), Prognos med billån och extra på lånet, Sparmål (en uträkning i
@@ -57,14 +59,38 @@
   en ton.
 
 ## Lär (ny flik)
-- Fungerar: bibliotek med åtta personer (Wim Hof, Susanna Søberg, Jari Laukkanen, Andrew Huberman, Rhonda Patrick,
-  Jon Kabat-Zinn, James Clear, Chris Williamson), filter på område, sida per person med metod, påståenden märkta
+- Fungerar: bibliotek med nio personer (Wim Hof, Susanna Søberg, Jari Laukkanen, Andrew Huberman, Rhonda Patrick,
+  Jon Kabat-Zinn, Sam Harris, James Clear, Chris Williamson), filter på område, sida per person med metod, påståenden märkta
   Väl belagt / Svagt stöd / Egen åsikt, källänkar och varningsrad. Fast innehåll i `src/lar/people.ts`, ingen
   databas, ingen server.
-- Ej verifierat: källänkarna är kontrollerade via sökresultat, inte öppnade (molnmiljön blockerar sidorna). Öppna
-  varje länk en gång från vanligt nät; några källor är sammanfattningssidor (rosetta.to, podscripts.co,
-  globalplayer.com, goodreads, booktopia, read.qxmd.com, Stanford-PDF för Tiny Habits, Publishers Weekly) och bör
-  bytas mot primärkällor. Laukkanen 2015 länkas via ScienceDaily i stället för PubMed eller JAMA.
+- Sammanfattningar (2026-11-13): varje påstående har 2 till 4 stycken skrivna från den öppnade källan, och varje
+  Börja här har 3 till 5 huvudpunkter. Allt syns på personsidan utan klick.
+- Citat (2026-11-13, Eriks beslut): varje person har 2 till 4 citat i sektionen Citat, på engelska med svensk
+  översättning och källänk. Alla 27 är kontrollerade ordagrant mot texten på den öppnade sidan med ett skript, och
+  sidan tillskriver personen orden. Ingen person har färre än 2. Wim Hofs två citat kommer från förlaget Sounds
+  Trues sida om boken (citat där), eftersom wimhofmethod.com bara har företagets text och deltagarnas berättelser.
+  Talspråk ur utskrifter: Laukkanens två citat (FoundMyFitness intervju), Patricks citat om stress (utskriften av
+  hennes egen video på FoundMyFitness) och Søbergs tredje citat (Huberman Labs utskrift av avsnittet).
+- Verifierat 2026-11-13: alla 56 unika länkar i `people.ts` är öppnade (den 56:e, Mindfuls intervju med Kabat-Zinn, lades till med citaten). Sammanfattningarna för alla nio personer är
+  granskade mot sidorna av en andra granskare, och rättelserna från den granskningen är gjorda. Texterna `about`, `method` och `teaser` är kontrollerade
+  mot öppnade sidor; detaljer som ingen sida stöder (årtal, titlar, Love Island) är borttagna. Rosetta, Podscripts, Global Player,
+  Goodreads, QxMD, Stanford-PDF:en, EurekAlert, ScienceDaily och The Psychologist är borttagna eller utbytta mot
+  PubMed, PMC, tidskriften, personens egen sajt eller tinyhabits.com. Påståendet om 66 dagar (James Clear) togs bort
+  (ingen öppnad källa utanför hans sajt). Williamsons tre påståenden skrevs om efter hans egna nyhetsbrev.
+- Sam Harris (tillagd 2026-11-13, område Meditation): fem påståenden, fyra Egen åsikt och ett Väl belagt. Alla
+  hans sidor är öppnade (samharris.org: om honom, How to Meditate, essän om ett medvetande utan jag, bokens sida;
+  wakingup.com: startsidan, om appen, sidan om mindfulness, introduktionen, stipendier), och Goyal 2014 lästes
+  via NCBI:s gränssnitt. Ej verifierat: boken Waking Up är inte läst, bara författarens sida om boken; de fem studier från 2010
+  och 2011 som han hänvisar till är bara kontrollerade till titel. Sidan om mindfulness är skriven av Waking Up
+  och tillskrivs appen, inte honom. Börja här är boken och hans gratis essä om hur man mediterar; appen är
+  betald och nämns bara neutralt i `about` och `method`, inte i Börja här. Podden Making Sense är inte med i
+  Börja här, eftersom sidan bara listar avsnitt och de flesta inte handlar om meditation.
+- Ej verifierat: PubMed- och PMC-sidorna visar en webbläsarkontroll för skript, så posterna lästes via NCBI:s
+  exportgränssnitt (MEDLINE) och PMC:s OAI-gränssnitt på samma värd, inte som sidor. Booktopia och Publishers
+  Weekly är kvar för böckerna eftersom förlagens sidor inte gick att nå; böckerna själva är inte lästa.
+  Idéer som Williamson lånar (Rich Roll, Montesquieu via Tim Urban, Charlie Munger) länkas inte till ursprunget,
+  eftersom de sidorna låg utanför de värdar som gick att nå. Samma gäller Oliver Burkemans mening om osäkra
+  överpresterare, som bara finns återgiven i Williamsons nyhetsbrev.
 - Inte med (beslut): loggning av egna pass, flöde med nya avsnitt, Jarvis och Idag läser inte biblioteket, egna
   anteckningar.
 - Design och plan: `docs/superpowers/specs/2026-11-13-lar-design.md`, `docs/superpowers/plans/2026-11-13-lar.md`.
