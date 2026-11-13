@@ -65,6 +65,11 @@
   databas, ingen server.
 - Sammanfattningar (2026-11-13): varje påstående har 2 till 4 stycken skrivna från den öppnade källan, och varje
   Börja här har 3 till 5 huvudpunkter. Allt syns på personsidan utan klick.
+- Citat (2026-11-13, Eriks beslut): varje person har 2 till 4 citat i sektionen Citat, på engelska med svensk
+  översättning och källänk. Alla 27 är kontrollerade ordagrant mot texten på den öppnade sidan med ett skript, och
+  sidan tillskriver personen orden. Ingen person har färre än 2. Wim Hofs två citat kommer från förlaget Sounds
+  Trues sida om boken (citat där), eftersom wimhofmethod.com bara har företagets text och deltagarnas berättelser.
+  Laukkanens och Patricks citat är talspråk från FoundMyFitness utskrift av intervjun.
 - Verifierat 2026-11-13: alla 55 unika länkar i `people.ts` är öppnade. Sammanfattningarna för alla nio personer är
   granskade mot sidorna av en andra granskare, och rättelserna från den granskningen är gjorda. Texterna `about`, `method` och `teaser` är kontrollerade
   mot öppnade sidor; detaljer som ingen sida stöder (årtal, titlar, Love Island) är borttagna. Rosetta, Podscripts, Global Player,
