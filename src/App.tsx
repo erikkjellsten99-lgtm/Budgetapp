@@ -30,6 +30,8 @@ import Today from './Today';
 // Jarvis bor i specialrummet och laddas först när rummet öppnas (med rummets typsnitt).
 const JarvisView = lazy(lazyWithReload(() => import('./Jarvis'), 'jarvis', JarvisUnavailable));
 import JarvisOrb from './JarvisOrb';
+import { wantsJarvis } from './jarvisApi';
+import { unlockSpeech } from './speech';
 import { lazyWithReload } from './lazyWithReload';
 import Room from './Room';
 import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type EconomyView, type Section, type View } from './nav';
@@ -71,9 +73,23 @@ export default function App() {
 
   const [economyView, setEconomyView] = useState<EconomyView>(savedEconomy);
   // Specialrummet med Jarvis. Orben öppnar, Tillbaka och Escape stänger, fokus går tillbaka till orben.
-  const [roomOpen, setRoomOpen] = useState(false);
+  // Adressen ?jarvis=1&listen=1 (Siri-genvägen) öppnar rummet direkt, där Jarvis hälsar och börjar lyssna.
+  const [roomOpen, setRoomOpen] = useState(() => wantsJarvis(window.location));
+  useEffect(() => {
+    if (!wantsJarvis(window.location)) return;
+    // Ta bort parametrarna, så att en omladdning eller delad adress inte öppnar Jarvis igen.
+    const params = new URLSearchParams(window.location.search);
+    params.delete('jarvis');
+    params.delete('listen');
+    const rest = params.toString();
+    history.replaceState(null, '', window.location.pathname.replace(/\/jarvis\/?$/, '/') + (rest ? `?${rest}` : '') + window.location.hash);
+  }, []);
   const orb = useRef<HTMLButtonElement>(null);
-  const openRoom = useCallback(() => setRoomOpen(true), []);
+  const openRoom = useCallback(() => {
+    // iPhone läser bara upp efter en tryckning: lås upp rösten här, innan Jarvis hinner laddas.
+    unlockSpeech();
+    setRoomOpen(true);
+  }, []);
   const closeRoom = useCallback(() => {
     setRoomOpen(false);
     requestAnimationFrame(() => orb.current?.focus());

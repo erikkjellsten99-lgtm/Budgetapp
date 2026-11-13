@@ -5,21 +5,11 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/600.css';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ask, EXAMPLES } from './jarvis';
-import {
-  canListen,
-  canSpeak,
-  listen,
-  onVoicesChanged,
-  pickVoice,
-  readVoice,
-  saveVoice,
-  speak,
-  stopSpeaking,
-  swedishVoices,
-  unlockSpeech,
-  type Listening,
-  type VoiceSettings,
-} from './speech';
+import { askServer, greeting } from './jarvisApi';
+import { firstNameOf, supabase } from './sync';
+// Tal och uppläsning går via gränssnittet i voice.ts. speech.ts används bara för röstinställningarna.
+import { stt, tts, type ListenSession } from './voice';
+import { onVoicesChanged, pickVoice, readVoice, saveVoice, speak, swedishVoices, type VoiceSettings } from './speech';
 
 interface Message {
   id: number;
@@ -60,30 +50,45 @@ function readHideSetting(): boolean {
 }
 
 const STATUS: Record<Mode, string> = {
-  idle: 'Tryck och prata',
+  idle: 'Håll in eller tryck, och prata',
   listening: 'Lyssnar…',
-  thinking: 'Räknar…',
+  thinking: 'Tänker…',
   speaking: 'Svarar…',
 };
 
+/** Håller du knappen längre än så här skickas frågan när du släpper. Ett kort tryck lyssnar tills du tystnar. */
+const HOLD_MS = 400;
+/** Har rösten inte börjat efter så här lång tid har telefonen vägrat läsa upp (kräver en tryckning först). */
+const SPEAK_START_MS = 2500;
+/** Fel som inte visas när Jarvis själv försökte börja lyssna efter hälsningen: då räcker det att trycka. */
+const QUIET_ERRORS = ['not-allowed', 'service-not-allowed', 'no-speech', 'aborted', 'start'];
+
 /**
- * Jarvis-fliken: en ring i mitten som du trycker på och pratar med. När du pratar täcker Jarvis
- * hela skärmen. Svaret visas stort och läses upp. Går också att skriva. Visningsläget döljer alla
- * belopp, så att Jarvis kan visas för andra. Läser bara: svaren räknas i telefonen (jarvis.ts).
- * Visar inga siffror förrän du frågar.
+ * Jarvis: en ring i mitten som du håller in eller trycker på och pratar med. När rummet öppnas hälsar
+ * Jarvis (uppläst av telefonen, inget anrop) och börjar lyssna. Frågan går till servern (edge function
+ * jarvis, som frågar Claude med verktyg) och svaret visas som text och läses upp. Går också att skriva.
+ * Utan inloggning eller nät, eller när dagens gräns är nådd, svarar den enklare Jarvis som räknar i
+ * telefonen (jarvis.ts). Visningsläget döljer alla belopp och använder alltid den. Läser bara.
  */
 export default function JarvisView({ active }: { active: boolean }) {
-  const voiceInput = canListen();
+  const voiceInput = stt.available();
   const [mode, setMode] = useState<Mode>('idle');
   const [heard, setHeard] = useState('');
   const [error, setError] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [typing, setTyping] = useState(!voiceInput);
+  // Textfältet syns alltid, som reserv när rösten inte passar eller inte finns.
+  const [typing, setTyping] = useState(true);
   const [text, setText] = useState('');
   const [voiceOut, setVoiceOut] = useState(readVoiceSetting);
   const [voice, setVoice] = useState<VoiceSettings>(readVoice);
   const [voicePanel, setVoicePanel] = useState(false);
-  const listening = useRef<Listening | null>(null);
+  const listening = useRef<ListenSession | null>(null);
+  /** Hälsningen visas som text tills första frågan. */
+  const [hello, setHello] = useState('');
+  /** Sant medan hälsningen läses upp. En tryckning eller en fråga avbryter den. */
+  const greeting_ = useRef(false);
+  const pressedAt = useRef(0);
+  const stopOnRelease = useRef(false);
   const nextId = useRef(1);
   const input = useRef<HTMLInputElement>(null);
   const [hideMoney, setHideMoney] = useState(readHideSetting);
@@ -91,9 +96,10 @@ export default function JarvisView({ active }: { active: boolean }) {
   const alive = useRef(true);
 
   function stopAll() {
+    greeting_.current = false;
     listening.current?.abort();
     listening.current = null;
-    stopSpeaking();
+    tts.stop();
     setMode('idle');
   }
 
@@ -107,16 +113,60 @@ export default function JarvisView({ active }: { active: boolean }) {
     return () => {
       alive.current = false;
       listening.current?.abort();
-      stopSpeaking();
+      tts.stop();
     };
   }, []);
 
-  // Lämnar du fliken slutar Jarvis lyssna och prata.
+  // Rummet öppnas: Jarvis hälsar och börjar lyssna. Rummet stängs: Jarvis slutar lyssna och prata.
   useEffect(() => {
     if (!active) {
       stopAll();
       setFull(false);
+      return;
     }
+    let cancelled = false;
+    let watchdog: number | undefined;
+    (async () => {
+      // Förnamnet kommer från den inloggade användaren. Utloggad eller utan namn: bara "Hej".
+      let name: string | null = null;
+      try {
+        name = firstNameOf((await supabase.auth.getSession()).data.session?.user.user_metadata);
+      } catch {
+        // Hälsar utan namn.
+      }
+      if (cancelled || !alive.current) return;
+      const text = greeting(name);
+      setHello(text);
+      if (!voiceOut || !tts.available()) {
+        if (voiceInput) startListening(true);
+        return;
+      }
+      greeting_.current = true;
+      let started = false;
+      setMode('speaking');
+      // iPhone läser bara upp efter en tryckning. Börjar rösten aldrig väntar Jarvis på att du trycker.
+      watchdog = window.setTimeout(() => {
+        if (started || !greeting_.current) return;
+        greeting_.current = false;
+        tts.stop();
+        if (alive.current) setMode((m) => (m === 'speaking' ? 'idle' : m));
+      }, SPEAK_START_MS);
+      tts.speak(text, {
+        onStart: () => (started = true),
+        onEnd: () => {
+          clearTimeout(watchdog);
+          // Avbruten av en tryckning, en fråga eller att rummet stängdes: då gör den som avbröt resten.
+          if (!greeting_.current || !alive.current) return;
+          greeting_.current = false;
+          if (started && voiceInput) startListening(true);
+          else setMode((m) => (m === 'speaking' ? 'idle' : m));
+        },
+      });
+    })();
+    return () => {
+      cancelled = true;
+      clearTimeout(watchdog);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
@@ -132,9 +182,10 @@ export default function JarvisView({ active }: { active: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [full]);
 
+  // Utan taligenkänning är textfältet huvudvägen in: ställ markören där. Annars skulle tangentbordet skymma Jarvis.
   useEffect(() => {
-    if (typing) input.current?.focus();
-  }, [typing]);
+    if (typing && !voiceInput) input.current?.focus();
+  }, [typing, voiceInput]);
 
   async function send(question: string) {
     const q = question.trim().slice(0, MAX_LENGTH);
@@ -142,60 +193,95 @@ export default function JarvisView({ active }: { active: boolean }) {
       setMode('idle');
       return;
     }
+    greeting_.current = false;
     setHeard(q);
     setError('');
     setMode('thinking');
     let reply: string;
     try {
-      reply = await ask(q, { hideMoney });
+      if (hideMoney) {
+        // Visningsläget: bara den enklare Jarvis, som vet vilka svar som innehåller belopp.
+        reply = await ask(q, { hideMoney });
+      } else {
+        const server = await askServer(q);
+        if (server.ok) reply = server.answer;
+        else {
+          // Utloggad, utan nät, dagens gräns nådd eller fel på servern: säg varför, och ge det enklare svaret.
+          setError(`${server.message} Här är ett enklare svar som räknas i telefonen.`);
+          reply = await ask(q);
+        }
+      }
     } catch {
       reply = 'Det gick inte att läsa Groundwork just nu. Försök igen.';
     }
     if (!alive.current) return;
     setMessages((all) => [{ id: nextId.current++, question: q, reply }, ...all].slice(0, 20));
-    if (voiceOut && canSpeak()) {
+    if (voiceOut && tts.available()) {
       setMode('speaking');
-      speak(reply, () => alive.current && setMode((m) => (m === 'speaking' ? 'idle' : m)), voice);
+      tts.speak(reply, { onEnd: () => alive.current && setMode((m) => (m === 'speaking' ? 'idle' : m)) });
     } else setMode('idle');
   }
 
-  function toggleListening() {
-    if (mode === 'listening') {
-      listening.current?.stop();
-      return;
-    }
-    if (mode === 'speaking') stopSpeaking();
-    if (mode === 'thinking') return;
-    unlockSpeech();
+  /** Börjar lyssna. `quiet`: Jarvis startade själv efter hälsningen, så helskärm och småfel hoppas över. */
+  function startListening(quiet = false) {
     setError('');
     setHeard('');
-    setFull(true);
-    const session = listen({
+    if (!quiet) setFull(true);
+    const session = stt.listen({
       onText: (t) => setHeard(t),
       onDone: (t) => {
         listening.current = null;
         if (t) send(t);
         else {
           setMode('idle');
-          setError('Jag hörde inget. Tryck och försök igen.');
+          if (!quiet) setError('Jag hörde inget. Tryck och försök igen.');
         }
       },
-      onError: (message) => {
+      onError: (message, code) => {
         listening.current = null;
         setMode('idle');
-        setError(message);
+        if (!(quiet && QUIET_ERRORS.includes(code))) setError(message);
       },
     });
     if (session) {
       listening.current = session;
       setMode('listening');
+    } else setMode((m) => (m === 'listening' || m === 'speaking' ? 'idle' : m));
+  }
+
+  /** Knappen trycks ner: börja lyssna. Lyssnar den redan skickas frågan när du släpper. */
+  function press() {
+    if (mode === 'thinking') return;
+    greeting_.current = false;
+    if (mode === 'listening') {
+      stopOnRelease.current = true;
+      return;
     }
+    stopOnRelease.current = false;
+    if (mode === 'speaking') tts.stop();
+    tts.unlock();
+    pressedAt.current = Date.now();
+    startListening();
+  }
+
+  /** Knappen släpps: höll du in den skickas frågan nu. Efter ett kort tryck lyssnar Jarvis tills du tystnar. */
+  function release() {
+    if (!listening.current) return;
+    if (stopOnRelease.current || Date.now() - pressedAt.current > HOLD_MS) listening.current.stop();
+    stopOnRelease.current = false;
+  }
+
+  /** Tangentbord (Enter eller mellanslag på knappen): börja lyssna, eller skicka om den redan lyssnar. */
+  function toggleListening() {
+    if (mode === 'listening') listening.current?.stop();
+    else press();
   }
 
   function submit(e: FormEvent) {
     e.preventDefault();
     if (mode === 'thinking' || !text.trim()) return;
-    unlockSpeech();
+    listening.current?.abort();
+    tts.unlock();
     const q = text;
     setText('');
     send(q);
@@ -204,7 +290,7 @@ export default function JarvisView({ active }: { active: boolean }) {
   function ask_(example: string) {
     if (mode === 'thinking') return;
     listening.current?.abort();
-    unlockSpeech();
+    tts.unlock();
     send(example);
   }
 
@@ -224,7 +310,8 @@ export default function JarvisView({ active }: { active: boolean }) {
     const next = !voiceOut;
     setVoiceOut(next);
     if (!next) {
-      stopSpeaking();
+      greeting_.current = false;
+      tts.stop();
       if (mode === 'speaking') setMode('idle');
     }
     try {
@@ -258,7 +345,7 @@ export default function JarvisView({ active }: { active: boolean }) {
         </div>
         <div className="jarvis-top-title">
           <h2 id="jarvis-title">Jarvis</h2>
-          <p>{hideMoney ? 'Visningsläge · belopp döljs' : 'Läser bara · exakta siffror'}</p>
+          <p>{hideMoney ? 'Visningsläge · belopp döljs' : 'Läser bara'}</p>
         </div>
         <div className="jarvis-top-side end">
           {!full && (
@@ -276,7 +363,7 @@ export default function JarvisView({ active }: { active: boolean }) {
               </svg>
             </button>
           )}
-          {canSpeak() ? (
+          {tts.available() ? (
             <button
               type="button"
               className={voiceOut ? 'jarvis-icon-button on' : 'jarvis-icon-button'}
@@ -297,9 +384,14 @@ export default function JarvisView({ active }: { active: boolean }) {
         <button
           type="button"
           className="jarvis-core"
-          onClick={voiceInput ? toggleListening : () => (setTyping(true), setFull(true))}
+          // Pekare (finger eller mus): håll in och släpp, eller ett kort tryck. Tangentbord går via onClick.
+          onPointerDown={voiceInput ? press : undefined}
+          onPointerUp={voiceInput ? release : undefined}
+          onPointerCancel={voiceInput ? release : undefined}
+          onContextMenu={(e) => e.preventDefault()}
+          onClick={voiceInput ? (e) => e.detail === 0 && toggleListening() : () => (setTyping(true), setFull(true))}
           disabled={busy}
-          aria-label={voiceInput ? (mode === 'listening' ? 'Sluta lyssna' : 'Prata med Jarvis') : 'Skriv en fråga'}
+          aria-label={voiceInput ? (mode === 'listening' ? 'Sluta lyssna och skicka' : 'Prata med Jarvis') : 'Skriv en fråga'}
         >
           <span className="ring r1" aria-hidden="true" />
           <span className="ring r2" aria-hidden="true" />
@@ -310,8 +402,13 @@ export default function JarvisView({ active }: { active: boolean }) {
           </span>
         </button>
         <p className="jarvis-status" aria-live="polite">
-          {voiceInput ? STATUS[mode] : busy ? STATUS.thinking : 'Skriv en fråga nedan'}
+          {voiceInput ? STATUS[mode] : busy ? STATUS.thinking : mode === 'speaking' ? STATUS.speaking : 'Skriv en fråga nedan'}
         </p>
+        {!voiceInput && (
+          <p className="jarvis-notice" role="status">
+            Den här webbläsaren kan inte lyssna, så Jarvis hör dig inte här. Skriv din fråga i fältet nedan.
+          </p>
+        )}
         {heard && mode !== 'idle' && <p className="jarvis-heard">”{heard}”</p>}
         {error && (
           <p className="jarvis-error" role="alert">
@@ -321,6 +418,7 @@ export default function JarvisView({ active }: { active: boolean }) {
       </div>
 
       <div className="jarvis-answers" aria-live="polite">
+        {!latest && hello && <p className="jarvis-hello">{hello}</p>}
         {latest && (
           <article className="jarvis-latest">
             <p className="jarvis-q">{latest.question}</p>

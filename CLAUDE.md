@@ -46,9 +46,19 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
   gör ett nytt vid behov) och skriv i PR:en att beloppen är identiska.
 
 ## Jarvis
-- Läser bara. Får aldrig ändra något i ekonomin, och citerar exakt de siffror som ligger i Groundwork.
-- Ingen AI och inget som kostar pengar. Svaren byggs med nyckelord i `ask.ts`.
-- Visningsläget (ögat) döljer alla belopp; svar märkta `money: true` i `ask.ts` ersätts med `HIDDEN_MONEY`.
+- Läser bara. Får aldrig ändra något i ekonomin.
+- **Två Jarvis (beslut 2026-11-13: Claude API är tillåtet för Jarvis i appen).**
+  - *Jarvis i appen* frågar edge function `jarvis` (`supabase/functions/jarvis/`), som frågar Claude
+    (`claude-sonnet-5-5`) med två läsverktyg (`tools.ts`: `hamta_manad`, `hamta_lage`). Verktygen räknar med den delade
+    koden i `inbox/`, modellen räknar aldrig själv. Svaren läses upp, så beloppen avrundas i talspråk (Eriks val).
+    Funktionen läser med användarens JWT (RLS gäller, ingen service role), högst 50 frågor per person och dag
+    (`jarvis_usage`, `jarvis_count_call()`), och API-nyckeln finns bara som hemlighet på servern.
+  - *Den enkla Jarvis* (`ask.ts`, nyckelord, ingen AI, exakta belopp) finns kvar: Siri-genvägarna, "Jarvis säger" på
+    Idag, visningsläget, och som reserv i appen när man är utloggad, utan nät eller har nått dagens gräns.
+- Visningsläget (ögat) döljer alla belopp och använder bara den enkla Jarvis; svar märkta `money: true` i `ask.ts`
+  ersätts med `HIDDEN_MONEY`.
+- Tal och uppläsning går via gränssnittet i `src/voice.ts` (`stt`, `tts`). Byt motor där, inte i `Jarvis.tsx`.
+- Jarvis öppnas också med adressen `?jarvis=1&listen=1` (eller `/jarvis?listen=1`, som skickar vidare dit).
 
 ## Arbetssätt
 - Pusha aldrig till `main`. Egen gren mot `main` (inte staplade grenar), PR med kort svensk beskrivning och
@@ -56,7 +66,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 - `npm test` och `npm run build` gröna före push.
 - IndexedDB: höj aldrig en befintlig version i efterhand, lägg till ny version med uppgraderingssteg
   (`src/db.ts` DB_VERSION, `src/vanor/store.ts` DB_VERSION).
-- Supabase (databas, edge function `inbox`) ändras bara efter att Erik skrivit "Lägg ut".
+- Supabase (databas, edge functions `inbox`, `reminders` och `jarvis`) ändras bara efter att Erik skrivit "Lägg ut".
 - Fråga innan ny teknik eller tjänst som kostar pengar. Erik vill inte betala något.
 - Max ett förslag på förbättring per leverans. Bygg det inte utan att fråga.
 

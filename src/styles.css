@@ -2264,6 +2264,11 @@ body.jarvis-locked {
   border: 0;
   border-radius: 50%;
   color: var(--j-accent);
+  /* Knappen hålls in medan du pratar: ingen markering, ingen meny och ingen rullning under fingret. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .jarvis-core:disabled {
@@ -2387,6 +2392,26 @@ body.jarvis-locked {
   margin: 0;
   color: var(--j-error);
   font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Beskedet när webbläsaren saknar taligenkänning, och hälsningen innan första frågan. */
+.jarvis-notice {
+  max-width: 30rem;
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--j-line);
+  border-radius: 0.75rem;
+  color: var(--j-text);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.jarvis-hello {
+  max-width: 30rem;
+  margin: 0 auto;
+  color: var(--j-muted);
+  font-size: 1.05rem;
   text-align: center;
 }
 
