@@ -24,9 +24,6 @@ const hostOf = (url: string) => new URL(url).hostname.replace(/^www\./, '');
 
 const words = (paras: string[]) => paras.join(' ').split(/\s+/).filter(Boolean).length;
 
-// Personer vars sammanfattningar är skrivna. Tas bort när alla åtta är klara.
-const DONE = new Set<string>(['wim-hof', 'susanna-soberg', 'jari-laukkanen', 'andrew-huberman', 'rhonda-patrick', 'jon-kabat-zinn', 'james-clear']);
-const withSummaries = () => PEOPLE.filter((p) => DONE.has(p.id));
 
 describe('Lär: innehållet', () => {
   it('har exakt de åtta personerna', () => {
@@ -87,7 +84,7 @@ describe('Lär: innehållet', () => {
         p.teaser,
         p.about,
         ...p.method,
-        ...p.claims.flatMap(c => [c.text, c.note ?? '', ...(c.summary ?? [])]),
+        ...p.claims.flatMap(c => [c.text, c.note ?? '', ...c.summary]),
         p.warning ?? '',
         ...p.claims.flatMap(c => c.sources.map(s => s.title)),
         ...p.startHere.flatMap(s => [s.title, ...(s.summary ?? [])]),
@@ -125,9 +122,9 @@ describe('Lär: innehållet', () => {
   });
 
   it('varje påstående har en sammanfattning på 2 till 4 stycken och 60 till 140 ord', () => {
-    for (const p of withSummaries()) {
+    for (const p of PEOPLE) {
       for (const c of p.claims) {
-        const sum = c.summary ?? [];
+        const sum = c.summary;
         expect(sum.length, `${p.name}: ${c.text}`).toBeGreaterThanOrEqual(2);
         expect(sum.length, `${p.name}: ${c.text}`).toBeLessThanOrEqual(4);
         for (const para of sum) expect(para.trim().length, c.text).toBeGreaterThan(0);
@@ -139,9 +136,9 @@ describe('Lär: innehållet', () => {
   });
 
   it('ingen sammanfattning upprepar rubriken eller noten ordagrant', () => {
-    for (const p of withSummaries()) {
+    for (const p of PEOPLE) {
       for (const c of p.claims) {
-        for (const para of c.summary ?? []) {
+        for (const para of c.summary) {
           expect(para.trim(), c.text).not.toBe(c.text.trim());
           if (c.note) expect(para.trim(), c.text).not.toBe(c.note.trim());
         }
@@ -150,7 +147,7 @@ describe('Lär: innehållet', () => {
   });
 
   it('varje Börja här har 3 till 5 huvudpunkter på en mening var', () => {
-    for (const p of withSummaries()) {
+    for (const p of PEOPLE) {
       for (const s of p.startHere) {
         const pts = s.summary ?? [];
         expect(pts.length, `${p.name}: ${s.title}`).toBeGreaterThanOrEqual(3);

@@ -1,6 +1,7 @@
 // Lär: fast innehåll om personer inom andning, kyla, bastu, meditation och personlig utveckling.
-// Inga citat, bara sammanfattningar med egna ord. Varje påstående har märkning och minst en https-källa
-// som kontrollerats på nätet när den skrevs in. Regler: se CLAUDE.md i den här mappen.
+// Inga citat, bara sammanfattningar med egna ord. Varje påstående har märkning, en sammanfattning skriven
+// från den öppnade källan och minst en https-källa som öppnats och kontrollerats (2026-11-13).
+// Regler: se CLAUDE.md i den här mappen.
 
 export type AreaId = 'andning' | 'kallbad' | 'meditation' | 'utveckling';
 
@@ -25,7 +26,7 @@ export type Source = { title: string; url: string; summary?: string[] };
  * Ett påstående. `text` är rubriken på en rad, `summary` en sammanfattning i 2 till 4 stycken skriven från
  * den öppnade källan, `note` förbehållet.
  */
-export type Claim = { text: string; evidence: Evidence; summary?: string[]; note?: string; sources: Source[] };
+export type Claim = { text: string; evidence: Evidence; summary: string[]; note?: string; sources: Source[] };
 export type Person = {
   id: string;
   name: string;
@@ -999,32 +1000,54 @@ export const PEOPLE: Person[] = [
     claims: [
       {
         text:
-          'Han varnar ofta för att vara en osäker överpresterare: att jaga mål för att laga en inre känsla av ' +
-          'att inte räcka till, och att tro att oro gör en bättre.',
+          'Han varnar för det han kallar kompetensens förbannelse: den som är duktig och har höga krav ser ' +
+          'framgång som det minsta som krävs och känner sig aldrig nöjd.',
         evidence: 'asikt',
-        note: 'Begreppet kommer från forskaren Laura Empson, som studerat personer på kunskapsföretag som konsult- och advokatbyråer.',
+        summary: [
+          'I sitt nyhetsbrev skriver han att en av de vanligaste frågorna på hans turné var hur man ger sig själv ' +
+            'erkännande och varför man aldrig känner sig klar. Hans svar är att den som är duktig räknar med att ' +
+            'lyckas, så att seger bara blir godtagbar och allt annat ett misslyckande.',
+          'Han menar att vi är byggda så, eftersom våra förfäder var de mest målinriktade och osäkra ' +
+            'överpresterarna, och att hjärnan bryr sig om framgång, inte om att vi mår bra. Det finns inga ' +
+            'lösningar, bara avvägningar: den som är besatt av ett område kan inte stänga av det när den vill.',
+          'I ett annat nyhetsbrev lyfter han fram Oliver Burkemans iakttagelse att toppen av näringslivet ' +
+            'domineras av osäkra överpresterare, som drivs av en känsla av att inte räcka till och inte har roligt.',
+        ],
+        note:
+          'Tanken att framgång måste förtjänas med smärta lånar han från Rich Roll, och ordet osäkra ' +
+          'överpresterare från bland andra Oliver Burkeman.',
         sources: [
           {
-            title: 'Modern Wisdom #879: 16 lärdomar från 2024 (Podscripts)',
-            url: 'https://podscripts.co/podcasts/modern-wisdom/879-16-lessons-from-2024-chris-bumstead-elon-musk-alex-hormozi',
+            title: 'Chris Williamson om att aldrig känna sig nöjd (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-enoughness-dogs-lessons/',
           },
           {
-            title: 'Laura Empson om osäkra överpresterare (City St Georges, University of London)',
-            url: 'https://www.citystgeorges.ac.uk/news-and-events/news/2018/02/if-youre-so-successful-why-are-you-still-working-70-hours-a-week',
+            title: 'Chris Williamson om stress och överpresterare (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-stress-overachievers-amp-bad-deals/',
           },
         ],
       },
       {
         text:
-          'Han menar att många börjar varje dag med en känsla av skuld över allt som inte är gjort, och att den ' +
-          'skulden aldrig går att betala av. En lista över det man faktiskt gjort hjälper mer än en lista över ' +
-          'det som återstår.',
+          'Han lyfter fram Oliver Burkemans tanke att många börjar varje dag med en skuld över allt som inte är ' +
+          'gjort, en skuld som aldrig går att betala av.',
         evidence: 'asikt',
-        note: 'Både skulden och listan över det gjorda kommer från författaren Oliver Burkeman.',
+        summary: [
+          'I nyhetsbrevet återger Williamson hur Matthew Hussey beskriver att han inte känner sig värd glädje och ' +
+            'lugn förrän han pressat sig genom ett brutalt schema. Williamson skriver att han känner igen sig, och ' +
+            'att Burkeman har ett namn för känslan: produktivitetsskuld.',
+          'Burkeman beskriver det som att börja varje morgon på minus och försöka arbeta sig upp till noll före ' +
+            'kvällen. Eftersom mejl, krav och ambitioner aldrig tar slut går skulden aldrig att betala av.',
+          'Hans förslag är att börja dagen på noll och föra en lista över det man faktiskt gjort, som fylls på ' +
+            'under dagen. Det gör det enligt honom lättare att slappna av och att välja vad man ska lägga kraft på.',
+        ],
+        note:
+          'Både skulden och listan över det gjorda kommer från författaren Oliver Burkeman. Williamsons ' +
+          'nyhetsbrev tar upp skulden, inte listan.',
         sources: [
           {
-            title: 'Chris Williamson om produktivitetsskuld (Rosetta)',
-            url: 'https://rosetta.to/u/chriswillx/productivity-debt',
+            title: 'Chris Williamson om produktivitetsskuld (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-productivity-debt-taboos-amp-anxiety/',
           },
           {
             title: 'Oliver Burkeman om listan över det gjorda',
@@ -1034,30 +1057,42 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Han menar att förväntningar styr hur lycklig man känner sig mer än vad som faktiskt händer, eftersom ' +
-          'vi jämför oss med andra och med det vi väntat oss.',
+          'Han menar att vi bedömer våra liv i jämförelse med andra, och att ett uppkopplat liv med fler att ' +
+          'jämföra sig med därför ger mer avund och mindre glädje.',
         evidence: 'asikt',
-        note: 'Han lånar tanken från bland andra författaren Morgan Housel.',
+        summary: [
+          'Williamson utgår från en tanke av Montesquieu som han hittat hos Tim Urban: att bli lycklig vore lätt, ' +
+            'men vi vill bli lyckligare än andra, och vi tror att andra är lyckligare än de är. Vi bedömer vårt ' +
+            'läge mot dem omkring oss, mot hur det var förut och mot hur föräldrarna hade det.',
+          'Eftersom de flesta bara visar upp sina bästa stunder ser vi våra egna misslyckanden på nära håll men ' +
+            'bara andras höjdpunkter. Han lyfter också Charlie Mungers tanke att det är avund snarare än girighet ' +
+            'som driver världen, och drar slutsatsen att ju mer vi kan jämföra oss, desto mindre glädje. Själv ' +
+            'följer han högst 100 personer på Twitter.',
+        ],
+        note: 'Han bygger på Montesquieu via Tim Urban och på Charlie Munger. Det är en tankegång, inte en studie.',
         sources: [
           {
-            title: 'Modern Wisdom #702: 16 lärdomar från 700 avsnitt (Global Player)',
-            url: 'https://globalplayer.com/podcasts/episodes/7Drih6n',
+            title: 'Chris Williamson om jämförelse och status (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-staring-men-comparison-status-symbols/',
           },
           {
-            title: 'Chris Williamson om förväntningar och lycka (Rosetta)',
-            url: 'https://rosetta.to/u/chriswillx/if-only-you-really-wanted-to-be-happy',
+            title: 'Chris Williamson om jämförelse och avund (nyhetsbrevet 3 Minute Monday)',
+            url: 'https://chriswillx.com/3-minute-monday-comparison-sexy-men-mistakes/',
           },
         ],
       },
     ],
     startHere: [
-      {
-        title: 'Modern Wisdom #064: James Clear om vanor som håller',
-        url: 'https://chriswillx.com/064-james-clear-how-to-build-habits-that-last/',
-      },
+      MW_CLEAR,
       {
         title: 'Modern Wisdom, alla avsnitt',
         url: 'https://chriswillx.com/podcast/',
+        summary: [
+          'Sidan samlar alla avsnitt av Modern Wisdom, och de går att lyssna på direkt eller i Apple Podcasts och Spotify.',
+          'Podden beskriver sig som lärdomar från framstående tänkare, för att livet är svårt.',
+          'Gästerna har varit bland andra David Goggins, Jordan Peterson, Naval Ravikant, Sam Harris och Andrew Huberman.',
+          'Varje avsnitt har en beskrivning av vad man lär sig och tidsmarkeringar för samtalets delar.',
+        ],
       },
     ],
   },
