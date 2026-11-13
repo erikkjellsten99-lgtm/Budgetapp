@@ -94,6 +94,27 @@ const FMF_COLD: Source = {
     'Den påpekar att forskningen är ung och att kyla har risker, särskilt utan tillsyn.',
   ],
 };
+const ATOMIC_SUMMARY: Source = {
+  title: 'Sammanfattning av Atomic Habits (jamesclear.com)',
+  url: 'https://jamesclear.com/atomic-habits-summary',
+  summary: [
+    'Små förbättringar varje dag växer som ränta på ränta, och en procent bättre om dagen i ett år blir ungefär 37 gånger bättre.',
+    'Systemet, alltså de vanor och processer som leder dit, betyder mer än själva målen.',
+    'Vanor som bygger på identitet håller bäst, och varje handling är en röst för den person man vill bli.',
+    'En vana har fyra steg: signal, begär, handling och belöning.',
+    'De fyra lagarna för nya vanor är att göra dem synliga, lockande, lätta och tillfredsställande.',
+  ],
+};
+const MW_CLEAR: Source = {
+  title: 'Modern Wisdom #064: James Clear om vanor som håller',
+  url: 'https://chriswillx.com/064-james-clear-how-to-build-habits-that-last/',
+  summary: [
+    'Chris Williamson intervjuar James Clear om boken Atomic Habits, som han kallar sin mest rekommenderade bok 2019.',
+    'Avsnittet handlar om hur man bygger nya vanor och bryter gamla.',
+    'Utgångspunkten är att framgång och misslyckande är eftersläpande mått på det man gör varje dag, och att vanorna styr de handlingarna.',
+    'De pratar också om hur man hittar sin passion och kopplar den till ett syfte.',
+  ],
+};
 const ALMAHAYNI_2024: Source = {
   title: 'Almahayni och Hammond 2024, systematisk genomgång av Wim Hof-metoden i PLOS ONE (PMC)',
   url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10936795',
@@ -862,11 +883,25 @@ export const PEOPLE: Person[] = [
           'Små förbättringar varje dag växer som ränta på ränta. En procent bättre varje dag blir ungefär 37 ' +
           'gånger bättre på ett år.',
         evidence: 'asikt',
+        summary: [
+          'Clear beskriver ständig förbättring som att göra små ändringar varje dag och räkna med att de till ' +
+            'slut blir något stort. Den vanliga vägen, ett stort mål och stora kliv, slutar enligt honom ofta i ' +
+            'utbrändhet och misslyckande.',
+          'Hans exempel är brittiska cykelförbundet, där Dave Brailsford letade efter en procents förbättring i ' +
+            'allt från sadlar och däck till massagegel, kuddar och handtvätt. Fem år senare tog britterna 60 ' +
+            'procent av guldmedaljerna i cykel vid OS 2008.',
+          'Han föreslår också att mäta bakåt, alltså att utgå från vad man gjorde förra veckan och bli lite ' +
+            'bättre den här veckan, och att ofta förbättra genom att ta bort fel i stället för att lägga till mer.',
+        ],
         note: 'Räkningen stämmer, men livet växer sällan så jämnt. Idén lånar han från Dave Brailsfords cykellag.',
         sources: [
           {
             title: 'Continuous Improvement (jamesclear.com)',
             url: 'https://jamesclear.com/continuous-improvement',
+          },
+          {
+            title: 'Marginal Gains, om Brailsford och brittisk cykel (jamesclear.com)',
+            url: 'https://jamesclear.com/marginal-gains',
           },
         ],
       },
@@ -875,8 +910,17 @@ export const PEOPLE: Person[] = [
           'Den som bestämmer exakt när och var en sak ska göras blir mer benägen att göra den. En genomgång av 94 ' +
           'tester fann en måttlig till stor effekt av sådana planer.',
         evidence: 'belagt',
-        note:
-          'Idén kommer från Peter Gollwitzer, genomgången gjorde han med Paschal Sheeran.',
+        summary: [
+          'Peter Gollwitzer och Paschal Sheeran gick 2006 igenom 94 oberoende tester av planer där man i förväg ' +
+            'bestämmer när, var och hur man ska göra något, ofta i formen om Y händer gör jag X. Planerna hade ' +
+            'en måttlig till stor effekt på om folk nådde sina mål.',
+          'De hjälpte folk att komma igång, att stå emot störningar, att släppa det som inte fungerade och att ' +
+            'spara kraft till senare. Planen gjorde att man lättare såg tillfället och att handlingen kom mer ' +
+            'automatiskt.',
+          'Clear lyfter fram en brittisk studie med 248 personer där 91 procent av dem som skrivit ner dag, tid ' +
+            'och plats tränade minst en gång i veckan, mot 35 till 38 procent i de andra grupperna.',
+        ],
+        note: 'Clear hänvisar till genomgången. Den brittiska studien han beskriver pågick bara i två veckor.',
         sources: [
           {
             title: 'Gollwitzer och Sheeran 2006, genomgång om när och var-planer (Konstanz universitet)',
@@ -890,32 +934,23 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Det finns inget magiskt antal dagar för en ny vana. I en studie var medianen 66 dagar innan ' +
-          'en ny vana kändes automatisk, med stor spridning mellan personer.',
-        evidence: 'svagt',
-        note:
-          'En studie med 96 personer som själva skattade hur automatisk vanan kändes. Spridningen var från 18 ' +
-          'till 254 dagar.',
-        sources: [
-          {
-            title: 'How Long Does it Actually Take to Form a New Habit? (jamesclear.com)',
-            url: 'https://jamesclear.com/new-habit',
-          },
-          {
-            title: 'Lally m.fl. 2010 om hur vanor bildas (BPS Research Digest)',
-            url: 'https://bps.org.uk/research-digest/how-form-habit',
-          },
-        ],
-      },
-      {
-        text:
           'Vanor fastnar bättre om de bygger på vem man vill vara än på vad man vill uppnå.',
         evidence: 'asikt',
+        summary: [
+          'Clear beskriver tre lager av förändring: resultat, alltså vad man får, process, alltså vad man gör, ' +
+            'och identitet, alltså vad man tror om sig själv. De flesta börjar med resultatet. Han menar att det ' +
+            'håller bättre att börja med vem man vill bli.',
+          'Han beskriver två steg: att bestämma vem man vill vara och att bevisa det för sig själv med små ' +
+            'vinster. Den som inte vet var den ska börja kan utgå från resultatet och fråga vilken sorts person ' +
+            'som skulle nå det. I sammanfattningen av boken kallar han varje handling en röst för den person man ' +
+            'vill bli.',
+        ],
         sources: [
           {
             title: 'Identity-Based Habits (jamesclear.com)',
             url: 'https://jamesclear.com/identity-based-habits',
           },
+          ATOMIC_SUMMARY,
         ],
       },
       {
@@ -923,28 +958,28 @@ export const PEOPLE: Person[] = [
           'Att haka på en ny vana direkt efter en befintlig gör den lättare att komma ihåg. Idén kommer från BJ ' +
           'Foggs metod Tiny Habits.',
         evidence: 'asikt',
+        summary: [
+          'Clear förklarar att hjärnan stärker kopplingar som används ofta och rensar bort dem som inte används. ' +
+            'Vanor man redan har är därför starka och kan bli utlösare för nya.',
+          'Han kallar det att stapla vanor: efter en vana jag redan har gör jag den nya, till exempel byter om ' +
+            'till träningskläder direkt efter att ha tagit av jobbskorna. Han ser det som en sorts plan för när ' +
+            'och var, där den nya vanan kopplas till en gammal vana i stället för till en tid och plats.',
+          'Metoden skapades enligt honom av BJ Fogg inom Tiny Habits. På Tiny Habits egen sida står att Clear ' +
+            'själv gick deras gratis femdagarsprogram 2012.',
+        ],
         sources: [
           {
             title: 'Habit Stacking (jamesclear.com)',
             url: 'https://jamesclear.com/habit-stacking',
           },
           {
-            title: 'Tiny Habits, introduktion (Stanford Medicine)',
-            url: 'https://med.stanford.edu/content/dam/sm/ascend/documents/Introduction_%20Tiny%20Habits%20for%20Self%20Compassion,%20Getting%20Started.pdf',
+            title: 'Tiny Habits, BJ Foggs femdagarsprogram (tinyhabits.com)',
+            url: 'https://tinyhabits.com/join/',
           },
         ],
       },
     ],
-    startHere: [
-      {
-        title: 'Sammanfattning av Atomic Habits (jamesclear.com)',
-        url: 'https://jamesclear.com/atomic-habits-summary',
-      },
-      {
-        title: 'Modern Wisdom #064: James Clear om vanor som håller',
-        url: 'https://chriswillx.com/064-james-clear-how-to-build-habits-that-last/',
-      },
-    ],
+    startHere: [ATOMIC_SUMMARY, MW_CLEAR],
   },
   {
     id: 'chris-williamson',
