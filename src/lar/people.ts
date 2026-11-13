@@ -34,9 +34,10 @@ export type Person = {
   warning?: string;
 };
 
-const WARN_BREATH =
+const WARN_BREATH_COLD =
   'Andningen kan göra att du svimmar. Gör den aldrig i vatten, i badkaret eller när du kör bil. ' +
-  'Kyla belastar hjärtat: var försiktig vid hjärtproblem och graviditet, och bada aldrig ensam i kallt vatten.';
+  'Kallt vatten och het bastu belastar hjärtat och blodtrycket. Var försiktig vid hjärtproblem, ' +
+  'graviditet och efter alkohol, och bada aldrig ensam i kallt vatten.';
 
 const WARN_COLD =
   'Kallt vatten och het bastu belastar hjärtat och blodtrycket. Var försiktig vid hjärtproblem, ' +
@@ -131,7 +132,7 @@ export const PEOPLE: Person[] = [
         sources: [
           {
             title: 'Vad är Wim Hof-metoden? (wimhofmethod.com)',
-            url: 'https://www.WimHofMethod.com/practice-the-method',
+            url: 'https://www.wimhofmethod.com/practice-the-method',
           },
         ],
       },
@@ -142,7 +143,7 @@ export const PEOPLE: Person[] = [
         url: 'https://www.soundstrue.com/products/the-wim-hof-method-1',
       },
     ],
-    warning: WARN_BREATH,
+    warning: WARN_BREATH_COLD,
   },
   {
     id: 'susanna-soberg',
@@ -188,9 +189,9 @@ export const PEOPLE: Person[] = [
         text:
           'Vinterbadarna i studien låg i snitt ungefär 11 minuter i kallt vatten och satt ungefär 57 minuter i ' +
           'bastun per vecka.',
-        evidence: 'svagt',
+        evidence: 'belagt',
         note:
-          'Siffrorna beskriver vad deltagarna redan gjorde. Ingen har testat att just den mängden ger bäst ' +
+          'Siffrorna beskriver vad de 8 vinterbadarna redan gjorde. Ingen har testat att just den mängden ger bäst ' +
           'effekt, men siffran sprids ofta som ett recept.',
         sources: [
           SOBERG_2021_FULL,
@@ -219,8 +220,8 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Hon lyfter fram bättre blodsocker och insulinkänslighet som en vinst med kyla. En genomgång av 104 ' +
-          'studier fann tecken på det, men också att de flesta studierna var små.',
+          'En genomgång av 104 studier om kallbad fann tecken på bättre insulinkänslighet och mindre kroppsfett, ' +
+          'men också att de flesta studierna var små.',
         evidence: 'svagt',
         note:
           'Genomgången säger själv att små grupper, oftast ett kön och olika vattentemperatur gör det svårt att ' +
@@ -258,7 +259,7 @@ export const PEOPLE: Person[] = [
     method: [
       'Följa stora grupper i många år och jämföra de som bastar ofta med de som bastar sällan.',
       'Mäta blodtryck, puls och kärl före och efter ett bastubad för att förstå vad som händer i kroppen.',
-      'Den traditionella finska bastun är utgångspunkten, ofta 4 till 7 gånger i veckan i de bästa grupperna.',
+      'Den traditionella finska bastun är utgångspunkten, ofta 4 till 7 gånger i veckan i grupperna med lägst risk.',
     ],
     claims: [
       {
@@ -346,7 +347,7 @@ export const PEOPLE: Person[] = [
     areas: ['andning', 'kallbad'],
     teaser: 'Hjärnforskare och poddare med konkreta råd om andning och kyla.',
     about:
-      'Andrew Huberman är professor i neurobiologi vid Stanford och driver podden Huberman Lab sedan 2021. ' +
+      'Andrew Huberman är docent (associate professor) i neurobiologi vid Stanford och driver podden Huberman Lab sedan 2021. ' +
       'Han forskar själv om synen och om andning och stress, men i podden pratar han ofta om områden ' +
       'utanför sitt eget. ' +
       'Han har fått kritik för att dra för långa slutsatser av små studier.',
@@ -374,7 +375,7 @@ export const PEOPLE: Person[] = [
       {
         text:
           'Han rekommenderar ungefär 11 minuter kyla i veckan totalt, fördelat på två till fyra korta pass.',
-        evidence: 'svagt',
+        evidence: 'asikt',
         note:
           'Siffran kommer från vad vinterbadarna i Søbergs lilla studie redan gjorde. Den har aldrig testats som ' +
           'dos.',
@@ -414,7 +415,7 @@ export const PEOPLE: Person[] = [
         url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health',
       },
     ],
-    warning: WARN_BREATH,
+    warning: WARN_BREATH_COLD,
   },
   {
     id: 'rhonda-patrick',
@@ -423,11 +424,11 @@ export const PEOPLE: Person[] = [
     areas: ['kallbad'],
     teaser: 'Biomedicinsk forskare som förklarar vad bastu och kyla gör i cellerna.',
     about:
-      'Rhonda Patrick har en doktorsexamen i biomedicin och driver sajten och podden FoundMyFitness sedan 2014. ' +
+      'Rhonda Patrick har en doktorsexamen i biomedicin och driver sajten och podden FoundMyFitness, podden sedan 2014. ' +
       'Hon sammanfattar studier och intervjuar forskare som Jari Laukkanen. Hon pratar ofta om bastu som ' +
       'ett sätt att belasta kroppen ungefär som träning.',
     method: [
-      'Regelbunden bastu, gärna flera gånger i veckan, som ett komplement till träning.',
+      'Hon förordar bastu flera gånger i veckan som ett komplement till träning.',
       'Förklara mekanismer: värmechockproteiner efter bastu och noradrenalin efter kyla.',
       'Bygga på stora befolkningsstudier och visa var bevisen tar slut.',
     ],
@@ -558,7 +559,9 @@ export const PEOPLE: Person[] = [
           'Anställda som gick kursen fick ett starkare antikroppssvar på en influensavaccination än en grupp ' +
           'som fick vänta, och mätningar visade förändrad aktivitet i hjärnan.',
         evidence: 'svagt',
-        note: 'Liten studie med 25 i kursen och 16 som väntade. Forskarna kallade själva resultatet preliminärt.',
+        note:
+          'Liten studie med 25 i kursen och 16 som väntade. Forskarna efterlyste mer forskning. Kabat-Zinn var en ' +
+          'av författarna.',
         sources: [
           {
             title: 'Davidson m.fl. 2003, meditation, hjärna och immunförsvar (PubMed)',
@@ -626,8 +629,7 @@ export const PEOPLE: Person[] = [
           'tester fann en måttlig till stor effekt av sådana planer.',
         evidence: 'belagt',
         note:
-          'Idén och forskningen kommer från Peter Gollwitzer och Paschal Sheeran. Nyare beräkningar som tar ' +
-          'hänsyn till att positiva resultat publiceras oftare ger en mindre effekt.',
+          'Idén och forskningen kommer från Peter Gollwitzer och Paschal Sheeran.',
         sources: [
           {
             title: 'Gollwitzer och Sheeran 2006, genomgång om när och var-planer (Konstanz universitet)',
@@ -641,7 +643,7 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Det finns inget magiskt antal dagar för en ny vana. I en studie tog det i snitt 66 dagar innan ' +
+          'Det finns inget magiskt antal dagar för en ny vana. I en studie var medianen 66 dagar innan ' +
           'en ny vana kändes automatisk, med stor spridning mellan personer.',
         evidence: 'svagt',
         note:

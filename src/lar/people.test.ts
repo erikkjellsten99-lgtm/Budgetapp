@@ -77,11 +77,14 @@ describe('Lär: innehållet', () => {
   it('inga citattecken eller tankstreck i texten', () => {
     for (const p of PEOPLE) {
       const texts = [
+        p.kind,
         p.teaser,
         p.about,
         ...p.method,
         ...p.claims.flatMap(c => [c.text, c.note ?? '']),
         p.warning ?? '',
+        ...p.claims.flatMap(c => c.sources.map(s => s.title)),
+        ...p.startHere.map(s => s.title),
       ];
       for (const t of texts) expect(t, `${p.name}: ${t}`).not.toMatch(FORBIDDEN);
     }
@@ -95,6 +98,7 @@ describe('Lär: innehållet', () => {
     }
   });
 
+  // Regeln är värdbaserad: en källa räknas som ursprunglig forskning om dess värd inte finns i OWN_HOSTS.
   it('Clear och Williamson: egna idéer är åsikt eller har källa utanför egen sajt', () => {
     for (const [name, hosts] of Object.entries(OWN_HOSTS)) {
       const p = PEOPLE.find(x => x.name === name)!;
