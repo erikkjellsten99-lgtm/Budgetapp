@@ -723,13 +723,27 @@ export const PEOPLE: Person[] = [
           'En stor genomgång av 47 slumpade studier med över 3 500 vuxna fann att program med mindfulness ' +
           'minskade ångest, nedstämdhet och smärta något.',
         evidence: 'belagt',
+        summary: [
+          'Forskare vid Johns Hopkins gick igenom 18 753 träffar fram till november 2012 och tog med 47 slumpade ' +
+            'studier med sammanlagt 3 515 vuxna. Alla studier jämförde med en aktiv kontrollgrupp, så att ' +
+            'förväntningar och uppmärksamhet inte ensamma skulle förklara resultatet.',
+          'Program med mindfulness gav måttligt säkra förbättringar av ångest, nedstämdhet och smärta, och mindre ' +
+            'säkra förbättringar av stress och psykisk livskvalitet. För humör, uppmärksamhet, missbruk, ' +
+            'matvanor, sömn och vikt fanns ingen eller för lite effekt.',
+          'Enligt NPR handlade det om ungefär två och en halv timmes övning i veckan, och kursen MBSR fanns med ' +
+            'i många av studierna.',
+        ],
         note:
           'Effekterna var små till måttliga, och meditation var inte bättre än annan aktiv behandling som ' +
           'motion eller terapi.',
         sources: [
           {
-            title: 'Goyal m.fl. 2014, meditation och stress, JAMA Internal Medicine (QxMD)',
-            url: 'https://read.qxmd.com/read/24395196/meditation-programs-for-psychological-stress-and-well-being-a-systematic-review-and-meta-analysis',
+            title: 'Goyal m.fl. 2014, meditation och stress, JAMA Internal Medicine (PubMed)',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/24395196/',
+          },
+          {
+            title: 'Samma genomgång, hela artikeln (PMC)',
+            url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4142584',
           },
           {
             title: 'NPR om genomgången',
@@ -742,7 +756,19 @@ export const PEOPLE: Person[] = [
           'I hans tidiga studie med 90 patienter med långvarig smärta minskade smärtan, oron och behovet av ' +
           'smärtstillande efter kursen, medan en jämförelsegrupp inte blev bättre.',
         evidence: 'svagt',
-        note: 'Grupperna var inte slumpade, och studien gjordes av den som skapat kursen.',
+        summary: [
+          'Kabat-Zinn och kollegor lät 90 patienter med långvarig smärta gå ett tio veckor långt program för ' +
+            'stressminskning och avslappning, med träning i mindfulnessmeditation.',
+          'Efteråt hade de mindre smärta i stunden, en bättre bild av sin kropp, mindre begränsning av vad de ' +
+            'kunde göra, färre symtom och mindre ångest och nedstämdhet. De tog mindre smärtstillande, var mer ' +
+            'aktiva och fick bättre självkänsla, oavsett kön och typ av smärta. En jämförelsegrupp med vanlig ' +
+            'smärtbehandling förbättrades inte.',
+          'Upp till 15 månader senare höll förbättringarna i sig, utom för smärtan i stunden, och de flesta ' +
+            'sade att de fortsatt meditera.',
+        ],
+        note:
+          'Jämförelsegruppen fick vanlig behandling, och studien beskriver ingen lottning. Den gjordes av den som ' +
+          'skapat kursen.',
         sources: [
           {
             title: 'Kabat-Zinn m.fl. 1985, mindfulness vid långvarig smärta (PubMed)',
@@ -755,6 +781,14 @@ export const PEOPLE: Person[] = [
           'Anställda som gick kursen fick ett starkare antikroppssvar på en influensavaccination än en grupp ' +
           'som fick vänta, och mätningar visade förändrad aktivitet i hjärnan.',
         evidence: 'svagt',
+        summary: [
+          'Forskarna lottade friska anställda på en arbetsplats till en åtta veckor lång klinisk kurs i ' +
+            'mindfulnessmeditation eller till att vänta. Hjärnans elektriska aktivitet mättes före, direkt efter ' +
+            'och fyra månader efter kursen, och när kursen var slut fick alla influensavaccin.',
+          'De som mediterat fick mer aktivitet i främre vänstra delen av hjärnan, ett mönster som tidigare ' +
+            'kopplats till positiva känslor, och fler antikroppar mot vaccinet än de som väntade. Ju större ' +
+            'förändringen i hjärnan var, desto större blev ökningen av antikroppar.',
+        ],
         note:
           'Liten studie med 25 i kursen och 16 som väntade. Forskarna efterlyste mer forskning. Kabat-Zinn var en ' +
           'av författarna.',
@@ -767,25 +801,42 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Han beskriver mindfulness som uppmärksamhet med avsikt, i nuet och utan att döma, och säger själv att ' +
-          'det är en arbetsdefinition och inte den slutliga.',
+          'Han beskriver mindfulness som uppmärksamhet med avsikt, i nuet och utan att döma, och lägger ibland ' +
+          'till att det sker för att förstå sig själv och bli klokare.',
         evidence: 'asikt',
+        summary: [
+          'Tidningen Mindful berättar att han 1979 tog in kroniskt sjuka patienter som inte blev hjälpta av vanlig ' +
+            'vård i sitt nya program på åtta veckor, det som i dag kallas MBSR. För NPR har han beskrivit ' +
+            'metoden som buddhistisk meditation utan buddhismen, helt världslig.',
+          'En av hans huvudtankar är att vi tar oss själva på för stort allvar, eftersom vi tror att det finns ' +
+            'ett jag att ta på allvar. Berättelsen om mig är enligt honom en konstruktion, och när vi släpper den ' +
+            'finns bara nuet kvar.',
+          'Kroppen andas av sig själv, så det medvetna är vår uppmärksamhet på andningen. Att lägga märke till, ' +
+            'vara tacksam och vara vaken ger en levande känsla, och det är den han kallar mindfulness.',
+        ],
         sources: [
           {
             title: 'Kabat-Zinn om hur han definierar mindfulness (Mindful)',
             url: 'https://www.mindful.org/jon-kabat-zinn-defining-mindfulness/',
           },
           {
-            title: 'Intervju i The Psychologist (BPS)',
-            url: 'https://thepsychologist.bps.org.uk/not-mcmindfulness-any-stretch-imagination',
+            title: 'NPR om mindfulness och kursen MBSR',
+            url: 'https://www.npr.org/blogs/health/2014/01/07/260470831/mindfulness-meditation-can-help-relieve-anxiety-and-depression',
           },
         ],
       },
     ],
     startHere: [
       {
-        title: 'Boken Full Catastrophe Living, 1990 (Publishers Weekly)',
+        title: 'Boken Full Catastrophe Living, 1990 (recension i Publishers Weekly)',
         url: 'https://www.publishersweekly.com/9780385298971',
+        summary: [
+          'Boken bygger på programmet för stresshantering som Kabat-Zinn grundade och ledde vid University of Massachusetts Medical Center.',
+          'Ämnet är hela spektrumet av stress i livet och hur medveten närvaro kan lugna reaktionerna utan att trubba av känslorna.',
+          'Först förklarar han hur man lägger upp ett schema för meditation, och sedan använder han det på de vanligaste källorna till stress.',
+          'En del i mitten går igenom vetenskapliga och anekdotiska belägg för hur sinnestillstånd hänger ihop med hälsa.',
+          'Enligt recensenten lovar han inte för mycket om vad meditation kan läka.',
+        ],
       },
     ],
   },
