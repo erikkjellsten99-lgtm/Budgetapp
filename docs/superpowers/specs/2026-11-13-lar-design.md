@@ -35,6 +35,7 @@ och bastu. Han vill lära sig mer av kända människor inom områdena, direkt i 
 | Susanna Søberg | Forskare | Kallbad och bastu |
 | Jari Laukkanen | Forskare | Kallbad och bastu |
 | Andrew Huberman | Forskare och poddare | Andning och kyla, Kallbad och bastu |
+| Rhonda Patrick | Forskare och poddare | Kallbad och bastu |
 | Jon Kabat-Zinn | Forskare | Meditation |
 | James Clear | Författare | Personlig utveckling |
 | Chris Williamson | Poddare | Personlig utveckling |
@@ -42,7 +43,9 @@ och bastu. Han vill lära sig mer av kända människor inom områdena, direkt i 
 Typen visas på sidan, så att det syns om någon forskar själv eller återberättar andras idéer.
 
 ## Så byggs det (Claudes val)
-- Ny mapp `src/lar/`: `people.ts` (innehållet, typat), `Lar.tsx` (lista och personsida), `lar.css`, tester.
+- Egen mapp `src/lar/` (Eriks krav): `people.ts` (innehållet, typat), `Lar.tsx` (lista och personsida),
+  `lar.css`, tester och en egen `CLAUDE.md` med delens regler. Inget av delens kod ligger utanför mappen, utom
+  fliken i `nav.ts` och inkopplingen i `App.tsx`.
 - Ingen databas och ingen synk: innehållet är fast och följer med appen. Laddas lazy som Nyheter.
 - Femte flik i `nav.ts` (`lar`), efter Nyheter. Vardagsrummets stil och tokens, 375 px, ljust och mörkt,
   sidomeny på skrivbord.
