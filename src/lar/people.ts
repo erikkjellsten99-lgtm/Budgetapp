@@ -1,6 +1,7 @@
 // Lär: fast innehåll om personer inom andning, kyla, bastu, meditation och personlig utveckling.
-// Inga citat, bara sammanfattningar med egna ord. Varje påstående har märkning, en sammanfattning skriven
-// från den öppnade källan och minst en https-källa som öppnats och kontrollerats (2026-11-13).
+// Sammanfattningar med egna ord. Varje påstående har märkning, en sammanfattning skriven från den öppnade
+// källan och minst en https-källa som öppnats och kontrollerats (2026-11-13). Citat finns bara i `quotes`:
+// ordagrant från en öppnad sida, personens egna ord, kontrollerade mot den sparade sidtexten.
 // Regler: se CLAUDE.md i den här mappen.
 
 export type AreaId = 'andning' | 'kallbad' | 'meditation' | 'utveckling';
@@ -27,6 +28,11 @@ export type Source = { title: string; url: string; summary?: string[] };
  * den öppnade källan, `note` förbehållet.
  */
 export type Claim = { text: string; evidence: Evidence; summary: string[]; note?: string; sources: Source[] };
+/**
+ * Ett citat. `text` står ordagrant som på sidan i `source`, på originalspråket (engelska), utan omgivande
+ * citattecken och högst 40 ord. `sv` är en trogen svensk översättning.
+ */
+export type Quote = { text: string; sv: string; source: Source };
 export type Person = {
   id: string;
   name: string;
@@ -35,6 +41,7 @@ export type Person = {
   teaser: string;
   about: string;
   method: string[];
+  quotes: Quote[];
   claims: Claim[];
   startHere: Source[];
   warning?: string;
@@ -151,6 +158,18 @@ export const PEOPLE: Person[] = [
       'Andning i omgångar: kraftiga andetag in, avslappnat ut, och sedan en lång andhållning.',
       'Kyla: kalla duschar eller isbad som ökas långsamt.',
       'Engagemang: att hålla fast vid övningen över tid.',
+    ],
+    quotes: [
+      {
+        text: 'This is how we will change the world, one soul at a time',
+        sv: 'Det är så vi ska förändra världen, en själ i taget.',
+        source: { title: 'Boken The Wim Hof Method (förlaget Sounds True)', url: 'https://www.soundstrue.com/products/the-wim-hof-method-1' },
+      },
+      {
+        text: 'We alter the collective consciousness by awakening to our own boundless potential. We are limited only by the depth of our imagination and the strength of our conviction.',
+        sv: 'Vi förändrar det kollektiva medvetandet genom att vakna upp till vår egen gränslösa potential. Vi begränsas bara av hur djup vår fantasi är och hur stark vår övertygelse är.',
+        source: { title: 'Boken The Wim Hof Method (förlaget Sounds True)', url: 'https://www.soundstrue.com/products/the-wim-hof-method-1' },
+      },
     ],
     claims: [
       {
@@ -278,6 +297,23 @@ export const PEOPLE: Person[] = [
       'Vinterbad: kallt vatten och bastu i växling, flera gånger per tillfälle.',
       'Søbergprincipen: hon menar att man ska sluta med kyla och låta kroppen värma upp sig själv.',
       'Korta dopp: vinterbadarna i hennes studie låg i snitt under två minuter per dopp.',
+    ],
+    quotes: [
+      {
+        text: 'We expected winter swimmers to have more brown fat than the control subjects, but it turned out that they instead had better thermoregulation',
+        sv: 'Vi trodde att vinterbadarna skulle ha mer brunt fett än kontrollpersonerna, men det visade sig att de i stället hade bättre temperaturreglering.',
+        source: { title: 'Köpenhamns universitet om studien av vinterbadare', url: 'https://cbmr.ku.dk/news/2021/winter-swimming-scandinavian-men-can-teach-us-how-the-body-adapts-to-extreme-heat-and-cold' },
+      },
+      {
+        text: 'We compared experienced winter swimmers with control subjects, which allows for the possibility that other lifestyle factors or genetic factors not measured in the current study also could impact the differences between the groups',
+        sv: 'Vi jämförde erfarna vinterbadare med kontrollpersoner, vilket lämnar öppet att andra levnadsvanor eller genetiska faktorer som inte mättes i studien också kan påverka skillnaderna mellan grupperna.',
+        source: { title: 'Köpenhamns universitet om studien av vinterbadare', url: 'https://cbmr.ku.dk/news/2021/winter-swimming-scandinavian-men-can-teach-us-how-the-body-adapts-to-extreme-heat-and-cold' },
+      },
+      {
+        text: 'So of course, we don\'t know yet whether brown fat decreases with age and therefore we get obese, or we get obese and therefore, we have less brown fat.',
+        sv: 'Så vi vet förstås inte ännu om brunt fett minskar med åldern och vi därför får fetma, eller om vi får fetma och därför har mindre brunt fett.',
+        source: { title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme', url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health' },
+      },
     ],
     claims: [
       {
@@ -423,6 +459,18 @@ export const PEOPLE: Person[] = [
       'Mäta blodtryck, puls och kärl före och efter ett bastubad för att förstå vad som händer i kroppen.',
       'Den traditionella finska bastun är utgångspunkten, ofta 4 till 7 gånger i veckan i grupperna med lägst risk.',
     ],
+    quotes: [
+      {
+        text: 'Also, in Finland, I think quite many use it for that purpose. They want some relaxation, you know, after working all day and so on.',
+        sv: 'I Finland tror jag också att ganska många använder bastun till det. De vill ha lite avkoppling, du vet, efter att ha jobbat hela dagen och så vidare.',
+        source: { title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu', url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen' },
+      },
+      {
+        text: 'Of course, we have to take care of other risk factors like blood pressure, lipids, smoking, obesity in addition to that.',
+        sv: 'Vi måste förstås också ta hand om andra riskfaktorer som blodtryck, blodfetter, rökning och fetma utöver det.',
+        source: { title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu', url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen' },
+      },
+    ],
     claims: [
       {
         text:
@@ -551,6 +599,23 @@ export const PEOPLE: Person[] = [
       'Kyla i korta pass utspridda över veckan i stället för ett långt pass.',
       'Han gör om forskning till dagliga rutiner som han kallar protokoll.',
     ],
+    quotes: [
+      {
+        text: 'Never get into a dangerous body of water.',
+        sv: 'Gå aldrig ner i ett vatten som är farligt.',
+        source: { title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)', url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance' },
+      },
+      {
+        text: 'This is the most common question I hear, and it makes sense to ask that. However, it is truly impossible to answer, as some people tolerate cold better than others.',
+        sv: 'Det här är den vanligaste frågan jag får, och det är rimligt att fråga. Men den är faktiskt omöjlig att besvara, eftersom vissa tål kyla bättre än andra.',
+        source: { title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)', url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance' },
+      },
+      {
+        text: 'After all, if it were easy, then there is no stimulus for your body to change (adapt).',
+        sv: 'När allt kommer omkring: om det vore lätt fanns det ingen stimulans för kroppen att förändras (anpassa sig).',
+        source: { title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)', url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance' },
+      },
+    ],
     claims: [
       {
         text:
@@ -634,6 +699,18 @@ export const PEOPLE: Person[] = [
       'Bastu efter träningen, som hon själv brukar göra.',
       'Förklara mekanismer: värmechockproteiner efter bastu och noradrenalin efter kyla.',
       'Bygga på stora befolkningsstudier och säga när forskningen ännu är ung.',
+    ],
+    quotes: [
+      {
+        text: 'Humans have used cold exposure, often with the expectation that it promotes health, for centuries.',
+        sv: 'Människor har använt kyla i århundraden, ofta i förväntan att det främjar hälsan.',
+        source: { title: 'FoundMyFitness: kallbad, kylbehandling och noradrenalin', url: 'https://foundmyfitness.com/episodes/cold-shock-norepinephrine' },
+      },
+      {
+        text: 'It\'s like a little bit of good stress where it\'s not too much stress, but it\'s enough stress to activate all of these genetic pathways that help you deal with stress.',
+        sv: 'Det är som lite bra stress, inte för mycket stress, men tillräckligt för att sätta i gång alla de genetiska signalvägar som hjälper en att hantera stress.',
+        source: { title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu', url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen' },
+      },
     ],
     claims: [
       {
@@ -740,6 +817,28 @@ export const PEOPLE: Person[] = [
       'Mindfulness: att medvetet rikta uppmärksamheten mot nuet utan att döma det man märker.',
       'En kurs på åtta veckor, vanligen med åtta träffar.',
       'Övningar som kroppsskanning och meditation, som många deltagare fortsätter med i vardagen.',
+    ],
+    quotes: [
+      {
+        text: 'Mindfulness is awareness that arises through paying attention, on purpose, in the present moment, non-judgementally',
+        sv: 'Mindfulness är den medvetenhet som uppstår genom att vara uppmärksam, avsiktligt, i nuet och utan att döma.',
+        source: { title: 'Kabat-Zinn om hur han definierar mindfulness (Mindful)', url: 'https://www.mindful.org/jon-kabat-zinn-defining-mindfulness/' },
+      },
+      {
+        text: 'Instead, we befriend ourselves as we are. We learn how to drop in on ourselves, visit, and hang out in awareness.',
+        sv: 'I stället blir vi vänner med oss själva som vi är. Vi lär oss att titta in hos oss själva, hälsa på och stanna en stund i medvetenheten.',
+        source: { title: 'Kabat-Zinn om mindfulness i vardagen, intervju (Mindful)', url: 'https://www.mindful.org/everyday-mindfulness-with-jon-kabat-zinn/' },
+      },
+      {
+        text: 'The price of success is that more and more people want something. But of course, mindfulness is not a something.',
+        sv: 'Priset för framgången är att allt fler vill ha något. Men mindfulness är förstås inte en sak man kan ha.',
+        source: { title: 'Kabat-Zinn om mindfulness i vardagen, intervju (Mindful)', url: 'https://www.mindful.org/everyday-mindfulness-with-jon-kabat-zinn/' },
+      },
+      {
+        text: 'If it were up to me to be breathing, I would have died a long time ago.',
+        sv: 'Om det hade hängt på mig att andas hade jag dött för länge sedan.',
+        source: { title: 'Kabat-Zinn om hur han definierar mindfulness (Mindful)', url: 'https://www.mindful.org/jon-kabat-zinn-defining-mindfulness/' },
+      },
     ],
     claims: [
       {
@@ -880,6 +979,28 @@ export const PEOPLE: Person[] = [
       'Han utgår från vipassana, en teknik från den äldsta grenen av buddhismen som han menar går att lära ut helt världsligt.',
       'Hans grundinstruktion är att låta uppmärksamheten vila i andningen och gå tillbaka dit när en tanke har tagit över.',
       'I appen Waking Up har han en introduktionskurs med en kort meditation och en kort lektion varje dag i en månad.',
+    ],
+    quotes: [
+      {
+        text: 'Mindfulness is simply a state of open, nonjudgmental, and nondiscursive attention to the contents of consciousness, whether pleasant or unpleasant.',
+        sv: 'Mindfulness är helt enkelt ett tillstånd av öppen, icke-dömande och ordlös uppmärksamhet på medvetandets innehåll, vare sig det är behagligt eller obehagligt.',
+        source: { title: 'Sam Harris om hur man mediterar (samharris.org, 2011)', url: 'https://www.samharris.org/blog/how-to-meditate' },
+      },
+      {
+        text: 'The practice of mindfulness is extraordinarily simple to describe, but it is in no sense easy.',
+        sv: 'Att öva mindfulness är utomordentligt enkelt att beskriva, men det är inte på något sätt lätt.',
+        source: { title: 'Sam Harris om hur man mediterar (samharris.org, 2011)', url: 'https://www.samharris.org/blog/how-to-meditate' },
+      },
+      {
+        text: 'The problem is not thoughts themselves but the state of thinking without knowing that one is thinking.',
+        sv: 'Problemet är inte tankarna i sig, utan att tänka utan att veta om att man tänker.',
+        source: { title: 'Sam Harris om hur man mediterar (samharris.org, 2011)', url: 'https://www.samharris.org/blog/how-to-meditate' },
+      },
+      {
+        text: 'Selflessness is a quality of consciousness that can be subjectively discovered. Indeed, it is in plain view in every present moment, and yet it remains difficult to see.',
+        sv: 'Att vara utan ett jag är en egenskap hos medvetandet som man kan upptäcka själv. Den syns faktiskt öppet i varje ögonblick, och ändå är den svår att se.',
+        source: { title: 'Sam Harris om ett medvetande utan jag (samharris.org, 2007)', url: 'https://www.samharris.org/blog/selfless-consciousness-without-faith' },
+      },
     ],
     claims: [
       {
@@ -1073,6 +1194,28 @@ export const PEOPLE: Person[] = [
       'Identitet först: varje handling ser han som en röst för den person man vill bli.',
       'Vanestapling: en ny vana kopplas direkt efter en man redan har.',
     ],
+    quotes: [
+      {
+        text: 'Your identity emerges out of your habits. Every action is a vote for the type of person you wish to become.',
+        sv: 'Din identitet växer fram ur dina vanor. Varje handling är en röst för den sortens person du vill bli.',
+        source: { title: 'Sammanfattning av Atomic Habits (jamesclear.com)', url: 'https://jamesclear.com/atomic-habits-summary' },
+      },
+      {
+        text: 'Goals are about the results you want to achieve. Systems are about the processes that lead to those results.',
+        sv: 'Mål handlar om de resultat du vill nå. System handlar om processerna som leder till de resultaten.',
+        source: { title: 'Sammanfattning av Atomic Habits (jamesclear.com)', url: 'https://jamesclear.com/atomic-habits-summary' },
+      },
+      {
+        text: 'If you’re having trouble changing your habits, the problem isn’t you. The problem is your system.',
+        sv: 'Om du har svårt att ändra dina vanor är det inte du som är problemet. Problemet är ditt system.',
+        source: { title: 'Sammanfattning av Atomic Habits (jamesclear.com)', url: 'https://jamesclear.com/atomic-habits-summary' },
+      },
+      {
+        text: 'It is so easy to dismiss the value of making slightly better decisions on a daily basis.',
+        sv: 'Det är så lätt att avfärda värdet av att fatta lite bättre beslut varje dag.',
+        source: { title: 'Continuous Improvement (jamesclear.com)', url: 'https://jamesclear.com/continuous-improvement' },
+      },
+    ],
     claims: [
       {
         text:
@@ -1191,6 +1334,23 @@ export const PEOPLE: Person[] = [
       'Långa intervjuer med forskare, författare och idrottare.',
       'Varje måndag delar han i nyhetsbrevet saker han lärt sig.',
       'Han lånar gärna idéer från gästerna och säger varifrån de kommer.',
+    ],
+    quotes: [
+      {
+        text: 'Your brain does not care about you feeling good, it only cares about you being successful.',
+        sv: 'Din hjärna bryr sig inte om att du mår bra, den bryr sig bara om att du lyckas.',
+        source: { title: 'Chris Williamson om att aldrig känna sig nöjd (nyhetsbrevet 3 Minute Monday)', url: 'https://chriswillx.com/3-minute-monday-enoughness-dogs-lessons/' },
+      },
+      {
+        text: 'We don’t just judge what we are in isolation, we judge it as a part of the entire hierarchy of those around us.',
+        sv: 'Vi bedömer inte bara vad vi är för sig, vi bedömer det som en del av hela rangordningen bland dem omkring oss.',
+        source: { title: 'Chris Williamson om jämförelse och status (nyhetsbrevet 3 Minute Monday)', url: 'https://chriswillx.com/3-minute-monday-staring-men-comparison-status-symbols/' },
+      },
+      {
+        text: 'Dealing with problems is the cost of doing business as a human, not a personal curse.',
+        sv: 'Att hantera problem är priset för att vara människa, inte en personlig förbannelse.',
+        source: { title: 'Chris Williamson om stress och överpresterare (nyhetsbrevet 3 Minute Monday)', url: 'https://chriswillx.com/3-minute-monday-stress-overachievers-amp-bad-deals/' },
+      },
     ],
     claims: [
       {

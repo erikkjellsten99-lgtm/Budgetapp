@@ -89,6 +89,8 @@ describe('Lär: innehållet', () => {
         p.warning ?? '',
         ...p.claims.flatMap(c => c.sources.map(s => s.title)),
         ...p.startHere.flatMap(s => [s.title, ...(s.summary ?? [])]),
+        // Citatets text står som på sidan och är undantagen; översättning och källtitel följer regeln.
+        ...p.quotes.flatMap(q => [q.sv, q.source.title]),
       ];
       for (const t of texts) expect(t, `${p.name}: ${t}`).not.toMatch(FORBIDDEN);
     }
@@ -160,6 +162,32 @@ describe('Lär: innehållet', () => {
           expect(pt.slice(0, -1), s.title).not.toMatch(/\. [A-ZÅÄÖ]/);
         }
       }
+    }
+  });
+
+  it('varje citat har text på högst 40 ord, översättning och https-källa med titel', () => {
+    for (const p of PEOPLE) {
+      expect(p.quotes.length, p.name).toBeLessThanOrEqual(4);
+      for (const q of p.quotes) {
+        const n = q.text.trim().split(/\s+/).filter(Boolean).length;
+        expect(n, `${p.name}: ${q.text}`).toBeGreaterThan(0);
+        expect(n, `${p.name}: ${q.text} (${n} ord)`).toBeLessThanOrEqual(40);
+        expect(q.sv.trim().length, `${p.name}: ${q.text}`).toBeGreaterThan(0);
+        expect(q.source.url, `${p.name}: ${q.text}`).toMatch(/^https:\/\//);
+        expect(q.source.title.trim().length, `${p.name}: ${q.text}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('citat börjar och slutar inte med citattecken och upprepas inte', () => {
+    const QUOTE_MARK = /^["“”'‘’]|["“”'‘’]$/;
+    for (const p of PEOPLE) {
+      for (const q of p.quotes) {
+        expect(q.text.trim(), `${p.name}: ${q.text}`).not.toMatch(QUOTE_MARK);
+        expect(q.text, `${p.name}: ${q.text}`).toBe(q.text.trim());
+      }
+      const texts = p.quotes.map(q => q.text);
+      expect(new Set(texts).size, p.name).toBe(texts.length);
     }
   });
 
