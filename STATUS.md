@@ -1,4 +1,4 @@
-# STATUS – Groundwork (2026-11-06)
+# STATUS – Groundwork (2026-11-13)
 
 Öppna PR:er att merga i ordning: [#101](https://github.com/erikkjellsten99-lgtm/groundwork/pull/101)
 (uppgraderingen, innehåller även #100). Stäng #100 utan att merga.
@@ -17,6 +17,7 @@
 3. Öppna fliken Nyheter en gång och kontrollera i serverloggarna att alla fyra SVT-flöden kom fram.
 4. ~~Lägg ut `reminders` med inbox-filerna~~ Klart: version 6 utlagd 2026-11-06, bootar och svarar 200 var 5:e minut.
    `inbox/health.ts` tappades av verktyget (sista filen, bara typer) och saknas på servern; följer med nästa gång.
+5. Öppna källänkarna i Lär från vanligt nät och byt sammanfattningssidor mot primärkällor.
 
 ## Ekonomi
 - Fungerar: Översikt, Budget (månad för månad), Prognos med billån och extra på lånet, Sparmål (en uträkning i
@@ -53,6 +54,18 @@
 - Fungerar i appen med testdata. Servern v16 har `?action=nyheter`. Riktiga SVT-flöden ej verifierade.
 - Beslut: ton positiv/negativ/neutral via ordlistor, orden som avgjorde visas. Neutral finns för att inte tvinga
   en ton.
+
+## Lär (ny flik)
+- Fungerar: bibliotek med åtta personer (Wim Hof, Susanna Søberg, Jari Laukkanen, Andrew Huberman, Rhonda Patrick,
+  Jon Kabat-Zinn, James Clear, Chris Williamson), filter på område, sida per person med metod, påståenden märkta
+  Väl belagt / Svagt stöd / Egen åsikt, källänkar och varningsrad. Fast innehåll i `src/lar/people.ts`, ingen
+  databas, ingen server.
+- Ej verifierat: källänkarna är kontrollerade via sökresultat, inte öppnade (molnmiljön blockerar sidorna). Öppna
+  varje länk en gång från vanligt nät; några källor är sammanfattningssidor (rosetta.to, podscripts.co,
+  globalplayer.com, goodreads, booktopia, read.qxmd.com) och bör bytas mot primärkällor.
+- Inte med (beslut): loggning av egna pass, flöde med nya avsnitt, Jarvis och Idag läser inte biblioteket, egna
+  anteckningar.
+- Design och plan: `docs/superpowers/specs/2026-11-13-lar-design.md`, `docs/superpowers/plans/2026-11-13-lar.md`.
 
 ## Design
 - Designspecen "Två rum" valdes 2026-11-07: lugnt vardagsrum (Idag, Ekonomi, Vanor, Nyheter) och mörkt specialrum
