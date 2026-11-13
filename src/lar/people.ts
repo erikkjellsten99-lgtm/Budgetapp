@@ -72,6 +72,17 @@ const SOBERG_HUBERMAN: Source = {
     'De jämför kalla duschar med bad i kallt vatten och vanlig bastu med infraröd.',
   ],
 };
+const HUBERMAN_COLD: Source = {
+  title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)',
+  url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance',
+  summary: [
+    'Säkerheten kommer först: aldrig farligt vatten, aldrig överandning före eller i vattnet, och hellre för varmt än för kallt i början.',
+    'Rätt temperatur är så kall att man vill upp men säkert kan stanna, och ju kallare vatten desto kortare tid behövs.',
+    'Kyla frisätter adrenalin, noradrenalin och dopamin, och han beskriver att det ger mer energi, fokus och bättre humör efteråt.',
+    'Hans protokoll är 11 minuter i veckan fördelat på 2 till 4 korta pass, och att avsluta med kyla enligt Søbergprincipen.',
+    'Kallbad inom ungefär fyra timmar efter träning kan minska vinsten av träningen, och kyla sent på dagen kan störa sömnen.',
+  ],
+};
 const ALMAHAYNI_2024: Source = {
   title: 'Almahayni och Hammond 2024, systematisk genomgång av Wim Hof-metoden i PLOS ONE (PMC)',
   url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10936795',
@@ -511,9 +522,20 @@ export const PEOPLE: Person[] = [
           'I hans grupps studie gav fem minuter cyklisk suck om dagen i en månad bättre humör och lugnare ' +
           'andning än lika lång tid mindfulnessmeditation.',
         evidence: 'svagt',
+        summary: [
+          'Studien gjordes på distans av forskare vid Stanford, med Huberman som en av författarna. 108 vuxna, ' +
+            'de flesta studenter, lottades till fem minuter om dagen i en månad av antingen mindfulnessmeditation ' +
+            'eller en av tre andningsövningar: cyklisk suck med långa utandningar, boxandning med lika långa ' +
+            'faser, eller snabb andning följd av andhållning.',
+          'Alla grupper kände sig mindre oroliga efter övningarna. Andningsgrupperna, och mest cyklisk suck, fick ' +
+            'en större ökning av positiva känslor än meditationsgruppen, och skillnaden växte ju fler dagar de ' +
+            'övat. Andningsfrekvensen i vila, mätt med ett armband, sjönk också mer. Sömnen ändrades inte i någon grupp.',
+          'Forskarna skriver själva att studien var tänkt som en förstudie inför en större prövning och att ' +
+            'grupperna var små.',
+        ],
         note:
-          'Slumpad studie med drygt hundra deltagare, men en enda studie från hans eget labb, små effekter och ' +
-          'humöret rapporterades av deltagarna själva.',
+          'Slumpad studie med 108 deltagare, men en enda studie från hans eget labb, och humöret ' +
+          'rapporterades av deltagarna själva.',
         sources: [
           {
             title: 'Balban m.fl. 2023, korta andningsövningar och humör, Cell Reports Medicine (PMC)',
@@ -525,45 +547,42 @@ export const PEOPLE: Person[] = [
         text:
           'Han rekommenderar ungefär 11 minuter kyla i veckan totalt, fördelat på två till fyra korta pass.',
         evidence: 'asikt',
+        summary: [
+          'I sitt nyhetsbrev om kyla föreslår Huberman 11 minuter i veckan totalt, fördelat på 2 till 4 pass om ' +
+            '1 till 5 minuter. Vattnet ska vara så kallt att man vill upp men ändå säkert kan stanna. Han kallar ' +
+            'det ett minimum och skriver att siffran bygger på en ny studie.',
+          'I hans samtal med Susanna Søberg framgår att det är hennes studie, där 11 minuter var vad vinterbadarna ' +
+            'själva råkade göra. Han skriver också att man kan avsluta med kyla och låta kroppen värma upp sig ' +
+            'själv för större effekt på ämnesomsättningen, och att kallbad strax efter träning kan minska vinsten ' +
+            'av träningen.',
+        ],
         note:
           'Siffran kommer från vad vinterbadarna i Søbergs lilla studie redan gjorde. Den har aldrig testats som ' +
           'dos.',
-        sources: [
-          {
-            title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)',
-            url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance',
-          },
-          SOBERG_2021_FULL,
-        ],
+        sources: [HUBERMAN_COLD, SOBERG_HUBERMAN, SOBERG_2021_FULL],
       },
       {
         text:
           'Han lyfter fram att kallt vatten ger en stor och långvarig ökning av dopamin och noradrenalin. ' +
-          'Studien bakom visade att en timme i 14 grader varmt vatten ökade noradrenalin ungefär sex gånger ' +
-          'och dopamin ungefär tre och en halv gånger.',
+          'I en studie där unga män låg en timme i 14 grader varmt vatten steg noradrenalin med 530 procent ' +
+          'och dopamin med 250 procent.',
         evidence: 'svagt',
+        summary: [
+          'I nyhetsbrevet skriver Huberman att kyla frisätter adrenalin och noradrenalin, som gör en vaken och ' +
+            'kan ge energi och fokus en tid efteråt. Han skriver också att kyla ger en långvarig ökning av ' +
+            'dopamin och hänvisar till en studie där människor låg ungefär en timme i vatten på omkring 15 grader.',
+          'Studien från 2000 lät unga män ligga en timme i vatten på 32, 20 och 14 grader. Bara vid 14 grader ' +
+            'steg noradrenalin och dopamin, medan adrenalinet inte ändrades. Ämnesomsättningen steg med 350 ' +
+            'procent och puls och blodtryck steg något.',
+          'Nyhetsbrevet namnger inte studien, så kopplingen till just den här görs här i Lär.',
+        ],
         note:
           'En liten studie med unga män som låg en hel timme i vattnet, mycket längre än de korta pass han ' +
           'själv föreslår.',
-        sources: [
-          SRAMEK_2000,
-          {
-            title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)',
-            url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance',
-          },
-        ],
+        sources: [SRAMEK_2000, HUBERMAN_COLD],
       },
     ],
-    startHere: [
-      {
-        title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)',
-        url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance',
-      },
-      {
-        title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme',
-        url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health',
-      },
-    ],
+    startHere: [HUBERMAN_COLD, SOBERG_HUBERMAN],
     warning: WARN_BREATH_COLD,
   },
   {
