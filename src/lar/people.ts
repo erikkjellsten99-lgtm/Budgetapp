@@ -77,11 +77,11 @@ const HUBERMAN_COLD: Source = {
   title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)',
   url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance',
   summary: [
-    'Säkerheten kommer först: aldrig farligt vatten, aldrig överandning före eller i vattnet, och hellre för varmt än för kallt i början.',
-    'Rätt temperatur är så kall att man vill upp men säkert kan stanna, och ju kallare vatten desto kortare tid behövs.',
-    'Kyla frisätter adrenalin, noradrenalin och dopamin, och han beskriver att det ger mer energi, fokus och bättre humör efteråt.',
+    'Han sätter säkerheten först: aldrig farligt vatten, aldrig överandning före eller i vattnet, och hellre för varmt än för kallt i början.',
+    'Han beskriver rätt temperatur som så kall att man vill upp men säkert kan stanna, och skriver att ju kallare vattnet är desto kortare tid behövs.',
+    'Han skriver att kyla frisätter adrenalin, noradrenalin och dopamin och att det ger mer energi, fokus och bättre humör efteråt.',
     'Hans protokoll är 11 minuter i veckan fördelat på 2 till 4 korta pass, och att avsluta med kyla enligt Søbergprincipen.',
-    'Kallbad inom ungefär fyra timmar efter träning kan minska vinsten av träningen, och kyla sent på dagen kan störa sömnen.',
+    'Han skriver att kallbad inom ungefär fyra timmar efter träning kan minska vinsten av träningen och att kyla sent på dagen kan störa sömnen.',
   ],
 };
 const FMF_COLD: Source = {
@@ -99,10 +99,10 @@ const ATOMIC_SUMMARY: Source = {
   title: 'Sammanfattning av Atomic Habits (jamesclear.com)',
   url: 'https://jamesclear.com/atomic-habits-summary',
   summary: [
-    'Små förbättringar varje dag växer som ränta på ränta, och en procent bättre om dagen i ett år blir ungefär 37 gånger bättre.',
-    'Systemet, alltså de vanor och processer som leder dit, betyder mer än själva målen.',
-    'Vanor som bygger på identitet håller bäst, och varje handling är en röst för den person man vill bli.',
-    'En vana har fyra steg: signal, begär, handling och belöning.',
+    'Boken menar att små förbättringar varje dag växer som ränta på ränta, och att en procent bättre om dagen i ett år blir ungefär 37 gånger bättre.',
+    'Clear menar att systemet, alltså de vanor och processer som leder dit, betyder mer än själva målen.',
+    'Han menar att vanor som bygger på identitet håller bäst, och kallar varje handling en röst för den person man vill bli.',
+    'En vana har enligt boken fyra steg: signal, begär, handling och belöning.',
     'De fyra lagarna för nya vanor är att göra dem synliga, lockande, lätta och tillfredsställande.',
   ],
 };
@@ -128,10 +128,10 @@ const FMF_LAUKKANEN: Source = {
   title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu',
   url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen',
   summary: [
-    'Laukkanen berättar om studien där över 2 300 medelålders män i östra Finland följdes i ungefär 20 år.',
+    'Laukkanen berättar om studien där över 2 300 medelålders män i östra Finland följdes i ungefär 20 år.',
     'Män som bastade 2 till 3 gånger i veckan hade 27 procent lägre dödlighet i hjärt-kärlsjukdom än de som bastade en gång, och de som bastade 4 till 7 gånger hade 50 procent lägre.',
     'För död av alla orsaker var skillnaden 24 och 40 procent, och för Alzheimers ungefär 65 procent i gruppen som bastade oftast.',
-    'Tiden i bastun beskrivs som viktig, och minst 20 minuter i 79 grader 4 till 7 gånger i veckan beskrivs som det bästa läget.',
+    'I avsnittet säger Laukkanen att minst 20 minuter i 79 grader 4 till 7 gånger i veckan var det läge som hängde ihop med lägst risk i de finska sambandsstudierna.',
     'De pratar om möjliga förklaringar som lägre blodtryck och värmechockproteiner, och Laukkanen varnar för kallbad efter bastun för den som har ett instabilt hjärta.',
   ],
 };
@@ -150,7 +150,7 @@ export const PEOPLE: Person[] = [
     method: [
       'Andning i omgångar: kraftiga andetag in, avslappnat ut, och sedan en lång andhållning.',
       'Kyla: kalla duschar eller isbad som ökas långsamt.',
-      'Engagemang: att öva varje dag och hålla fast vid det över tid.',
+      'Engagemang: att hålla fast vid övningen över tid.',
     ],
     claims: [
       {
@@ -257,7 +257,7 @@ export const PEOPLE: Person[] = [
           'Boken går igenom metodens tre delar: kyla, andning och tankesätt.',
           'Andningsövningarna ska enligt förlaget ge energi och skärpa fokus.',
           'Kylövningarna beskrivs som kontrollerade och utan chock för kroppen.',
-          'Den återger studier om metoden och berättelser från personer som använt den vid sjukdom.',
+          'Den återger studier om metoden och, enligt förlaget, berättelser från personer som använt den vid sjukdom.',
           'Den berättar också Wim Hofs egen historia.',
         ],
       },
@@ -275,9 +275,9 @@ export const PEOPLE: Person[] = [
       'vinterbadare som växlar mellan kallt vatten och bastu, och hon har skrivit boken Winter Swimming om ' +
       'hur kroppen reagerar på kyla och värme.',
     method: [
-      'Växla mellan kallt vatten och bastu i flera omgångar.',
-      'Avsluta med kyla och låt kroppen värma upp sig själv efteråt, det hon kallar Søbergprincipen.',
-      'Korta stunder räcker: hennes vinterbadare låg bara några minuter i vattnet åt gången.',
+      'Vinterbad: kallt vatten och bastu i växling, flera gånger per tillfälle.',
+      'Søbergprincipen: hon menar att man ska sluta med kyla och låta kroppen värma upp sig själv.',
+      'Korta dopp: vinterbadarna i hennes studie låg i snitt under två minuter per dopp.',
     ],
     claims: [
       {
@@ -286,18 +286,18 @@ export const PEOPLE: Person[] = [
           'när de kyldes ner, trots att det bruna fettet aktiverades ungefär lika mycket i båda grupperna.',
         evidence: 'svagt',
         summary: [
-          'Søberg och kollegor vid Köpenhamns universitet jämförde 8 unga friska män som vinterbadade 2 till 3 ' +
-            'gånger i veckan och var inne på minst sin andra säsong med 8 män som inte gjorde det. Grupperna var ' +
-            'lika i ålder, vikt och kondition.',
+          'Søberg och kollegor vid Köpenhamns universitet jämförde 8 unga män som vinterbadade 2 till 3 gånger i ' +
+            'veckan och var inne på minst sin andra säsong (7 kom med i analyserna) med 8 som inte gjorde det. ' +
+            'Grupperna var lika i ålder, BMI och kondition, men vinterbadarna hade lägre fettprocent, 12 mot 18.',
           'När deltagarna kyldes ner med vattenfyllda filtar ökade vinterbadarnas värmeproduktion mer, och de ' +
-            'förbrände fler kalorier. Omräknat till ett dygn låg förbrukningen under nedkylningen på 3 044 ' +
-            'kilokalorier hos vinterbadarna och 2 560 hos de andra.',
+            'förbrände fler kalorier. Omräknat till ett dygn låg förbrukningen under nedkylningen på 3 044 ' +
+            'kilokalorier hos vinterbadarna och 2 560 hos de andra.',
           'Det bruna fettets sockerupptag och musklernas aktivitet ökade däremot ungefär lika mycket i båda ' +
             'grupperna. Forskarna föreslår vinterbad som ett sätt att öka energiförbrukningen, om man inte äter ' +
             'mer för att kompensera.',
         ],
         note:
-          'Bara 8 vinterbadare och 8 i kontrollgruppen, alla män. Studien jämför grupper vid ett tillfälle och ' +
+          'Bara 7 vinterbadare och 8 i kontrollgruppen, alla män. Studien jämför grupper vid ett tillfälle och ' +
           'kan inte visa att det är badandet som orsakar skillnaden.',
         sources: [
           SOBERG_2021,
@@ -331,7 +331,7 @@ export const PEOPLE: Person[] = [
           'bastun per vecka.',
         evidence: 'svagt',
         summary: [
-          'Siffrorna kommer från studiens tabell över vad vinterbadarna faktiskt gjorde månaden före ' +
+          'Siffrorna kommer från studiens tabell över vad de 7 vinterbadarna faktiskt gjorde månaden före ' +
             'försöken. De badade i snitt 2,6 gånger i veckan, doppade sig ungefär 2,6 gånger per tillfälle och ' +
             'låg i snitt 1,4 minuter per dopp. Sammanlagt blev det 11 minuter i kallt vatten och 57 minuter i ' +
             'bastu per vecka.',
@@ -340,8 +340,8 @@ export const PEOPLE: Person[] = [
             'siffran till ett råd om minsta mängd kyla.',
         ],
         note:
-          'Siffrorna beskriver vad de få vinterbadarna i studien råkade göra, och mängderna har aldrig testats som ' +
-          'en dos. Ingen vet om just den mängden ger bäst effekt, men siffran sprids ofta som ett recept.',
+          'Siffran är vad de 7 vinterbadarna i studien redan gjorde. Studien prövade inte olika mängder, så den ' +
+          'visar inte att just den mängden behövs eller räcker.',
         sources: [SOBERG_2021_FULL, SOBERG_HUBERMAN],
       },
       {
@@ -362,12 +362,13 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'En genomgång av andra forskare (Espeland m.fl. 2022) fann tecken på att kallbad minskar eller ' +
-          'omvandlar kroppsfett och förbättrar insulinkänsligheten, men de flesta studierna var små.',
+          'En genomgång av andra forskare (Espeland m.fl. 2022) fann tecken på att kallbad påverkar ' +
+          'kroppsfettet och förbättrar insulinkänsligheten, men resultaten var blandade och de flesta studierna ' +
+          'var små.',
         evidence: 'svagt',
         summary: [
           'Forskarna sökte i flera databaser efter studier om vad frivilliga bad i kallt vatten gör med hälsan ' +
-            'och fann 104 relevanta studier. Många visade tydliga effekter på kroppens funktioner och blodvärden. ' +
+            'och fann 104 relevanta studier. Många visade mätbara effekter på kroppens funktioner och blodvärden. ' +
             'En del gjordes på vana vinterbadare, andra på ovana personer eller på kallbad efter träning.',
           'Kallbad verkar minska eller omvandla kroppsfett och förbättra insulinkänsligheten, vilket enligt ' +
             'författarna kan skydda mot hjärt-kärlsjukdom och fetma. De beskriver också riskerna: köldchocken ' +
@@ -377,7 +378,8 @@ export const PEOPLE: Person[] = [
         ],
         note:
           'Genomgången säger själv att små grupper, oftast ett kön och olika vattentemperatur gör det svårt att ' +
-          'dra säkra slutsatser.',
+          'dra säkra slutsatser. Författarna skriver också att många av de hälsovinster som tillskrivs kallbad ' +
+          'kanske inte beror på kylan utan på livsstil, socialt umgänge och inställning.',
         sources: [
           {
             title: 'Espeland m.fl. 2022, hälsoeffekter av frivilliga kallbad (PubMed)',
@@ -424,11 +426,11 @@ export const PEOPLE: Person[] = [
     claims: [
       {
         text:
-          'Bland 2 315 finska män som följdes i ungefär 20 år hade de som bastade 4 till 7 gånger i veckan lägre ' +
+          'Bland 2 315 finska män som följdes i ungefär 20 år hade de som bastade 4 till 7 gånger i veckan lägre ' +
           'risk att dö av hjärtsjukdom och av alla orsaker än de som bastade en gång i veckan.',
         evidence: 'belagt',
         summary: [
-          'Studien bygger på Kuopiostudien om hjärtsjukdom: ett urval av 2 315 män mellan 42 och 60 år från ' +
+          'Studien bygger på Kuopiostudien om hjärtsjukdom: ett urval av 2 315 män mellan 42 och 60 år från ' +
             'östra Finland som undersöktes 1984 till 1989. Männen fick uppge hur ofta och hur länge de bastade och ' +
             'följdes sedan i median 20,7 år.',
           'Under tiden dog 929 av männen. Bland dem som bastade en gång i veckan dog 49,1 procent, bland dem som ' +
@@ -449,7 +451,7 @@ export const PEOPLE: Person[] = [
           'sjukdom än de som bastade en gång i veckan.',
         evidence: 'belagt',
         summary: [
-          'Forskarna använde samma 2 315 till synes friska män från Kuopio, undersökta 1984 till 1989 och följda ' +
+          'Forskarna använde samma 2 315 till synes friska män från Kuopio, undersökta 1984 till 1989 och följda ' +
             'i median 20,7 år. Under den tiden fick 204 av dem diagnosen demens och 123 diagnosen Alzheimers sjukdom.',
           'Efter justering för bland annat ålder, alkohol, vikt, blodtryck, rökning, diabetes och tidigare ' +
             'hjärtinfarkt var risken för demens 66 procent lägre för dem som bastade 4 till 7 gånger i veckan än ' +
@@ -468,16 +470,17 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Bland 1 628 män och kvinnor hade de som bastade 4 till 7 gånger i veckan ungefär 60 procent lägre risk ' +
+          'Bland 1 628 män och kvinnor hade de som bastade 4 till 7 gånger i veckan ungefär 60 procent lägre risk ' +
           'för stroke, även när man tagit hänsyn till motion, blodtryck och annat.',
         evidence: 'belagt',
         summary: [
-          'Här följdes 1 628 män och kvinnor mellan 53 och 74 år ur samma Kuopiostudie, ingen av dem med tidigare ' +
+          'Här följdes 1 628 män och kvinnor mellan 53 och 74 år ur samma Kuopiostudie, ingen av dem med tidigare ' +
             'stroke. De delades in efter om de bastade en gång, 2 till 3 gånger eller 4 till 7 gånger i veckan. ' +
             'Under i median 14,9 år fick 155 personer stroke.',
-          'Jämfört med en gång i veckan var risken 14 procent lägre för 2 till 3 gånger och 61 procent lägre för ' +
-            '4 till 7 gånger. Sambandet höll även efter justering för ålder, kön, diabetes, vikt, blodfetter, ' +
-            'alkohol, motion och socioekonomisk ställning.',
+          'Jämfört med en gång i veckan var risken 61 procent lägre för 4 till 7 gånger, och det sambandet höll ' +
+            'även efter justering för ålder, kön, diabetes, vikt, blodfetter, alkohol, motion och socioekonomisk ' +
+            'ställning. För 2 till 3 gånger nämner universitetet 14 procent lägre risk, men ingen av sidorna ' +
+            'säger att den skillnaden var säker.',
           'Forskarna tror att lägre blodtryck, påverkan på immunförsvaret och nervsystemet och bättre ' +
             'fungerande hjärta och kärl kan ligga bakom.',
         ],
@@ -540,14 +543,13 @@ export const PEOPLE: Person[] = [
     areas: ['andning', 'kallbad'],
     teaser: 'Hjärnforskare och poddare med konkreta råd om andning och kyla.',
     about:
-      'Andrew Huberman är docent (associate professor) i neurobiologi vid Stanford och driver podden Huberman Lab sedan 2021. ' +
-      'Han forskar själv om synen och om andning och stress, men i podden pratar han ofta om områden ' +
-      'utanför sitt eget. ' +
-      'Han har fått kritik för att dra för långa slutsatser av små studier.',
+      'Andrew Huberman är forskare i neurobiologi vid Stanford och driver podden Huberman Lab. Hans egen ' +
+      'forskning gäller främst synen och hur stress, syn och andning påverkar hjärnans tillstånd, men i podden ' +
+      'pratar han ofta om områden utanför sitt eget.',
     method: [
       'Cyklisk suck: andning med långa utandningar, fem minuter om dagen.',
       'Kyla i korta pass utspridda över veckan i stället för ett långt pass.',
-      'Gör om forskning till enkla dagliga vanor, så kallade protokoll.',
+      'Han gör om forskning till dagliga rutiner som han kallar protokoll.',
     ],
     claims: [
       {
@@ -567,7 +569,7 @@ export const PEOPLE: Person[] = [
             'grupperna var små.',
         ],
         note:
-          'Slumpad studie med 108 deltagare, men en enda studie från hans eget labb, och humöret ' +
+          'Slumpad studie med 108 deltagare, men en enda studie från hans eget labb, och de positiva känslorna ' +
           'rapporterades av deltagarna själva.',
         sources: [
           {
@@ -582,7 +584,7 @@ export const PEOPLE: Person[] = [
         evidence: 'asikt',
         summary: [
           'I sitt nyhetsbrev om kyla föreslår Huberman 11 minuter i veckan totalt, fördelat på 2 till 4 pass om ' +
-            '1 till 5 minuter. Vattnet ska vara så kallt att man vill upp men ändå säkert kan stanna. Han kallar ' +
+            '1 till 5 minuter. Enligt honom ska vattnet vara så kallt att man vill upp men ändå säkert kan stanna. Han kallar ' +
             'det ett minimum och skriver att siffran bygger på en ny studie.',
           'I hans samtal med Susanna Søberg framgår att det är hennes studie, där 11 minuter var vad vinterbadarna ' +
             'själva råkade göra. Han skriver också att man kan avsluta med kyla och låta kroppen värma upp sig ' +
@@ -590,15 +592,15 @@ export const PEOPLE: Person[] = [
             'av träningen.',
         ],
         note:
-          'Siffran kommer från vad vinterbadarna i Søbergs lilla studie redan gjorde. Den har aldrig testats som ' +
-          'dos.',
+          'Siffran är vad vinterbadarna i Søbergs lilla studie redan gjorde. Studien prövade inte olika mängder, ' +
+          'så den visar inte att just den mängden behövs eller räcker.',
         sources: [HUBERMAN_COLD, SOBERG_HUBERMAN, SOBERG_2021_FULL],
       },
       {
         text:
-          'Han lyfter fram att kallt vatten ger en stor och långvarig ökning av dopamin och noradrenalin. ' +
-          'I en studie där unga män låg en timme i 14 grader varmt vatten steg noradrenalin med 530 procent ' +
-          'och dopamin med 250 procent.',
+          'Han lyfter fram att kallt vatten ger en stor ökning av dopamin och noradrenalin som han beskriver som ' +
+          'långvarig. I en studie där unga män låg en timme i 14 grader varmt vatten var noradrenalin 530 ' +
+          'procent och dopamin 250 procent högre än före badet.',
         evidence: 'svagt',
         summary: [
           'I nyhetsbrevet skriver Huberman att kyla frisätter adrenalin och noradrenalin, som gör en vaken och ' +
@@ -625,13 +627,13 @@ export const PEOPLE: Person[] = [
     areas: ['kallbad'],
     teaser: 'Biomedicinsk forskare som förklarar vad bastu och kyla gör i cellerna.',
     about:
-      'Rhonda Patrick har en doktorsexamen i biomedicin och driver sajten och podden FoundMyFitness, podden sedan 2014. ' +
+      'Rhonda Patrick har en doktorsexamen i biomedicin och driver sajten och podden FoundMyFitness. ' +
       'Hon sammanfattar studier och intervjuar forskare som Jari Laukkanen. Hon pratar ofta om bastu som ' +
       'ett sätt att belasta kroppen ungefär som träning.',
     method: [
-      'Hon förordar bastu flera gånger i veckan som ett komplement till träning.',
+      'Bastu efter träningen, som hon själv brukar göra.',
       'Förklara mekanismer: värmechockproteiner efter bastu och noradrenalin efter kyla.',
-      'Bygga på stora befolkningsstudier och visa var bevisen tar slut.',
+      'Bygga på stora befolkningsstudier och säga när forskningen ännu är ung.',
     ],
     claims: [
       {
@@ -640,7 +642,7 @@ export const PEOPLE: Person[] = [
           'och lägre risk för demens.',
         evidence: 'belagt',
         summary: [
-          'I intervjun med Jari Laukkanen går hon igenom Kuopiostudien med över 2 300 medelålders män. Den som ' +
+          'I intervjun med Jari Laukkanen går hon igenom Kuopiostudien med över 2 300 medelålders män. Den som ' +
             'bastade 2 till 3 gånger i veckan hade 27 procent lägre risk att dö av hjärt-kärlsjukdom än den som ' +
             'bastade en gång, och 4 till 7 gånger gav 50 procent lägre risk. För död av alla orsaker var ' +
             'skillnaden 24 och 40 procent.',
@@ -660,7 +662,7 @@ export const PEOPLE: Person[] = [
       {
         text:
           'Hon beskriver bastu som en belastning på hjärtat som liknar måttlig träning. I en studie med 19 ' +
-          'personer steg puls och blodtryck i bastun till samma nivå som vid cykling med måttlig belastning, och ' +
+          'personer steg puls och blodtryck i bastun till samma nivå som vid ett arbetsprov med måttlig belastning, och ' +
           'blodtrycket sjönk sedan under utgångsläget.',
         evidence: 'svagt',
         summary: [
@@ -669,7 +671,7 @@ export const PEOPLE: Person[] = [
             'hälsa liknar dem för träning.',
           'I studien satt 19 friska vuxna, varav 7 kvinnor och i snitt 46 år, 25 minuter i en bastu på 93 grader. ' +
             'Blodtryck och puls steg hela tiden under badet och sjönk sedan stadigt, och efter badet låg ' +
-            'blodtrycket lägre än före. Belastningen på hjärtat motsvarade 60 till 100 watt på en testcykel.',
+            'blodtrycket lägre än före. Belastningen på hjärtat motsvarade ett arbetsprov med måttlig belastning, 60 till 100 watt.',
         ],
         note: 'Liten studie som bara mätte direkt under och efter ett pass. Ingen visar att bastu ersätter träning.',
         sources: [
@@ -729,25 +731,25 @@ export const PEOPLE: Person[] = [
     name: 'Jon Kabat-Zinn',
     kind: 'Forskare',
     areas: ['meditation'],
-    teaser: 'Grundade kursen MBSR och tog in mindfulness i vården.',
+    teaser: 'Grundade kursen MBSR för kroniskt sjuka patienter.',
     about:
-      'Jon Kabat-Zinn startade 1979 en klinik för stresshantering vid University of ' +
-      'Massachusetts. Där byggde han den åtta veckor långa kursen Mindfulness-Based Stress Reduction, MBSR, ' +
-      'för patienter med långvarig smärta och sjukdom. Kursen har sedan spridits över hela världen.',
+      'Jon Kabat-Zinn grundade och ledde programmet för stresshantering vid University of Massachusetts ' +
+      'Medical Center. Där startade han 1979 den åtta veckor långa kursen Mindfulness-Based Stress Reduction, ' +
+      'MBSR, för kroniskt sjuka patienter. Kursen har sedan använts i många studier.',
     method: [
       'Mindfulness: att medvetet rikta uppmärksamheten mot nuet utan att döma det man märker.',
-      'En kurs på åtta veckor med träffar varje vecka och en heldag med övning.',
-      'Övningar i meditation och medveten närvaro som man fortsätter med hemma.',
+      'En kurs på åtta veckor, vanligen med åtta träffar.',
+      'Övningar som kroppsskanning och meditation, som många deltagare fortsätter med i vardagen.',
     ],
     claims: [
       {
         text:
-          'En stor genomgång av 47 slumpade studier med över 3 500 vuxna fann att program med mindfulness ' +
+          'En stor genomgång av 47 slumpade studier med över 3 500 vuxna fann att program med mindfulness ' +
           'minskade ångest, nedstämdhet och smärta något.',
         evidence: 'belagt',
         summary: [
-          'Forskare vid Johns Hopkins gick igenom 18 753 träffar fram till november 2012 och tog med 47 slumpade ' +
-            'studier med sammanlagt 3 515 vuxna. Alla studier jämförde med en aktiv kontrollgrupp, så att ' +
+          'Forskare vid Johns Hopkins gick igenom 18 753 träffar fram till november 2012 och tog med 47 slumpade ' +
+            'studier med sammanlagt 3 515 vuxna. Alla studier jämförde med en aktiv kontrollgrupp, så att ' +
             'förväntningar och uppmärksamhet inte ensamma skulle förklara resultatet.',
           'Program med mindfulness gav måttligt säkra förbättringar av ångest, nedstämdhet och smärta, och mindre ' +
             'säkra förbättringar av stress och psykisk livskvalitet. För humör, uppmärksamhet, missbruk, ' +
@@ -756,7 +758,7 @@ export const PEOPLE: Person[] = [
             'i många av studierna.',
         ],
         note:
-          'Effekterna var små till måttliga, och meditation var inte bättre än annan aktiv behandling som ' +
+          'Effekterna var små till måttliga, och det fanns inga belägg för att meditation var bättre än annan aktiv behandling som ' +
           'motion eller terapi.',
         sources: [
           {
@@ -834,7 +836,7 @@ export const PEOPLE: Person[] = [
             'ett jag att ta på allvar. Berättelsen om mig är enligt honom en konstruktion, och när vi släpper den ' +
             'finns bara nuet kvar.',
           'Kroppen andas av sig själv, så det medvetna är vår uppmärksamhet på andningen. Att lägga märke till, ' +
-            'vara tacksam och vara vaken ger en levande känsla, och det är den han kallar mindfulness.',
+            'vara tacksam och vara vaken ger enligt honom en levande känsla som inte fanns där förut.',
         ],
         sources: [
           {
@@ -869,28 +871,28 @@ export const PEOPLE: Person[] = [
     areas: ['utveckling'],
     teaser: 'Små vanor som växer över tid. Författaren till Atomic Habits.',
     about:
-      'James Clear är författare och skriver om vanor och beslut. Hans bok Atomic Habits från 2018 har sålt i ' +
-      'tiotals miljoner exemplar. Han forskar inte själv utan samlar idéer från forskning och andra författare ' +
+      'James Clear är författare och skriver om vanor och beslut. Hans bok Atomic Habits har enligt hans egen ' +
+      'sida sålt i mer än 30 miljoner exemplar. Han forskar inte själv utan samlar idéer från forskning och andra författare ' +
       'och gör dem praktiska.',
     method: [
-      'Fyra lagar för nya vanor: gör det synligt, lockande, lätt och tillfredsställande.',
-      'Vänd på lagarna för att bryta en dålig vana: gör den osynlig, olockande, svår och otillfredsställande.',
-      'Börja med vem du vill vara, och låt varje litet beslut bli en röst för den personen.',
-      'Haka på en ny vana direkt efter en du redan har.',
+      'Fyra lagar för nya vanor: att göra dem synliga, lockande, lätta och tillfredsställande.',
+      'Lagarna omvända för att bryta en dålig vana: att göra den osynlig, olockande, svår och otillfredsställande.',
+      'Identitet först: varje handling ser han som en röst för den person man vill bli.',
+      'Vanestapling: en ny vana kopplas direkt efter en man redan har.',
     ],
     claims: [
       {
         text:
-          'Små förbättringar varje dag växer som ränta på ränta. En procent bättre varje dag blir ungefär 37 ' +
-          'gånger bättre på ett år.',
+          'Clear menar att små förbättringar varje dag växer som ränta på ränta. En procent bättre varje dag ' +
+          'blir ungefär 37 gånger bättre på ett år.',
         evidence: 'asikt',
         summary: [
           'Clear beskriver ständig förbättring som att göra små ändringar varje dag och räkna med att de till ' +
             'slut blir något stort. Den vanliga vägen, ett stort mål och stora kliv, slutar enligt honom ofta i ' +
             'utbrändhet och misslyckande.',
           'Hans exempel är brittiska cykelförbundet, där Dave Brailsford letade efter en procents förbättring i ' +
-            'allt från sadlar och däck till massagegel, kuddar och handtvätt. Fem år senare tog britterna 60 ' +
-            'procent av guldmedaljerna i cykel vid OS 2008.',
+            'allt från sadlar och däck till massagegel, kuddar och handtvätt. Fem år senare tog britterna 8 av ' +
+            '14 guldmedaljer i cykel vid OS 2008.',
           'Han föreslår också att mäta bakåt, alltså att utgå från vad man gjorde förra veckan och bli lite ' +
             'bättre den här veckan, och att ofta förbättra genom att ta bort fel i stället för att lägga till mer.',
         ],
@@ -935,14 +937,14 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Vanor fastnar bättre om de bygger på vem man vill vara än på vad man vill uppnå.',
+          'Clear menar att vanor fastnar bättre om de bygger på vem man vill vara än på vad man vill uppnå.',
         evidence: 'asikt',
         summary: [
           'Clear beskriver tre lager av förändring: resultat, alltså vad man får, process, alltså vad man gör, ' +
             'och identitet, alltså vad man tror om sig själv. De flesta börjar med resultatet. Han menar att det ' +
             'håller bättre att börja med vem man vill bli.',
           'Han beskriver två steg: att bestämma vem man vill vara och att bevisa det för sig själv med små ' +
-            'vinster. Den som inte vet var den ska börja kan utgå från resultatet och fråga vilken sorts person ' +
+            'vinster. Den som inte vet var den ska börja kan enligt honom utgå från resultatet och fråga vilken sorts person ' +
             'som skulle nå det. I sammanfattningen av boken kallar han varje handling en röst för den person man ' +
             'vill bli.',
         ],
@@ -956,8 +958,8 @@ export const PEOPLE: Person[] = [
       },
       {
         text:
-          'Att haka på en ny vana direkt efter en befintlig gör den lättare att komma ihåg. Idén kommer från BJ ' +
-          'Foggs metod Tiny Habits.',
+          'Clear menar att en ny vana blir lättare att komma ihåg om den hakas på direkt efter en befintlig. ' +
+          'Idén kommer från BJ Foggs metod Tiny Habits.',
         evidence: 'asikt',
         summary: [
           'Clear förklarar att hjärnan stärker kopplingar som används ofta och rensar bort dem som inte används. ' +
@@ -989,12 +991,12 @@ export const PEOPLE: Person[] = [
     areas: ['utveckling'],
     teaser: 'Poddaren bakom Modern Wisdom samlar idéer om lycka, driv och vanor.',
     about:
-      'Chris Williamson är en brittisk poddare som driver Modern Wisdom sedan 2018. Han var tidigare ' +
-      'klubbarrangör och deltog i första säsongen av Love Island. Han forskar inte, utan intervjuar forskare ' +
-      'och författare och sammanfattar vad han lärt sig i återkommande avsnitt med lärdomar.',
+      'Chris Williamson driver podden Modern Wisdom, med tre avsnitt i veckan och över 900 avsnitt, och ' +
+      'nyhetsbrevet 3 Minute Monday. Han forskar inte, utan intervjuar forskare och författare och samlar det ' +
+      'han lärt sig i nyhetsbrevet.',
     method: [
       'Långa intervjuer med forskare, författare och idrottare.',
-      'I återkommande avsnitt går han igenom de lärdomar han tagit med sig.',
+      'Varje måndag delar han i nyhetsbrevet saker han lärt sig.',
       'Han lånar gärna idéer från gästerna och säger varifrån de kommer.',
     ],
     claims: [
@@ -1014,8 +1016,8 @@ export const PEOPLE: Person[] = [
             'domineras av osäkra överpresterare, som drivs av en känsla av att inte räcka till och inte har roligt.',
         ],
         note:
-          'Tanken att framgång måste förtjänas med smärta lånar han från Rich Roll, och ordet osäkra ' +
-          'överpresterare från bland andra Oliver Burkeman.',
+          'Han inleder med Rich Rolls tvivel på att framgång måste förtjänas med smärta, en tanke Roll själv tror ' +
+          'är fel. Ordet osäkra överpresterare finns också hos Oliver Burkeman.',
         sources: [
           {
             title: 'Chris Williamson om att aldrig känna sig nöjd (nyhetsbrevet 3 Minute Monday)',
@@ -1089,7 +1091,7 @@ export const PEOPLE: Person[] = [
         url: 'https://chriswillx.com/podcast/',
         summary: [
           'Sidan samlar alla avsnitt av Modern Wisdom, och de går att lyssna på direkt eller i Apple Podcasts och Spotify.',
-          'Podden beskriver sig som lärdomar från framstående tänkare, för att livet är svårt.',
+          'Podden beskriver sig som lärdomar från kloka tänkare, eftersom livet är svårt.',
           'Gästerna har varit bland andra David Goggins, Jordan Peterson, Naval Ravikant, Sam Harris och Andrew Huberman.',
           'Varje avsnitt har en beskrivning av vad man lär sig och tidsmarkeringar för samtalets delar.',
         ],

@@ -45,14 +45,15 @@ describe('Lär', () => {
     const esc = (t: string) => renderToStaticMarkup(<>{t}</>);
     expect(html).toContain(`<p>${esc(person.claims[0].summary[0])}</p>`);
     expect(html).toContain(`<li>${esc(person.startHere[0].summary![0])}</li>`);
-    expect(html).toMatch(/<h4 class="lar-sources-heading">Källor?<\/h4>/);
+    expect(html).toContain(`<h4 class="lar-claim-text">${esc(person.claims[0].text)}</h4>`);
+    expect(html).toMatch(/<p class="lar-sources-heading">Källor?<\/p>/);
     expect(html).not.toContain('<details');
   });
 
   it('källrubriken är Källa för en källa och Källor för flera', () => {
     for (const p of PEOPLE) {
       const html = renderToStaticMarkup(<Lar initialOpenId={p.id} />);
-      const headings = html.match(/<h4 class="lar-sources-heading">([^<]*)<\/h4>/g) ?? [];
+      const headings = html.match(/<p class="lar-sources-heading">([^<]*)<\/p>/g) ?? [];
       expect(headings.length, p.name).toBe(p.claims.length);
       p.claims.forEach((c, i) => expect(headings[i], c.text).toContain(c.sources.length === 1 ? '>Källa<' : '>Källor<'));
     }

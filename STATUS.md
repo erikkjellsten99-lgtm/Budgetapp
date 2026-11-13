@@ -17,8 +17,8 @@
 3. Öppna fliken Nyheter en gång och kontrollera i serverloggarna att alla fyra SVT-flöden kom fram.
 4. ~~Lägg ut `reminders` med inbox-filerna~~ Klart: version 6 utlagd 2026-11-06, bootar och svarar 200 var 5:e minut.
    `inbox/health.ts` tappades av verktyget (sista filen, bara typer) och saknas på servern; följer med nästa gång.
-5. ~~Öppna källänkarna i Lär~~ Klart 2026-11-13: alla länkar i `src/lar/people.ts` är öppnade och kontrollerade, och
-   sammanfattningssidorna är utbytta. Kvar: PubMed- och PMC-sidorna lästes via NCBI:s egna gränssnitt på samma värd
+5. ~~Öppna källänkarna i Lär~~ Klart 2026-11-13: alla länkar i `src/lar/people.ts` är öppnade, sammanfattningarna är
+   granskade mot sidorna av en andra granskare och rättade, och sammanfattningssidorna är utbytta. Kvar: PubMed- och PMC-sidorna lästes via NCBI:s egna gränssnitt på samma värd
    (sidorna visar en webbläsarkontroll för skript), och böckerna är sammanfattade bara från förlagets eller
    bokhandelns text. Öppna gärna några PubMed-länkar i en vanlig webbläsare.
 
@@ -65,14 +65,18 @@
   databas, ingen server.
 - Sammanfattningar (2026-11-13): varje påstående har 2 till 4 stycken skrivna från den öppnade källan, och varje
   Börja här har 3 till 5 huvudpunkter. Allt syns på personsidan utan klick.
-- Verifierat 2026-11-13: alla 50 länkar är öppnade och stöder sitt påstående. Rosetta, Podscripts, Global Player,
+- Verifierat 2026-11-13: alla 50 länkar är öppnade. Sammanfattningarna är granskade mot sidorna av en andra
+  granskare, och rättelserna från den granskningen är gjorda. Texterna `about`, `method` och `teaser` är kontrollerade
+  mot öppnade sidor; detaljer som ingen sida stöder (årtal, titlar, Love Island) är borttagna. Rosetta, Podscripts, Global Player,
   Goodreads, QxMD, Stanford-PDF:en, EurekAlert, ScienceDaily och The Psychologist är borttagna eller utbytta mot
   PubMed, PMC, tidskriften, personens egen sajt eller tinyhabits.com. Påståendet om 66 dagar (James Clear) togs bort
   (ingen öppnad källa utanför hans sajt). Williamsons tre påståenden skrevs om efter hans egna nyhetsbrev.
 - Ej verifierat: PubMed- och PMC-sidorna visar en webbläsarkontroll för skript, så posterna lästes via NCBI:s
   exportgränssnitt (MEDLINE) och PMC:s OAI-gränssnitt på samma värd, inte som sidor. Booktopia och Publishers
   Weekly är kvar för böckerna eftersom förlagens sidor inte gick att nå; böckerna själva är inte lästa.
-  Texterna om vem personerna är (`about`) kontrollerades inte i den här omgången.
+  Idéer som Williamson lånar (Rich Roll, Montesquieu via Tim Urban, Charlie Munger) länkas inte till ursprunget,
+  eftersom de sidorna låg utanför de värdar som gick att nå. Samma gäller Oliver Burkemans mening om osäkra
+  överpresterare, som bara finns återgiven i Williamsons nyhetsbrev.
 - Inte med (beslut): loggning av egna pass, flöde med nya avsnitt, Jarvis och Idag läser inte biblioteket, egna
   anteckningar.
 - Design och plan: `docs/superpowers/specs/2026-11-13-lar-design.md`, `docs/superpowers/plans/2026-11-13-lar.md`.

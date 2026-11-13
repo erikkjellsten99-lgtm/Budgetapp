@@ -31,14 +31,14 @@ function ClaimItem({ claim }: { claim: Claim }) {
   return (
     <li className="lar-claim">
       <span className={`lar-evidence ${claim.evidence}`}>{EVIDENCE_LABEL[claim.evidence]}</span>
-      <p className="lar-claim-text">{claim.text}</p>
+      <h4 className="lar-claim-text">{claim.text}</h4>
       <div className="lar-summary">
         {claim.summary.map((para) => (
           <p key={para}>{para}</p>
         ))}
       </div>
       {claim.note && <p className="lar-note">{claim.note}</p>}
-      <h4 className="lar-sources-heading">{claim.sources.length === 1 ? 'Källa' : 'Källor'}</h4>
+      <p className="lar-sources-heading">{claim.sources.length === 1 ? 'Källa' : 'Källor'}</p>
       <Links sources={claim.sources} />
     </li>
   );
