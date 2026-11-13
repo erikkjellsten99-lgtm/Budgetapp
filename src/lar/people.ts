@@ -479,8 +479,8 @@ export const PEOPLE: Person[] = [
             'Under i median 14,9 år fick 155 personer stroke.',
           'Jämfört med en gång i veckan var risken 61 procent lägre för 4 till 7 gånger, och det sambandet höll ' +
             'även efter justering för ålder, kön, diabetes, vikt, blodfetter, alkohol, motion och socioekonomisk ' +
-            'ställning. För 2 till 3 gånger nämner universitetet 14 procent lägre risk, men ingen av sidorna ' +
-            'säger att den skillnaden var säker.',
+            'ställning. För 2 till 3 gånger anger universitetet 14 procent lägre risk, men den skillnaden ' +
+            'redovisas inte som säker.',
           'Forskarna tror att lägre blodtryck, påverkan på immunförsvaret och nervsystemet och bättre ' +
             'fungerande hjärta och kärl kan ligga bakom.',
         ],
@@ -752,7 +752,7 @@ export const PEOPLE: Person[] = [
             'studier med sammanlagt 3 515 vuxna. Alla studier jämförde med en aktiv kontrollgrupp, så att ' +
             'förväntningar och uppmärksamhet inte ensamma skulle förklara resultatet.',
           'Program med mindfulness gav måttligt säkra förbättringar av ångest, nedstämdhet och smärta, och mindre ' +
-            'säkra förbättringar av stress och psykisk livskvalitet. För humör, uppmärksamhet, missbruk, ' +
+            'säkra förbättringar av stress och psykisk livskvalitet. För positiva känslor, uppmärksamhet, missbruk, ' +
             'matvanor, sömn och vikt fanns ingen eller för lite effekt.',
           'Enligt NPR handlade det om ungefär två och en halv timmes övning i veckan, och kursen MBSR fanns med ' +
             'i många av studierna.',
