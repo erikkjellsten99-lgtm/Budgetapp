@@ -17,8 +17,10 @@
 3. Öppna fliken Nyheter en gång och kontrollera i serverloggarna att alla fyra SVT-flöden kom fram.
 4. ~~Lägg ut `reminders` med inbox-filerna~~ Klart: version 6 utlagd 2026-11-06, bootar och svarar 200 var 5:e minut.
    `inbox/health.ts` tappades av verktyget (sista filen, bara typer) och saknas på servern; följer med nästa gång.
-5. Öppna källänkarna i Lär från vanligt nät och byt sammanfattningssidor mot primärkällor. Tills det är gjort uppfyller innehållet inte regeln i
-   `src/lar/CLAUDE.md` att varje källa är öppnad och kontrollerad.
+5. ~~Öppna källänkarna i Lär~~ Klart 2026-11-13: alla länkar i `src/lar/people.ts` är öppnade och kontrollerade, och
+   sammanfattningssidorna är utbytta. Kvar: PubMed- och PMC-sidorna lästes via NCBI:s egna gränssnitt på samma värd
+   (sidorna visar en webbläsarkontroll för skript), och böckerna är sammanfattade bara från förlagets eller
+   bokhandelns text. Öppna gärna några PubMed-länkar i en vanlig webbläsare.
 
 ## Ekonomi
 - Fungerar: Översikt, Budget (månad för månad), Prognos med billån och extra på lånet, Sparmål (en uträkning i
@@ -61,10 +63,16 @@
   Jon Kabat-Zinn, James Clear, Chris Williamson), filter på område, sida per person med metod, påståenden märkta
   Väl belagt / Svagt stöd / Egen åsikt, källänkar och varningsrad. Fast innehåll i `src/lar/people.ts`, ingen
   databas, ingen server.
-- Ej verifierat: källänkarna är kontrollerade via sökresultat, inte öppnade (molnmiljön blockerar sidorna). Öppna
-  varje länk en gång från vanligt nät; några källor är sammanfattningssidor (rosetta.to, podscripts.co,
-  globalplayer.com, goodreads, booktopia, read.qxmd.com, Stanford-PDF för Tiny Habits, Publishers Weekly) och bör
-  bytas mot primärkällor. Laukkanen 2015 länkas via ScienceDaily i stället för PubMed eller JAMA.
+- Sammanfattningar (2026-11-13): varje påstående har 2 till 4 stycken skrivna från den öppnade källan, och varje
+  Börja här har 3 till 5 huvudpunkter. Allt syns på personsidan utan klick.
+- Verifierat 2026-11-13: alla 50 länkar är öppnade och stöder sitt påstående. Rosetta, Podscripts, Global Player,
+  Goodreads, QxMD, Stanford-PDF:en, EurekAlert, ScienceDaily och The Psychologist är borttagna eller utbytta mot
+  PubMed, PMC, tidskriften, personens egen sajt eller tinyhabits.com. Påståendet om 66 dagar (James Clear) togs bort
+  (ingen öppnad källa utanför hans sajt). Williamsons tre påståenden skrevs om efter hans egna nyhetsbrev.
+- Ej verifierat: PubMed- och PMC-sidorna visar en webbläsarkontroll för skript, så posterna lästes via NCBI:s
+  exportgränssnitt (MEDLINE) och PMC:s OAI-gränssnitt på samma värd, inte som sidor. Booktopia och Publishers
+  Weekly är kvar för böckerna eftersom förlagens sidor inte gick att nå; böckerna själva är inte lästa.
+  Texterna om vem personerna är (`about`) kontrollerades inte i den här omgången.
 - Inte med (beslut): loggning av egna pass, flöde med nya avsnitt, Jarvis och Idag läser inte biblioteket, egna
   anteckningar.
 - Design och plan: `docs/superpowers/specs/2026-11-13-lar-design.md`, `docs/superpowers/plans/2026-11-13-lar.md`.

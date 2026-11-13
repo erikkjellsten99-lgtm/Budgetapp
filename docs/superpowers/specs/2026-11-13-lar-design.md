@@ -9,6 +9,8 @@ och bastu. Han vill lära sig mer av kända människor inom områdena, direkt i 
   viktigaste påståenden och länkar till källan (bok, studie, poddavsnitt).
 - Varje påstående är märkt: **Väl belagt**, **Svagt stöd** eller **Egen åsikt**. Fakta och åsikt blandas aldrig.
 - Filter på område: Andning och kyla, Kallbad och bastu, Meditation, Personlig utveckling.
+- Allt Erik behöver finns i appen: varje påstående har en sammanfattning på några stycken skriven från den öppnade
+  källan, och varje Börja här har bokens, artikelns eller avsnittets huvudpunkter. Länken finns kvar som referens.
 
 ## Inte mål (första versionen)
 - Ingen loggning av egna pass, inga vanor skapas automatiskt.
