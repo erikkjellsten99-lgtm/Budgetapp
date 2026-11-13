@@ -77,8 +77,19 @@ const ALMAHAYNI_2024: Source = {
   url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10936795',
 };
 const LAUKKANEN_2015: Source = {
-  title: 'Laukkanen m.fl. 2015, bastu och dödlighet i JAMA Internal Medicine (ScienceDaily)',
-  url: 'https://sciencedaily.com/releases/2015/02/150223122602.htm',
+  title: 'Laukkanen m.fl. 2015, bastu och dödlighet, JAMA Internal Medicine (PubMed)',
+  url: 'https://pubmed.ncbi.nlm.nih.gov/25705824/',
+};
+const FMF_LAUKKANEN: Source = {
+  title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu',
+  url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen',
+  summary: [
+    'Laukkanen berättar om studien där över 2 300 medelålders män i östra Finland följdes i ungefär 20 år.',
+    'Män som bastade 2 till 3 gånger i veckan hade 27 procent lägre dödlighet i hjärt-kärlsjukdom än de som bastade en gång, och de som bastade 4 till 7 gånger hade 50 procent lägre.',
+    'För död av alla orsaker var skillnaden 24 och 40 procent, och för Alzheimers ungefär 65 procent i gruppen som bastade oftast.',
+    'Tiden i bastun beskrivs som viktig, och minst 20 minuter i 79 grader 4 till 7 gånger i veckan beskrivs som det bästa läget.',
+    'De pratar om möjliga förklaringar som lägre blodtryck och värmechockproteiner, och Laukkanen varnar för kallbad efter bastun för den som har ett instabilt hjärta.',
+  ],
 };
 
 export const PEOPLE: Person[] = [
@@ -372,22 +383,37 @@ export const PEOPLE: Person[] = [
           'Bland 2 315 finska män som följdes i ungefär 20 år hade de som bastade 4 till 7 gånger i veckan lägre ' +
           'risk att dö av hjärtsjukdom och av alla orsaker än de som bastade en gång i veckan.',
         evidence: 'belagt',
+        summary: [
+          'Studien bygger på Kuopiostudien om hjärtsjukdom: ett urval av 2 315 män mellan 42 och 60 år från ' +
+            'östra Finland som undersöktes 1984 till 1989. Männen fick uppge hur ofta och hur länge de bastade och ' +
+            'följdes sedan i median 20,7 år.',
+          'Under tiden dog 929 av männen. Bland dem som bastade en gång i veckan dog 49,1 procent, bland dem som ' +
+            'bastade 4 till 7 gånger 30,8 procent. Efter justering för andra riskfaktorer var risken för plötslig ' +
+            'hjärtdöd ungefär 63 procent lägre i den gruppen, och sambanden var liknande för död i hjärtsjukdom ' +
+            'och död av alla orsaker.',
+          'Längre bad, över 19 minuter, hängde också ihop med lägre risk för hjärtdöd men inte för död av alla ' +
+            'orsaker. Forskarna skriver att fler studier behövs för att förstå varför.',
+        ],
         note:
           'Stor studie med lång uppföljning, men den är observerande: den visar ett samband, inte att bastun är ' +
           'orsaken. Bara medelålders män från östra Finland.',
-        sources: [
-          LAUKKANEN_2015,
-          {
-            title: 'Pressmeddelande om studien (EurekAlert)',
-            url: 'https://www.eurekalert.org/news-releases/862302',
-          },
-        ],
+        sources: [LAUKKANEN_2015],
       },
       {
         text:
           'I samma grupp män hade de som bastade 4 till 7 gånger i veckan lägre risk för demens och Alzheimers ' +
           'sjukdom än de som bastade en gång i veckan.',
         evidence: 'belagt',
+        summary: [
+          'Forskarna använde samma 2 315 till synes friska män från Kuopio, undersökta 1984 till 1989 och följda ' +
+            'i median 20,7 år. Under den tiden fick 204 av dem diagnosen demens och 123 diagnosen Alzheimers sjukdom.',
+          'Efter justering för bland annat ålder, alkohol, vikt, blodtryck, rökning, diabetes och tidigare ' +
+            'hjärtinfarkt var risken för demens 66 procent lägre för dem som bastade 4 till 7 gånger i veckan än ' +
+            'för dem som bastade en gång. För Alzheimers var den 65 procent lägre. För 2 till 3 gånger i veckan ' +
+            'var skillnaden mindre och inte säker.',
+          'Forskarna skriver att det är den första studien om bastu och minnessjukdomar och att mekanismerna ' +
+            'behöver studeras.',
+        ],
         note: 'Observerande studie med samband, inte bevisad orsak. Bara män.',
         sources: [
           {
@@ -401,6 +427,16 @@ export const PEOPLE: Person[] = [
           'Bland 1 628 män och kvinnor hade de som bastade 4 till 7 gånger i veckan ungefär 60 procent lägre risk ' +
           'för stroke, även när man tagit hänsyn till motion, blodtryck och annat.',
         evidence: 'belagt',
+        summary: [
+          'Här följdes 1 628 män och kvinnor mellan 53 och 74 år ur samma Kuopiostudie, ingen av dem med tidigare ' +
+            'stroke. De delades in efter om de bastade en gång, 2 till 3 gånger eller 4 till 7 gånger i veckan. ' +
+            'Under i median 14,9 år fick 155 personer stroke.',
+          'Jämfört med en gång i veckan var risken 14 procent lägre för 2 till 3 gånger och 61 procent lägre för ' +
+            '4 till 7 gånger. Sambandet höll även efter justering för ålder, kön, diabetes, vikt, blodfetter, ' +
+            'alkohol, motion och socioekonomisk ställning.',
+          'Forskarna tror att lägre blodtryck, påverkan på immunförsvaret och nervsystemet och bättre ' +
+            'fungerande hjärta och kärl kan ligga bakom.',
+        ],
         note: 'Observerande studie. Sambandet var lika starkt för kvinnor och män.',
         sources: [
           {
@@ -418,17 +454,21 @@ export const PEOPLE: Person[] = [
           'Direkt efter 30 minuter i bastu sjönk blodtrycket och kärlen blev mindre stela hos 100 personer, ' +
           'medan pulsen steg ungefär som vid måttlig träning.',
         evidence: 'svagt',
+        summary: [
+          'Forskargruppen lät 100 personer, kunder hos en vårdgivare, sitta 30 minuter i en finsk bastu och mätte ' +
+            'före, direkt efter och efter 30 minuters vila. Det övre blodtrycket sjönk i snitt från 137 till 130 ' +
+            'och det nedre från 82 till 75, och det övre låg kvar lägre efter vilan.',
+          'Pulsvågens hastighet, ett mått på hur stela kärlen är, sjönk från 9,8 till 8,6 meter per sekund. ' +
+            'Under badet steg pulsen ungefär som vid måttlig träning och kroppstemperaturen med ungefär 2 grader. ' +
+            'Forskarna menar att det kan förklara sambanden i befolkningsstudierna, men att fler försök behövs.',
+        ],
         note:
-          'Ej slumpad studie som bara mätte direkt efter ett pass. Studien gjordes i bastur från en ' +
-          'tillverkare som var partner i projektet.',
+          'Samma personer mättes före och efter ett enda pass, utan jämförelsegrupp. Studien gjordes i bastur från ' +
+          'en tillverkare som var partner i projektet.',
         sources: [
           {
             title: 'Östra Finlands universitet om studien',
             url: 'https://www.uef.fi/en/article/scientists-uncover-why-sauna-bathing-is-good-for-your-health',
-          },
-          {
-            title: 'Om studien (ScienceDaily)',
-            url: 'https://www.sciencedaily.com/releases/2018/01/180105124005.htm',
           },
         ],
       },
@@ -437,11 +477,15 @@ export const PEOPLE: Person[] = [
       {
         title: 'Laukkanen m.fl. 2018, genomgång av bastu och hälsa, Mayo Clinic Proceedings (Bristols universitet)',
         url: 'https://research-information.bris.ac.uk/en/publications/875f218f-f6a3-46e8-bdbc-ea005e174ab9',
+        summary: [
+          'Genomgången samlar befolkningsstudier, försök och behandlingsstudier om finsk bastu som publicerats fram till februari 2018.',
+          'Bastu kopplas där till lägre risk för högt blodtryck, hjärt-kärlsjukdom, minnessjukdomar och lungsjukdomar och till lägre dödlighet.',
+          'Den tar också upp studier om lindring vid ledsjukdom, huvudvärk och influensa.',
+          'Författarna beskriver möjliga förklaringar som bättre kärlfunktion, mindre stela artärer, påverkan på nervsystemet, blodfetterna och ett lägre blodtryck.',
+          'Den pekar också ut vad som fortfarande är osäkert och vad det betyder för vården.',
+        ],
       },
-      {
-        title: 'Rhonda Patrick intervjuar Jari Laukkanen (FoundMyFitness)',
-        url: 'https://www.foundmyfitness.com/episodes/sauna-use-associated-with-decreased-risk-of-heart-disease-and-alzheimer-s-disease-jari-laukkanen',
-      },
+      FMF_LAUKKANEN,
     ],
     warning: WARN_COLD,
   },
