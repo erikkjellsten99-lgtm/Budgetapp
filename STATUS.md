@@ -65,8 +65,8 @@
   databas, ingen server.
 - Sammanfattningar (2026-11-13): varje påstående har 2 till 4 stycken skrivna från den öppnade källan, och varje
   Börja här har 3 till 5 huvudpunkter. Allt syns på personsidan utan klick.
-- Verifierat 2026-11-13: alla 50 länkar är öppnade. Sammanfattningarna är granskade mot sidorna av en andra
-  granskare, och rättelserna från den granskningen är gjorda. Texterna `about`, `method` och `teaser` är kontrollerade
+- Verifierat 2026-11-13: alla 55 unika länkar i `people.ts` är öppnade. Sammanfattningarna för alla nio personer är
+  granskade mot sidorna av en andra granskare, och rättelserna från den granskningen är gjorda. Texterna `about`, `method` och `teaser` är kontrollerade
   mot öppnade sidor; detaljer som ingen sida stöder (årtal, titlar, Love Island) är borttagna. Rosetta, Podscripts, Global Player,
   Goodreads, QxMD, Stanford-PDF:en, EurekAlert, ScienceDaily och The Psychologist är borttagna eller utbytta mot
   PubMed, PMC, tidskriften, personens egen sajt eller tinyhabits.com. Påståendet om 66 dagar (James Clear) togs bort
@@ -74,10 +74,11 @@
 - Sam Harris (tillagd 2026-11-13, område Meditation): fem påståenden, fyra Egen åsikt och ett Väl belagt. Alla
   hans sidor är öppnade (samharris.org: om honom, How to Meditate, essän om ett medvetande utan jag, bokens sida;
   wakingup.com: startsidan, om appen, sidan om mindfulness, introduktionen, stipendier), och Goyal 2014 lästes
-  via NCBI:s gränssnitt. Ej verifierat: boken Waking Up är inte läst, bara bokens sida; de fem studier från 2010
+  via NCBI:s gränssnitt. Ej verifierat: boken Waking Up är inte läst, bara författarens sida om boken; de fem studier från 2010
   och 2011 som han hänvisar till är bara kontrollerade till titel. Sidan om mindfulness är skriven av Waking Up
-  och tillskrivs appen, inte honom. Podden Making Sense är inte med i Börja här, eftersom sidan bara listar
-  avsnitt och de flesta inte handlar om meditation.
+  och tillskrivs appen, inte honom. Börja här är boken och hans gratis essä om hur man mediterar; appen är
+  betald och nämns bara neutralt i `about` och `method`, inte i Börja här. Podden Making Sense är inte med i
+  Börja här, eftersom sidan bara listar avsnitt och de flesta inte handlar om meditation.
 - Ej verifierat: PubMed- och PMC-sidorna visar en webbläsarkontroll för skript, så posterna lästes via NCBI:s
   exportgränssnitt (MEDLINE) och PMC:s OAI-gränssnitt på samma värd, inte som sidor. Booktopia och Publishers
   Weekly är kvar för böckerna eftersom förlagens sidor inte gick att nå; böckerna själva är inte lästa.
