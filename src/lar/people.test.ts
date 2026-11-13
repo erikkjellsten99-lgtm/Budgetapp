@@ -25,7 +25,7 @@ const hostOf = (url: string) => new URL(url).hostname.replace(/^www\./, '');
 const words = (paras: string[]) => paras.join(' ').split(/\s+/).filter(Boolean).length;
 
 // Personer vars sammanfattningar är skrivna. Tas bort när alla åtta är klara.
-const DONE = new Set<string>(['wim-hof', 'susanna-soberg', 'jari-laukkanen', 'andrew-huberman']);
+const DONE = new Set<string>(['wim-hof', 'susanna-soberg', 'jari-laukkanen', 'andrew-huberman', 'rhonda-patrick']);
 const withSummaries = () => PEOPLE.filter((p) => DONE.has(p.id));
 
 describe('Lär: innehållet', () => {

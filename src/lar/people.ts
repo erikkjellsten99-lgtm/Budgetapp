@@ -83,6 +83,17 @@ const HUBERMAN_COLD: Source = {
     'Kallbad inom ungefär fyra timmar efter träning kan minska vinsten av träningen, och kyla sent på dagen kan störa sömnen.',
   ],
 };
+const FMF_COLD: Source = {
+  title: 'FoundMyFitness: kallbad, kylbehandling och noradrenalin',
+  url: 'https://foundmyfitness.com/episodes/cold-shock-norepinephrine',
+  summary: [
+    'Sidan förklarar hur kallbad och kylbehandling ger en kraftig frisättning av noradrenalin.',
+    'Den beskriver kyla som hormesis, en mild stress som förbereder kroppen för större påfrestningar.',
+    'Den tar upp möjliga effekter på blodsocker, blodfetter, inflammation, tankeförmåga och immunförsvar.',
+    'Den jämför olika doser, från en timme i 14 grader till 20 sekunder i ungefär 4 grader.',
+    'Den påpekar att forskningen är ung och att kyla har risker, särskilt utan tillsyn.',
+  ],
+};
 const ALMAHAYNI_2024: Source = {
   title: 'Almahayni och Hammond 2024, systematisk genomgång av Wim Hof-metoden i PLOS ONE (PMC)',
   url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10936795',
@@ -606,29 +617,44 @@ export const PEOPLE: Person[] = [
           'Hon lyfter fram de finska studierna där män som bastade ofta hade lägre risk att dö av hjärtsjukdom ' +
           'och lägre risk för demens.',
         evidence: 'belagt',
+        summary: [
+          'I intervjun med Jari Laukkanen går hon igenom Kuopiostudien med över 2 300 medelålders män. Den som ' +
+            'bastade 2 till 3 gånger i veckan hade 27 procent lägre risk att dö av hjärt-kärlsjukdom än den som ' +
+            'bastade en gång, och 4 till 7 gånger gav 50 procent lägre risk. För död av alla orsaker var ' +
+            'skillnaden 24 och 40 procent.',
+          'De tar också upp att männen som bastade oftast hade ungefär 65 procent lägre risk för Alzheimers. ' +
+            'Själv är hon mest intresserad av värmechockproteiner, som hon tror kan vara en av förklaringarna.',
+        ],
         note: 'Stora observerande studier som visar samband, inte bevisad orsak. Mest män från östra Finland.',
         sources: [
           {
-            title: 'FoundMyFitness: bastu och lägre risk för hjärtsjukdom och demens',
+            title: 'FoundMyFitness: klipp om bastu och lägre risk för hjärtsjukdom och demens',
             url: 'https://www.foundmyfitness.com/episodes/sauna-use-decreased-risk-of-heart-and-neurodegenerative-diseases',
           },
+          FMF_LAUKKANEN,
           LAUKKANEN_2015,
         ],
       },
       {
         text:
-          'Hon beskriver bastu som en form av träning för hjärtat. I en tysk studie med 19 personer steg puls ' +
-          'och blodtryck i bastun till samma nivå som vid cykling med måttlig belastning, och sjönk sedan under utgångsläget.',
+          'Hon beskriver bastu som en belastning på hjärtat som liknar måttlig träning. I en studie med 19 ' +
+          'personer steg puls och blodtryck i bastun till samma nivå som vid cykling med måttlig belastning, och ' +
+          'blodtrycket sjönk sedan under utgångsläget.',
         evidence: 'svagt',
+        summary: [
+          'På hennes sajt beskrivs hur pulsen stiger i bastun, upp till 150 slag i minuten, så att bastun på ' +
+            'vissa sätt liknar måttlig konditionsträning. Laukkanen påpekar där att många av bastuns samband med ' +
+            'hälsa liknar dem för träning.',
+          'I studien satt 19 friska vuxna, varav 7 kvinnor och i snitt 46 år, 25 minuter i en bastu på 93 grader. ' +
+            'Blodtryck och puls steg hela tiden under badet och sjönk sedan stadigt, och efter badet låg ' +
+            'blodtrycket lägre än före. Belastningen på hjärtat motsvarade 60 till 100 watt på en testcykel.',
+        ],
         note: 'Liten studie som bara mätte direkt under och efter ett pass. Ingen visar att bastu ersätter träning.',
         sources: [
+          FMF_LAUKKANEN,
           {
-            title: 'FoundMyFitness: bastu som träning för hjärtat (Rosetta)',
-            url: 'https://rosetta.to/u/foundmyfitness/sauna-use-as-an-exercise-mimetic-for-heart-and-healthspan',
-          },
-          {
-            title: 'Ketelhut och Ketelhut 2019, bastu och puls (ScienceDaily)',
-            url: 'https://www.sciencedaily.com/releases/2019/06/190612093900.htm',
+            title: 'Ketelhut och Ketelhut 2019, blodtryck och puls i bastun (PubMed)',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/31126559/',
           },
         ],
       },
@@ -637,6 +663,15 @@ export const PEOPLE: Person[] = [
           'Hon menar att värmen i bastun ökar värmechockproteiner, som hjälper cellerna att hålla proteiner i ' +
           'rätt form, och att det kan bidra till att bevara muskler.',
         evidence: 'svagt',
+        summary: [
+          'I ett klipp från en intervju berättar hon om en studie där bastu efter hård träning minskade ' +
+            'träningsvärken och förbättrade styrkan. I en annan studie fick personer som hölls orörliga i en ' +
+            'vecka lokal värme eller inte, och värmen minskade muskelförlusten med ungefär 40 procent.',
+          'Hon tror att det främst beror på värmechockproteiner och tillväxthormon, och säger att djurstudier ' +
+            'visat att skyddet hängde på värmechockproteinerna. Hon nämner också studier där 30 minuter i ' +
+            'ungefär 73 grader höjde värmechockproteinerna med 50 procent och att de kan vara förhöjda i ungefär ' +
+            '48 timmar.',
+        ],
         note:
           'Mekanismen är rimlig, men att den ger bättre hälsa på lång sikt är inte visat i stora studier med ' +
           'människor.',
@@ -650,28 +685,21 @@ export const PEOPLE: Person[] = [
       {
         text:
           'Hon förklarar att kallt vatten ger en kraftig ökning av noradrenalin, och hänvisar till studien där en ' +
-          'timme i 14 grader varmt vatten ökade noradrenalin ungefär sex gånger.',
+          'timme i 14 grader varmt vatten ökade noradrenalin med 530 procent.',
         evidence: 'svagt',
-        note: 'Bygger på en liten studie med långa pass i vattnet.',
-        sources: [
-          {
-            title: 'FoundMyFitness: kallbad, kylbehandling och noradrenalin',
-            url: 'https://foundmyfitness.com/episodes/cold-shock-norepinephrine',
-          },
-          SRAMEK_2000,
+        summary: [
+          'På hennes sida om kyla beskrivs hur kallbad och kylbehandling frisätter mycket noradrenalin, som ' +
+            'sätter igång anpassningar i ämnesomsättningen, hjärnan och generna. Hon ser det som hormesis, en ' +
+            'mild stress som gör kroppen tåligare mot större påfrestningar.',
+          'Hon jämför olika sätt. En timme upp till halsen i 14 grader gav också 250 procent mer dopamin, medan ' +
+            '20 sekunder i ungefär 4 grader ökade noradrenalinet med 200 till 300 procent. Sidan påpekar att ' +
+            'forskningen är ung och att kyla har risker.',
         ],
+        note: 'Bygger på en liten studie med långa pass i vattnet.',
+        sources: [FMF_COLD, SRAMEK_2000],
       },
     ],
-    startHere: [
-      {
-        title: 'FoundMyFitness: intervjun med Jari Laukkanen om bastu',
-        url: 'https://www.foundmyfitness.com/episodes/sauna-use-associated-with-decreased-risk-of-heart-disease-and-alzheimer-s-disease-jari-laukkanen',
-      },
-      {
-        title: 'FoundMyFitness: allt om bastu',
-        url: 'https://www.foundmyfitness.com/tags/sauna',
-      },
-    ],
+    startHere: [FMF_LAUKKANEN, FMF_COLD],
     warning: WARN_COLD,
   },
   {
