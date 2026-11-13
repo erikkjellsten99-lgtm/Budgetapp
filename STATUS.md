@@ -69,8 +69,9 @@
   översättning och källänk. Alla 27 är kontrollerade ordagrant mot texten på den öppnade sidan med ett skript, och
   sidan tillskriver personen orden. Ingen person har färre än 2. Wim Hofs två citat kommer från förlaget Sounds
   Trues sida om boken (citat där), eftersom wimhofmethod.com bara har företagets text och deltagarnas berättelser.
-  Laukkanens och Patricks citat är talspråk från FoundMyFitness utskrift av intervjun.
-- Verifierat 2026-11-13: alla 55 unika länkar i `people.ts` är öppnade. Sammanfattningarna för alla nio personer är
+  Talspråk ur utskrifter: Laukkanens två citat (FoundMyFitness intervju), Patricks citat om stress (utskriften av
+  hennes egen video på FoundMyFitness) och Søbergs tredje citat (Huberman Labs utskrift av avsnittet).
+- Verifierat 2026-11-13: alla 56 unika länkar i `people.ts` är öppnade (den 56:e, Mindfuls intervju med Kabat-Zinn, lades till med citaten). Sammanfattningarna för alla nio personer är
   granskade mot sidorna av en andra granskare, och rättelserna från den granskningen är gjorda. Texterna `about`, `method` och `teaser` är kontrollerade
   mot öppnade sidor; detaljer som ingen sida stöder (årtal, titlar, Love Island) är borttagna. Rosetta, Podscripts, Global Player,
   Goodreads, QxMD, Stanford-PDF:en, EurekAlert, ScienceDaily och The Psychologist är borttagna eller utbytta mot

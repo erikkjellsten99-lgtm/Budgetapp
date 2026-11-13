@@ -167,7 +167,7 @@ export const PEOPLE: Person[] = [
       },
       {
         text: 'We alter the collective consciousness by awakening to our own boundless potential. We are limited only by the depth of our imagination and the strength of our conviction.',
-        sv: 'Vi förändrar det kollektiva medvetandet genom att vakna upp till vår egen gränslösa potential. Vi begränsas bara av hur djup vår fantasi är och hur stark vår övertygelse är.',
+        sv: 'Vi förändrar det kollektiva medvetandet genom att vakna till insikt om vår egen gränslösa potential. Vi begränsas bara av hur djup vår fantasi är och hur stark vår övertygelse är.',
         source: { title: 'Boken The Wim Hof Method (förlaget Sounds True)', url: 'https://www.soundstrue.com/products/the-wim-hof-method-1' },
       },
     ],
@@ -311,7 +311,7 @@ export const PEOPLE: Person[] = [
       },
       {
         text: 'So of course, we don\'t know yet whether brown fat decreases with age and therefore we get obese, or we get obese and therefore, we have less brown fat.',
-        sv: 'Så vi vet förstås inte ännu om brunt fett minskar med åldern och vi därför får fetma, eller om vi får fetma och därför har mindre brunt fett.',
+        sv: 'Så vi vet förstås inte ännu om brunt fett minskar med åldern och vi därför blir feta, eller om vi blir feta och därför har mindre brunt fett.',
         source: { title: 'Huberman Lab: Dr. Susanna Søberg om kyla och värme', url: 'https://www.hubermanlab.com/episode/dr-susanna-soberg-how-to-use-cold-and-heat-exposure-to-improve-your-health' },
       },
     ],
@@ -462,12 +462,12 @@ export const PEOPLE: Person[] = [
     quotes: [
       {
         text: 'Also, in Finland, I think quite many use it for that purpose. They want some relaxation, you know, after working all day and so on.',
-        sv: 'I Finland tror jag också att ganska många använder bastun till det. De vill ha lite avkoppling, du vet, efter att ha jobbat hela dagen och så vidare.',
+        sv: 'Dessutom tror jag att ganska många i Finland använder bastun till just det. De vill ha lite avkoppling, du vet, efter att ha jobbat hela dagen och så vidare.',
         source: { title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu', url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen' },
       },
       {
         text: 'Of course, we have to take care of other risk factors like blood pressure, lipids, smoking, obesity in addition to that.',
-        sv: 'Vi måste förstås också ta hand om andra riskfaktorer som blodtryck, blodfetter, rökning och fetma utöver det.',
+        sv: 'Vi måste förstås ta hand om andra riskfaktorer som blodtryck, blodfetter, rökning och fetma utöver det.',
         source: { title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu', url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen' },
       },
     ],
@@ -606,8 +606,8 @@ export const PEOPLE: Person[] = [
         source: { title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)', url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance' },
       },
       {
-        text: 'This is the most common question I hear, and it makes sense to ask that. However, it is truly impossible to answer, as some people tolerate cold better than others.',
-        sv: 'Det här är den vanligaste frågan jag får, och det är rimligt att fråga. Men den är faktiskt omöjlig att besvara, eftersom vissa tål kyla bättre än andra.',
+        text: 'The total calories burned from the cold exposure are not that significant.',
+        sv: 'Den totala mängden kalorier som kylan förbränner är inte särskilt stor.',
         source: { title: 'Huberman Lab: vetenskapen om kyla (nyhetsbrev)', url: 'https://www.hubermanlab.com/newsletter/the-science-and-use-of-cold-exposure-for-health-and-performance' },
       },
       {
@@ -707,9 +707,9 @@ export const PEOPLE: Person[] = [
         source: { title: 'FoundMyFitness: kallbad, kylbehandling och noradrenalin', url: 'https://foundmyfitness.com/episodes/cold-shock-norepinephrine' },
       },
       {
-        text: 'It\'s like a little bit of good stress where it\'s not too much stress, but it\'s enough stress to activate all of these genetic pathways that help you deal with stress.',
-        sv: 'Det är som lite bra stress, inte för mycket stress, men tillräckligt för att sätta i gång alla de genetiska signalvägar som hjälper en att hantera stress.',
-        source: { title: 'FoundMyFitness: Rhonda Patrick intervjuar Jari Laukkanen om bastu', url: 'https://www.foundmyfitness.com/episodes/jari-laukkanen' },
+        text: 'We all want to reduce stress and make our lives easier, but is that always the best approach?',
+        sv: 'Vi vill alla minska stressen och göra livet lättare, men är det alltid det bästa sättet?',
+        source: { title: 'FoundMyFitness: kallbad, kylbehandling och noradrenalin', url: 'https://foundmyfitness.com/episodes/cold-shock-norepinephrine' },
       },
     ],
     claims: [
@@ -831,7 +831,7 @@ export const PEOPLE: Person[] = [
       },
       {
         text: 'The price of success is that more and more people want something. But of course, mindfulness is not a something.',
-        sv: 'Priset för framgången är att allt fler vill ha något. Men mindfulness är förstås inte en sak man kan ha.',
+        sv: 'Priset för framgången är att allt fler vill ha något. Men mindfulness är förstås inte ett något.',
         source: { title: 'Kabat-Zinn om mindfulness i vardagen, intervju (Mindful)', url: 'https://www.mindful.org/everyday-mindfulness-with-jon-kabat-zinn/' },
       },
       {
@@ -983,7 +983,7 @@ export const PEOPLE: Person[] = [
     quotes: [
       {
         text: 'Mindfulness is simply a state of open, nonjudgmental, and nondiscursive attention to the contents of consciousness, whether pleasant or unpleasant.',
-        sv: 'Mindfulness är helt enkelt ett tillstånd av öppen, icke-dömande och ordlös uppmärksamhet på medvetandets innehåll, vare sig det är behagligt eller obehagligt.',
+        sv: 'Mindfulness är helt enkelt ett tillstånd av öppen, icke-dömande och icke-diskursiv uppmärksamhet på medvetandets innehåll, vare sig det är behagligt eller obehagligt.',
         source: { title: 'Sam Harris om hur man mediterar (samharris.org, 2011)', url: 'https://www.samharris.org/blog/how-to-meditate' },
       },
       {
@@ -998,7 +998,7 @@ export const PEOPLE: Person[] = [
       },
       {
         text: 'Selflessness is a quality of consciousness that can be subjectively discovered. Indeed, it is in plain view in every present moment, and yet it remains difficult to see.',
-        sv: 'Att vara utan ett jag är en egenskap hos medvetandet som man kan upptäcka själv. Den syns faktiskt öppet i varje ögonblick, och ändå är den svår att se.',
+        sv: 'Jaglöshet är en egenskap hos medvetandet som kan upptäckas i den egna upplevelsen. Den ligger faktiskt i öppen dager i varje ögonblick, och ändå är den svår att se.',
         source: { title: 'Sam Harris om ett medvetande utan jag (samharris.org, 2007)', url: 'https://www.samharris.org/blog/selfless-consciousness-without-faith' },
       },
     ],

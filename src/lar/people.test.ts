@@ -167,6 +167,7 @@ describe('Lär: innehållet', () => {
 
   it('varje citat har text på högst 40 ord, översättning och https-källa med titel', () => {
     for (const p of PEOPLE) {
+      expect(p.quotes.length, p.name).toBeGreaterThanOrEqual(2);
       expect(p.quotes.length, p.name).toBeLessThanOrEqual(4);
       for (const q of p.quotes) {
         const n = q.text.trim().split(/\s+/).filter(Boolean).length;
