@@ -32,6 +32,7 @@ import {
   isFollowed,
   monthCost,
   moreKind,
+  nextToPresent,
   NAME_MAX,
   ownPeople,
   sessionOrder,
@@ -681,6 +682,7 @@ export function OwnPersonPage({
   onDeeper,
   onRemove,
   onWrite,
+  writing,
 }: {
   person: FollowedPerson;
   cards: KunskapCard[];
@@ -689,10 +691,13 @@ export function OwnPersonPage({
   onVote: (card: KunskapCard, pressed: 1 | -1) => void;
   onDeeper: (card: KunskapCard) => void;
   onRemove: () => void;
-  /** Ber servern skriva (eller skriva om) presentationen. Kostar pengar, så bara på en tryckning. */
+  /** Ber servern skriva (eller skriva om) presentationen. */
   onWrite: () => Promise<GenerateReply>;
+  /** Presentationen skrivs just nu av sig själv (personen är nyss tillagd). */
+  writing?: boolean;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [pressed, setBusy] = useState(false);
+  const busy = pressed || !!writing;
   const [result, setResult] = useState<{ text: string; error: boolean } | null>(null);
   const alive = useRef(true);
   useEffect(() => {
@@ -759,8 +764,9 @@ export function OwnPersonPage({
           </>
         ) : (
           <p className="kunskap-hint">
-            Ingen presentation än. Claude kan skriva en kort text om vem personen är, med källor. Den blir inte granskad, och det
-            kostar en liten summa.
+            {writing
+              ? 'Claude skriver en kort text om vem personen är, med källor.'
+              : 'Ingen presentation än. Claude skriver en av sig själv när du lagt till någon och är inloggad. Du kan också be om den här. Den blir inte granskad, och varje presentation kostar en liten summa.'}
           </p>
         )}
         <button type="button" className="kunskap-manage" disabled={busy} onClick={() => void write()}>
@@ -1152,6 +1158,26 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
   const lastGenerated = cards.reduce((last, c, i) => (c.created ? i : last), -1);
   const mine = ownPeople(people, PEOPLE.map((p) => p.name));
   const ownPerson = own ? people.find((p) => p.id === own.id) : undefined;
+  // Varje person du lagt till själv får en presentation skriven av sig själv (Eriks önskan 2026-11-15): en i
+  // taget, när Mindhub är öppen. Efter ett fel (utloggad, utan nät, dygnets gräns) görs inga fler försök den här
+  // gången; knappen på personens sida finns kvar.
+  const [writingId, setWritingId] = useState<string | null>(null);
+  const presentTried = useRef(new Set<string>());
+  const presentStopped = useRef(false);
+  const batchList = data?.batches;
+  useEffect(() => {
+    if (!batchList || writingId || presentStopped.current) return;
+    const next = nextToPresent(mine, presentTried.current, batchList, Date.now());
+    if (!next) return;
+    presentTried.current.add(next.id);
+    setWritingId(next.id);
+    void writeProfile(next.id).then((reply) => {
+      if (!reply.ok) presentStopped.current = true;
+      setWritingId(null);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchList, writingId, mine.map((p) => `${p.id}:${p.profile ? 1 : 0}`).join()]);
+
   /** Raden på kortet i biblioteket för en person du lagt till själv: vem det är, om det är känt, annars antal kort. */
   const ownTeaser = (p: FollowedPerson) => {
     const about =
@@ -1159,6 +1185,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
       GENRES.flatMap((g) => g.people).find((x) => personKey(x.name) === personKey(p.name))?.about ??
       (data?.found ?? []).find((x) => personKey(x.name) === personKey(p.name))?.about;
     const n = cardsOf(everything, p.name).length;
+    if (!p.profile && writingId === p.id) return 'Claude skriver en presentation …';
     return about ?? (n === 0 ? 'Inga kort än. De kommer vid nästa generering.' : n === 1 ? '1 kort.' : `${n} kort.`);
   };
   /** Knappen på kortets namn: den granskade sidan, annars din egen sida, annars ingen. */
@@ -1219,6 +1246,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
           onVote={(card, pressed) => void vote(card, pressed)}
           onDeeper={setChat}
           onWrite={() => writeProfile(ownPerson.id)}
+          writing={writingId === ownPerson.id}
           onRemove={() => {
             void unfollow(ownPerson.id);
             if (own?.fromCard) backToFeed();

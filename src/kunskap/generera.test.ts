@@ -35,7 +35,7 @@ import {
   type VoteRow,
 } from '../../supabase/functions/kunskap-generera/shared.ts';
 import { EXAMPLE_CARDS } from './cards';
-import { allCards, batchLog, moreKind, sessionOrder, describeWeight, feed, formatUsd, formatWhen, monthCost, tasteOf, withManual } from './kunskapState';
+import { allCards, batchLog, moreKind, nextToPresent, sessionOrder, describeWeight, feed, formatUsd, formatWhen, monthCost, tasteOf, withManual } from './kunskapState';
 import { loadKunskap, readGenerateReply, savePrefs, saveSettings } from './kunskapStore';
 
 const PEOPLE: Person[] = [{ name: 'Susanna Søberg', topics: ['bastu', 'kallbad'] }];
@@ -351,6 +351,34 @@ describe('inställningar, schema och kostnad', () => {
     expect(formatUsd(0.004).replace(/\s/g, ' ')).toBe('0,004 USD');
     expect(formatUsd(0).replace(/\s/g, ' ')).toBe('0,00 USD');
     expect(formatWhen(new Date(2026, 10, 4, 4, 5).getTime())).toBe('2026-11-04 04:05');
+  });
+});
+
+describe('presentationer skrivs av sig själva', () => {
+  const now = Date.UTC(2026, 10, 15, 12);
+  const p = (id: string, profile = false) => ({ id, name: id, topics: [], created: 0, ...(profile ? { profile: { text: ['x'], sources: [{ title: 't', url: 'https://a.se' }], created: 1, model: 'm' } } : {}) });
+  const prof = (ago: number, over: Partial<Batch> = {}): Batch => ({
+    id: `p${ago}`, created: now - ago, status: 'klar', trigger: 'profil', requested: 0, cards: 0, quotesVerified: 0, quotesRewritten: 0, dropped: 0, model: 'm', usage: NO_USAGE, costUsd: 0.05, ...over,
+  });
+
+  it('nästa är den första som saknar presentation och inte prövats', () => {
+    const people = [p('a', true), p('b'), p('c')];
+    expect(nextToPresent(people, new Set(), [], now)?.id).toBe('b');
+    expect(nextToPresent(people, new Set(['b']), [], now)?.id).toBe('c');
+    expect(nextToPresent(people, new Set(['b', 'c']), [], now)).toBeNull();
+    expect(nextToPresent([p('a', true)], new Set(), [], now)).toBeNull();
+    expect(nextToPresent([], new Set(), [], now)).toBeNull();
+  });
+
+  it('inte när dygnets fem är slut, och inte medan en presentation skrivs', () => {
+    const people = [p('b')];
+    expect(nextToPresent(people, new Set(), [1, 2, 3, 4, 5].map((n) => prof(n * 1000)), now)).toBeNull();
+    expect(nextToPresent(people, new Set(), [1, 2, 3, 4].map((n) => prof(n * 1000)), now)?.id).toBe('b');
+    expect(nextToPresent(people, new Set(), [prof(30_000, { status: 'pagar' })], now)).toBeNull();
+    expect(nextToPresent(people, new Set(), [prof(20 * 60_000, { status: 'pagar' })], now)?.id).toBe('b');
+    // Sökningar i Upptäck och vanliga omgångar hindrar inte.
+    expect(nextToPresent(people, new Set(), [1, 2, 3, 4, 5, 6].map((n) => prof(n * 1000, { search: true })), now)?.id).toBe('b');
+    expect(nextToPresent(people, new Set(), [prof(1000, { trigger: 'manuell', status: 'pagar' })], now)?.id).toBe('b');
   });
 });
 
