@@ -27,6 +27,8 @@ export interface KunskapCard {
   batch?: string
   /** Citat: ordagrant återfunnet i källsidans text av servern. */
   verified?: boolean
+  /** Upptäckt: en person du inte följer eller ett nytt ämne nära det du gillar. */
+  discovery?: boolean
 }
 
 export const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length
@@ -74,6 +76,93 @@ export function cleanSettings(raw: unknown): KunskapSettings {
   return { id: 'settings', frequency, count: Math.min(COUNT_MAX, Math.max(1, n)) }
 }
 
+// Smak: viktning av personer, ämnen och korttyper utifrån gilla/ogilla, och det användaren själv ställt in
+
+export type PrefKind = 'person' | 'topic' | 'type'
+export type ManualLevel = 'mer' | 'mindre'
+
+/** Sparas som en post (id "prefs") i kunskap_settings: det användaren själv ändrat i "Vad Claude tror du gillar". */
+export interface KunskapPrefs {
+  id: 'prefs'
+  manual: Record<string, { kind: PrefKind; label: string; level: ManualLevel }>
+}
+
+export const NO_PREFS: KunskapPrefs = { id: 'prefs', manual: {} }
+export const PREF_LABEL_MAX = 60
+const MANUAL_MAX = 80
+
+/** Nyckeln för en person, ett ämne eller en korttyp. Personer jämförs utan accenter, ämnen utan stora bokstäver. */
+export const prefKey = (kind: PrefKind, label: string) => `${kind}:${kind === 'person' ? personKey(label) : tidy(label).toLowerCase()}`
+
+export function cleanPrefs(raw: unknown): KunskapPrefs {
+  const manual: KunskapPrefs['manual'] = {}
+  const given = ((raw ?? {}) as { manual?: unknown }).manual
+  for (const value of Object.values(given && typeof given === 'object' ? (given as Record<string, unknown>) : {}).slice(0, MANUAL_MAX)) {
+    const v = (value ?? {}) as Record<string, unknown>
+    const kind = v.kind === 'person' || v.kind === 'topic' || v.kind === 'type' ? v.kind : null
+    const label = typeof v.label === 'string' ? tidy(v.label).slice(0, PREF_LABEL_MAX).trim() : ''
+    if (kind && label && (v.level === 'mer' || v.level === 'mindre')) manual[prefKey(kind, label)] = { kind, label, level: v.level }
+  }
+  return { id: 'prefs', manual }
+}
+
+export interface VoteRow {
+  value: 1 | -1
+  person: string
+  topic: string
+  type: CardType
+}
+
+export interface Weight {
+  key: string
+  kind: PrefKind
+  label: string
+  likes: number
+  dislikes: number
+  /** Det användaren själv valt, om något. Går före rösterna. */
+  manual?: ManualLevel
+  /** -1 till 1. Från rösterna: (gilla − ogilla) / (gilla + ogilla + 2), så att en enda röst inte väger för tungt. */
+  weight: number
+}
+
+/** Över den här gränsen räknas något som gillat (eller under minus gränsen som ogillat). En enda gilla räcker. */
+export const LEAN = 0.2
+export const leaning = (w: Pick<Weight, 'weight'>): 'mer' | 'mindre' | 'neutral' => (w.weight >= LEAN ? 'mer' : w.weight <= -LEAN ? 'mindre' : 'neutral')
+
+/**
+ * Viktningen per person, ämne och korttyp. `known` är sådant som ska finnas med även utan röster
+ * (dem du följer och deras ämnen, de tre korttyperna). Sorterad med det mest gillade först inom varje slag.
+ */
+export function weights(votes: VoteRow[], prefs: KunskapPrefs, known: { kind: PrefKind; label: string }[] = []): Weight[] {
+  const all = new Map<string, Weight>()
+  const entry = (kind: PrefKind, label: string) => {
+    const clean = tidy(String(label ?? '')).slice(0, PREF_LABEL_MAX).trim()
+    if (!clean) return null
+    const key = prefKey(kind, clean)
+    if (!all.has(key)) all.set(key, { key, kind, label: clean, likes: 0, dislikes: 0, weight: 0 })
+    return all.get(key)!
+  }
+  for (const k of known) entry(k.kind, k.label)
+  for (const v of votes) {
+    if (v.value !== 1 && v.value !== -1) continue
+    for (const e of [entry('person', v.person), entry('topic', v.topic), entry('type', v.type)]) {
+      if (e) v.value === 1 ? e.likes++ : e.dislikes++
+    }
+  }
+  for (const m of Object.values(prefs.manual)) {
+    const e = entry(m.kind, m.label)
+    if (e) e.manual = m.level
+  }
+  const order: PrefKind[] = ['person', 'topic', 'type']
+  return [...all.values()]
+    .map((w) => ({ ...w, weight: w.manual === 'mer' ? 1 : w.manual === 'mindre' ? -1 : Math.round(((w.likes - w.dislikes) / (w.likes + w.dislikes + 2)) * 100) / 100 }))
+    .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || b.weight - a.weight || a.label.localeCompare(b.label, 'sv'))
+}
+
+/** Andelen kort per batch som ska vara upptäckt, och hur många det blir: 5 kort ger 1, 10 kort ger 2, 1 eller 2 kort ger 0. */
+export const DISCOVERY_SHARE = 0.2
+export const discoveryCount = (count: number) => Math.round(count * DISCOVERY_SHARE)
+
 // Batchar och kostnad
 
 export interface Usage {
@@ -100,6 +189,8 @@ export interface Batch {
   quotesRewritten: number
   /** Kort som kastades (ingen känd källa, för långa, okänd person, dubbletter). */
   dropped: number
+  /** Hur många av korten som är upptäckt. Saknas på batchar från före 2026-11-15. */
+  discovery?: number
   model: string
   usage: Usage
   costUsd: number

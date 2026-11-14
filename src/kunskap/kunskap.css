@@ -580,6 +580,107 @@
   color: var(--lingon);
 }
 
+/* Upptäckt och smak */
+.kunskap-type.upptackt {
+  background: color-mix(in srgb, var(--pine) 14%, var(--surface));
+  color: var(--pine);
+}
+
+.kunskap-person {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.kunskap-follow {
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--cobalt);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--cobalt);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.kunskap-taste {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kunskap-taste-list {
+  display: grid;
+  margin: 0;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-group);
+  background: var(--surface);
+  list-style: none;
+}
+
+.kunskap-taste-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+}
+
+.kunskap-taste-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.kunskap-taste-list li > div:first-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.kunskap-levels {
+  display: flex;
+  flex: none;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+}
+
+.kunskap-levels button {
+  min-width: 2.9rem;
+  min-height: 2.5rem;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.kunskap-levels button.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.kunskap-levels button.active.mer {
+  background: var(--pine);
+  color: var(--surface);
+  box-shadow: none;
+}
+
+.kunskap-levels button.active.mindre {
+  background: var(--lingon);
+  color: var(--surface);
+  box-shadow: none;
+}
+
 /* Chatten */
 .kunskap-chat-scroll {
   display: flex;

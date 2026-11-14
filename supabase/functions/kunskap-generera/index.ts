@@ -17,18 +17,23 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk@1.8.0'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4'
-import { checkCards, collectSources, htmlToText, MODEL, SAVE_TOOL, systemPrompt, userPrompt, type Person, type VoteRow } from './generate.ts'
+import { checkCards, collectSources, htmlToText, MODEL, SAVE_TOOL, systemPrompt, userPrompt, type Person } from './generate.ts'
 import {
   addUsage,
   batchesLastDay,
+  cleanPrefs,
   cleanSettings,
   costUsd,
+  discoveryCount,
   isDue,
   MAX_BATCHES_PER_DAY,
   NO_USAGE,
   type Batch,
   type KunskapCard,
   type Usage,
+  type VoteRow,
+  type Weight,
+  weights,
 } from './shared.ts'
 
 const CORS = {
@@ -103,8 +108,8 @@ async function pageText(url: string): Promise<string | null> {
 }
 
 /** Frågar Claude med webbsökning tills korten lämnas med spara_kort. Ger verktygets indata, alla svarsblock och förbrukningen. */
-async function ask(people: Person[], count: number, votes: VoteRow[], existing: KunskapCard[], usage: { total: Usage }) {
-  const first: Anthropic.MessageParam = { role: 'user', content: userPrompt(people, count, votes, existing, new Date().toISOString().slice(0, 10)) }
+async function ask(people: Person[], count: number, discovery: number, taste: Weight[], existing: KunskapCard[], usage: { total: Usage }) {
+  const first: Anthropic.MessageParam = { role: 'user', content: userPrompt(people, count, discovery, taste, existing, new Date().toISOString().slice(0, 10)) }
   const messages: Anthropic.MessageParam[] = [first]
   const blocks: unknown[] = []
   for (let turn = 0; turn <= MAX_CONTINUATIONS; turn++) {
@@ -135,9 +140,15 @@ async function ask(people: Person[], count: number, votes: VoteRow[], existing: 
 /** En batch åt en person. Loggas alltid, även när den misslyckas. */
 async function runBatch(userId: string, rows: Row[], trigger: Batch['trigger']): Promise<Batch> {
   const of = <T>(store: string) => rows.filter((r) => r.store === store && r.data).map((r) => r.data as T)
-  const settings = cleanSettings(of<unknown>('kunskap_settings')[0])
+  // Inställningen och smaken ligger i samma store, med olika id.
+  const record = (id: string) => rows.find((r) => r.store === 'kunskap_settings' && r.id === id)?.data
+  const settings = cleanSettings(record('settings'))
   const people = of<Person>('kunskap_people').map((p) => ({ name: String(p.name ?? ''), topics: Array.isArray(p.topics) ? p.topics.map(String) : [] })).filter((p) => p.name)
   const existing = of<KunskapCard>('kunskap_cards').sort((a, b) => (b.created ?? 0) - (a.created ?? 0))
+
+  // Smaken: rösterna viktade per person, ämne och korttyp, plus det användaren själv ställt in.
+  const taste = weights(of<VoteRow>('kunskap_votes'), cleanPrefs(record('prefs')), people.flatMap((p) => [{ kind: 'person' as const, label: p.name }, ...p.topics.map((t) => ({ kind: 'topic' as const, label: t }))]))
+  const discovery = discoveryCount(settings.count)
 
   const now = Date.now()
   const batch: Batch = {
@@ -159,10 +170,10 @@ async function runBatch(userId: string, rows: Row[], trigger: Batch['trigger']):
 
   const usage = { total: NO_USAGE }
   try {
-    const { input, blocks } = await ask(people, settings.count, of<VoteRow>('kunskap_votes'), existing, usage)
-    const checked = await checkCards(input, people, collectSources(blocks), new Set(existing.map((c) => c.id)), settings.count, pageText, now, batch.id)
+    const { input, blocks } = await ask(people, settings.count, discovery, taste, existing, usage)
+    const checked = await checkCards(input, people, collectSources(blocks), new Set(existing.map((c) => c.id)), settings.count, pageText, now, batch.id, discovery)
     await save(userId, 'kunskap_cards', checked.cards)
-    Object.assign(batch, { status: 'klar', cards: checked.cards.length, quotesVerified: checked.quotesVerified, quotesRewritten: checked.quotesRewritten, dropped: checked.dropped })
+    Object.assign(batch, { status: 'klar', cards: checked.cards.length, quotesVerified: checked.quotesVerified, quotesRewritten: checked.quotesRewritten, dropped: checked.dropped, discovery: checked.discovery })
   } catch (error) {
     batch.status = 'fel'
     batch.error =
@@ -203,7 +214,7 @@ Deno.serve(async (req) => {
       const due = [...new Set(rows.map((r) => r.user_id))].filter((userId) => {
         const mine = rows.filter((r) => r.user_id === userId)
         const batches = mine.filter((r) => r.store === 'kunskap_batches').map((r) => r.data as Batch)
-        const settings = cleanSettings(mine.find((r) => r.store === 'kunskap_settings')?.data)
+        const settings = cleanSettings(mine.find((r) => r.store === 'kunskap_settings' && r.id === 'settings')?.data)
         return mine.some((r) => r.store === 'kunskap_people') && isDue(settings, batches, now) && batchesLastDay(batches, now) < MAX_BATCHES_PER_DAY
       })
       const done = await Promise.all(due.map((userId) => runBatch(userId, rows.filter((r) => r.user_id === userId), 'schema')))

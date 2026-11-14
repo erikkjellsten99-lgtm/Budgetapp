@@ -5,26 +5,33 @@ import {
   collectSources,
   htmlToText,
   normalizeUrl,
-  preferences,
   quoteInText,
   SAVE_TOOL,
   systemPrompt,
+  taste,
   toCandidate,
   userPrompt,
   type Person,
 } from '../../supabase/functions/kunskap-generera/generate.ts';
 import {
   batchesLastDay,
+  cleanPrefs,
   cleanSettings,
   costUsd,
+  discoveryCount,
   isDue,
+  leaning,
   MAX_BATCHES_PER_DAY,
+  NO_PREFS,
   NO_USAGE,
+  prefKey,
+  weights,
   type Batch,
+  type VoteRow,
 } from '../../supabase/functions/kunskap-generera/shared.ts';
 import { EXAMPLE_CARDS } from './cards';
-import { allCards, batchLog, feed, formatUsd, formatWhen, monthCost } from './kunskapState';
-import { loadKunskap, readGenerateReply, saveSettings } from './kunskapStore';
+import { allCards, batchLog, describeWeight, feed, formatUsd, formatWhen, monthCost, tasteOf, withManual } from './kunskapState';
+import { loadKunskap, readGenerateReply, savePrefs, saveSettings } from './kunskapStore';
 
 const PEOPLE: Person[] = [{ name: 'Susanna Søberg', topics: ['bastu', 'kallbad'] }];
 const URL_A = 'https://example.org/podd/avsnitt-12';
@@ -38,6 +45,7 @@ const raw = (over: Record<string, unknown> = {}) => ({
   person: 'susanna soberg',
   topic: 'kallbad',
   type: 'insikt',
+  discovery: false,
   text: 'Vinterbadare i hennes studie reglerade kroppstemperaturen bättre än kontrollgruppen.',
   sv: null,
   steps: null,
@@ -140,17 +148,101 @@ describe('citat måste stå ordagrant i källan', () => {
   });
 });
 
+const vote = (value: 1 | -1, person: string, topic: string, type: VoteRow['type']): VoteRow => ({ value, person, topic, type });
+
+describe('viktningen', () => {
+  const votes = [
+    vote(1, 'Susanna Søberg', 'Bastu', 'protokoll'),
+    vote(1, 'susanna soberg', 'bastu', 'protokoll'),
+    vote(1, 'Susanna Søberg', 'kallbad', 'insikt'),
+    vote(-1, 'Wim Hof', 'andning', 'citat'),
+    vote(-1, 'Wim Hof', 'andning', 'insikt'),
+  ];
+  const by = (all: ReturnType<typeof weights>, kind: string, label: string) => all.find((w) => w.key === prefKey(kind as 'person', label))!;
+
+  it('räknas per person, ämne och korttyp, dämpad så att en röst inte väger för tungt', () => {
+    const all = weights(votes, NO_PREFS);
+    expect(by(all, 'person', 'Susanna Søberg')).toMatchObject({ likes: 3, dislikes: 0, weight: 0.6 });
+    expect(by(all, 'person', 'Wim Hof')).toMatchObject({ likes: 0, dislikes: 2, weight: -0.5 });
+    expect(by(all, 'topic', 'bastu')).toMatchObject({ label: 'Bastu', likes: 2, weight: 0.5 });
+    expect(by(all, 'type', 'insikt')).toMatchObject({ likes: 1, dislikes: 1, weight: 0 });
+    expect(by(weights([vote(1, 'A', 'b', 'citat')], NO_PREFS), 'person', 'A').weight).toBe(0.33);
+    expect(all.filter((w) => w.kind === 'person').map((w) => w.label)).toEqual(['Susanna Søberg', 'Wim Hof']);
+    expect(all.map((w) => w.kind).join()).toMatch(/^(person,)+(topic,)+(type,?)+$/);
+    expect([leaning({ weight: 0.33 }), leaning({ weight: 0 }), leaning({ weight: -0.5 })]).toEqual(['mer', 'neutral', 'mindre']);
+  });
+
+  it('det du själv valt går före rösterna, och Auto lämnar tillbaka till rösterna', () => {
+    let prefs = withManual(NO_PREFS, 'person', 'Wim Hof', prefKey('person', 'Wim Hof'), 'mer');
+    prefs = withManual(prefs, 'topic', 'sömn', prefKey('topic', 'sömn'), 'mer');
+    const all = weights(votes, prefs);
+    expect(by(all, 'person', 'Wim Hof')).toMatchObject({ manual: 'mer', weight: 1, dislikes: 2 });
+    expect(by(all, 'topic', 'sömn')).toMatchObject({ manual: 'mer', weight: 1, likes: 0 });
+    expect(describeWeight(by(all, 'person', 'Wim Hof'))).toBe('Gillar, valt av dig');
+    expect(describeWeight(by(all, 'person', 'Susanna Søberg'))).toBe('Gillar: 3 gilla, 0 ogilla');
+    const back = withManual(prefs, 'person', 'Wim Hof', prefKey('person', 'Wim Hof'), null);
+    expect(by(weights(votes, back), 'person', 'Wim Hof')).toMatchObject({ weight: -0.5 });
+    expect(describeWeight(by(weights(votes, back), 'person', 'Wim Hof'))).toBe('Gillar mindre: 0 gilla, 2 ogilla');
+  });
+
+  it('dem du följer och de tre korttyperna finns med även utan röster', () => {
+    const all = tasteOf([], NO_PREFS, [{ id: '1', name: 'Naval Ravikant', topics: ['lycka'], created: 0 }]);
+    expect(all.map((w) => `${w.kind}:${w.label}`)).toEqual(['person:Naval Ravikant', 'topic:lycka', 'type:citat', 'type:insikt', 'type:protokoll']);
+    expect(describeWeight(all[0])).toBe('Inga röster än');
+  });
+
+  it('trasiga sparade val städas bort', () => {
+    expect(cleanPrefs(null)).toEqual({ id: 'prefs', manual: {} });
+    const clean = cleanPrefs({ manual: { a: { kind: 'topic', label: '  Sömn ', level: 'mer' }, b: { kind: 'x', label: 'y', level: 'mer' }, c: { kind: 'person', label: '', level: 'mer' }, d: { kind: 'type', label: 'citat', level: 'mest' }, e: 'skräp' } });
+    expect(clean.manual).toEqual({ 'topic:sömn': { kind: 'topic', label: 'Sömn', level: 'mer' } });
+  });
+
+  it('ungefär vart femte kort är upptäckt', () => {
+    expect([1, 2, 3, 5, 7, 8, 10].map(discoveryCount)).toEqual([0, 0, 1, 1, 1, 2, 2]);
+  });
+});
+
 describe('prompten', () => {
-  it('nämner personerna, antalet, smaken och det som redan finns', () => {
-    const votes = [
-      { value: 1 as const, person: 'Susanna Søberg', topic: 'bastu', type: 'protokoll' as const },
-      { value: -1 as const, person: 'Wim Hof', topic: 'andning', type: 'citat' as const },
-    ];
-    const text = userPrompt(PEOPLE, 5, votes, [{ person: 'Susanna Søberg', text: 'Ett kort som finns.' }], '2026-11-14');
-    for (const part of ['Gör 5 nya kort', 'Susanna Søberg: bastu, kallbad', 'Gillar mest', 'typen protokoll', 'Ogillar mest', 'Ett kort som finns.']) expect(text).toContain(part);
-    expect(preferences([])).toBe('');
+  it('nämner personerna, antalet, upptäckt, smaken och det som redan finns', () => {
+    const all = weights([vote(1, 'Susanna Søberg', 'bastu', 'protokoll'), vote(1, 'Susanna Søberg', 'bastu', 'protokoll'), vote(1, 'Susanna Søberg', 'bastu', 'protokoll'), vote(-1, 'Wim Hof', 'andning', 'citat')], NO_PREFS);
+    const text = userPrompt(PEOPLE, 5, 1, all, [{ person: 'Susanna Søberg', text: 'Ett kort som finns.' }], '2026-11-14');
+    for (const part of ['Gör 5 nya kort', '1 av dem ska vara upptäcktskort', 'Övriga 4', 'Susanna Søberg: bastu, kallbad', 'Mer av: personen Susanna Søberg (starkt)', 'ämnet bastu', 'korttypen protokoll', 'Mindre av: personen Wim Hof', 'Ett kort som finns.'])
+      expect(text).toContain(part);
+    expect(userPrompt(PEOPLE, 2, 0, [], [], '2026-11-14')).toContain('Inga upptäcktskort');
+    expect(userPrompt(PEOPLE, 2, 0, [], [], '2026-11-14')).not.toContain('smak');
+    expect(taste([])).toBe('');
+    expect(taste(weights([vote(1, 'A', 'b', 'citat'), vote(-1, 'A', 'b', 'citat')], NO_PREFS))).toBe('');
     expect(systemPrompt()).toContain('spara_kort');
+    expect(systemPrompt()).toContain('Upptäcktskort');
     expect(SAVE_TOOL.input_schema.properties.cards.items.required).toEqual(Object.keys(SAVE_TOOL.input_schema.properties.cards.items.properties));
+  });
+});
+
+describe('upptäcktskort', () => {
+  const run = (cards: unknown[], max: number, count = 5) => checkCards({ cards }, PEOPLE, SOURCES, new Set(), count, async () => null, 1000, 'b-1', max);
+  const found = (over: Record<string, unknown> = {}) => raw({ person: 'Rhonda Patrick', topic: 'värme', discovery: true, text: 'En insikt från en ny person.', ...over });
+
+  it('en person du inte följer släpps bara in på ett kort märkt som upptäckt', () => {
+    expect(toCandidate(found(), PEOPLE, SOURCES)?.card).toMatchObject({ person: 'Rhonda Patrick', topic: 'värme', discovery: true });
+    expect(toCandidate(found({ discovery: false }), PEOPLE, SOURCES)).toBeNull();
+    expect(toCandidate(found({ discovery: 'true' }), PEOPLE, SOURCES)).toBeNull();
+    expect(toCandidate(found({ source_url: 'https://pahittad.se/x' }), PEOPLE, SOURCES)).toBeNull();
+    expect(toCandidate(raw({ discovery: true }), PEOPLE, SOURCES)?.card).toMatchObject({ person: 'Susanna Søberg', discovery: true });
+    expect(toCandidate(raw(), PEOPLE, SOURCES)?.card.discovery).toBeUndefined();
+  });
+
+  it('högst så många upptäcktskort som batchen ska ha', async () => {
+    const out = await run([found(), raw(), found({ text: 'En andra upptäckt.' }), raw({ text: 'En vanlig till.' })], 1);
+    expect(out.cards.map((c) => !!c.discovery)).toEqual([true, false, false]);
+    expect(out).toMatchObject({ discovery: 1, dropped: 1 });
+    expect((await run([found()], 0)).cards).toEqual([]);
+  });
+
+  it('visas i flödet fast personen inte följs', () => {
+    const card = { ...EXAMPLE_CARDS[0], id: 'g-9', person: 'Rhonda Patrick', discovery: true, created: 5 };
+    const me = [{ id: 'x', name: 'Wim Hof', topics: [], created: 0 }];
+    expect(feed(allCards([card], EXAMPLE_CARDS), me, new Map(), 'alla')[0]).toEqual(card);
+    expect(feed(allCards([{ ...card, discovery: false }], EXAMPLE_CARDS), me, new Map(), 'alla').some((c) => c.id === 'g-9')).toBe(false);
   });
 });
 
@@ -237,6 +329,11 @@ describe('appen', () => {
     expect((await loadKunskap()).settings).toEqual({ id: 'settings', frequency: 'av', count: 5 });
     await saveSettings({ frequency: 'vecka', count: 42 });
     expect((await loadKunskap()).settings).toEqual({ id: 'settings', frequency: 'vecka', count: 10 });
+    // Smaken ligger i samma store med eget id, och de två skriver inte över varandra.
+    expect((await loadKunskap()).prefs).toEqual(NO_PREFS);
+    await savePrefs(withManual(NO_PREFS, 'topic', 'Sömn', prefKey('topic', 'Sömn'), 'mer'));
+    await saveSettings({ frequency: 'dag', count: 3 });
+    expect(await loadKunskap()).toMatchObject({ settings: { frequency: 'dag', count: 3 }, prefs: { manual: { 'topic:sömn': { label: 'Sömn', level: 'mer' } } } });
   });
 
   it('svaret från servern tolkas, även när funktionen inte är utlagd', () => {

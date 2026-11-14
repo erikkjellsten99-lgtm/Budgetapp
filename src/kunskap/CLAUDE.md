@@ -12,6 +12,15 @@
   webbsökningens resultat kastas, och ett citat som servern inte hittar ordagrant i källsidans text görs om till en
   insikt med egna ord (eller kastas). Bara blanksteg, typografiska citattecken och tankstreck får skilja. Lätta aldrig
   på de kontrollerna för att få fler kort.
+- **Personligt:** rösterna viktas per person, ämne och korttyp i `weights()` (`shared.ts`): (gilla − ogilla) /
+  (gilla + ogilla + 2). Det användaren själv ställt in i vyn "Vad Claude tror du gillar" (Mer, Mindre) går före
+  rösterna och sparas som posten `prefs` i `kunskap_settings` (samma store som inställningen `settings`, olika id, så
+  ingen ny databasversion). Appen och servern räknar med samma funktion; viktningen skickas som text i prompten
+  (`taste()`).
+- **Upptäckt:** ungefär vart femte kort (`discoveryCount`, 5 kort ger 1) får handla om en person som inte följs eller
+  ett nytt ämne. Servern släpper bara in en icke följd person på ett kort som är märkt `discovery`, och aldrig fler än
+  batchens andel. Källkravet och citatkontrollen gäller dem också. I flödet visas de med märket Upptäckt och en
+  Följ-knapp.
 - Kostnadsskydd: utan sparad inställning (`kunskap_settings`) genereras ingenting, högst 3 batchar per person och
   dygn, högst 10 kort per batch, tak på antal sökningar. Varje batch loggas med token, sökningar och USD, även när
   den misslyckas. Priserna står i `PRICE` i `shared.ts` och ska ändras där om Anthropic ändrar dem.

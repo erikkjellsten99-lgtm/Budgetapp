@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { deleteKunskapRecord, loadKunskapRecords, newId, onHabitChange, saveKunskapRecord } from '../vanor/store';
 import { supabase } from '../sync';
 import { syncHabits } from '../vanor/sync';
-import { cleanSettings, DEFAULT_SETTINGS, type Batch, type KunskapSettings } from '../../supabase/functions/kunskap-generera/shared.ts';
+import { cleanPrefs, cleanSettings, DEFAULT_SETTINGS, NO_PREFS, type Batch, type KunskapPrefs, type KunskapSettings } from '../../supabase/functions/kunskap-generera/shared.ts';
 import type { KunskapCard } from './cards';
 import { cleanName, isFollowed, nextVote, parseTopics, type FollowedPerson, type Vote } from './kunskapState';
 
@@ -15,6 +15,8 @@ export interface KunskapData {
   /** Genererade kort, skrivna av servern. */
   cards: KunskapCard[];
   settings: KunskapSettings;
+  /** Det du själv ändrat i "Vad Claude tror du gillar". */
+  prefs: KunskapPrefs;
   /** Kostnadsloggen, skriven av servern. */
   batches: Batch[];
 }
@@ -24,15 +26,21 @@ export async function loadKunskap(): Promise<KunskapData> {
     loadKunskapRecords<FollowedPerson>('kunskap_people'),
     loadKunskapRecords<Vote>('kunskap_votes'),
     loadKunskapRecords<KunskapCard>('kunskap_cards'),
-    loadKunskapRecords<unknown>('kunskap_settings'),
+    loadKunskapRecords<{ id?: string }>('kunskap_settings'),
     loadKunskapRecords<Batch>('kunskap_batches'),
   ]);
   people.sort((a, b) => a.created - b.created);
-  return { people, votes, cards, settings: settings.length ? cleanSettings(settings[0]) : DEFAULT_SETTINGS, batches };
+  // Inställningen och smaken ligger i samma store, med olika id.
+  const saved = settings.find((r) => r.id === 'settings');
+  const prefs = settings.find((r) => r.id === 'prefs');
+  return { people, votes, cards, settings: saved ? cleanSettings(saved) : DEFAULT_SETTINGS, prefs: prefs ? cleanPrefs(prefs) : NO_PREFS, batches };
 }
 
 /** Sparar hur ofta kort ska genereras och hur många. Synkas till kontot, där servern läser det. */
 export const saveSettings = (settings: Pick<KunskapSettings, 'frequency' | 'count'>) => saveKunskapRecord('kunskap_settings', cleanSettings(settings));
+
+/** Sparar det du själv ställt in om vad du gillar. Synkas till kontot, där servern läser det vid nästa generering. */
+export const savePrefs = (prefs: KunskapPrefs) => saveKunskapRecord('kunskap_settings', cleanPrefs(prefs));
 
 export type GenerateReply = { ok: true; cards: number; costUsd: number } | { ok: false; message: string };
 

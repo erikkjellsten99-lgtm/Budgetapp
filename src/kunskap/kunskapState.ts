@@ -1,7 +1,17 @@
 // Kunskap: ren logik för personer att följa, gilla/ogilla och vilka kort som visas. Inget här rör lagringen.
 
 import type { CardType, KunskapCard } from './cards';
-import { personKey, STALE_MS, type Batch } from '../../supabase/functions/kunskap-generera/shared.ts';
+import {
+  leaning,
+  personKey,
+  STALE_MS,
+  weights,
+  type Batch,
+  type KunskapPrefs,
+  type ManualLevel,
+  type PrefKind,
+  type Weight,
+} from '../../supabase/functions/kunskap-generera/shared.ts';
 
 export { personKey };
 
@@ -63,13 +73,13 @@ export const FILTERS: { id: Filter; label: string }[] = [
 ];
 
 /**
- * Korten i flödet. Följer du ingen visas alla kort (exempel), annars bara kort från dem du följer.
- * Gillade visar det du gillat, oavsett vem du följer just nu.
+ * Korten i flödet. Följer du ingen visas alla kort (exempel), annars bara kort från dem du följer, plus
+ * upptäcktskorten. Gillade visar det du gillat, oavsett vem du följer just nu.
  */
 export function feed(cards: KunskapCard[], people: FollowedPerson[], votes: Map<string, 1 | -1>, filter: Filter): KunskapCard[] {
   if (filter === 'gillade') return cards.filter((c) => votes.get(c.id) === 1);
   const followed = new Set(people.map((p) => personKey(p.name)));
-  const mine = followed.size === 0 ? cards : cards.filter((c) => followed.has(personKey(c.person)));
+  const mine = followed.size === 0 ? cards : cards.filter((c) => c.discovery || followed.has(personKey(c.person)));
   return filter === 'alla' ? mine : mine.filter((c) => c.type === filter);
 }
 
@@ -118,4 +128,35 @@ export function formatWhen(ms: number): string {
   const d = new Date(ms);
   const two = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
+}
+
+// Smak: "Vad Claude tror du gillar"
+
+const TYPES = [
+  { kind: 'type' as const, label: 'citat' },
+  { kind: 'type' as const, label: 'insikt' },
+  { kind: 'type' as const, label: 'protokoll' },
+];
+
+/** Viktningen som den visas och skickas till servern: rösterna, det du ställt in, dem du följer och de tre korttyperna. */
+export function tasteOf(votes: Vote[], prefs: KunskapPrefs, people: FollowedPerson[]): Weight[] {
+  const known = [...people.flatMap((p) => [{ kind: 'person' as const, label: p.name }, ...p.topics.map((t) => ({ kind: 'topic' as const, label: t }))]), ...TYPES];
+  return weights(votes, prefs, known);
+}
+
+/** Smaken med en rad ändrad. `null` tar bort ditt eget val, så att rösterna gäller igen. */
+export function withManual(prefs: KunskapPrefs, kind: PrefKind, label: string, key: string, level: ManualLevel | null): KunskapPrefs {
+  const manual = { ...prefs.manual };
+  if (level === null) delete manual[key];
+  else manual[key] = { kind, label, level };
+  return { id: 'prefs', manual };
+}
+
+/** "Gillar", "Gillar mindre" eller "Neutralt", och varför: ditt eget val eller antalet röster. */
+export function describeWeight(w: Weight): string {
+  const lean = leaning(w);
+  const head = lean === 'mer' ? 'Gillar' : lean === 'mindre' ? 'Gillar mindre' : 'Neutralt';
+  if (w.manual) return `${head}, valt av dig`;
+  if (w.likes + w.dislikes === 0) return 'Inga röster än';
+  return `${head}: ${w.likes} gilla, ${w.dislikes} ogilla`;
 }

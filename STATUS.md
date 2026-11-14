@@ -141,6 +141,12 @@
   bland sökresultaten kastas, citat som inte står ordagrant på källsidan blir insikter. Kostnad per batch (token,
   sökningar, USD) visas under inställningarna. Vanor-databasen är version 6 (`kunskap_cards`, `kunskap_settings`,
   `kunskap_batches`).
+- Personligt (2026-11-15, i repot): viktning av gilla/ogilla per person, ämne och korttyp, som skickas med i
+  prompten. Vyn "Vad Claude tror du gillar" (hjärtat i Kunskaps rubrik) visar viktningen och låter Erik sätta Mer,
+  Mindre eller Auto per rad och lägga till egna ämnen. Ungefär 20 % av korten per batch är upptäckt (ny person eller
+  nytt ämne), märkta i flödet med Följ-knapp. Inte prövat: om modellen faktiskt följer viktningen och andelen.
+- PR 119 mergades 2026-11-14 med bara flödet (vanor-databasen version 5). Genereringen (version 6) och det personliga
+  ligger i en ny PR från samma gren.
 - **Att lägga ut efter "Lägg ut":** funktionerna `kunskap` (verify_jwt på) och `kunskap-generera` (verify_jwt AV),
   hemligheten `KUNSKAP_CRON_SECRET` (samma värde i Vault som `kunskap_cron_secret`), och migrationen
   `20261115120000_kunskap_generera_cron.sql`. `ANTHROPIC_API_KEY` finns redan.
