@@ -78,14 +78,17 @@ async function callGenerate(name: 'kunskap-generera' | 'kunskap-presentation', b
 }
 
 /** Börja följa en person. Ger false om namnet är tomt eller personen redan följs. */
-export async function follow(name: string, topics: string | string[]): Promise<boolean> {
-  const clean = cleanName(name);
-  if (!clean) return false;
-  const { people } = await loadKunskap();
-  if (isFollowed(people, clean)) return false;
-  const person: FollowedPerson = { id: newId(), name: clean, topics: parseTopics(Array.isArray(topics) ? topics.join(',') : topics), created: Date.now() };
-  await saveKunskapRecord('kunskap_people', person);
-  return true;
+export function follow(name: string, topics: string | string[]): Promise<boolean> {
+  // En i taget: annars hinner ett dubbelklick lägga till samma person två gånger innan den första sparats.
+  return serial(async () => {
+    const clean = cleanName(name);
+    if (!clean) return false;
+    const { people } = await loadKunskap();
+    if (isFollowed(people, clean)) return false;
+    const person: FollowedPerson = { id: newId(), name: clean, topics: parseTopics(Array.isArray(topics) ? topics.join(',') : topics), created: Date.now() };
+    await saveKunskapRecord('kunskap_people', person);
+    return true;
+  });
 }
 
 export const unfollow = (id: string) => deleteKunskapRecord('kunskap_people', id);
@@ -142,6 +145,12 @@ function followLibraryWhenReady(): Promise<void> {
 // Tryckningar görs en i taget, så att ett dubbelklick blir två riktiga tryckningar (på och av) och inte två "på".
 let queue: Promise<unknown> = Promise.resolve();
 
+function serial<T>(run: () => Promise<T>): Promise<T> {
+  const next = queue.then(run, run);
+  queue = next.catch(() => {});
+  return next;
+}
+
 /** Gilla eller ogilla ett kort. Samma knapp en gång till tar bort rösten. */
 export function vote(card: KunskapCard, pressed: 1 | -1): Promise<void> {
   const run = async () => {
@@ -151,9 +160,7 @@ export function vote(card: KunskapCard, pressed: 1 | -1): Promise<void> {
     const record: Vote = { cardId: card.id, value, ts: Date.now(), person: card.person, topic: card.topic, type: card.type };
     return saveKunskapRecord('kunskap_votes', record);
   };
-  const next = queue.then(run, run);
-  queue = next.catch(() => {});
-  return next;
+  return serial(run);
 }
 
 /** Personer och röster, uppdaterade när något ändras här eller kommer in via synken. Null medan de laddas. */

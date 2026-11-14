@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import Lar from '../lar/Lar';
 import { PEOPLE } from '../lar/people';
 import { EXAMPLE_CARDS, SUGGESTED, TYPE_LABEL, type KunskapCard } from './cards';
+import { discover } from './discover';
 import { askAboutCard, QUESTION_MAX, TURNS_BACK, type ChatTurn } from './chatApi';
 import {
   COUNT_MAX,
@@ -852,11 +853,84 @@ export function MoreCards({
 /** Personens sida i biblioteket (Lär), om hen har en. */
 const libraryId = (name: string) => PEOPLE.find((p) => personKey(p.name) === personKey(name))?.id;
 
-type Mode = 'flode' | 'bibliotek';
+type Mode = 'flode' | 'bibliotek' | 'upptack';
 const MODES: { id: Mode; label: string }[] = [
   { id: 'flode', label: 'Flöde' },
   { id: 'bibliotek', label: 'Bibliotek' },
+  { id: 'upptack', label: 'Upptäck' },
 ];
+const EYEBROW: Record<Mode, string> = { flode: 'Flöde', bibliotek: 'Bibliotek', upptack: 'Upptäck' };
+
+/**
+ * Upptäck: sök på genre och få förslag på personer att följa, med det som passar dig först. Katalogen är fast
+ * (discover.ts), så inget hämtas och inget kostar. Den som följs blir en egen person i biblioteket.
+ */
+export function Discover({ taste, already, onFollow }: { taste: Weight[]; already: string[]; onFollow: (name: string, topics: string[]) => void }) {
+  const [query, setQuery] = useState('');
+  const [only, setOnly] = useState<string | null>(null);
+  const matches = discover(taste, already, query, only ?? undefined);
+  return (
+    <div className="kunskap-discover">
+      <p className="kunskap-hint">
+        Förslag på personer att följa, sorterade efter vad du gillar. Beskrivningarna är korta och inte granskade som biblioteket.
+        Den du följer får en egen sida och kommer med i flödet.
+      </p>
+      <input
+        className="kunskap-search"
+        type="search"
+        value={query}
+        maxLength={60}
+        placeholder="Sök genre eller person, t.ex. framgång"
+        aria-label="Sök genre eller person"
+        autoComplete="off"
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <nav className="kunskap-chips" aria-label="Genrer">
+        <button type="button" className={only === null ? 'chip active' : 'chip'} aria-pressed={only === null} onClick={() => setOnly(null)}>
+          Alla
+        </button>
+        {discover(taste, already).map(({ genre }) => (
+          <button key={genre.id} type="button" className={only === genre.id ? 'chip active' : 'chip'} aria-pressed={only === genre.id} onClick={() => setOnly(genre.id)}>
+            {genre.label}
+          </button>
+        ))}
+      </nav>
+      {matches.length === 0 ? (
+        <div className="empty">
+          <p>Inga förslag för ”{query.trim()}”. Pröva ett annat ord, eller lägg till personen själv under Bibliotek.</p>
+        </div>
+      ) : (
+        matches.map(({ genre, fits, people }) => (
+          <section key={genre.id} className="kunskap-genre" aria-labelledby={`kunskap-genre-${genre.id}`}>
+            <h3 id={`kunskap-genre-${genre.id}`}>
+              {genre.label}
+              {fits && <span className="kunskap-type upptackt">Passar dig</span>}
+            </h3>
+            <ul className="kunskap-suggestions">
+              {people.map((p) => (
+                <li key={p.name}>
+                  <div>
+                    <span className="kunskap-people-name">{p.name}</span>
+                    <span className="kunskap-suggestion-about">{p.about}</span>
+                    <span className="kunskap-people-topics">{p.topics.join(', ')}</span>
+                  </div>
+                  {p.followed ? (
+                    <span className="kunskap-followed">Följer</span>
+                  ) : (
+                    <button type="button" className="kunskap-follow" onClick={() => onFollow(p.name, p.topics)}>
+                      Följ
+                      <span className="visually-hidden"> {p.name}</span>
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      )}
+    </div>
+  );
+}
 
 /**
  * Kunskap: två lägen. Flödet är korta kort från personer du följer, med gilla/ogilla och en chatt per kort.
@@ -980,7 +1054,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
         <>
       <div className="view-intro">
         <div>
-          <p className="eyebrow">{mode === 'flode' ? 'Flöde' : 'Bibliotek'}</p>
+          <p className="eyebrow">{EYEBROW[mode]}</p>
           <h2>Mindhub</h2>
         </div>
         {mode === 'flode' && (
@@ -997,7 +1071,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
         </div>
         )}
       </div>
-      <div className="kunskap-segment two kunskap-modes" role="group" aria-label="Läge">
+      <div className="kunskap-segment kunskap-modes" role="group" aria-label="Läge">
         {MODES.map((m) => (
           <button key={m.id} type="button" className={m.id === mode ? 'active' : undefined} aria-pressed={m.id === mode} onClick={() => showMode(m.id)}>
             {m.label}
@@ -1005,6 +1079,13 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
         ))}
       </div>
         </>
+      )}
+      {mode === 'upptack' && (
+        <Discover
+          taste={tasteOf(data?.votes ?? [], data?.prefs ?? { id: 'prefs', manual: {} }, people)}
+          already={[...people.map((p) => p.name), ...PEOPLE.map((p) => p.name)]}
+          onFollow={(name, topics) => void follow(name, topics)}
+        />
       )}
       {mode === 'bibliotek' && ownPerson && (
         <OwnPersonPage

@@ -1,8 +1,14 @@
 # Kunskap – regler för den här delen
 
-- Två lägen i samma flik: **Flöde** (korten, den här mappen) och **Bibliotek** (Lär, `../lar/`, fast och granskat
-  innehåll). Namnet på ett kort är en knapp till personsidan när personen finns i `PEOPLE`; Tillbaka går då till
+- Tre lägen i samma flik: **Flöde** (korten, den här mappen), **Bibliotek** (Lär, `../lar/`, fast och granskat
+  innehåll) och **Upptäck** (förslag på personer att följa, se nedan). Namnet på ett kort är en knapp till personsidan när personen finns i `PEOPLE`; Tillbaka går då till
   flödet på samma ställe. Personer utan sida i biblioteket får ingen, och sådana sidor genereras aldrig av Claude.
+
+- **Upptäck** (`discover.ts`, Eriks önskan 2026-11-15): en fast katalog med genrer och personer att följa, sökbar,
+  med genrerna som passar smaken (`weights`) först och personer man valt mindre av dolda. Inget hämtas och inget
+  kostar. Katalogen är förslag skrivna ur minnet, inte granskat innehåll: bara vem personen är och vad hen är känd
+  för, högst 90 tecken, inga påståenden om vad som fungerar, inga siffror, inga citat, inga länkar (låst i
+  `discover.test.tsx`). Är du osäker på en uppgift, ta inte med personen. Följ lägger till personen som egen person.
 
 - **Egna personer i biblioteket:** de Erik följer som inte finns i `PEOPLE` visas under Egna personer i läget
   Bibliotek och har en egen sida (`OwnPersonPage`). Sidan är inte granskad och säger det: den visar bara ämnena

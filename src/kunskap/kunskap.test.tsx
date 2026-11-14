@@ -127,6 +127,15 @@ describe('lagringen', () => {
   });
 });
 
+describe('dubbelklick på Följ', () => {
+  it('två tryck direkt efter varandra ger en person, inte två', async () => {
+    expect(await Promise.all([follow('Paul Graham', 'startups'), follow('paul graham', '')])).toEqual([true, false]);
+    const people = (await loadKunskap()).people.filter((p) => p.name === 'Paul Graham');
+    expect(people).toHaveLength(1);
+    await unfollow(people[0].id);
+  });
+});
+
 describe('bibliotekets personer följs från början', () => {
   it('alla läggs till en gång, med fasta id:n, och den som tas bort kommer inte tillbaka', async () => {
     // En person som redan följs med eget id får ingen dubblett.
