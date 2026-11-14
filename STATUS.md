@@ -44,8 +44,16 @@
 - Nytt 2026-11-13: Jarvis i appen frågar Claude via edge function `jarvis` (verktyg, RLS, 50 frågor per dag). Hälsar
   med förnamnet (Konto → Förnamn) och börjar lyssna när rummet öppnas. Håll in eller tryck för att prata. Adressen
   `?jarvis=1&listen=1` öppnar Jarvis direkt. Tal och uppläsning ligger bakom `voice.ts`.
-- Nytt 2026-11-14 (PR, inte utlagt): verktyget `hamta_vanor`, så att Jarvis i appen kan svara om vanor och Att göra
-  (måsten idag, kan vänta, bockat, veckans läge). Kräver ny utläggning av `jarvis`. Hälsodata läses inte.
+- Nytt 2026-11-14: verktyget `hamta_vanor`, så att Jarvis i appen kan svara om vanor och Att göra (måsten idag,
+  kan vänta, bockat, veckans läge). Hälsodata läses inte.
+- Nytt 2026-11-14: Jarvis pratar mer som en människa (ny systemprompt, förnamn, följdfrågor med de senaste fyra
+  utbytena) och får röst från ElevenLabs (funktionen `jarvis-rost`, hemligheten `ELEVENLABS_API_KEY`).
+- **Utlagt 2026-11-14:** migrationen `jarvis_speech` är körd, `jarvis` version 3 (tre verktyg, `history`, ny prompt)
+  och `jarvis-rost` version 2 ligger ute, båda med verify_jwt på. Båda startar och nekar den som inte är inloggad.
+  Inte prövat: ett riktigt svar från nya `jarvis`, rösten mot ElevenLabs (nyckeln saknas tills Erik lagt in den),
+  och uppspelningen på iPhone. Appens del går ut först när PR:en med samtalston och röst är sammanfogad (PR 115 hann bara få med `hamta_vanor`).
+- MCP-verktyget gör om `\u00A0` i källan till ett vanligt tecken vid utläggning. Skriv `\s` i reguljära uttryck i
+  funktioner i stället för att räkna upp mellanslagstecken (`jarvis-rost/text.ts`).
 - `ANTHROPIC_API_KEY` lades in som hemlighet 2026-11-14. Första riktiga svaret från Claude samma dag.
 - **Utlagt 2026-11-13:** migrationen `jarvis_usage` är körd och `jarvis` version 1 ligger ute (verify_jwt på).
   Räknaren är prövad i en tillbakarullad transaktion: fråga 1–50 går igenom, 51 nekas, räknaren står kvar på 50.

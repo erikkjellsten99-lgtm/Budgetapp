@@ -1,8 +1,18 @@
 // Jarvis mot servern: hur svaren tolkas, hälsningen och adressen som öppnar Jarvis. Inget nätverk.
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { greeting, readReply, SIGNED_OUT, wantsJarvis } from './jarvisApi';
+import { addTurn, greeting, readReply, SIGNED_OUT, TURNS_BACK, wantsJarvis } from './jarvisApi';
 import { firstNameOf } from './sync';
+
+describe('addTurn', () => {
+  it('lägger det nya utbytet sist och behåller bara de senaste', () => {
+    let talk = addTurn([], { question: 'fråga 0', answer: 'svar 0' });
+    for (let i = 1; i < 7; i++) talk = addTurn(talk, { question: `fråga ${i}`, answer: `svar ${i}` });
+    expect(talk).toHaveLength(TURNS_BACK);
+    expect(talk[0].question).toBe('fråga 3');
+    expect(talk[TURNS_BACK - 1]).toEqual({ question: 'fråga 6', answer: 'svar 6' });
+  });
+});
 
 describe('readReply', () => {
   it('ett svar från servern', () => {

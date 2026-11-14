@@ -1,9 +1,11 @@
 // Jarvis röst bakom ett eget gränssnitt: tal till text (STT) och text till tal (TTS).
-// Jarvis-vyn använder bara `stt` och `tts` härifrån. I dag ligger webbläsarens inbyggda stöd bakom
-// (speech.ts: SpeechRecognition och speechSynthesis). Vill du byta till t.ex. Whisper eller ElevenLabs
-// skriver du en ny SpeechToText eller TextToSpeech och byter raderna längst ner. Resten av appen rörs inte.
+// Jarvis-vyn använder bara `stt` och `tts` härifrån. Lyssnandet är webbläsarens (speech.ts: SpeechRecognition).
+// Rösten är ElevenLabs via servern (cloudVoice.ts), med webbläsarens uppläsning (speechSynthesis) som reserv.
+// Vill du byta motor, t.ex. till Whisper, skriver du en ny SpeechToText eller TextToSpeech och byter raderna
+// längst ner. Resten av appen rörs inte.
 
 import { canListen, canSpeak, listen, readVoice, speak, stopSpeaking, unlockSpeech } from './speech';
+import { cloudVoiceReady, fetchSpeech, playSpeech, savedSpeech, saveSpeech, stopPlayer, unlockPlayer } from './cloudVoice';
 
 /** En pågående lyssning. */
 export interface ListenSession {
@@ -35,6 +37,11 @@ export interface SpeakHandlers {
   onStart?: () => void;
   /** Uppläsningen är klar eller avbruten. */
   onEnd: () => void;
+  /**
+   * Texten är alltid densamma (hälsningen): spara ljudet i telefonen, så att den nästa gång spelas direkt
+   * utan anrop. Första gången läser telefonens röst upp den medan ljudet hämtas i bakgrunden.
+   */
+  keep?: boolean;
 }
 
 /** Text till tal. */
@@ -60,5 +67,51 @@ const browserTts: TextToSpeech = {
   stop: stopSpeaking,
 };
 
+/** Ökar för varje uppläsning och stopp, så att ett ljud som kommer för sent från servern inte spelas. */
+let turn = 0;
+
+/**
+ * Mänsklig röst från servern (ElevenLabs). Går den inte att få fram, eller vägrar telefonen spela ljudet,
+ * läser telefonens röst upp texten i stället, så att Jarvis aldrig blir tyst.
+ */
+const cloudTts: TextToSpeech = {
+  available: () => canSpeak() || cloudVoiceReady(),
+  unlock: () => {
+    unlockSpeech();
+    unlockPlayer();
+  },
+  speak: (text, handlers) => {
+    const mine = ++turn;
+    stopPlayer();
+    const fallback = () => {
+      if (mine !== turn) return;
+      if (canSpeak()) browserTts.speak(text, handlers);
+      else handlers.onEnd();
+    };
+    if (!cloudVoiceReady()) return fallback();
+    (async () => {
+      let audio = handlers.keep ? await savedSpeech(text) : null;
+      if (mine !== turn) return;
+      if (!audio && handlers.keep) {
+        // Hälsningen ska komma direkt: telefonens röst nu, och ljudet sparas till nästa gång.
+        fallback();
+        const fetched = await fetchSpeech(text);
+        if (fetched) await saveSpeech(text, fetched);
+        return;
+      }
+      audio ??= await fetchSpeech(text);
+      if (mine !== turn) return;
+      if (!audio) return fallback();
+      const onEnd = () => mine === turn && handlers.onEnd();
+      if (!(await playSpeech(audio, handlers.onStart, onEnd))) fallback();
+    })();
+  },
+  stop: () => {
+    turn++;
+    stopPlayer();
+    stopSpeaking();
+  },
+};
+
 export const stt: SpeechToText = browserStt;
-export const tts: TextToSpeech = browserTts;
+export const tts: TextToSpeech = cloudTts;
