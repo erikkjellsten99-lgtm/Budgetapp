@@ -90,6 +90,11 @@
 - Egna personer i biblioteket (2026-11-15): den som läggs till själv visas under Egna personer i Bibliotek och har
   en sida med sina kort. Sidan är märkt som inte granskad. Beslut: inga genererade personsidor (text om personen,
   påståenden, märkning av belägg), bara korten med källa.
+- Presentation av egna personer (2026-11-15, i repot, **inte utlagd**): knappen "Skriv en presentation" på en egen
+  persons sida ber den nya funktionen `kunskap-presentation` skriva en kort text med källor. Före utläggning svarar
+  knappen "inte påslaget på servern än". Delad serverkod ligger i `kunskap-generera/server.ts`; `kunskap-generera`
+  beter sig som version 1 men bör läggas ut igen så att servern stämmer med repot.
+  Inte prövat mot Claude.
 - Bibliotekets personer följs automatiskt sedan 2026-11-15 (Eriks önskan: alla i biblioteket ska finnas i flödet).
   De går att ta bort under Följer och kommer då inte tillbaka. Inte prövat inloggad mot riktig synk på två telefoner.
 

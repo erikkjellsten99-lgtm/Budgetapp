@@ -222,7 +222,7 @@ describe('egna personer i biblioteket', () => {
     const card = { ...EXAMPLE_CARDS.find((c) => c.type === 'insikt')!, id: 'g-n', person: 'naval ravikant', label: undefined };
     expect(cardsOf([card, ...EXAMPLE_CARDS], 'Naval Ravikant')).toEqual([card]);
     const html = renderToStaticMarkup(
-      <OwnPersonPage person={naval} cards={[card]} votes={new Map()} onBack={() => {}} onVote={() => {}} onDeeper={() => {}} onRemove={() => {}} />,
+      <OwnPersonPage person={naval} cards={[card]} votes={new Map()} onBack={() => {}} onVote={() => {}} onDeeper={() => {}} onRemove={() => {}} onWrite={async () => ({ ok: true, cards: 0, costUsd: 0 })} />,
     );
     expect(html).toContain('>Naval Ravikant</h2>');
     expect(html).toContain('Egen person, lycka, rikedom');
@@ -232,9 +232,23 @@ describe('egna personer i biblioteket', () => {
     expect(html).not.toContain('Väl belagt');
   });
 
+  it('presentationen visas med källor och märks som skriven av Claude och inte granskad', () => {
+    const profile = { text: ['Naval Ravikant är investerare.'], sources: [{ title: 'Hans sajt', url: 'https://example.org/naval' }], created: new Date(2026, 10, 15, 9).getTime(), model: 'm' };
+    const page = (p: FollowedPerson) =>
+      renderToStaticMarkup(<OwnPersonPage person={p} cards={[]} votes={new Map()} onBack={() => {}} onVote={() => {}} onDeeper={() => {}} onRemove={() => {}} onWrite={async () => ({ ok: true, cards: 0, costUsd: 0 })} />);
+    const withProfile = page({ ...naval, profile });
+    expect(withProfile).toContain('Naval Ravikant är investerare.');
+    expect(withProfile).toContain('href="https://example.org/naval"');
+    expect(withProfile).toContain('Skriven av Claude med webbsökning 2026-11-15. Inte granskad');
+    expect(withProfile).toContain('Skriv om presentationen');
+    const without = page(naval);
+    expect(without).toContain('Ingen presentation än');
+    expect(without).toContain('>Skriv en presentation</button>');
+  });
+
   it('utan kort visas ett tomt läge', () => {
     const html = renderToStaticMarkup(
-      <OwnPersonPage person={naval} cards={[]} votes={new Map()} onBack={() => {}} onVote={() => {}} onDeeper={() => {}} onRemove={() => {}} />,
+      <OwnPersonPage person={naval} cards={[]} votes={new Map()} onBack={() => {}} onVote={() => {}} onDeeper={() => {}} onRemove={() => {}} onWrite={async () => ({ ok: true, cards: 0, costUsd: 0 })} />,
     );
     expect(html).toContain('Inga kort om Naval Ravikant än');
   });

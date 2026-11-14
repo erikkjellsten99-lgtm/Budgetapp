@@ -5,11 +5,15 @@ import {
   collectSources,
   htmlToText,
   normalizeUrl,
+  PROFILE_TOOL,
+  profileSystemPrompt,
+  profileUserPrompt,
   quoteInText,
   SAVE_TOOL,
   systemPrompt,
   taste,
   toCandidate,
+  toProfile,
   userPrompt,
   type Person,
 } from '../../supabase/functions/kunskap-generera/generate.ts';
@@ -25,6 +29,7 @@ import {
   NO_PREFS,
   NO_USAGE,
   prefKey,
+  profilesLastDay,
   weights,
   type Batch,
   type VoteRow,
@@ -246,6 +251,34 @@ describe('upptäcktskort', () => {
   });
 });
 
+describe('presentation av en egen person', () => {
+  const ok = { paragraphs: ['Naval Ravikant är investerare och författare.', 'Han skriver om lycka och rikedom.'], sources: [{ url: URL_A, title: 'Hans sajt' }] };
+
+  it('kräver text och minst en källa ur sökresultaten', () => {
+    expect(toProfile(ok, SOURCES, 5)).toEqual({ text: ok.paragraphs, sources: [{ title: 'Hans sajt', url: URL_A }], created: 5, model: 'claude-sonnet-5-5' });
+    expect(toProfile({ ...ok, sources: [{ url: 'https://pahittad.se/x', title: 'Påhittad' }] }, SOURCES, 5)).toBeNull();
+    expect(toProfile({ ...ok, sources: [] }, SOURCES, 5)).toBeNull();
+    expect(toProfile({ ...ok, paragraphs: [] }, SOURCES, 5)).toBeNull();
+    expect(toProfile({ ...ok, paragraphs: ['  '] }, SOURCES, 5)).toBeNull();
+    expect(toProfile(null, SOURCES, 5)).toBeNull();
+  });
+
+  it('för lång text kastas, påhittade och dubbla källor rensas bort', () => {
+    expect(toProfile({ ...ok, paragraphs: [Array(121).fill('ord').join(' ')] }, SOURCES, 5)).toBeNull();
+    expect(toProfile({ ...ok, paragraphs: [Array(120).fill('ord').join(' ')] }, SOURCES, 5)).not.toBeNull();
+    const mixed = toProfile({ ...ok, sources: [{ url: 'https://pahittad.se/x', title: 'Påhittad' }, { url: URL_A, title: 'Ett' }, { url: URL_A + '#del', title: 'Samma igen' }, { url: URL_A, title: '' }] }, SOURCES, 5);
+    expect(mixed?.sources).toEqual([{ title: 'Ett', url: URL_A }]);
+    expect(toProfile({ ...ok, paragraphs: ['a', 'b', 'c', 'd'] }, SOURCES, 5)?.text).toEqual(['a', 'b', 'c']);
+  });
+
+  it('prompten nämner personen och ämnena och förbjuder hälsopåståenden', () => {
+    expect(profileUserPrompt({ name: 'Naval Ravikant', topics: ['lycka', 'rikedom'] })).toContain('- Naval Ravikant: lycka, rikedom');
+    expect(profileSystemPrompt()).toContain('spara_presentation');
+    expect(profileSystemPrompt()).toContain('Inga påståenden om hälsoeffekter');
+    expect(PROFILE_TOOL.input_schema.required).toEqual(['paragraphs', 'sources']);
+  });
+});
+
 describe('inställningar, schema och kostnad', () => {
   const HOUR = 3_600_000;
   const now = Date.UTC(2026, 10, 14, 4, 10);
@@ -267,7 +300,16 @@ describe('inställningar, schema och kostnad', () => {
     expect(isDue(cleanSettings({ frequency: 'vecka' }), schema(7 * 24 * HOUR), now)).toBe(true);
     // En manuell batch flyttar inte schemat, men räknas mot dygnets gräns.
     expect(isDue(cleanSettings({ frequency: 'dag' }), [{ created: now - HOUR, trigger: 'manuell' }], now)).toBe(true);
-    expect(batchesLastDay([{ created: now - HOUR }, { created: now - 23 * HOUR }, { created: now - 25 * HOUR }], now)).toBe(2);
+    const day = [
+      { created: now - HOUR, trigger: 'manuell' as const },
+      { created: now - 23 * HOUR, trigger: 'schema' as const },
+      { created: now - 25 * HOUR, trigger: 'schema' as const },
+      { created: now - 2 * HOUR, trigger: 'profil' as const },
+    ];
+    // Presentationer räknas för sig och tar inte av dygnets batchar.
+    expect(batchesLastDay(day, now)).toBe(2);
+    expect(profilesLastDay(day, now)).toBe(1);
+    expect(isDue(cleanSettings({ frequency: 'dag' }), [{ created: now - HOUR, trigger: 'profil' }], now)).toBe(true);
     expect(MAX_BATCHES_PER_DAY).toBe(3);
   });
 
@@ -339,7 +381,7 @@ describe('appen', () => {
   it('svaret från servern tolkas, även när funktionen inte är utlagd', () => {
     expect(readGenerateReply(200, { batches: [{ cards: 4, costUsd: 0.21 }] })).toEqual({ ok: true, cards: 4, costUsd: 0.21 });
     expect(readGenerateReply(401, null)).toMatchObject({ ok: false, message: expect.stringContaining('Logga in') });
-    expect(readGenerateReply(404, { code: 'NOT_FOUND' })).toMatchObject({ ok: false, message: expect.stringContaining('inte påslagen') });
+    expect(readGenerateReply(404, { code: 'NOT_FOUND' })).toMatchObject({ ok: false, message: expect.stringContaining('inte påslaget') });
     expect(readGenerateReply(429, { message: 'Högst 3 batchar per dygn.' })).toEqual({ ok: false, message: 'Högst 3 batchar per dygn.' });
     expect(readGenerateReply(200, { batches: [] })).toMatchObject({ ok: false });
   });
