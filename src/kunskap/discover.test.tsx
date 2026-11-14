@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { PEOPLE } from '../lar/people';
 import { NO_PREFS, prefKey, weights, type VoteRow } from '../../supabase/functions/kunskap-generera/shared.ts';
-import { discover, GENRES, genreScore } from './discover';
+import { discover, GENRES, genreOfPerson, genreScore, libraryGroups, libraryPlace } from './discover';
 import { Discover } from './Kunskap';
 import { personKey, withManual } from './kunskapState';
 
@@ -68,6 +68,37 @@ describe('det som passar dig kommer först', () => {
     expect(out[0].people.some((p) => p.name === 'Tim Ferriss')).toBe(false);
     expect(out[0].people.find((p) => p.name === 'Naval Ravikant')?.followed).toBe(true);
     expect(out[0].people.find((p) => p.name === 'Paul Graham')?.followed).toBe(false);
+  });
+});
+
+describe('bibliotekets filter för egna personer', () => {
+  it('en person ur katalogen hamnar i sin genre, andra efter sina ämnen', () => {
+    expect(genreOfPerson('alex hormozi', [])?.id).toBe('framgang');
+    expect(genreOfPerson('Okänd Person', ['Sömn'])?.id).toBe('somn');
+    expect(genreOfPerson('Okänd Person', ['investeringar', 'x'])?.id).toBe('pengar');
+    expect(genreOfPerson('Okänd Person', ['segling'])).toBeNull();
+    expect(genreOfPerson('Okänd Person', [])).toBeNull();
+  });
+
+  it('genrer som är samma sak som bibliotekets områden läggs där, resten får egna filter', () => {
+    expect(libraryPlace('James Nestor', ['andning'])).toEqual({ area: 'andning' });
+    expect(libraryPlace('Tara Brach', [])).toEqual({ area: 'meditation' });
+    expect(libraryPlace('BJ Fogg', [])).toEqual({ area: 'utveckling' });
+    expect(libraryPlace('Ramit Sethi', ['pengar'])).toEqual({ group: 'pengar' });
+    expect(libraryPlace('Okänd Person', ['segling'])).toEqual({ group: 'ovrigt' });
+  });
+
+  it('bara filter som har någon person visas, i katalogens ordning, med Övrigt sist', () => {
+    const people = [
+      { name: 'Okänd Person', topics: ['segling'] },
+      { name: 'Ramit Sethi', topics: ['pengar'] },
+      { name: 'Alex Hormozi', topics: [] },
+      { name: 'Tara Brach', topics: [] },
+      { name: 'Morgan Housel', topics: [] },
+    ];
+    expect(libraryGroups(people).map((g) => g.label)).toEqual(['Framgång och företagande', 'Pengar och investeringar', 'Övrigt']);
+    expect(libraryGroups([])).toEqual([]);
+    expect(libraryGroups([{ name: 'Tara Brach', topics: [] }])).toEqual([]);
   });
 });
 

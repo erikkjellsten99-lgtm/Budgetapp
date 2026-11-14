@@ -196,3 +196,48 @@ export function discover(taste: Weight[], already: string[], query = '', only?: 
   });
   return out.sort((a, b) => b.score - a.score || a.index - b.index).map(({ genre, fits, people }) => ({ genre, fits, people }));
 }
+
+// Bibliotekets filter för personer man lagt till själv
+
+/** Genrer som är samma sak som ett av bibliotekets egna områden (../lar/people.ts). */
+export const GENRE_AREA: Record<string, 'andning' | 'kallbad' | 'meditation' | 'utveckling'> = {
+  andning: 'andning',
+  sinnesro: 'meditation',
+  vanor: 'utveckling',
+};
+
+/**
+ * Genren en person hör till: den hen står under i katalogen, annars den första genren vars ord nämns i personens
+ * ämnen. Null om ingen passar.
+ */
+export function genreOfPerson(name: string, topics: string[]): Genre | null {
+  const key = norm(name);
+  const listed = GENRES.find((g) => g.people.some((p) => norm(p.name) === key));
+  if (listed) return listed;
+  const mine = topics.map(norm).filter(Boolean);
+  return (
+    GENRES.find((g) => {
+      const words = [g.label, ...g.words].map(norm);
+      return mine.some((t) => words.some((w) => w === t || w.includes(t) || t.includes(w)));
+    }) ?? null
+  );
+}
+
+export const OTHER_GROUP = { id: 'ovrigt', label: 'Övrigt' };
+
+/**
+ * Var en egen person hamnar bland bibliotekets filter: i ett av bibliotekets områden, i en egen genre, eller
+ * under Övrigt.
+ */
+export function libraryPlace(name: string, topics: string[]): { area?: 'andning' | 'kallbad' | 'meditation' | 'utveckling'; group?: string } {
+  const genre = genreOfPerson(name, topics);
+  if (!genre) return { group: OTHER_GROUP.id };
+  const area = GENRE_AREA[genre.id];
+  return area ? { area } : { group: genre.id };
+}
+
+/** Filtren som behövs utöver bibliotekets egna, i katalogens ordning, för de personer man har. Övrigt sist. */
+export function libraryGroups(people: { name: string; topics: string[] }[]): { id: string; label: string }[] {
+  const used = new Set(people.map((p) => libraryPlace(p.name, p.topics).group).filter(Boolean));
+  return [...GENRES.filter((g) => used.has(g.id)).map((g) => ({ id: g.id, label: g.label })), ...(used.has(OTHER_GROUP.id) ? [OTHER_GROUP] : [])];
+}

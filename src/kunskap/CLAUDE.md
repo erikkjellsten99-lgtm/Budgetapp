@@ -18,8 +18,10 @@
   `search: true`. Egen funktion, så att knappen aldrig kan starta en batch med kort.
 
 - **Egna personer i biblioteket:** de Erik följer som inte finns i `PEOPLE` visas i samma lista som bibliotekets
-  personer (Eriks val 2026-11-15: en lista, ingen egen rubrik), efter de fasta och bara under Alla, och har en egen
-  sida (`OwnPersonPage`). Sidan är inte granskad och säger det: den visar bara ämnena
+  personer (Eriks val 2026-11-15: en lista, ingen egen rubrik), efter de fasta, och har en egen sida
+  (`OwnPersonPage`). Bibliotekets filter gäller dem också: `libraryPlace` (`discover.ts`) lägger en egen person i ett
+  av bibliotekets områden när genren är samma sak, annars i en egen genre ur katalogen, annars under Övrigt. Bara
+  filter som har någon person visas. Sidan är inte granskad och säger det: den visar bara ämnena
   och korten om personen, med källa. Inga texter om personen, inga påståenden och inga märkningar av belägg
   skrivs där, varken för hand eller av Claude. Att lägga till i biblioteket är samma sak som att följa.
 

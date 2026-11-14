@@ -88,7 +88,8 @@
   en ton.
 
 - Egna personer i biblioteket (2026-11-15): den som läggs till själv visas i samma lista som bibliotekets nio
-  (sammanslaget samma dag på Eriks önskan, ingen egen rubrik) och har en sida med sina kort. Sidan är märkt som inte granskad. Beslut: inga genererade personsidor (text om personen,
+  (sammanslaget samma dag på Eriks önskan, ingen egen rubrik) och har en sida med sina kort. Bibliotekets filter
+  har fått fler genrer, så att egna personer går att filtrera fram (Framgång, Pengar, Idrott med flera, och Övrigt). Sidan är märkt som inte granskad. Beslut: inga genererade personsidor (text om personen,
   påståenden, märkning av belägg), bara korten med källa.
 - Presentation av egna personer (2026-11-15): knappen "Skriv en presentation" på en egen persons sida ber
   funktionen `kunskap-presentation` skriva en kort text med källor. Delad serverkod ligger i
@@ -118,8 +119,10 @@
   mot riktig server, och att en batch hinner klart inom tidsgränsen. En batch är för lite för att säga något om
   hur ofta citat går att bekräfta.
 - Presentationer skrivs av sig själva (2026-11-15): varje egen person utan presentation får en när Mindhub är
-  öppen och man är inloggad, en i taget. Gränsen är höjd från 5 till 20 per dygn i repot (2026-11-15) men
-  servern har kvar 5 tills `kunskap-presentation` läggs ut igen. De som inte hinner med tas nästa dag.
+  öppen och man är inloggad, en i taget, högst 20 per dygn (höjt från 5 den 2026-11-15). `kunskap-presentation`
+  version 3 med den gränsen är utlagd och svarar 401 utan inloggad användare. Ingen riktig presentation har
+  skrivits än: på Eriks konto fanns 15 personer och ingen med presentation när version 3 lades ut. Tre omgångar
+  kort har körts (0,16, 0,16 och 0,21 USD för 5 kort var).
   Prövat i webbläsare med låtsad server (två personer gav två anrop efter varandra, utloggad gav inga). Ingen
   ändring på servern.
 - Bibliotekets personer följs automatiskt sedan 2026-11-15 (Eriks önskan: alla i biblioteket ska finnas i flödet).
