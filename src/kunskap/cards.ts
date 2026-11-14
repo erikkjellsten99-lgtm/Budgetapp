@@ -65,8 +65,9 @@ const AREA_TOPICS: Record<string, string[]> = {
   utveckling: ['personlig utveckling'],
 };
 
-/** Förslag på personer att följa: de som redan har kort. */
-export const SUGGESTED: { name: string; topics: string[] }[] = PEOPLE.map((p) => ({
+/** Personerna i biblioteket (Lär), med ämnen. De följs från början (se followLibrary) och visas som förslag om man tar bort dem. */
+export const SUGGESTED: { id: string; name: string; topics: string[] }[] = PEOPLE.map((p) => ({
+  id: p.id,
   name: p.name,
   topics: [...new Set(p.areas.flatMap((a) => AREA_TOPICS[a] ?? []))],
 }));

@@ -225,8 +225,11 @@ function PeopleSheet({ people, onClose }: { people: FollowedPerson[]; onClose: (
 
   return (
     <Sheet title="Personer du följer" onClose={onClose}>
+      <p className="kunskap-hint">
+        Alla i biblioteket följs från början. Ta bort dem du inte vill ha kort om, och lägg till andra nedan.
+      </p>
       {people.length === 0 ? (
-        <p className="kunskap-hint">Du följer ingen än. Lägg till en person nedan eller välj bland förslagen.</p>
+        <p className="kunskap-hint">Du följer ingen just nu. Lägg till en person nedan eller välj bland förslagen.</p>
       ) : (
         <ul className="kunskap-people">
           {people.map((p) => (
@@ -282,7 +285,7 @@ function PeopleSheet({ people, onClose }: { people: FollowedPerson[]; onClose: (
       {suggestions.length > 0 && (
         <div className="kunskap-suggest">
           <h3>Förslag</h3>
-          <p className="kunskap-hint">De här har redan kort i flödet.</p>
+          <p className="kunskap-hint">De här finns i biblioteket och har redan kort i flödet.</p>
           <div className="kunskap-suggest-list">
             {suggestions.map((s) => (
               <button key={s.name} type="button" className="chip" onClick={() => void follow(s.name, s.topics)}>

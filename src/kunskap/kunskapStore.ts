@@ -2,11 +2,11 @@
 // privata synk till kontot, tabellen personal_records), så allt fungerar utan nät och synkas när det går.
 
 import { useEffect, useState } from 'react';
-import { deleteKunskapRecord, loadKunskapRecords, newId, onHabitChange, saveKunskapRecord } from '../vanor/store';
+import { deleteKunskapRecord, getMeta, loadKunskapRecords, newId, onHabitChange, saveKunskapRecord } from '../vanor/store';
 import { supabase } from '../sync';
 import { syncHabits } from '../vanor/sync';
 import { cleanPrefs, cleanSettings, DEFAULT_SETTINGS, NO_PREFS, type Batch, type KunskapPrefs, type KunskapSettings } from '../../supabase/functions/kunskap-generera/shared.ts';
-import type { KunskapCard } from './cards';
+import { SUGGESTED, type KunskapCard } from './cards';
 import { cleanName, isFollowed, nextVote, parseTopics, type FollowedPerson, type Vote } from './kunskapState';
 
 export interface KunskapData {
@@ -85,6 +85,55 @@ export async function follow(name: string, topics: string | string[]): Promise<b
 
 export const unfollow = (id: string) => deleteKunskapRecord('kunskap_people', id);
 
+/**
+ * Följer alla personer i biblioteket (Lär) som inte lagts till förut, så att de finns i flödet och får nya kort.
+ * Vilka som lagts till sparas i posten "library" i kunskap_settings: den du själv tar bort kommer inte tillbaka,
+ * men en ny person i biblioteket läggs till en gång. Id:t är fast per person, så att två telefoner inte får dubbletter.
+ * Ger antalet nya.
+ */
+export async function followLibrary(): Promise<number> {
+  const [people, records] = await Promise.all([
+    loadKunskapRecords<FollowedPerson>('kunskap_people'),
+    loadKunskapRecords<{ id?: string; seeded?: unknown }>('kunskap_settings'),
+  ]);
+  const saved = records.find((r) => r.id === 'library')?.seeded;
+  const seeded = new Set(Array.isArray(saved) ? saved.map(String) : []);
+  const missing = SUGGESTED.filter((p) => !seeded.has(p.id));
+  if (missing.length === 0) return 0;
+  const now = Date.now();
+  let added = 0;
+  for (const p of missing) {
+    if (isFollowed(people, p.name)) continue;
+    await saveKunskapRecord('kunskap_people', { id: `lib-${p.id}`, name: p.name, topics: p.topics, created: now + added } satisfies FollowedPerson);
+    added++;
+  }
+  await saveKunskapRecord('kunskap_settings', { id: 'library', seeded: [...seeded, ...missing.map((p) => p.id)] });
+  return added;
+}
+
+let seeding: Promise<void> | null = null;
+
+/**
+ * Lägger till bibliotekets personer när det är säkert: utloggad, eller när kontots poster har hämtats en gång.
+ * Annars kunde en ny telefon lägga tillbaka någon som tagits bort på en annan, innan synken hunnit berätta det.
+ */
+function followLibraryWhenReady(): Promise<void> {
+  // En körning i taget. Varje sparad person ger en ändring som anropar den här igen, och utan spärren kunde en
+  // sen körning lägga tillbaka någon som just tagits bort.
+  seeding ??= (async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session && !(await getMeta<{ lastPull: string | null }>('sync'))?.lastPull) return;
+      await followLibrary();
+    } catch {
+      // Går det inte nu görs ett nytt försök nästa gång Kunskap öppnas eller något ändras.
+    } finally {
+      seeding = null;
+    }
+  })();
+  return seeding;
+}
+
 // Tryckningar görs en i taget, så att ett dubbelklick blir två riktiga tryckningar (på och av) och inte två "på".
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -108,11 +157,16 @@ export function useKunskap(): { data: KunskapData | null; failed: boolean } {
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let alive = true;
-    const load = () =>
+    const read = () =>
       loadKunskap().then(
         (next) => alive && (setData(next), setFailed(false)),
         () => alive && setFailed(true),
       );
+    // Efter varje ändring: finns det någon i biblioteket som inte följts än? (Gör ingenting när alla redan lagts till.)
+    const load = () => {
+      void followLibraryWhenReady();
+      return read();
+    };
     load();
     const off = onHabitChange(load);
     return () => {

@@ -4,6 +4,11 @@
   innehåll). Namnet på ett kort är en knapp till personsidan när personen finns i `PEOPLE`; Tillbaka går då till
   flödet på samma ställe. Personer utan sida i biblioteket får ingen, och sådana sidor genereras aldrig av Claude.
 
+- Alla personer i biblioteket följs från början (`followLibrary` i `kunskapStore.ts`), så att de finns i flödet och
+  får nya kort. Vilka som lagts till står i posten `library` i `kunskap_settings`: den Erik tar bort kommer inte
+  tillbaka, en ny person i `PEOPLE` läggs till en gång. Id:t är `lib-<person-id>`, lika på alla telefoner. Inloggad
+  görs det först när kontots poster hämtats en gång, och bara en körning i taget.
+
 - Ett flöde av kort i textform ("reels i text"): `citat`, `insikt` eller `protokoll`. Varje kort har person, ämne,
   typ och källa med https-länk, och högst 80 ord (`MAX_WORDS`, låst i `kunskap.test.tsx`).
 - Exempelkorten (`cards.ts`) byggs av det granskade innehållet i Lär (`../lar/people.ts`). Skriv inga egna kort

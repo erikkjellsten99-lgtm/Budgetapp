@@ -8,7 +8,7 @@ import { cardWords, EXAMPLE_CARDS, MAX_WORDS, SUGGESTED, TYPE_LABEL } from './ca
 import { cardPayload, NOT_DEPLOYED, readChatReply, SIGNED_OUT } from './chatApi';
 import Kunskap, { CardView } from './Kunskap';
 import { cleanName, feed, isFollowed, nextVote, parseTopics, personKey, voteMap, waiting, type FollowedPerson } from './kunskapState';
-import { follow, loadKunskap, unfollow, vote } from './kunskapStore';
+import { follow, followLibrary, loadKunskap, unfollow, vote } from './kunskapStore';
 
 const person = (name: string, topics: string[] = []): FollowedPerson => ({ id: name, name, topics, created: 0 });
 
@@ -124,6 +124,35 @@ describe('lagringen', () => {
     await unfollow(data.people[0].id);
     expect(await loadKunskap()).toMatchObject({ people: [], votes: [], cards: [], batches: [], settings: { frequency: 'av', count: 5 } });
     expect((await getOutbox()).every((e) => e.deleted)).toBe(true);
+  });
+});
+
+describe('bibliotekets personer följs från början', () => {
+  it('alla läggs till en gång, med fasta id:n, och den som tas bort kommer inte tillbaka', async () => {
+    // En person som redan följs med eget id får ingen dubblett.
+    await follow('susanna soberg', 'vinterbad');
+    expect(await followLibrary()).toBe(PEOPLE.length - 1);
+    let people = (await loadKunskap()).people;
+    expect(people).toHaveLength(PEOPLE.length);
+    expect(people.filter((p) => p.id.startsWith('lib-')).map((p) => p.id).sort()).toEqual(
+      PEOPLE.filter((p) => p.name !== 'Susanna Søberg').map((p) => `lib-${p.id}`).sort(),
+    );
+    expect(people.find((p) => p.id === 'lib-wim-hof')).toMatchObject({ name: 'Wim Hof', topics: ['andning', 'kyla'] });
+    expect(feed(EXAMPLE_CARDS, people, new Map(), 'alla')).toHaveLength(EXAMPLE_CARDS.length);
+
+    // En gång till gör ingenting.
+    expect(await followLibrary()).toBe(0);
+    expect((await loadKunskap()).people).toHaveLength(PEOPLE.length);
+
+    // Den du tar bort läggs inte tillbaka.
+    await unfollow('lib-wim-hof');
+    expect(await followLibrary()).toBe(0);
+    people = (await loadKunskap()).people;
+    expect(people.some((p) => p.name === 'Wim Hof')).toBe(false);
+    // Inställningen för genereringen ligger i samma store och rörs inte.
+    expect((await loadKunskap()).settings).toEqual({ id: 'settings', frequency: 'av', count: 5 });
+
+    for (const p of people) await unfollow(p.id);
   });
 });
 
