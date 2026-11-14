@@ -1,0 +1,588 @@
+/* Kunskap, vardagsrummet. Bara tokens, inga egna färger. */
+.kunskap {
+  --kunskap-scrim: rgb(10 14 12 / 0.45);
+}
+
+.kunskap .view-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.kunskap .view-intro h2 {
+  margin: 0;
+}
+
+.kunskap-manage {
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--cobalt);
+  font: inherit;
+  font-weight: 650;
+}
+
+.kunskap-chips {
+  display: flex;
+  gap: 0.5rem;
+  margin: -0.25rem -1rem 0.75rem;
+  padding: 0.25rem 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.kunskap-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.kunskap-notice {
+  margin: 0 0 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.kunskap-feed {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr;
+  max-width: 40rem;
+}
+
+.kunskap-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 1rem;
+}
+
+.kunskap-skeleton {
+  height: 11rem;
+  margin: 0;
+  opacity: 0.6;
+}
+
+.kunskap-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.kunskap-type {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--cobalt);
+  font-weight: 700;
+}
+
+.kunskap-type.protokoll {
+  background: color-mix(in srgb, var(--pine) 14%, var(--surface));
+  color: var(--pine);
+}
+
+.kunskap-type.citat {
+  background: color-mix(in srgb, var(--muted) 16%, var(--surface));
+  color: var(--ink);
+}
+
+.kunskap-label {
+  margin-left: auto;
+}
+
+.kunskap-text,
+.kunskap-quote p {
+  margin: 0;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.kunskap-quote {
+  margin: 0;
+  padding-left: 0.85rem;
+  border-left: 3px solid var(--cobalt);
+}
+
+.kunskap-quote p {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.kunskap-sv {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.kunskap-steps {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.4rem;
+  font-size: 1.0625rem;
+  line-height: 1.45;
+}
+
+.kunskap-steps li::marker {
+  color: var(--pine);
+  font-weight: 700;
+}
+
+.kunskap-warning {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-left: 4px solid var(--lingon);
+  border-radius: var(--radius-control);
+  background: var(--danger-soft);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.kunskap-person {
+  margin: 0;
+  font-weight: 700;
+}
+
+.kunskap-source {
+  margin: -0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.kunskap a {
+  color: var(--cobalt);
+}
+
+.kunskap-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.kunskap-vote,
+.kunskap-deeper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.kunskap-deeper {
+  margin-left: auto;
+  border-color: var(--cobalt);
+  color: var(--cobalt);
+}
+
+.kunskap-vote.liked {
+  border-color: var(--pine);
+  background: color-mix(in srgb, var(--pine) 14%, var(--surface));
+  color: var(--pine);
+}
+
+.kunskap-vote.disliked {
+  border-color: var(--lingon);
+  background: var(--danger-soft);
+  color: var(--lingon);
+}
+
+.kunskap-icon {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kunskap button:focus-visible,
+.kunskap a:focus-visible,
+.kunskap input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Ark: personer och chatt */
+.kunskap-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--kunskap-scrim);
+  animation: kunskap-fade 0.2s ease-out;
+}
+
+.kunskap-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 38rem;
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 1.1rem max(1rem, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 1.25rem)
+    max(1rem, env(safe-area-inset-left, 0px));
+  border-radius: 22px 22px 0 0;
+  background: var(--bg);
+  animation: kunskap-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.kunskap-sheet.chat {
+  height: 88dvh;
+  overflow: hidden;
+  gap: 0.75rem;
+}
+
+.kunskap-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.kunskap-sheet h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.kunskap-sheet h3 {
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.kunskap-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.kunskap-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.kunskap-people {
+  display: grid;
+  margin: 0;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-group);
+  background: var(--surface);
+  list-style: none;
+}
+
+.kunskap-people li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+}
+
+.kunskap-people li + li {
+  border-top: 1px solid var(--line);
+}
+
+.kunskap-people li > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.kunskap-people-name {
+  font-weight: 700;
+}
+
+.kunskap-people-topics {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.kunskap-remove {
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--lingon);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.kunskap-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.kunskap-form label {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.kunskap-form input,
+.kunskap-chat-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.9rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.kunskap-form input[aria-invalid='true'] {
+  border-color: var(--lingon);
+}
+
+.kunskap-form button.primary,
+.kunskap-chat-form button.primary {
+  min-height: 2.9rem;
+}
+
+.kunskap-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.kunskap-tags span {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.kunskap-error {
+  margin: 0;
+  color: var(--lingon);
+  font-weight: 600;
+}
+
+.kunskap-suggest {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kunskap-suggest-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Chatten */
+.kunskap-chat-scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.kunskap-chat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-group);
+  background: var(--surface);
+}
+
+.kunskap-chat-card .kunskap-text,
+.kunskap-chat-card .kunskap-quote p,
+.kunskap-chat-card .kunskap-steps {
+  font-size: 0.9375rem;
+}
+
+.kunskap-starters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.kunskap-starters .kunskap-hint {
+  flex-basis: 100%;
+}
+
+.kunskap-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kunskap-msg {
+  max-width: 88%;
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 16px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.kunskap-msg.du {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.kunskap-msg.claude {
+  align-self: flex-start;
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.kunskap-msg.error {
+  border-color: var(--lingon);
+  background: var(--danger-soft);
+}
+
+.kunskap-msg.thinking {
+  display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.85rem;
+}
+
+.kunskap-msg.thinking span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: kunskap-blink 1.2s infinite ease-in-out;
+}
+
+.kunskap-msg.thinking span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.kunskap-msg.thinking span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.kunskap-chat-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.kunskap-chat-form button {
+  flex: none;
+  padding: 0 1rem;
+}
+
+.kunskap-chat-note {
+  margin: -0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+@keyframes kunskap-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes kunskap-rise {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+@keyframes kunskap-blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kunskap-scrim,
+  .kunskap-sheet,
+  .kunskap-msg.thinking span {
+    animation: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .kunskap {
+    --kunskap-scrim: rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme='dark'] .kunskap {
+  --kunskap-scrim: rgb(0 0 0 / 0.6);
+}
+
+@media (min-width: 640px) {
+  .kunskap-scrim {
+    align-items: center;
+  }
+
+  .kunskap-sheet {
+    border-radius: 22px;
+  }
+}
