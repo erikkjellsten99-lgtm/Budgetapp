@@ -313,7 +313,7 @@ export const batchesLastDay = (batches: Pick<Batch, 'created' | 'trigger'>[], no
   batches.filter((b) => b.trigger !== 'profil' && now - b.created < 24 * HOUR).length
 
 /** Högst så här många presentationer per dygn och person som frågar. Räknas för sig, inte mot batcharna. */
-export const MAX_PROFILES_PER_DAY = 5
+export const MAX_PROFILES_PER_DAY = 20
 
 export const profilesLastDay = (batches: Pick<Batch, 'created' | 'trigger' | 'search'>[], now: number) =>
   batches.filter((b) => b.trigger === 'profil' && !b.search && now - b.created < 24 * HOUR).length

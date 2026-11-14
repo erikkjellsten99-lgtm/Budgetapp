@@ -30,7 +30,7 @@
   personens post i `kunskap_people` och visas märkt "Skriven av Claude … Inte granskad". Sedan 2026-11-15 (Eriks
   önskan) skrivs den av sig själv för varje egen person som saknar en, när Mindhub är öppen och man är inloggad:
   en i taget (`nextToPresent`), ett försök per person och gång, och inga fler försök efter ett fel. Knappen finns
-  kvar för att skriva om. Högst 5 per dygn (serverns gräns), och kostnaden loggas som en batch med `trigger: 'profil'`. Fortfarande inga
+  kvar för att skriva om. Högst 20 per dygn (serverns gräns, höjd från 5 den 2026-11-15), och kostnaden loggas som en batch med `trigger: 'profil'`. Fortfarande inga
   påståenden om belägg, ingen metod och inga märkningar på egna sidor, och bibliotekets nio sidor genereras aldrig.
 
 - Alla personer i biblioteket följs från början (`followLibrary` i `kunskapStore.ts`), så att de finns i flödet och

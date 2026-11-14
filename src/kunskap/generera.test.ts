@@ -35,6 +35,7 @@ import {
   type VoteRow,
 } from '../../supabase/functions/kunskap-generera/shared.ts';
 import { EXAMPLE_CARDS } from './cards';
+import { MAX_PROFILES_PER_DAY } from '../../supabase/functions/kunskap-generera/shared.ts';
 import { allCards, batchLog, moreKind, nextToPresent, sessionOrder, describeWeight, feed, formatUsd, formatWhen, monthCost, tasteOf, withManual } from './kunskapState';
 import { loadKunskap, readGenerateReply, savePrefs, saveSettings } from './kunskapStore';
 
@@ -370,14 +371,16 @@ describe('presentationer skrivs av sig själva', () => {
     expect(nextToPresent([], new Set(), [], now)).toBeNull();
   });
 
-  it('inte när dygnets fem är slut, och inte medan en presentation skrivs', () => {
+  it('inte när dygnets presentationer är slut, och inte medan en presentation skrivs', () => {
+    expect(MAX_PROFILES_PER_DAY).toBe(20);
+    const full = Array.from({ length: MAX_PROFILES_PER_DAY }, (_, i) => prof((i + 1) * 1000));
     const people = [p('b')];
-    expect(nextToPresent(people, new Set(), [1, 2, 3, 4, 5].map((n) => prof(n * 1000)), now)).toBeNull();
-    expect(nextToPresent(people, new Set(), [1, 2, 3, 4].map((n) => prof(n * 1000)), now)?.id).toBe('b');
+    expect(nextToPresent(people, new Set(), full, now)).toBeNull();
+    expect(nextToPresent(people, new Set(), full.slice(1), now)?.id).toBe('b');
     expect(nextToPresent(people, new Set(), [prof(30_000, { status: 'pagar' })], now)).toBeNull();
     expect(nextToPresent(people, new Set(), [prof(20 * 60_000, { status: 'pagar' })], now)?.id).toBe('b');
     // Sökningar i Upptäck och vanliga omgångar hindrar inte.
-    expect(nextToPresent(people, new Set(), [1, 2, 3, 4, 5, 6].map((n) => prof(n * 1000, { search: true })), now)?.id).toBe('b');
+    expect(nextToPresent(people, new Set(), Array.from({ length: 30 }, (_, i) => prof((i + 1) * 1000, { search: true })), now)?.id).toBe('b');
     expect(nextToPresent(people, new Set(), [prof(1000, { trigger: 'manuell', status: 'pagar' })], now)?.id).toBe('b');
   });
 });
