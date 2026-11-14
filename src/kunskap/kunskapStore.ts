@@ -3,18 +3,73 @@
 
 import { useEffect, useState } from 'react';
 import { deleteKunskapRecord, loadKunskapRecords, newId, onHabitChange, saveKunskapRecord } from '../vanor/store';
+import { supabase } from '../sync';
+import { syncHabits } from '../vanor/sync';
+import { cleanPrefs, cleanSettings, DEFAULT_SETTINGS, NO_PREFS, type Batch, type KunskapPrefs, type KunskapSettings } from '../../supabase/functions/kunskap-generera/shared.ts';
 import type { KunskapCard } from './cards';
 import { cleanName, isFollowed, nextVote, parseTopics, type FollowedPerson, type Vote } from './kunskapState';
 
 export interface KunskapData {
   people: FollowedPerson[];
   votes: Vote[];
+  /** Genererade kort, skrivna av servern. */
+  cards: KunskapCard[];
+  settings: KunskapSettings;
+  /** Det du själv ändrat i "Vad Claude tror du gillar". */
+  prefs: KunskapPrefs;
+  /** Kostnadsloggen, skriven av servern. */
+  batches: Batch[];
 }
 
 export async function loadKunskap(): Promise<KunskapData> {
-  const [people, votes] = await Promise.all([loadKunskapRecords<FollowedPerson>('kunskap_people'), loadKunskapRecords<Vote>('kunskap_votes')]);
+  const [people, votes, cards, settings, batches] = await Promise.all([
+    loadKunskapRecords<FollowedPerson>('kunskap_people'),
+    loadKunskapRecords<Vote>('kunskap_votes'),
+    loadKunskapRecords<KunskapCard>('kunskap_cards'),
+    loadKunskapRecords<{ id?: string }>('kunskap_settings'),
+    loadKunskapRecords<Batch>('kunskap_batches'),
+  ]);
   people.sort((a, b) => a.created - b.created);
-  return { people, votes };
+  // Inställningen och smaken ligger i samma store, med olika id.
+  const saved = settings.find((r) => r.id === 'settings');
+  const prefs = settings.find((r) => r.id === 'prefs');
+  return { people, votes, cards, settings: saved ? cleanSettings(saved) : DEFAULT_SETTINGS, prefs: prefs ? cleanPrefs(prefs) : NO_PREFS, batches };
+}
+
+/** Sparar hur ofta kort ska genereras och hur många. Synkas till kontot, där servern läser det. */
+export const saveSettings = (settings: Pick<KunskapSettings, 'frequency' | 'count'>) => saveKunskapRecord('kunskap_settings', cleanSettings(settings));
+
+/** Sparar det du själv ställt in om vad du gillar. Synkas till kontot, där servern läser det vid nästa generering. */
+export const savePrefs = (prefs: KunskapPrefs) => saveKunskapRecord('kunskap_settings', cleanPrefs(prefs));
+
+export type GenerateReply = { ok: true; cards: number; costUsd: number } | { ok: false; message: string };
+
+/** Svaret från kunskap-generera tolkat. Egen funktion så att den kan testas utan nätverk. */
+export function readGenerateReply(status: number, body: unknown): GenerateReply {
+  const b = (body ?? {}) as { batches?: { cards?: unknown; costUsd?: unknown }[]; message?: unknown };
+  const batch = Array.isArray(b.batches) ? b.batches[0] : undefined;
+  if (status >= 200 && status < 300 && batch) return { ok: true, cards: Number(batch.cards) || 0, costUsd: Number(batch.costUsd) || 0 };
+  if (status === 401) return { ok: false, message: 'Logga in under Konto för att generera kort.' };
+  if (status === 404) return { ok: false, message: 'Genereringen är inte påslagen på servern än.' };
+  return { ok: false, message: typeof b.message === 'string' && b.message.trim() ? b.message.trim() : 'Genereringen misslyckades. Försök igen.' };
+}
+
+/** Kör en batch nu, på servern. Tar upp till ett par minuter. Kastar aldrig. */
+export async function generateNow(): Promise<GenerateReply> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, message: 'Du är inte uppkopplad.' };
+  try {
+    const { data: auth } = await supabase.auth.getSession();
+    if (!auth.session) return readGenerateReply(401, null);
+    // Servern läser personerna och inställningen från kontot: skicka upp det som ändrats här först.
+    await syncHabits();
+    const { data, error, response } = await supabase.functions.invoke('kunskap-generera', { body: {} });
+    const reply = !error ? readGenerateReply(200, data) : response ? readGenerateReply(response.status, await response.json().catch(() => null)) : readGenerateReply(0, null);
+    // Hämta de nya korten och kostnadsraden direkt.
+    void syncHabits();
+    return reply;
+  } catch {
+    return readGenerateReply(0, null);
+  }
 }
 
 /** Börja följa en person. Ger false om namnet är tomt eller personen redan följs. */

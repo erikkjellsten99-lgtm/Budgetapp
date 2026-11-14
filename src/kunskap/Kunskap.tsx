@@ -1,8 +1,40 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { EXAMPLE_CARDS, SUGGESTED, TYPE_LABEL, type KunskapCard } from './cards';
 import { askAboutCard, QUESTION_MAX, TURNS_BACK, type ChatTurn } from './chatApi';
-import { cleanName, feed, FILTERS, isFollowed, NAME_MAX, parseTopics, voteMap, waiting, type Filter, type FollowedPerson } from './kunskapState';
-import { follow, unfollow, useKunskap, vote } from './kunskapStore';
+import {
+  COUNT_MAX,
+  PREF_LABEL_MAX,
+  prefKey,
+  type Batch,
+  type Frequency,
+  type KunskapPrefs,
+  type KunskapSettings,
+  type ManualLevel,
+  type PrefKind,
+  type Weight,
+} from '../../supabase/functions/kunskap-generera/shared.ts';
+import {
+  allCards,
+  batchLog,
+  cleanName,
+  describeWeight,
+  feed,
+  FILTERS,
+  formatUsd,
+  formatWhen,
+  isFollowed,
+  monthCost,
+  NAME_MAX,
+  parseTopics,
+  tasteOf,
+  voteMap,
+  waiting,
+  withManual,
+  type Filter,
+  type FollowedPerson,
+  type Vote,
+} from './kunskapState';
+import { follow, generateNow, savePrefs, saveSettings, unfollow, useKunskap, vote } from './kunskapStore';
 import './kunskap.css';
 
 const ICON = {
@@ -10,6 +42,8 @@ const ICON = {
   down: 'M17 14V4h3v10h-3zm0 0-4.2 6.3a1.6 1.6 0 0 1-2.9-1.2l.7-5.1H6a2 2 0 0 1-2-2.4l1.2-6A2 2 0 0 1 7.2 4H17',
   chat: 'M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z',
   close: 'M6 6l12 12M18 6 6 18',
+  settings: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 4.5v5M9 14.5v5',
+  taste: 'M12 20.5s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.9c0 5.6-7.5 10-7.5 10z',
 };
 
 function Icon({ d }: { d: string }) {
@@ -25,7 +59,7 @@ function CardBody({ card }: { card: KunskapCard }) {
   if (card.type === 'citat')
     return (
       <>
-        <blockquote className="kunskap-quote" lang="en">
+        <blockquote className="kunskap-quote" lang={card.sv ? (card.created ? undefined : 'en') : 'sv'}>
           <p>{card.text}</p>
         </blockquote>
         {card.sv && <p className="kunskap-sv">{card.sv}</p>}
@@ -54,8 +88,10 @@ function CardMeta({ card }: { card: KunskapCard }) {
   return (
     <p className="kunskap-meta">
       <span className={`kunskap-type ${card.type}`}>{TYPE_LABEL[card.type]}</span>
+      {card.discovery && <span className="kunskap-type upptackt">Upptäckt</span>}
       <span className="kunskap-topic">{card.topic}</span>
       {card.label && <span className="kunskap-label">{card.label}</span>}
+      {card.verified && <span className="kunskap-label">Ordagrant ur källan</span>}
     </p>
   );
 }
@@ -77,17 +113,28 @@ export function CardView({
   value,
   onVote,
   onDeeper,
+  onFollow,
 }: {
   card: KunskapCard;
   value?: 1 | -1;
   onVote: (pressed: 1 | -1) => void;
   onDeeper: () => void;
+  /** Finns bara på upptäcktskort om en person du inte följer. */
+  onFollow?: () => void;
 }) {
   return (
     <article className="card kunskap-card" aria-label={`${TYPE_LABEL[card.type]} från ${card.person}`}>
       <CardMeta card={card} />
       <CardBody card={card} />
-      <p className="kunskap-person">{card.person}</p>
+      <p className="kunskap-person">
+        {card.person}
+        {onFollow && (
+          <button type="button" className="kunskap-follow" onClick={onFollow}>
+            Följ
+            <span className="visually-hidden"> {card.person}</span>
+          </button>
+        )}
+      </p>
       <SourceLine card={card} />
       <div className="kunskap-actions">
         <button type="button" className={value === 1 ? 'kunskap-vote liked' : 'kunskap-vote'} aria-pressed={value === 1} onClick={() => onVote(1)}>
@@ -236,6 +283,246 @@ function PeopleSheet({ people, onClose }: { people: FollowedPerson[]; onClose: (
   );
 }
 
+const FREQUENCIES: { id: Frequency; label: string }[] = [
+  { id: 'av', label: 'Av' },
+  { id: 'dag', label: 'Varje dag' },
+  { id: 'vecka', label: 'Varje vecka' },
+];
+
+const STATUS: Record<Batch['status'], string> = { pagar: 'Pågår', klar: 'Klar', fel: 'Misslyckades' };
+const tokens = (n: number) => n.toLocaleString('sv-SE');
+
+/** Inställningar för genereringen, knappen Generera nu och kostnadsloggen per batch. */
+function SettingsSheet({
+  settings,
+  batches,
+  hasPeople,
+  onClose,
+}: {
+  settings: KunskapSettings;
+  batches: Batch[];
+  hasPeople: boolean;
+  onClose: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ text: string; error: boolean } | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  // Egen kopia, så att två snabba tryck på plus blir två steg och inte ett (inställningen kommer tillbaka först efter sparningen).
+  const [draft, setDraft] = useState(settings);
+  const latest = useRef(settings);
+  function change(part: Partial<Pick<KunskapSettings, 'frequency' | 'count'>>) {
+    latest.current = { ...latest.current, ...part };
+    setDraft(latest.current);
+    void saveSettings(latest.current);
+  }
+  const now = Date.now();
+  const log = batchLog(batches, now);
+  const thisMonth = monthCost(batches, now);
+
+  async function run() {
+    if (busy) return;
+    setBusy(true);
+    setResult(null);
+    const reply = await generateNow();
+    if (!alive.current) return;
+    setBusy(false);
+    setResult(
+      reply.ok
+        ? { text: `${reply.cards === 1 ? '1 nytt kort' : `${reply.cards} nya kort`}. Batchen kostade ${formatUsd(reply.costUsd)}.`, error: false }
+        : { text: reply.message, error: true },
+    );
+  }
+
+  return (
+    <Sheet title="Nya kort" onClose={onClose}>
+      <p className="kunskap-hint">
+        Korten görs på servern av Claude med webbsökning, från dem du följer. Varje kort får en källa, och citat som inte står
+        ordagrant i källan görs om till insikter. Ungefär vart femte kort är en upptäckt: en ny person eller ett nytt ämne nära
+        det du gillar. Varje batch kostar pengar, se nedan.
+      </p>
+      <fieldset className="kunskap-field">
+        <legend>Hur ofta</legend>
+        <div className="kunskap-segment">
+          {FREQUENCIES.map((f) => (
+            <label key={f.id} className={f.id === draft.frequency ? 'active' : undefined}>
+              <input
+                type="radio"
+                name="kunskap-frequency"
+                className="visually-hidden"
+                checked={f.id === draft.frequency}
+                onChange={() => change({ frequency: f.id })}
+              />
+              {f.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="kunskap-field">
+        <span id="kunskap-count-label">Kort per batch</span>
+        <div className="kunskap-stepper" role="group" aria-labelledby="kunskap-count-label">
+          <button type="button" aria-label="Färre kort" disabled={draft.count <= 1} onClick={() => change({ count: Math.max(1, latest.current.count - 1) })}>
+            −
+          </button>
+          <output aria-live="polite">{draft.count}</output>
+          <button
+            type="button"
+            aria-label="Fler kort"
+            disabled={draft.count >= COUNT_MAX}
+            onClick={() => change({ count: Math.min(COUNT_MAX, latest.current.count + 1) })}
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div className="kunskap-generate">
+        <button type="button" className="primary" disabled={busy || !hasPeople} onClick={() => void run()}>
+          {busy ? 'Genererar …' : 'Generera nu'}
+        </button>
+        {busy && <p className="kunskap-hint">Det tar upp till ett par minuter. Du kan stänga arket under tiden.</p>}
+        {!hasPeople && <p className="kunskap-hint">Följ minst en person först.</p>}
+        {result && (
+          <p className={result.error ? 'kunskap-error' : 'kunskap-ok'} role={result.error ? 'alert' : 'status'}>
+            {result.text}
+          </p>
+        )}
+      </div>
+      <section className="kunskap-cost" aria-labelledby="kunskap-cost-title">
+        <h3 id="kunskap-cost-title">Kostnad</h3>
+        {log.length === 0 ? (
+          <p className="kunskap-hint">Ingen batch har körts än. Här visas token, sökningar och kostnad för varje batch.</p>
+        ) : (
+          <>
+            <p className="kunskap-cost-sum">
+              Den här månaden: <strong>{formatUsd(thisMonth)}</strong>
+            </p>
+            <ul className="kunskap-batches">
+              {log.slice(0, 20).map((b) => (
+                <li key={b.id}>
+                  <p className="kunskap-batch-head">
+                    <span>{formatWhen(b.created)}</span>
+                    <strong>{formatUsd(b.costUsd)}</strong>
+                  </p>
+                  <p className={b.status === 'fel' || b.stale ? 'kunskap-batch-line bad' : 'kunskap-batch-line'}>
+                    {b.trigger === 'schema' ? 'Schemat' : 'Manuellt'}
+                    {': '}
+                    {b.stale ? 'avbröts' : STATUS[b.status].toLowerCase()}
+                    {b.status === 'klar' && `, ${b.cards} kort`}
+                    {b.status === 'klar' && !!b.discovery && `, varav ${b.discovery} upptäckt`}
+                    {b.status === 'klar' && b.quotesVerified + b.quotesRewritten > 0 && ` (${b.quotesVerified} citat bekräftade, ${b.quotesRewritten} omskrivna)`}
+                    {b.status === 'fel' && b.error ? `. ${b.error}` : ''}
+                  </p>
+                  <p className="kunskap-batch-line">
+                    {tokens(b.usage.input + b.usage.cacheRead + b.usage.cacheWrite)} token in, {tokens(b.usage.output)} ut, {b.usage.searches}{' '}
+                    {b.usage.searches === 1 ? 'sökning' : 'sökningar'}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <p className="kunskap-hint">Räknat med listpriser. Fakturan från Anthropic är det som gäller.</p>
+          </>
+        )}
+      </section>
+    </Sheet>
+  );
+}
+
+const GROUPS: { kind: PrefKind; title: string; empty: string }[] = [
+  { kind: 'person', title: 'Personer', empty: 'Följ någon eller rösta på ett kort, så fylls listan.' },
+  { kind: 'topic', title: 'Ämnen', empty: 'Inga ämnen än. Rösta på kort eller lägg till ett ämne nedan.' },
+  { kind: 'type', title: 'Korttyper', empty: '' },
+];
+const LEVELS: { id: ManualLevel | null; label: string }[] = [
+  { id: 'mindre', label: 'Mindre' },
+  { id: null, label: 'Auto' },
+  { id: 'mer', label: 'Mer' },
+];
+const typeName = (w: Weight) => (w.kind === 'type' ? (TYPE_LABEL[w.label as keyof typeof TYPE_LABEL] ?? w.label) : w.label);
+
+/** Vad Claude tror du gillar: viktningen från gilla/ogilla, som du kan ändra rad för rad. */
+function TasteSheet({ votes, prefs, people, onClose }: { votes: Vote[]; prefs: KunskapPrefs; people: FollowedPerson[]; onClose: () => void }) {
+  // Egen kopia, så att snabba tryck inte skriver över varandra innan sparningen kommit tillbaka.
+  const [draft, setDraft] = useState(prefs);
+  const latest = useRef(prefs);
+  const [topic, setTopic] = useState('');
+  // Ordningen låses när arket öppnas (mest gillat först), så att en rad inte hoppar iväg när man ändrar den.
+  const order = useRef<string[]>(tasteOf(votes, prefs, people).map((w) => w.key));
+  const rank = (key: string) => {
+    const i = order.current.indexOf(key);
+    return i === -1 ? order.current.length : i;
+  };
+  const taste = tasteOf(votes, draft, people).sort((a, b) => rank(a.key) - rank(b.key));
+
+  function set(kind: PrefKind, label: string, key: string, level: ManualLevel | null) {
+    latest.current = withManual(latest.current, kind, label, key, level);
+    setDraft(latest.current);
+    void savePrefs(latest.current);
+  }
+
+  function addTopic(e: FormEvent) {
+    e.preventDefault();
+    const label = topic.trim().replace(/\s+/g, ' ').slice(0, PREF_LABEL_MAX).trim();
+    if (!label) return;
+    set('topic', label, prefKey('topic', label), 'mer');
+    setTopic('');
+  }
+
+  return (
+    <Sheet title="Vad Claude tror du gillar" onClose={onClose}>
+      <p className="kunskap-hint">
+        Uträknat från dina gilla och ogilla, per person, ämne och korttyp. Det styr nästa generering: mer av det du gillar och
+        närliggande ämnen, mindre av resten. Ändra det som inte stämmer. Auto låter rösterna bestämma.
+      </p>
+      {GROUPS.map((g) => {
+        const rows = taste.filter((w) => w.kind === g.kind);
+        return (
+          <section key={g.kind} className="kunskap-taste" aria-labelledby={`kunskap-taste-${g.kind}`}>
+            <h3 id={`kunskap-taste-${g.kind}`}>{g.title}</h3>
+            {rows.length === 0 ? (
+              <p className="kunskap-hint">{g.empty}</p>
+            ) : (
+              <ul className="kunskap-taste-list">
+                {rows.map((w) => (
+                  <li key={w.key}>
+                    <div>
+                      <span className="kunskap-people-name">{typeName(w)}</span>
+                      <span className="kunskap-people-topics">{describeWeight(w)}</span>
+                    </div>
+                    <div className="kunskap-levels" role="group" aria-label={`Hur mycket av ${typeName(w)}`}>
+                      {LEVELS.map((l) => (
+                        <button
+                          key={l.label}
+                          type="button"
+                          className={(w.manual ?? null) === l.id ? `active ${l.id ?? 'auto'}` : undefined}
+                          aria-pressed={(w.manual ?? null) === l.id}
+                          onClick={() => set(w.kind, w.label, w.key, l.id)}
+                        >
+                          {l.label}
+                        </button>
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })}
+      <form className="kunskap-chat-form" onSubmit={addTopic}>
+        <input value={topic} maxLength={PREF_LABEL_MAX} placeholder="Lägg till ett ämne, t.ex. sömn" aria-label="Nytt ämne du vill ha mer av" autoComplete="off" onChange={(e) => setTopic(e.target.value)} />
+        <button type="submit" className="primary" disabled={!topic.trim()}>
+          Lägg till
+        </button>
+      </form>
+    </Sheet>
+  );
+}
+
 const STARTERS = ['Vad säger forskningen?', 'Hur gör jag i praktiken?', 'Vad talar emot?'];
 
 type Message = { from: 'du' | 'claude'; text: string; error?: boolean };
@@ -336,12 +623,15 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
   const { data, failed } = useKunskap();
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [managing, setManaging] = useState(false);
+  const [configuring, setConfiguring] = useState(false);
+  const [tasting, setTasting] = useState(false);
   const [chat, setChat] = useState<KunskapCard | null>(null);
 
   const people = data?.people ?? [];
   const votes = voteMap(data?.votes ?? []);
-  const cards = feed(EXAMPLE_CARDS, people, votes, filter);
-  const pending = waiting(EXAMPLE_CARDS, people);
+  const everything = allCards(data?.cards ?? [], EXAMPLE_CARDS);
+  const cards = feed(everything, people, votes, filter);
+  const pending = waiting(everything, people);
 
   return (
     <div className="kunskap">
@@ -350,9 +640,17 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
           <p className="eyebrow">Flöde</p>
           <h2>Kunskap</h2>
         </div>
-        <button type="button" className="kunskap-manage" onClick={() => setManaging(true)}>
-          {people.length === 0 ? 'Följ personer' : `Följer ${people.length}`}
-        </button>
+        <div className="kunskap-head-actions">
+          <button type="button" className="kunskap-manage" onClick={() => setManaging(true)}>
+            {people.length === 0 ? 'Följ personer' : `Följer ${people.length}`}
+          </button>
+          <button type="button" className="kunskap-close" onClick={() => setTasting(true)} aria-label="Vad Claude tror du gillar" disabled={!data}>
+            <Icon d={ICON.taste} />
+          </button>
+          <button type="button" className="kunskap-close" onClick={() => setConfiguring(true)} aria-label="Inställningar för nya kort" disabled={!data}>
+            <Icon d={ICON.settings} />
+          </button>
+        </div>
       </div>
       <nav className="kunskap-chips" aria-label="Filter">
         {FILTERS.map((f) => (
@@ -378,7 +676,7 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
           )}
           {pending.length > 0 && filter !== 'gillade' && (
             <p className="kunskap-notice">
-              Inga kort än för {pending.map((p) => p.name).join(', ')}. De får kort när genereringen är påkopplad.
+              Inga kort än för {pending.map((p) => p.name).join(', ')}. De får kort vid nästa generering.
             </p>
           )}
           {cards.length === 0 ? (
@@ -405,6 +703,7 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
                   value={votes.get(card.id)}
                   onVote={(pressed) => void vote(card, pressed)}
                   onDeeper={() => setChat(card)}
+                  onFollow={card.discovery && !isFollowed(people, card.person) ? () => void follow(card.person, [card.topic]) : undefined}
                 />
               ))}
             </div>
@@ -413,6 +712,8 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
       )}
 
       {managing && <PeopleSheet people={people} onClose={() => setManaging(false)} />}
+      {configuring && data && <SettingsSheet settings={data.settings} batches={data.batches} hasPeople={people.length > 0} onClose={() => setConfiguring(false)} />}
+      {tasting && data && <TasteSheet votes={data.votes} prefs={data.prefs} people={people} onClose={() => setTasting(false)} />}
       {chat && <ChatSheet card={chat} onClose={() => setChat(null)} />}
     </div>
   );

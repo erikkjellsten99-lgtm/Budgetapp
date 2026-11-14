@@ -122,7 +122,7 @@ describe('lagringen', () => {
     await Promise.all([vote(card, 1), vote(card, 1)]);
     expect((await loadKunskap()).votes).toEqual([]);
     await unfollow(data.people[0].id);
-    expect(await loadKunskap()).toEqual({ people: [], votes: [] });
+    expect(await loadKunskap()).toMatchObject({ people: [], votes: [], cards: [], batches: [], settings: { frequency: 'av', count: 5 } });
     expect((await getOutbox()).every((e) => e.deleted)).toBe(true);
   });
 });
