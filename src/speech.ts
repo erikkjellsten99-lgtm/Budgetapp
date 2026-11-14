@@ -47,7 +47,7 @@ export function listenError(code: string): string {
   if (code === 'no-speech') return 'Jag hörde inget. Tryck och försök igen.';
   if (code === 'audio-capture') return 'Ingen mikrofon hittades.';
   if (code === 'network') return 'Taligenkänningen behöver uppkoppling. Skriv i stället.';
-  return 'Det gick inte att lyssna just nu. Försök igen eller skriv.';
+  return 'Det gick inte att lyssna just nu. Försök igen.';
 }
 
 /** Lyssnar på en fråga på svenska. onText får texten medan du pratar, onDone hela frågan (eller tom). */

@@ -63,11 +63,13 @@ const HOLD_MS = 400;
 const SPEAK_START_MS = 2500;
 /** Fel som inte visas när Jarvis själv försökte börja lyssna efter hälsningen: då räcker det att trycka. */
 const QUIET_ERRORS = ['not-allowed', 'service-not-allowed', 'no-speech', 'aborted', 'start'];
+/** Fel som gör att det inte går att prata alls. Då visas skrivfältet, så att Jarvis ändå går att fråga. */
+const BLOCKING_ERRORS = ['not-allowed', 'service-not-allowed', 'audio-capture', 'network'];
 
 /**
  * Jarvis: en ring i mitten som du håller in eller trycker på och pratar med. När rummet öppnas hälsar
  * Jarvis (uppläst av telefonen, inget anrop) och börjar lyssna. Frågan går till servern (edge function
- * jarvis, som frågar Claude med verktyg) och svaret visas som text och läses upp. Går också att skriva.
+ * jarvis, som frågar Claude med verktyg) och svaret visas som text och läses upp. Skrivfältet visas bara där det inte går att prata.
  * Utan inloggning eller nät, eller när dagens gräns är nådd, svarar den enklare Jarvis som räknar i
  * telefonen (jarvis.ts). Visningsläget döljer alla belopp och använder alltid den. Läser bara.
  */
@@ -78,7 +80,9 @@ export default function JarvisView({ active }: { active: boolean }) {
   const [error, setError] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   // Textfältet syns alltid, som reserv när rösten inte passar eller inte finns.
-  const [typing, setTyping] = useState(true);
+  // Jarvis är till för att prata med. Skrivfältet visas bara där det inte går: webbläsaren kan inte lyssna, eller
+  // mikrofonen är spärrad.
+  const [typing, setTyping] = useState(!voiceInput);
   const [text, setText] = useState('');
   const [voiceOut, setVoiceOut] = useState(readVoiceSetting);
   const [voice, setVoice] = useState<VoiceSettings>(readVoice);
@@ -189,8 +193,8 @@ export default function JarvisView({ active }: { active: boolean }) {
 
   // Utan taligenkänning är textfältet huvudvägen in: ställ markören där. Annars skulle tangentbordet skymma Jarvis.
   useEffect(() => {
-    if (typing && !voiceInput) input.current?.focus();
-  }, [typing, voiceInput]);
+    if (typing) input.current?.focus();
+  }, [typing]);
 
   async function send(question: string) {
     const q = question.trim().slice(0, MAX_LENGTH);
@@ -247,7 +251,10 @@ export default function JarvisView({ active }: { active: boolean }) {
       onError: (message, code) => {
         listening.current = null;
         setMode('idle');
-        if (!(quiet && QUIET_ERRORS.includes(code))) setError(message);
+        if (!(quiet && QUIET_ERRORS.includes(code))) {
+          setError(message);
+          if (BLOCKING_ERRORS.includes(code)) setTyping(true);
+        }
       },
     });
     if (session) {
@@ -399,7 +406,7 @@ export default function JarvisView({ active }: { active: boolean }) {
           onPointerUp={voiceInput ? release : undefined}
           onPointerCancel={voiceInput ? release : undefined}
           onContextMenu={(e) => e.preventDefault()}
-          onClick={voiceInput ? (e) => e.detail === 0 && toggleListening() : () => (setTyping(true), setFull(true))}
+          onClick={voiceInput ? (e) => e.detail === 0 && toggleListening() : () => (input.current?.focus(), setFull(true))}
           disabled={busy}
           aria-label={voiceInput ? (mode === 'listening' ? 'Sluta lyssna och skicka' : 'Prata med Jarvis') : 'Skriv en fråga'}
         >
@@ -451,7 +458,7 @@ export default function JarvisView({ active }: { active: boolean }) {
             </button>
           ))}
         </div>
-        {typing ? (
+        {typing && (
           <form className="jarvis-form" onSubmit={submit}>
             <label className="jarvis-field">
               <span className="visually-hidden">Din fråga</span>
@@ -469,10 +476,6 @@ export default function JarvisView({ active }: { active: boolean }) {
               Fråga
             </button>
           </form>
-        ) : (
-          <button type="button" className="jarvis-type" onClick={() => setTyping(true)}>
-            Skriv i stället
-          </button>
         )}
       </footer>
 

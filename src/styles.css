@@ -2488,16 +2488,6 @@ body.jarvis-locked {
   font-size: 0.86rem;
 }
 
-.jarvis-type {
-  align-self: center;
-  min-height: 2.75rem;
-  background: transparent;
-  border: 0;
-  color: var(--j-muted);
-  font-size: 0.9rem;
-  text-decoration: underline;
-}
-
 .jarvis-form {
   display: flex;
   gap: 0.5rem;
