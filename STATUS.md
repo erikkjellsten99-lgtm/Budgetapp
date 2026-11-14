@@ -90,11 +90,16 @@
 - Egna personer i biblioteket (2026-11-15): den som läggs till själv visas under Egna personer i Bibliotek och har
   en sida med sina kort. Sidan är märkt som inte granskad. Beslut: inga genererade personsidor (text om personen,
   påståenden, märkning av belägg), bara korten med källa.
-- Presentation av egna personer (2026-11-15, i repot, **inte utlagd**): knappen "Skriv en presentation" på en egen
-  persons sida ber den nya funktionen `kunskap-presentation` skriva en kort text med källor. Före utläggning svarar
-  knappen "inte påslaget på servern än". Delad serverkod ligger i `kunskap-generera/server.ts`; `kunskap-generera`
-  beter sig som version 1 men bör läggas ut igen så att servern stämmer med repot.
-  Inte prövat mot Claude.
+- Presentation av egna personer (2026-11-15): knappen "Skriv en presentation" på en egen persons sida ber
+  funktionen `kunskap-presentation` skriva en kort text med källor. Delad serverkod ligger i
+  `kunskap-generera/server.ts`.
+- **Utlagt 2026-11-15 (andra omgången):** `kunskap-presentation` version 1 (verify_jwt på) och `kunskap-generera`
+  version 2 (verify_jwt av), båda hopslagna till en fil med esbuild. Prövat från databasen (pg_net): alla tre
+  Kunskap-funktionerna startar och svarar 401 utan inloggad användare, och fel hemlighet nekas. Schemats riktiga
+  anrop prövades inte den här gången, eftersom Erik har valt Varje vecka och det hade startat en riktig batch.
+  Inte prövat: en riktig batch, en riktig presentation och en riktig chatt (kräver Eriks inloggning).
+- Sett 2026-11-15: på kontot fanns inställningen sparad men inga personer (`kunskap_people`). Schemat hoppar över
+  den som inte följer någon. Personerna kommer upp när appen med automatisk följning är öppnad inloggad.
 - Bibliotekets personer följs automatiskt sedan 2026-11-15 (Eriks önskan: alla i biblioteket ska finnas i flödet).
   De går att ta bort under Följer och kommer då inte tillbaka. Inte prövat inloggad mot riktig synk på två telefoner.
 
