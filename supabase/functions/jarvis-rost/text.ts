@@ -20,3 +20,12 @@ export function speakable(text: string): string {
     .trim()
     .slice(0, MAX_SPEECH)
 }
+
+const XML: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }
+const xml = (text: string) => text.replace(/[&<>"']/g, (c) => XML[c])
+
+/** Texten som SSML för Azure Speech, med rösten `voice` (t.ex. sv-SE-MattiasNeural). Tecken som betyder något i XML skrivs om. */
+export function ssml(text: string, voice: string): string {
+  const lang = /^[a-z]{2,3}-[A-Z]{2}/.exec(voice)?.[0] ?? 'sv-SE'
+  return `<speak version='1.0' xml:lang='${lang}'><voice name='${xml(voice)}'>${xml(text)}</voice></speak>`
+}

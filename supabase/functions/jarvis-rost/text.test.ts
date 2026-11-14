@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_SPEECH, speakable } from './text.ts'
+import { MAX_SPEECH, speakable, ssml } from './text.ts'
 
 describe('speakable', () => {
   it('skriver ihop tusental och skriver ut kronor', () => {
@@ -21,5 +21,17 @@ describe('speakable', () => {
 
   it('kortar långa texter', () => {
     expect(speakable('a'.repeat(5000))).toHaveLength(MAX_SPEECH)
+  })
+})
+
+describe('ssml', () => {
+  it('lägger texten i rösten och tar språket från röstens namn', () => {
+    expect(ssml('Hej Erik.', 'sv-SE-MattiasNeural')).toBe("<speak version='1.0' xml:lang='sv-SE'><voice name='sv-SE-MattiasNeural'>Hej Erik.</voice></speak>")
+    expect(ssml('Hi.', 'en-US-AvaNeural')).toContain("xml:lang='en-US'")
+  })
+
+  it('skriver om tecken som betyder något i XML', () => {
+    expect(ssml(`Mat & hushåll <"A"> 'b'`, 'sv-SE-SofieNeural')).toContain('Mat &amp; hushåll &lt;&quot;A&quot;&gt; &apos;b&apos;')
+    expect(ssml('x', "a'><break/>")).toContain("name='a&apos;&gt;&lt;break/&gt;'")
   })
 })

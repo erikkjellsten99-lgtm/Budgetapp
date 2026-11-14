@@ -534,7 +534,7 @@ function VoicePanel({
       </label>
       <p className="jarvis-voice-hint">
         {cloud
-          ? 'Svaren läses upp med en röst från ElevenLabs när du är inloggad och uppkopplad. Inställningarna nedan gäller telefonens röst, som tar över annars.'
+          ? 'Svaren läses upp med en svensk röst från servern när du är inloggad och uppkopplad. Inställningarna nedan gäller telefonens röst, som tar över annars.'
           : 'Svaren läses upp med telefonens röst.'}
       </p>
       {voices.length > 0 ? (

@@ -52,6 +52,10 @@
   och `jarvis-rost` version 2 ligger ute, båda med verify_jwt på. Båda startar och nekar den som inte är inloggad.
   Inte prövat: ett riktigt svar från nya `jarvis`, rösten mot ElevenLabs (nyckeln saknas tills Erik lagt in den),
   och uppspelningen på iPhone. Appens del går ut först när PR:en med samtalston och röst är sammanfogad (PR 115 hann bara få med `hamta_vanor`).
+- Nytt 2026-11-14 (PR, inte utlagt): rösten byter från ElevenLabs till Azure Speech. ElevenLabs gratisnivå svarade
+  401 "detected_unusual_activity" när anropet kom från Supabase. OpenAI valdes bort: `gpt-4o-mini-tts` stängs
+  2027-01-06. Nya hemligheter: `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`, valfritt `AZURE_SPEECH_VOICE`.
+  `ELEVENLABS_API_KEY` används inte längre och kan tas bort. Inte prövat mot Azure.
 - MCP-verktyget gör om `\u00A0` i källan till ett vanligt tecken vid utläggning. Skriv `\s` i reguljära uttryck i
   funktioner i stället för att räkna upp mellanslagstecken (`jarvis-rost/text.ts`).
 - `ANTHROPIC_API_KEY` lades in som hemlighet 2026-11-14. Första riktiga svaret från Claude samma dag.

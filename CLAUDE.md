@@ -56,10 +56,12 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
     (`jarvis_usage`, `jarvis_count_call()`), och API-nyckeln finns bara som hemlighet på servern.
     Appen skickar med de senaste fyra utbytena (`history`), så att följdfrågor går att förstå. Samtalet glöms när
     Jarvis stängs. Systemprompten ber om ett samtal i talspråk, inte bara siffror.
-  - *Rösten* (beslut 2026-11-14: ElevenLabs är tillåtet): edge function `jarvis-rost` gör svaret till tal. Appen
+  - *Rösten* (beslut 2026-11-14: Azure Speech, efter att ElevenLabs gratisnivå nekade anrop från servern): edge
+    function `jarvis-rost` gör svaret till tal. Appen
     spelar ljudet via `cloudVoice.ts` bakom `voice.ts`. Telefonens röst är reserv (utloggad, utan nät, ingen nyckel,
     dagens gräns på 150 uppläsningar). Hälsningen sparas som ljud i telefonen efter första gången, så den spelas utan
-    anrop. Hemligheter: `ELEVENLABS_API_KEY`, valfritt `ELEVENLABS_VOICE_ID` och `ELEVENLABS_MODEL`.
+    anrop. Hemligheter: `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` (standard `swedencentral`), valfritt
+    `AZURE_SPEECH_VOICE` (standard `sv-SE-MattiasNeural`).
   - *Den enkla Jarvis* (`ask.ts`, nyckelord, ingen AI, exakta belopp) finns kvar: Siri-genvägarna, "Jarvis säger" på
     Idag, visningsläget, och som reserv i appen när man är utloggad, utan nät eller har nått dagens gräns.
 - Visningsläget (ögat) döljer alla belopp och använder bara den enkla Jarvis; svar märkta `money: true` i `ask.ts`
