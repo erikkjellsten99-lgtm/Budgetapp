@@ -87,8 +87,8 @@
 - Beslut: ton positiv/negativ/neutral via ordlistor, orden som avgjorde visas. Neutral finns för att inte tvinga
   en ton.
 
-- Egna personer i biblioteket (2026-11-15): den som läggs till själv visas under Egna personer i Bibliotek och har
-  en sida med sina kort. Sidan är märkt som inte granskad. Beslut: inga genererade personsidor (text om personen,
+- Egna personer i biblioteket (2026-11-15): den som läggs till själv visas i samma lista som bibliotekets nio
+  (sammanslaget samma dag på Eriks önskan, ingen egen rubrik) och har en sida med sina kort. Sidan är märkt som inte granskad. Beslut: inga genererade personsidor (text om personen,
   påståenden, märkning av belägg), bara korten med källa.
 - Presentation av egna personer (2026-11-15): knappen "Skriv en presentation" på en egen persons sida ber
   funktionen `kunskap-presentation` skriva en kort text med källor. Delad serverkod ligger i
@@ -107,10 +107,16 @@
 - Upptäck (2026-11-15): tredje läget i Mindhub. Sök på genre eller person och följ med ett tryck. Elva genrer och
   ett fyrtiotal personer i en fast katalog (`discover.ts`), sorterade efter smaken. Beskrivningarna är skrivna ur
   minnet och inte kontrollerade mot källor; vyn säger att de inte är granskade.
-- Fråga Claude efter fler (2026-11-15, i repot, **inte utlagd**): knappen "Sök med Claude" i Upptäck anropar den
-  nya funktionen `kunskap-upptack`. Före utläggning svarar den "inte påslaget på servern än". Vid utläggning bör
-  även `kunskap-presentation` läggas ut igen, så att sökningar inte räknas mot dygnets presentationer
-  (`profilesLastDay` räknar numera bara det som inte är en sökning). Prövat i webbläsare med låtsad server.
+- Fråga Claude efter fler (2026-11-15): knappen "Sök med Claude" i Upptäck anropar funktionen `kunskap-upptack`.
+- **Utlagt 2026-11-15 (tredje omgången):** `kunskap-upptack` version 1 och `kunskap-presentation` version 2 (båda
+  verify_jwt på, hopslagna med esbuild). Sökningar räknas nu för sig och tar inte av dygnets presentationer.
+  Prövat från databasen (pg_net): båda startar och svarar 401 utan inloggad användare.
+  Inte prövat: en riktig sökning och en riktig presentation (kräver Eriks inloggning).
+- **Första riktiga batchen (2026-11-14 21:47 UTC, manuell, Eriks konto):** klar, 5 kort av 5 begärda, 0 kastade.
+  1 citat bekräftat ordagrant mot källsidan, 0 omskrivna, 1 upptäcktskort. 7 sökningar, 36 939 token in, 1 838 ut,
+  0,16 USD. Det bekräftar att webbsökningen (`web_search_20260209`), kostnadsloggen och citatkontrollen fungerar
+  mot riktig server, och att en batch hinner klart inom tidsgränsen. En batch är för lite för att säga något om
+  hur ofta citat går att bekräfta.
 - Bibliotekets personer följs automatiskt sedan 2026-11-15 (Eriks önskan: alla i biblioteket ska finnas i flödet).
   De går att ta bort under Följer och kommer då inte tillbaka. Inte prövat inloggad mot riktig synk på två telefoner.
 
