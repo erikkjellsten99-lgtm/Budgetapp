@@ -1152,6 +1152,15 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
   const lastGenerated = cards.reduce((last, c, i) => (c.created ? i : last), -1);
   const mine = ownPeople(people, PEOPLE.map((p) => p.name));
   const ownPerson = own ? people.find((p) => p.id === own.id) : undefined;
+  /** Raden på kortet i biblioteket för en person du lagt till själv: vem det är, om det är känt, annars antal kort. */
+  const ownTeaser = (p: FollowedPerson) => {
+    const about =
+      p.profile?.text[0] ??
+      GENRES.flatMap((g) => g.people).find((x) => personKey(x.name) === personKey(p.name))?.about ??
+      (data?.found ?? []).find((x) => personKey(x.name) === personKey(p.name))?.about;
+    const n = cardsOf(everything, p.name).length;
+    return about ?? (n === 0 ? 'Inga kort än. De kommer vid nästa generering.' : n === 1 ? '1 kort.' : `${n} kort.`);
+  };
   /** Knappen på kortets namn: den granskade sidan, annars din egen sida, annars ingen. */
   const personLink = (name: string) => {
     const id = libraryId(name);
@@ -1218,31 +1227,22 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
         />
       )}
       {mode === 'bibliotek' && !ownPerson && (
-        <Lar key={fromCard ?? 'lista'} embedded initialOpenId={fromCard ?? undefined} onBack={fromCard ? backToFeed : undefined} onOpenChange={setPersonOpen} />
+        <Lar
+          key={fromCard ?? 'lista'}
+          embedded
+          initialOpenId={fromCard ?? undefined}
+          onBack={fromCard ? backToFeed : undefined}
+          onOpenChange={setPersonOpen}
+          extra={mine.map((p) => ({ id: p.id, name: p.name, kind: p.topics.length > 0 ? p.topics.join(', ') : 'Tillagd av dig', teaser: ownTeaser(p) }))}
+          onOpenExtra={(id) => openOwn(id, false)}
+        />
       )}
       {mode === 'bibliotek' && !ownPerson && !personOpen && (
-        <section className="kunskap-own-list" aria-labelledby="kunskap-own-title">
-          <h3 id="kunskap-own-title">Egna personer</h3>
-          {mine.length === 0 ? (
-            <p className="kunskap-hint">Lägg till vem du vill. Personen får en egen sida med korten som görs om hen, och kommer med i flödet.</p>
-          ) : (
-            <div className="lar-list">
-              {mine.map((p) => (
-                <button key={p.id} type="button" className="card lar-card" onClick={() => openOwn(p.id, false)}>
-                  <span className="lar-card-name">{p.name}</span>
-                  <span className="lar-kind">Egen person</span>
-                  <span className="lar-teaser">
-                    {p.topics.length > 0 ? p.topics.join(', ') : 'Inga ämnen angivna'}
-                    {`. ${cardsOf(everything, p.name).length} kort.`}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="kunskap-own-list">
           <button type="button" className="kunskap-manage" onClick={() => setManaging(true)} disabled={!data}>
             Lägg till person
           </button>
-        </section>
+        </div>
       )}
       <div hidden={mode !== 'flode'}>
       <nav className="kunskap-chips" aria-label="Filter">

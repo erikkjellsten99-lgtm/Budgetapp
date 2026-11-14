@@ -724,7 +724,16 @@
   display: grid;
   gap: 0.75rem;
   justify-items: start;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
+}
+
+/* Presentationens första stycke på kortet i biblioteket: högst tre rader. */
+.kunskap .lar-teaser {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 .kunskap-own-list h3 {

@@ -262,9 +262,9 @@ describe('egna personer i biblioteket', () => {
     expect(html).toContain('Inga kort om Naval Ravikant än');
   });
 
-  it('biblioteket har en plats för egna personer', () => {
+  it('biblioteket är en enda lista, utan egen rubrik för egna personer, med knappen Lägg till person', () => {
     const html = renderToStaticMarkup(<Kunskap initialMode="bibliotek" />);
-    expect(html).toContain('>Egna personer</h3>');
+    expect(html).not.toContain('Egna personer');
     expect(html).toContain('Lägg till person');
   });
 });

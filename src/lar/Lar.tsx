@@ -89,17 +89,24 @@ function StartHere({ sources }: { sources: Source[] }) {
   );
 }
 
-/** Korten i listan. Tom lista får en förklaring. */
+/** En person som visas i listan men inte hör till det fasta innehållet (tillagd av användaren i Kunskap). */
+export type ExtraPerson = { id: string; name: string; kind: string; teaser: string };
+
+/** Korten i listan. `extra` visas i samma lista, efter de fasta. Tom lista får en förklaring. */
 export function LarList({
   people,
   onOpen,
   cardRef,
+  extra = [],
+  onOpenExtra,
 }: {
   people: Person[];
   onOpen: (id: string) => void;
   cardRef?: (id: string) => (el: HTMLButtonElement | null) => void;
+  extra?: ExtraPerson[];
+  onOpenExtra?: (id: string) => void;
 }) {
-  if (people.length === 0)
+  if (people.length + extra.length === 0)
     return (
       <div className="empty">
         <p>Inga personer i det här området än.</p>
@@ -109,6 +116,13 @@ export function LarList({
     <div className="lar-list">
       {people.map((p) => (
         <button key={p.id} type="button" className="card lar-card" ref={cardRef?.(p.id)} onClick={() => onOpen(p.id)}>
+          <span className="lar-card-name">{p.name}</span>
+          <span className="lar-kind">{p.kind}</span>
+          <span className="lar-teaser">{p.teaser}</span>
+        </button>
+      ))}
+      {extra.map((p) => (
+        <button key={`extra-${p.id}`} type="button" className="card lar-card" onClick={() => onOpenExtra?.(p.id)}>
           <span className="lar-card-name">{p.name}</span>
           <span className="lar-kind">{p.kind}</span>
           <span className="lar-teaser">{p.teaser}</span>
@@ -175,7 +189,7 @@ function PersonPage({
 /**
  * Lär: lista över personer och en sida per person. Fast innehåll ur people.ts. Visas som biblioteket i Kunskap
  * (`embedded`: utan egen rubrik). `onBack` tar över Tillbaka på personsidan (när sidan öppnats från ett kort),
- * och `onOpenChange` säger till när en personsida visas.
+ * och `onOpenChange` säger till när en personsida visas. `extra` är personer som lagts till i Kunskap.
  */
 export default function Lar({
   initialArea,
@@ -183,12 +197,17 @@ export default function Lar({
   embedded,
   onBack,
   onOpenChange,
+  extra,
+  onOpenExtra,
 }: {
   initialArea?: AreaId | 'alla';
   initialOpenId?: string;
   embedded?: boolean;
   onBack?: () => void;
   onOpenChange?: (open: boolean) => void;
+  /** Personer som användaren lagt till själv i Kunskap. Visas i samma lista under Alla (de har inget område). */
+  extra?: ExtraPerson[];
+  onOpenExtra?: (id: string) => void;
 }) {
   const [state, dispatch] = useReducer(larReducer, { area: initialArea ?? 'alla', openId: initialOpenId ?? null });
   const person = visiblePerson(state);
@@ -242,6 +261,8 @@ export default function Lar({
       </nav>
       <LarList
         people={shown}
+        extra={state.area === 'alla' ? extra : []}
+        onOpenExtra={onOpenExtra}
         cardRef={(id) => (el) => void cards.current.set(id, el)}
         onOpen={(id) => {
           from.current = id;

@@ -87,8 +87,8 @@
 - Beslut: ton positiv/negativ/neutral via ordlistor, orden som avgjorde visas. Neutral finns för att inte tvinga
   en ton.
 
-- Egna personer i biblioteket (2026-11-15): den som läggs till själv visas under Egna personer i Bibliotek och har
-  en sida med sina kort. Sidan är märkt som inte granskad. Beslut: inga genererade personsidor (text om personen,
+- Egna personer i biblioteket (2026-11-15): den som läggs till själv visas i samma lista som bibliotekets nio
+  (sammanslaget samma dag på Eriks önskan, ingen egen rubrik) och har en sida med sina kort. Sidan är märkt som inte granskad. Beslut: inga genererade personsidor (text om personen,
   påståenden, märkning av belägg), bara korten med källa.
 - Presentation av egna personer (2026-11-15): knappen "Skriv en presentation" på en egen persons sida ber
   funktionen `kunskap-presentation` skriva en kort text med källor. Delad serverkod ligger i

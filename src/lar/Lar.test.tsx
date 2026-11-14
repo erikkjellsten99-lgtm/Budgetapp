@@ -18,6 +18,15 @@ describe('Lär', () => {
     expect(cards(html)).toBe(9);
   });
 
+  it('personer som lagts till i Kunskap visas i samma lista, efter de fasta, och bara under Alla', () => {
+    const extra = [{ id: 'x1', name: 'Naval Ravikant', kind: 'företagande', teaser: 'Investerare.' }];
+    const html = renderToStaticMarkup(<Lar embedded extra={extra} />);
+    expect(cards(html)).toBe(10);
+    expect(html.indexOf('Naval Ravikant')).toBeGreaterThan(html.indexOf('Chris Williamson'));
+    expect((html.match(/class="lar-list"/g) ?? []).length).toBe(1);
+    expect(cards(renderToStaticMarkup(<Lar embedded extra={extra} initialArea="meditation" />))).toBe(PEOPLE.filter((p) => p.areas.includes('meditation')).length);
+  });
+
   it('personsidans rubrik kan få fokus och länkarna nämner ny flik', () => {
     const html = renderToStaticMarkup(<Lar initialOpenId="wim-hof" />);
     expect(html).toMatch(/<h2 tabindex="-1">Wim Hof<\/h2>/);
