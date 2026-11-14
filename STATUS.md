@@ -118,7 +118,8 @@
   mot riktig server, och att en batch hinner klart inom tidsgränsen. En batch är för lite för att säga något om
   hur ofta citat går att bekräfta.
 - Presentationer skrivs av sig själva (2026-11-15): varje egen person utan presentation får en när Mindhub är
-  öppen och man är inloggad, en i taget, högst 5 per dygn (serverns gräns). De som inte hinner med tas nästa dag.
+  öppen och man är inloggad, en i taget. Gränsen är höjd från 5 till 20 per dygn i repot (2026-11-15) men
+  servern har kvar 5 tills `kunskap-presentation` läggs ut igen. De som inte hinner med tas nästa dag.
   Prövat i webbläsare med låtsad server (två personer gav två anrop efter varandra, utloggad gav inga). Ingen
   ändring på servern.
 - Bibliotekets personer följs automatiskt sedan 2026-11-15 (Eriks önskan: alla i biblioteket ska finnas i flödet).
