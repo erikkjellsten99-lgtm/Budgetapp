@@ -1,6 +1,6 @@
 // Jarvis röst bakom ett eget gränssnitt: tal till text (STT) och text till tal (TTS).
 // Jarvis-vyn använder bara `stt` och `tts` härifrån. Lyssnandet är webbläsarens (speech.ts: SpeechRecognition).
-// Rösten är ElevenLabs via servern (cloudVoice.ts), med webbläsarens uppläsning (speechSynthesis) som reserv.
+// Rösten är Azure Speech via servern (cloudVoice.ts), med webbläsarens uppläsning (speechSynthesis) som reserv.
 // Vill du byta motor, t.ex. till Whisper, skriver du en ny SpeechToText eller TextToSpeech och byter raderna
 // längst ner. Resten av appen rörs inte.
 
@@ -71,7 +71,7 @@ const browserTts: TextToSpeech = {
 let turn = 0;
 
 /**
- * Mänsklig röst från servern (ElevenLabs). Går den inte att få fram, eller vägrar telefonen spela ljudet,
+ * Mänsklig röst från servern (Azure Speech). Går den inte att få fram, eller vägrar telefonen spela ljudet,
  * läser telefonens röst upp texten i stället, så att Jarvis aldrig blir tyst.
  */
 const cloudTts: TextToSpeech = {

@@ -1,5 +1,5 @@
-// Jarvis mänskliga röst: texten skickas till edge function jarvis-rost (ElevenLabs) och ljudet spelas upp här.
-// Nyckeln till ElevenLabs finns bara på servern. Går det inte (utloggad, utan nät, ingen nyckel, dagens gräns)
+// Jarvis mänskliga röst: texten skickas till edge function jarvis-rost (Azure Speech) och ljudet spelas upp här.
+// Nyckeln till Azure finns bara på servern. Går det inte (utloggad, utan nät, ingen nyckel, dagens gräns)
 // tar telefonens egen röst över: se voice.ts, som är det enda stället som använder den här filen.
 
 import { supabase } from './sync';

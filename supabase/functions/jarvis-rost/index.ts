@@ -1,17 +1,18 @@
-// Jarvis röst: gör om en text till tal med ElevenLabs och skickar tillbaka ljudet (mp3).
+// Jarvis röst: gör om en text till tal med Azure Speech och skickar tillbaka ljudet (mp3).
 //
 // POST { text: "Det blir ungefär sextontusen kronor över." }  med appens inloggning ("Authorization: Bearer <JWT>").
 // Svar: ljudet som application/octet-stream (mp3). Fel: { error: "kod", message: "text på svenska" }.
 //
 // - Bara inloggade användare. Högst 150 uppläsningar per person och dag (jarvis_usage.spoken, jarvis_count_speech()).
-// - ELEVENLABS_API_KEY ligger som hemlighet i Supabase och lämnar aldrig servern.
-// - Valfria hemligheter: ELEVENLABS_VOICE_ID (rösten) och ELEVENLABS_MODEL (modellen).
+// - AZURE_SPEECH_KEY ligger som hemlighet i Supabase och lämnar aldrig servern.
+// - AZURE_SPEECH_REGION är regionen där Speech-resursen skapades (standard: swedencentral).
+// - Valfri hemlighet: AZURE_SPEECH_VOICE (rösten: sv-SE-MattiasNeural, sv-SE-SofieNeural eller sv-SE-HilleviNeural).
 // - Läser ingenting ur ekonomin och skriver bara räknaren. Appen faller tillbaka på telefonens röst vid fel.
 //
 // verify_jwt ska vara på (standard). Läggs bara ut efter att Erik skrivit "Lägg ut".
 
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4'
-import { SPEECH_LIMIT, speakable } from './text.ts'
+import { SPEECH_LIMIT, speakable, ssml } from './text.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,10 +22,10 @@ const CORS = {
 const fail = (status: number, error: string, message: string) =>
   new Response(JSON.stringify({ error, message }), { status, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } })
 
-/** Rösten om ingen är vald: exemplet i ElevenLabs dokumentation. Byt med hemligheten ELEVENLABS_VOICE_ID. */
-const DEFAULT_VOICE = 'JBFqnCBsd6RMkjVDRZzb'
-/** Flerspråkig modell med svenska. Byt med hemligheten ELEVENLABS_MODEL, t.ex. eleven_flash_v2_5 (snabbare). */
-const DEFAULT_MODEL = 'eleven_multilingual_v2'
+/** Rösten om ingen är vald. Byt med hemligheten AZURE_SPEECH_VOICE. */
+const DEFAULT_VOICE = 'sv-SE-MattiasNeural'
+/** Regionen om ingen är vald. Måste vara den där Speech-resursen skapades, annars godtas inte nyckeln. */
+const DEFAULT_REGION = 'swedencentral'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS })
@@ -48,9 +49,9 @@ Deno.serve(async (req) => {
   const text = typeof body?.text === 'string' ? speakable(body.text) : ''
   if (!text) return fail(400, 'text', 'Texten är tom.')
 
-  const key = Deno.env.get('ELEVENLABS_API_KEY')
+  const key = Deno.env.get('AZURE_SPEECH_KEY')
   if (!key) {
-    console.error('jarvis-rost: ELEVENLABS_API_KEY saknas')
+    console.error('jarvis-rost: AZURE_SPEECH_KEY saknas')
     return fail(503, 'nyckel', 'Jarvis röst är inte inställd på servern.')
   }
 
@@ -61,18 +62,26 @@ Deno.serve(async (req) => {
     if (!count) throw new Error('jarvis_count_speech gav inget svar')
     if (!count.allowed) return fail(429, 'grans', `Jarvis har läst upp ${SPEECH_LIMIT} gånger i dag, och det är gränsen.`)
 
-    const voice = Deno.env.get('ELEVENLABS_VOICE_ID') || DEFAULT_VOICE
-    const model = Deno.env.get('ELEVENLABS_MODEL') || DEFAULT_MODEL
-    const speech = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`, {
+    const voice = (Deno.env.get('AZURE_SPEECH_VOICE') || DEFAULT_VOICE).trim()
+    const region = (Deno.env.get('AZURE_SPEECH_REGION') || DEFAULT_REGION).trim().toLowerCase()
+    if (!/^[a-z0-9]+$/.test(region)) {
+      console.error('jarvis-rost: AZURE_SPEECH_REGION ser fel ut')
+      return fail(503, 'nyckel', 'Jarvis röst är inte rätt inställd på servern.')
+    }
+    const speech = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
       method: 'POST',
-      headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
-      // language_code stöds inte av eleven_multilingual_v2, som hör språket själv.
-      body: JSON.stringify({ text, model_id: model, ...(model === 'eleven_multilingual_v2' ? {} : { language_code: 'sv' }) }),
+      headers: {
+        'Ocp-Apim-Subscription-Key': key,
+        'Content-Type': 'application/ssml+xml',
+        'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3',
+        'User-Agent': 'groundwork-jarvis',
+      },
+      body: ssml(text, voice),
       signal: AbortSignal.timeout(20_000),
     })
     if (!speech.ok || !speech.body) {
-      console.error('jarvis-rost: fel från ElevenLabs', speech.status, (await speech.text().catch(() => '')).slice(0, 300))
-      if (speech.status === 401) return fail(503, 'nyckel', 'Jarvis röst är inte rätt inställd på servern.')
+      console.error('jarvis-rost: fel från Azure Speech', speech.status, (await speech.text().catch(() => '')).slice(0, 300))
+      if (speech.status === 401 || speech.status === 403) return fail(503, 'nyckel', 'Jarvis röst är inte rätt inställd på servern.')
       return fail(502, 'rost', 'Det gick inte att få fram rösten just nu.')
     }
     // octet-stream så att appens Supabase-klient lämnar ljudet som en Blob och inte försöker läsa det som text.
