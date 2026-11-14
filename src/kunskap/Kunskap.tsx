@@ -981,7 +981,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
       <div className="view-intro">
         <div>
           <p className="eyebrow">{mode === 'flode' ? 'Flöde' : 'Bibliotek'}</p>
-          <h2>Kunskap</h2>
+          <h2>Mindhub</h2>
         </div>
         {mode === 'flode' && (
         <div className="kunskap-head-actions">

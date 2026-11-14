@@ -193,7 +193,7 @@ function TodayGroups({ facts, onOpen }: { facts: SummaryFacts; onOpen: (target: 
           <div className="empty">
             <p>Inga vanor eller att göra än.</p>
             <button type="button" className="primary" onClick={() => onOpen('vanor')}>
-              Lägg till i Vanor
+              Lägg till i Habits
             </button>
           </div>
         )}

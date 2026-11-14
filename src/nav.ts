@@ -6,13 +6,15 @@ export type Section = 'idag' | 'ekonomi' | 'vanor' | 'nyheter' | 'kunskap';
 export type EconomyView = 'overview' | 'budget' | 'goal' | 'assets' | 'investments' | 'wishlist';
 export type View = 'idag' | 'nyheter' | 'vanor' | 'kunskap' | 'account' | EconomyView;
 
-/** Huvudflikarna. Ikonerna är enkla linjer i ett 24×24-rutnät. */
+/** Huvudflikarna. Namnen är på engelska (Eriks val 2026-11-15); id:n och resten av appen är på svenska.
+ * Kunskap heter Mindhub i menyn.
+ * Ikonerna är enkla linjer i ett 24×24-rutnät. */
 export const SECTIONS: { id: Section; label: string; icon: string }[] = [
-  { id: 'idag', label: 'Idag', icon: 'M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4 7 17M17 7l1.4-1.4M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
-  { id: 'ekonomi', label: 'Ekonomi', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
-  { id: 'vanor', label: 'Vanor', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12.2l2.7 2.6L16.2 9.4' },
-  { id: 'nyheter', label: 'Nyheter', icon: 'M5 4h11v15a1 1 0 0 0 2 0V8h2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM8 8h5M8 12h5M8 16h3' },
-  { id: 'kunskap', label: 'Kunskap', icon: 'M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z' },
+  { id: 'idag', label: 'Today', icon: 'M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4 7 17M17 7l1.4-1.4M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
+  { id: 'ekonomi', label: 'Finance', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
+  { id: 'vanor', label: 'Habits', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12.2l2.7 2.6L16.2 9.4' },
+  { id: 'nyheter', label: 'News', icon: 'M5 4h11v15a1 1 0 0 0 2 0V8h2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM8 8h5M8 12h5M8 16h3' },
+  { id: 'kunskap', label: 'Mindhub', icon: 'M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z' },
 ];
 
 /** Underflikarna i Ekonomi. */

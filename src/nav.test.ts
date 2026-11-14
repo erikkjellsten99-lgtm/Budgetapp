@@ -11,6 +11,12 @@ describe('huvudmenyn', () => {
   });
 });
 
+describe('flikarnas namn', () => {
+  it('är på engelska, och Kunskap heter Mindhub', () => {
+    expect(SECTIONS.map((s) => s.label)).toEqual(['Today', 'Finance', 'Habits', 'News', 'Mindhub']);
+  });
+});
+
 describe('restoreView', () => {
   it('gammal sparad Jarvis-flik öppnar Idag', () => {
     expect(restoreView('jarvis')).toBe('idag');

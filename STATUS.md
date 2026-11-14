@@ -144,7 +144,9 @@
   anteckningar.
 - Design och plan: `docs/superpowers/specs/2026-11-13-lar-design.md`, `docs/superpowers/plans/2026-11-13-lar.md`.
 
-## Kunskap (ny flik, 2026-11-14)
+## Kunskap (ny flik, 2026-11-14; heter Mindhub i menyn sedan 2026-11-15)
+- Flikarna heter Today, Finance, Habits, News och Mindhub sedan 2026-11-15. Resten av appen är på svenska, även
+  underflikarna i Ekonomi, lägena Flöde och Bibliotek, och Jarvis svar (som nämner flikarna med svenska namn).
 - Sammanslaget med Lär 2026-11-15 (Eriks beslut): fem flikar i menyn, och Kunskap har lägena Flöde och Bibliotek.
   Biblioteket är Lär oförändrat. Namnet på ett kort öppnar personsidan, och Tillbaka går till samma ställe i flödet.
   En sparad Lär-flik öppnar Kunskap.

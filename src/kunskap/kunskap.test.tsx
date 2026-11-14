@@ -159,7 +159,7 @@ describe('bibliotekets personer följs från början', () => {
 describe('vyn', () => {
   it('visar rubrik, filter och laddning innan datan lästs', () => {
     const html = renderToStaticMarkup(<Kunskap />);
-    expect(html).toContain('>Kunskap</h2>');
+    expect(html).toContain('>Mindhub</h2>');
     for (const label of ['Alla', 'Citat', 'Insikter', 'Protokoll', 'Gillade']) expect(html).toContain(`>${label}</button>`);
     expect(html).toContain('aria-busy="true"');
   });
@@ -185,7 +185,7 @@ describe('biblioteket (Lär) inuti Kunskap', () => {
   it('läget Bibliotek visar en sida per person, utan egen rubrik och utan flödets knappar', () => {
     const html = renderToStaticMarkup(<Kunskap initialMode="bibliotek" />);
     expect((html.match(/class="card lar-card"/g) ?? []).length).toBe(PEOPLE.length);
-    expect(html).toContain('>Kunskap</h2>');
+    expect(html).toContain('>Mindhub</h2>');
     expect(html).not.toContain('>Lär</h2>');
     expect(html).toContain('>Bibliotek</p>');
     expect(html).not.toContain('Inställningar för nya kort');
