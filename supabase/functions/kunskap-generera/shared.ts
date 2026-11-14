@@ -59,6 +59,25 @@ export const personKey = (name: string) =>
     .normalize('NFD')
     .replace(ACCENTS, '')
 
+// Presentation av en egen person
+
+/** Högst så här många ord i en presentation, och så här många källor. */
+export const PROFILE_WORDS = 120
+export const PROFILE_SOURCES = 4
+
+/**
+ * En kort presentation av en person du lagt till själv, skriven av Claude med webbsökning. Sparas på personens
+ * post i kunskap_people. Den är inte granskad, och har därför inga påståenden om belägg.
+ */
+export interface PersonProfile {
+  /** Ett till tre korta stycken på svenska. */
+  text: string[]
+  /** Sidor ur webbsökningen som texten bygger på. Minst en. */
+  sources: { title: string; url: string }[]
+  created: number
+  model: string
+}
+
 // Inställningar
 
 export type Frequency = 'av' | 'dag' | 'vecka'
@@ -185,7 +204,10 @@ export interface Batch {
   id: string
   created: number
   status: 'pagar' | 'klar' | 'fel'
-  trigger: 'schema' | 'manuell'
+  /** `profil`: en presentation av en person skrevs (inga kort). */
+  trigger: 'schema' | 'manuell' | 'profil'
+  /** `profil`: vem presentationen gäller. */
+  person?: string
   requested: number
   /** Kort som sparades. */
   cards: number
@@ -233,7 +255,14 @@ export function isDue(settings: KunskapSettings, batches: Pick<Batch, 'created' 
 /** Högst så här många batchar per dygn och person, schemalagda och manuella tillsammans. Skyddar mot dyra misstag. */
 export const MAX_BATCHES_PER_DAY = 3
 
-export const batchesLastDay = (batches: Pick<Batch, 'created'>[], now: number) => batches.filter((b) => now - b.created < 24 * HOUR).length
+export const batchesLastDay = (batches: Pick<Batch, 'created' | 'trigger'>[], now: number) =>
+  batches.filter((b) => b.trigger !== 'profil' && now - b.created < 24 * HOUR).length
+
+/** Högst så här många presentationer per dygn och person som frågar. Räknas för sig, inte mot batcharna. */
+export const MAX_PROFILES_PER_DAY = 5
+
+export const profilesLastDay = (batches: Pick<Batch, 'created' | 'trigger'>[], now: number) =>
+  batches.filter((b) => b.trigger === 'profil' && now - b.created < 24 * HOUR).length
 
 /** En batch som stått som pågående längre än så här har avbrutits (funktionen hann inte klart). */
 export const STALE_MS = 10 * 60_000

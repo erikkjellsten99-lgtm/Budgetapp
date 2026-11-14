@@ -21,7 +21,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 | Vanor | `src/vanor/` | `src/vanor/CLAUDE.md` |
 | Jarvis | `src/Jarvis.tsx`, `jarvis.ts`, `speech.ts`, `Today.tsx` | föreslagen mapp `src/jarvis/` (inte flyttat än) |
 | Lär (biblioteket i Kunskap, ingen egen flik) | `src/lar/` (`people.ts` innehållet, `Lar.tsx` vyn, `larState.ts`, `lar.css`) | `src/lar/CLAUDE.md` |
-| Kunskap | `src/kunskap/` (`cards.ts` korten, `Kunskap.tsx` vyn, `kunskapState.ts`, `kunskapStore.ts`, `chatApi.ts`), servern `supabase/functions/kunskap/` (chatten) och `kunskap-generera/` (korten, på schema) | `src/kunskap/CLAUDE.md` |
+| Kunskap | `src/kunskap/` (`cards.ts` korten, `Kunskap.tsx` vyn, `kunskapState.ts`, `kunskapStore.ts`, `chatApi.ts`), servern `supabase/functions/kunskap/` (chatten), `kunskap-generera/` (korten, på schema) och `kunskap-presentation/` | `src/kunskap/CLAUDE.md` |
 | Galax | `src/vanor/CosmosView.tsx`, `Galaxy.tsx`, `*3d.ts`, `CameraRig.ts`, `cosmos*.ts`, `universe.ts` | föreslagen mapp `src/galax/` (inte flyttat än) |
 | Servern | `supabase/functions/inbox/` | `supabase/functions/inbox/CLAUDE.md` |
 
@@ -77,7 +77,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 - `npm test` och `npm run build` gröna före push.
 - IndexedDB: höj aldrig en befintlig version i efterhand, lägg till ny version med uppgraderingssteg
   (`src/db.ts` DB_VERSION, `src/vanor/store.ts` DB_VERSION).
-- Supabase (databas, edge functions `inbox`, `reminders`, `jarvis`, `kunskap` och `kunskap-generera`) ändras bara efter att Erik skrivit "Lägg ut".
+- Supabase (databas, edge functions `inbox`, `reminders`, `jarvis`, `kunskap`, `kunskap-generera` och `kunskap-presentation`) ändras bara efter att Erik skrivit "Lägg ut".
 - Fråga innan ny teknik eller tjänst som kostar pengar. Erik vill inte betala något.
 - Max ett förslag på förbättring per leverans. Bygg det inte utan att fråga.
 

@@ -49,23 +49,28 @@ export function readGenerateReply(status: number, body: unknown): GenerateReply 
   const b = (body ?? {}) as { batches?: { cards?: unknown; costUsd?: unknown }[]; message?: unknown };
   const batch = Array.isArray(b.batches) ? b.batches[0] : undefined;
   if (status >= 200 && status < 300 && batch) return { ok: true, cards: Number(batch.cards) || 0, costUsd: Number(batch.costUsd) || 0 };
-  if (status === 401) return { ok: false, message: 'Logga in under Konto för att generera kort.' };
-  if (status === 404) return { ok: false, message: 'Genereringen är inte påslagen på servern än.' };
+  if (status === 401) return { ok: false, message: 'Logga in under Konto först. Genereringen körs på ditt konto.' };
+  if (status === 404) return { ok: false, message: 'Det här är inte påslaget på servern än.' };
   return { ok: false, message: typeof b.message === 'string' && b.message.trim() ? b.message.trim() : 'Genereringen misslyckades. Försök igen.' };
 }
 
 /** Kör en batch nu, på servern. Tar upp till ett par minuter. Kastar aldrig. */
-export async function generateNow(): Promise<GenerateReply> {
+export const generateNow = () => callGenerate('kunskap-generera', {});
+
+/** Ber servern skriva en presentation av en person du följer. Tar upp till en minut. Kastar aldrig. */
+export const writeProfile = (personId: string) => callGenerate('kunskap-presentation', { person: personId });
+
+async function callGenerate(name: 'kunskap-generera' | 'kunskap-presentation', body: { person?: string }): Promise<GenerateReply> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, message: 'Du är inte uppkopplad.' };
   try {
     const { data: auth } = await supabase.auth.getSession();
     if (!auth.session) return readGenerateReply(401, null);
     // Servern läser personerna och inställningen från kontot: skicka upp det som ändrats här först.
     await syncHabits();
-    const { data, error, response } = await supabase.functions.invoke('kunskap-generera', { body: {} });
+    const { data, error, response } = await supabase.functions.invoke(name, { body });
     const reply = !error ? readGenerateReply(200, data) : response ? readGenerateReply(response.status, await response.json().catch(() => null)) : readGenerateReply(0, null);
-    // Hämta de nya korten och kostnadsraden direkt.
-    void syncHabits();
+    // Hämta det nya (kort, presentation, kostnadsrad) innan svaret visas.
+    await syncHabits();
     return reply;
   } catch {
     return readGenerateReply(0, null);

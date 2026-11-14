@@ -9,6 +9,14 @@
   och korten om personen, med källa. Inga texter om personen, inga påståenden och inga märkningar av belägg
   skrivs där, varken för hand eller av Claude. Att lägga till i biblioteket är samma sak som att följa.
 
+- **Presentation av en egen person** (beslut av Erik 2026-11-15): på en egen persons sida kan Erik be Claude skriva
+  en kort text om vem personen är (`writeProfile` → edge function `kunskap-presentation` med `{ person: id }`; egen funktion så att knappen aldrig
+  kan starta en batch med kort). Högst 120 ord, minst en
+  källa som finns bland webbsökningens resultat (`toProfile`), annars sparas ingenting. Texten sparas som `profile` på
+  personens post i `kunskap_people` och visas märkt "Skriven av Claude … Inte granskad". Bara på en tryckning, aldrig
+  automatiskt, högst 5 per dygn, och kostnaden loggas som en batch med `trigger: 'profil'`. Fortfarande inga
+  påståenden om belägg, ingen metod och inga märkningar på egna sidor, och bibliotekets nio sidor genereras aldrig.
+
 - Alla personer i biblioteket följs från början (`followLibrary` i `kunskapStore.ts`), så att de finns i flödet och
   får nya kort. Vilka som lagts till står i posten `library` i `kunskap_settings`: den Erik tar bort kommer inte
   tillbaka, en ny person i `PEOPLE` läggs till en gång. Id:t är `lib-<person-id>`, lika på alla telefoner. Inloggad

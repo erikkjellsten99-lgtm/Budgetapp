@@ -39,7 +39,7 @@ import {
   type FollowedPerson,
   type Vote,
 } from './kunskapState';
-import { follow, generateNow, savePrefs, saveSettings, unfollow, useKunskap, vote } from './kunskapStore';
+import { follow, generateNow, savePrefs, saveSettings, unfollow, useKunskap, vote, writeProfile, type GenerateReply } from './kunskapStore';
 import './kunskap.css';
 
 const ICON = {
@@ -427,10 +427,10 @@ function SettingsSheet({
                     <strong>{formatUsd(b.costUsd)}</strong>
                   </p>
                   <p className={b.status === 'fel' || b.stale ? 'kunskap-batch-line bad' : 'kunskap-batch-line'}>
-                    {b.trigger === 'schema' ? 'Schemat' : 'Manuellt'}
+                    {b.trigger === 'schema' ? 'Schemat' : b.trigger === 'profil' ? `Presentation av ${b.person ?? 'en person'}` : 'Manuellt'}
                     {': '}
                     {b.stale ? 'avbröts' : STATUS[b.status].toLowerCase()}
-                    {b.status === 'klar' && `, ${b.cards} kort`}
+                    {b.status === 'klar' && b.trigger !== 'profil' && `, ${b.cards} kort`}
                     {b.status === 'klar' && !!b.discovery && `, varav ${b.discovery} upptäckt`}
                     {b.status === 'klar' && b.quotesVerified + b.quotesRewritten > 0 && ` (${b.quotesVerified} citat bekräftade, ${b.quotesRewritten} omskrivna)`}
                     {b.status === 'fel' && b.error ? `. ${b.error}` : ''}
@@ -648,6 +648,7 @@ export function OwnPersonPage({
   onVote,
   onDeeper,
   onRemove,
+  onWrite,
 }: {
   person: FollowedPerson;
   cards: KunskapCard[];
@@ -656,7 +657,28 @@ export function OwnPersonPage({
   onVote: (card: KunskapCard, pressed: 1 | -1) => void;
   onDeeper: (card: KunskapCard) => void;
   onRemove: () => void;
+  /** Ber servern skriva (eller skriva om) presentationen. Kostar pengar, så bara på en tryckning. */
+  onWrite: () => Promise<GenerateReply>;
 }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ text: string; error: boolean } | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  async function write() {
+    if (busy) return;
+    setBusy(true);
+    setResult(null);
+    const reply = await onWrite();
+    if (!alive.current) return;
+    setBusy(false);
+    setResult(reply.ok ? { text: `Klart. Det kostade ${formatUsd(reply.costUsd)}.`, error: false } : { text: reply.message, error: true });
+  }
+  const profile = person.profile;
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -679,6 +701,46 @@ export function OwnPersonPage({
         Du har lagt till den här personen själv. Sidan är inte granskad som de andra i biblioteket: den visar korten som
         gjorts om personen, med källa på varje kort.
       </p>
+      <section className="card lar-section kunskap-profile" aria-labelledby="kunskap-profile-title">
+        <h3 id="kunskap-profile-title">Om {person.name}</h3>
+        {profile ? (
+          <>
+            {profile.text.map((p) => (
+              <p key={p} className="kunskap-profile-text">
+                {p}
+              </p>
+            ))}
+            <p className="kunskap-profile-heading">{profile.sources.length === 1 ? 'Källa' : 'Källor'}</p>
+            <ul className="kunskap-profile-sources">
+              {profile.sources.map((s) => (
+                <li key={s.url}>
+                  <a href={s.url} target="_blank" rel="noopener noreferrer">
+                    {s.title}
+                    <span className="visually-hidden"> (öppnas i ny flik)</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p className="kunskap-profile-note">
+              Skriven av Claude med webbsökning {formatWhen(profile.created).slice(0, 10)}. Inte granskad: kontrollera mot källorna.
+            </p>
+          </>
+        ) : (
+          <p className="kunskap-hint">
+            Ingen presentation än. Claude kan skriva en kort text om vem personen är, med källor. Den blir inte granskad, och det
+            kostar en liten summa.
+          </p>
+        )}
+        <button type="button" className="kunskap-manage" disabled={busy} onClick={() => void write()}>
+          {busy ? 'Skriver …' : profile ? 'Skriv om presentationen' : 'Skriv en presentation'}
+        </button>
+        {busy && <p className="kunskap-hint">Det tar upp till en minut.</p>}
+        {result && (
+          <p className={result.error ? 'kunskap-error' : 'kunskap-ok'} role={result.error ? 'alert' : 'status'}>
+            {result.text}
+          </p>
+        )}
+      </section>
       {cards.length === 0 ? (
         <div className="empty">
           <p>Inga kort om {person.name} än. De kommer vid nästa generering.</p>
@@ -806,6 +868,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
           onBack={own?.fromCard ? backToFeed : () => setOwn(null)}
           onVote={(card, pressed) => void vote(card, pressed)}
           onDeeper={setChat}
+          onWrite={() => writeProfile(ownPerson.id)}
           onRemove={() => {
             void unfollow(ownPerson.id);
             if (own?.fromCard) backToFeed();

@@ -9,6 +9,7 @@ import {
   type Batch,
   type KunskapPrefs,
   type ManualLevel,
+  type PersonProfile,
   type PrefKind,
   type Weight,
 } from '../../supabase/functions/kunskap-generera/shared.ts';
@@ -21,6 +22,8 @@ export interface FollowedPerson {
   name: string;
   topics: string[];
   created: number;
+  /** Presentation skriven av Claude på servern (bara egna personer, och bara när du bett om den). */
+  profile?: PersonProfile;
 }
 
 /** Gilla (1) eller ogilla (-1) på ett kort. Sparas i kunskap_votes, ett per kort. */

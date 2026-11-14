@@ -654,6 +654,59 @@
   text-align: left;
 }
 
+/* Presentation av en egen person */
+.kunskap-profile {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+  max-width: 40rem;
+  margin: 0 0 0.85rem;
+  padding: 1rem;
+}
+
+.kunskap-profile h3 {
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.kunskap-profile-text {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.kunskap-profile-heading {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.kunskap-profile-sources {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.kunskap-profile-sources li {
+  padding: 0;
+  border: 0;
+}
+
+.kunskap-profile-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
 /* Upptäckt och smak */
 .kunskap-type.upptackt {
   background: color-mix(in srgb, var(--pine) 14%, var(--surface));
