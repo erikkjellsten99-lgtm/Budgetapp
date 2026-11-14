@@ -172,8 +172,24 @@ function PersonPage({
   );
 }
 
-/** Lär: lista över personer och en sida per person. Fast innehåll ur people.ts. */
-export default function Lar({ initialArea, initialOpenId }: { initialArea?: AreaId | 'alla'; initialOpenId?: string }) {
+/**
+ * Lär: lista över personer och en sida per person. Fast innehåll ur people.ts. Visas som biblioteket i Kunskap
+ * (`embedded`: utan egen rubrik). `onBack` tar över Tillbaka på personsidan (när sidan öppnats från ett kort),
+ * och `onOpenChange` säger till när en personsida visas.
+ */
+export default function Lar({
+  initialArea,
+  initialOpenId,
+  embedded,
+  onBack,
+  onOpenChange,
+}: {
+  initialArea?: AreaId | 'alla';
+  initialOpenId?: string;
+  embedded?: boolean;
+  onBack?: () => void;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const [state, dispatch] = useReducer(larReducer, { area: initialArea ?? 'alla', openId: initialOpenId ?? null });
   const person = visiblePerson(state);
   const cards = useRef(new Map<string, HTMLButtonElement | null>());
@@ -191,21 +207,26 @@ export default function Lar({ initialArea, initialOpenId }: { initialArea?: Area
     }
   }, [person]);
 
+  const open = !!person;
+  useEffect(() => onOpenChange?.(open), [open, onOpenChange]);
+
   if (person)
     return (
       <div className="lar">
-        <PersonPage person={person} onBack={() => dispatch({ type: 'back' })} headingRef={heading} />
+        <PersonPage person={person} onBack={onBack ?? (() => dispatch({ type: 'back' }))} headingRef={heading} />
       </div>
     );
 
   return (
     <div className="lar">
-      <div className="view-intro">
-        <div>
-          <p className="eyebrow">Bibliotek</p>
-          <h2>Lär</h2>
+      {!embedded && (
+        <div className="view-intro">
+          <div>
+            <p className="eyebrow">Bibliotek</p>
+            <h2>Lär</h2>
+          </div>
         </div>
-      </div>
+      )}
       <nav className="lar-chips" aria-label="Områden">
         {[{ id: 'alla' as const, label: 'Alla' }, ...AREAS].map((a) => (
           <button

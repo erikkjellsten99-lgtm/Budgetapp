@@ -580,6 +580,48 @@
   color: var(--lingon);
 }
 
+/* Två lägen: Flöde och Bibliotek (Lär) */
+.kunskap-segment.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.kunskap-modes {
+  max-width: 40rem;
+  margin: 0 0 0.85rem;
+}
+
+.kunskap-modes button {
+  min-height: 2.5rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.kunskap-modes button.active {
+  background: var(--cobalt);
+  color: var(--surface);
+}
+
+.kunskap-person-link {
+  min-height: 2.75rem;
+  margin: -0.6rem 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
 /* Upptäckt och smak */
 .kunskap-type.upptackt {
   background: color-mix(in srgb, var(--pine) 14%, var(--surface));

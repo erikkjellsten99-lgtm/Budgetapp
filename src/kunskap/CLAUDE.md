@@ -1,5 +1,9 @@
 # Kunskap – regler för den här delen
 
+- Två lägen i samma flik: **Flöde** (korten, den här mappen) och **Bibliotek** (Lär, `../lar/`, fast och granskat
+  innehåll). Namnet på ett kort är en knapp till personsidan när personen finns i `PEOPLE`; Tillbaka går då till
+  flödet på samma ställe. Personer utan sida i biblioteket får ingen, och sådana sidor genereras aldrig av Claude.
+
 - Ett flöde av kort i textform ("reels i text"): `citat`, `insikt` eller `protokoll`. Varje kort har person, ämne,
   typ och källa med https-länk, och högst 80 ord (`MAX_WORDS`, låst i `kunskap.test.tsx`).
 - Exempelkorten (`cards.ts`) byggs av det granskade innehållet i Lär (`../lar/people.ts`). Skriv inga egna kort

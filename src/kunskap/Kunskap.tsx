@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import Lar from '../lar/Lar';
+import { PEOPLE } from '../lar/people';
 import { EXAMPLE_CARDS, SUGGESTED, TYPE_LABEL, type KunskapCard } from './cards';
 import { askAboutCard, QUESTION_MAX, TURNS_BACK, type ChatTurn } from './chatApi';
 import {
@@ -26,6 +28,7 @@ import {
   monthCost,
   NAME_MAX,
   parseTopics,
+  personKey,
   tasteOf,
   voteMap,
   waiting,
@@ -114,6 +117,7 @@ export function CardView({
   onVote,
   onDeeper,
   onFollow,
+  onPerson,
 }: {
   card: KunskapCard;
   value?: 1 | -1;
@@ -121,13 +125,22 @@ export function CardView({
   onDeeper: () => void;
   /** Finns bara på upptäcktskort om en person du inte följer. */
   onFollow?: () => void;
+  /** Finns när personen har en sida i biblioteket. */
+  onPerson?: () => void;
 }) {
   return (
     <article className="card kunskap-card" aria-label={`${TYPE_LABEL[card.type]} från ${card.person}`}>
       <CardMeta card={card} />
       <CardBody card={card} />
       <p className="kunskap-person">
-        {card.person}
+        {onPerson ? (
+          <button type="button" className="kunskap-person-link" onClick={onPerson}>
+            {card.person}
+            <span className="visually-hidden">, öppna i biblioteket</span>
+          </button>
+        ) : (
+          card.person
+        )}
         {onFollow && (
           <button type="button" className="kunskap-follow" onClick={onFollow}>
             Följ
@@ -618,14 +631,49 @@ function ChatSheet({ card, onClose }: { card: KunskapCard; onClose: () => void }
   );
 }
 
-/** Kunskap: ett flöde av korta kort från personer du följer, med gilla/ogilla och en chatt per kort. */
-export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Filter }) {
+/** Personens sida i biblioteket (Lär), om hen har en. */
+const libraryId = (name: string) => PEOPLE.find((p) => personKey(p.name) === personKey(name))?.id;
+
+type Mode = 'flode' | 'bibliotek';
+const MODES: { id: Mode; label: string }[] = [
+  { id: 'flode', label: 'Flöde' },
+  { id: 'bibliotek', label: 'Bibliotek' },
+];
+
+/**
+ * Kunskap: två lägen. Flödet är korta kort från personer du följer, med gilla/ogilla och en chatt per kort.
+ * Biblioteket är Lär: en granskad sida per person. Personens namn på ett kort öppnar sidan.
+ */
+export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' }: { initialFilter?: Filter; initialMode?: Mode }) {
   const { data, failed } = useKunskap();
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [managing, setManaging] = useState(false);
   const [configuring, setConfiguring] = useState(false);
   const [tasting, setTasting] = useState(false);
   const [chat, setChat] = useState<KunskapCard | null>(null);
+  const [mode, setMode] = useState<Mode>(initialMode);
+  // Personsidan som öppnats från ett kort (då går Tillbaka till flödet, på samma ställe som förut).
+  const [fromCard, setFromCard] = useState<string | null>(null);
+  const [personOpen, setPersonOpen] = useState(false);
+  const scrollBack = useRef(0);
+
+  function showMode(next: Mode) {
+    setFromCard(null);
+    setPersonOpen(false);
+    setMode(next);
+  }
+
+  function openPerson(id: string) {
+    scrollBack.current = window.scrollY;
+    setFromCard(id);
+    setMode('bibliotek');
+  }
+
+  function backToFeed() {
+    showMode('flode');
+    const y = scrollBack.current;
+    requestAnimationFrame(() => window.scrollTo(0, y));
+  }
 
   const people = data?.people ?? [];
   const votes = voteMap(data?.votes ?? []);
@@ -635,11 +683,14 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
 
   return (
     <div className="kunskap">
+      {!personOpen && (
+        <>
       <div className="view-intro">
         <div>
-          <p className="eyebrow">Flöde</p>
+          <p className="eyebrow">{mode === 'flode' ? 'Flöde' : 'Bibliotek'}</p>
           <h2>Kunskap</h2>
         </div>
+        {mode === 'flode' && (
         <div className="kunskap-head-actions">
           <button type="button" className="kunskap-manage" onClick={() => setManaging(true)}>
             {people.length === 0 ? 'Följ personer' : `Följer ${people.length}`}
@@ -651,7 +702,21 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
             <Icon d={ICON.settings} />
           </button>
         </div>
+        )}
       </div>
+      <div className="kunskap-segment two kunskap-modes" role="group" aria-label="Läge">
+        {MODES.map((m) => (
+          <button key={m.id} type="button" className={m.id === mode ? 'active' : undefined} aria-pressed={m.id === mode} onClick={() => showMode(m.id)}>
+            {m.label}
+          </button>
+        ))}
+      </div>
+        </>
+      )}
+      {mode === 'bibliotek' && (
+        <Lar key={fromCard ?? 'lista'} embedded initialOpenId={fromCard ?? undefined} onBack={fromCard ? backToFeed : undefined} onOpenChange={setPersonOpen} />
+      )}
+      <div hidden={mode !== 'flode'}>
       <nav className="kunskap-chips" aria-label="Filter">
         {FILTERS.map((f) => (
           <button key={f.id} type="button" className={f.id === filter ? 'chip active' : 'chip'} aria-pressed={f.id === filter} onClick={() => setFilter(f.id)}>
@@ -704,6 +769,7 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
                   onVote={(pressed) => void vote(card, pressed)}
                   onDeeper={() => setChat(card)}
                   onFollow={card.discovery && !isFollowed(people, card.person) ? () => void follow(card.person, [card.topic]) : undefined}
+                  onPerson={libraryId(card.person) ? () => openPerson(libraryId(card.person)!) : undefined}
                 />
               ))}
             </div>
@@ -711,6 +777,7 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
         </>
       )}
 
+      </div>
       {managing && <PeopleSheet people={people} onClose={() => setManaging(false)} />}
       {configuring && data && <SettingsSheet settings={data.settings} batches={data.batches} hasPeople={people.length > 0} onClose={() => setConfiguring(false)} />}
       {tasting && data && <TasteSheet votes={data.votes} prefs={data.prefs} people={people} onClose={() => setTasting(false)} />}

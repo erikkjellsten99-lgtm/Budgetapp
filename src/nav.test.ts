@@ -2,12 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { ECONOMY, ECONOMY_TABS, isEconomy, restoreView, sectionOf, SECTIONS, tabOf } from './nav';
 
 describe('huvudmenyn', () => {
-  it('sex flikar i rätt ordning', () => {
-    expect(SECTIONS.map((s) => s.id)).toEqual(['idag', 'ekonomi', 'vanor', 'nyheter', 'lar', 'kunskap']);
-  });
-
-  it('Lär hör till sin egen flik', () => {
-    expect(sectionOf('lar')).toBe('lar');
+  it('fem flikar i rätt ordning', () => {
+    expect(SECTIONS.map((s) => s.id)).toEqual(['idag', 'ekonomi', 'vanor', 'nyheter', 'kunskap']);
   });
 
   it('Kunskap hör till sin egen flik', () => {
@@ -20,13 +16,17 @@ describe('restoreView', () => {
     expect(restoreView('jarvis')).toBe('idag');
   });
 
+  it('gammal sparad Lär-flik öppnar Kunskap, där biblioteket bor', () => {
+    expect(restoreView('lar')).toBe('kunskap');
+  });
+
   it('okänd eller saknad vy öppnar Idag', () => {
     expect(restoreView(null)).toBe('idag');
     expect(restoreView('galax')).toBe('idag');
   });
 
   it('giltiga vyer behålls', () => {
-    for (const v of ['idag', 'vanor', 'nyheter', 'lar', 'kunskap', 'account', 'overview', 'budget', 'goal', 'assets', 'investments', 'wishlist'])
+    for (const v of ['idag', 'vanor', 'nyheter', 'kunskap', 'account', 'overview', 'budget', 'goal', 'assets', 'investments', 'wishlist'])
       expect(restoreView(v)).toBe(v);
   });
 });

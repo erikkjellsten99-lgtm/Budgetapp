@@ -36,7 +36,6 @@ import { lazyWithReload } from './lazyWithReload';
 import Room from './Room';
 import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type EconomyView, type Section, type View } from './nav';
 const Nyheter = lazy(() => import('./Nyheter'));
-const Lar = lazy(() => import('./lar/Lar'));
 const Kunskap = lazy(() => import('./kunskap/Kunskap'));
 import { formatKr, formatKrOre, formatPct } from './money';
 import { usePortfolio } from './usePortfolio';
@@ -362,13 +361,6 @@ export default function App() {
           {visited.has('nyheter') && (
             <Suspense fallback={<ViewLoading />}>
               <Nyheter active={view === 'nyheter'} />
-            </Suspense>
-          )}
-        </div>
-        <div hidden={view !== 'lar'}>
-          {visited.has('lar') && (
-            <Suspense fallback={<ViewLoading />}>
-              <Lar />
             </Suspense>
           )}
         </div>
