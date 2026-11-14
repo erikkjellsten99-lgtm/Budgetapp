@@ -49,8 +49,9 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 - Läser bara. Får aldrig ändra något i ekonomin.
 - **Två Jarvis (beslut 2026-11-13: Claude API är tillåtet för Jarvis i appen).**
   - *Jarvis i appen* frågar edge function `jarvis` (`supabase/functions/jarvis/`), som frågar Claude
-    (`claude-sonnet-5-5`) med två läsverktyg (`tools.ts`: `hamta_manad`, `hamta_lage`). Verktygen räknar med den delade
-    koden i `inbox/`, modellen räknar aldrig själv. Svaren läses upp, så beloppen avrundas i talspråk (Eriks val).
+    (`claude-sonnet-5-5`) med tre läsverktyg (`tools.ts`: `hamta_manad`, `hamta_lage`, `hamta_vanor`). Verktygen räknar med den delade
+    koden i `inbox/`, modellen räknar aldrig själv. `hamta_vanor` läser personens egna vanor och Att göra
+    (`personal_records`), inte hälsodata. Svaren läses upp, så beloppen avrundas i talspråk (Eriks val).
     Funktionen läser med användarens JWT (RLS gäller, ingen service role), högst 50 frågor per person och dag
     (`jarvis_usage`, `jarvis_count_call()`), och API-nyckeln finns bara som hemlighet på servern.
   - *Den enkla Jarvis* (`ask.ts`, nyckelord, ingen AI, exakta belopp) finns kvar: Siri-genvägarna, "Jarvis säger" på

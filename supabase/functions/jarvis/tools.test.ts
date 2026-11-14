@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { monthTool, runTool, stateTool, systemPrompt, toEconomy, TOOLS } from './tools.ts'
+import { habitsTool, monthTool, runTool, stateTool, systemPrompt, toDay, toEconomy, TOOLS } from './tools.ts'
 import { overviewNumbers, summaryFacts } from '../inbox/summary.ts'
 import { monthPlans } from '../inbox/months.ts'
 import { MAX_MONTHS } from '../inbox/goalPlan.ts'
@@ -109,6 +109,78 @@ describe('hamta_lage', () => {
   })
 })
 
+// 2026-11-13 är en fredag. Raderna som de ligger i personal_records, i blandad ordning.
+const habit = (id: string, name: string, goal: number, order: number, extra: object = {}) => ({
+  store: 'habits',
+  data: { id, name, goal, created: '2026-10-01', after: [], order, archived: false, ...extra },
+})
+const check = (date: string, habitId: string) => ({ data: { date, habitId } })
+const personal = [
+  habit('gym', 'Gym', 3, 2),
+  habit('med', 'Meditation', 7, 0, { minimum: '2 min' }),
+  habit('las', 'Läsa', 7, 1),
+  habit('lop', 'Löpning', 1, 3),
+  habit('gammal', 'Gammal vana', 7, 4, { archived: true }),
+  { store: 'tasks', data: { id: 't1', title: 'Ring banken', date: '2026-11-12', created: 1 } },
+  { store: 'tasks', data: { id: 't2', title: 'Tvätta', date: today, doneOn: today, created: 2 } },
+  { store: 'tasks', data: { id: 't3', title: 'Boka tandläkare', date: '2026-11-20', created: 3 } },
+  { store: 'pauses', data: null },
+]
+const checks = [check(today, 'las'), check('2026-11-12', 'las'), check('2026-11-10', 'gym'), check('2026-11-09', 'lop'), { data: null }]
+const withDay = { ...economy, day: toDay(personal, checks) }
+
+describe('hamta_vanor', () => {
+  it('delar upp dagen som Prioritera idag (prioritizeToday)', () => {
+    const d = withDay.day
+    const p = prioritizeToday(d.habits, d.log, d.paused, d.tasks, today)
+    const h = habitsTool(withDay) as {
+      kvar_att_bocka_av: { maste_goras_idag: { namn: string }[]; kan_vanta: { namn: string }[] }
+      bockade_idag: { namn: string }[]
+      inte_aktuella_idag: { namn: string }[]
+    }
+    expect(h.kvar_att_bocka_av.maste_goras_idag.map((r) => r.namn)).toEqual(p.must.map((r) => r.habit.name))
+    expect(h.kvar_att_bocka_av.kan_vanta.map((r) => r.namn)).toEqual(p.flexible.map((r) => r.habit.name))
+    expect(h.kvar_att_bocka_av.maste_goras_idag.map((r) => r.namn)).toEqual(['Meditation'])
+    expect(h.kvar_att_bocka_av.kan_vanta.map((r) => r.namn)).toEqual(['Gym'])
+    expect(h.bockade_idag.map((r) => r.namn)).toEqual(['Läsa'])
+    expect(h.inte_aktuella_idag.map((r) => r.namn)).toEqual(['Löpning'])
+  })
+
+  it('bär veckans läge, minsta version, Att göra och vad man börjar med', () => {
+    expect(habitsTool(withDay)).toMatchObject({
+      datum: today,
+      veckodag: 'fredag',
+      pausad_idag: false,
+      kvar_att_bocka_av: {
+        maste_goras_idag: [{ namn: 'Meditation', denna_vecka: '0 av 7', minsta_version: '2 min' }],
+        kan_vanta: [{ namn: 'Gym', denna_vecka: '1 av 3', lage: ['2 kvar på 3 dagar, kan vänta till i morgon'] }],
+      },
+      bockade_idag: [{ namn: 'Läsa', denna_vecka: '2 av 7', lage: ['2 dagar i rad'] }],
+      inte_aktuella_idag: [{ namn: 'Löpning', lage: ['Veckomål klart'] }],
+      att_gora: { kvar: [{ titel: 'Ring banken', nar: 'Försenad sedan tors 12 nov' }], klart_idag: ['Tvätta'] },
+      borja_med: 'Ring banken',
+      klart_idag: '2 av 4',
+    })
+  })
+
+  it('en pausad dag har inga måsten', () => {
+    const paused = { ...economy, day: toDay([...personal, { store: 'pauses', data: { date: today } }], checks) }
+    expect(habitsTool(paused)).toMatchObject({ pausad_idag: true, kvar_att_bocka_av: { maste_goras_idag: [], kan_vanta: [] } })
+  })
+
+  it('utan vanor, eller när de inte gick att läsa, blir det ett felsvar', () => {
+    expect(habitsTool(economy)).toHaveProperty('fel')
+    expect(habitsTool({ ...economy, day: null })).toHaveProperty('fel')
+    expect(habitsTool({ ...economy, day: toDay([], []) })).toHaveProperty('fel')
+    expect(runTool('hamta_vanor', {}, economy).isError).toBe(true)
+    expect(runTool('hamta_vanor', {}, withDay).isError).toBe(false)
+  })
+
+  it('innehåller ingen ekonomi', () => {
+    expect(runTool('hamta_vanor', {}, withDay).content).not.toMatch(/69940|Avanza|Billån/)
+  })
+})
+
 describe('runTool', () => {
   it('svarar med JSON och märker fel', () => {
     const ok = runTool('hamta_manad', { manad: ' 2026-11 ' }, economy)
@@ -121,8 +193,8 @@ describe('runTool', () => {
     }
   })
 
-  it('verktygen kan bara läsa: två verktyg, inget som ändrar', () => {
-    expect(TOOLS.map((t) => t.name)).toEqual(['hamta_manad', 'hamta_lage'])
+  it('verktygen kan bara läsa: tre verktyg, inget som ändrar', () => {
+    expect(TOOLS.map((t) => t.name)).toEqual(['hamta_manad', 'hamta_lage', 'hamta_vanor'])
     for (const tool of TOOLS) expect(tool.input_schema.additionalProperties).toBe(false)
   })
 })
@@ -135,5 +207,6 @@ describe('systemPrompt', () => {
     expect(prompt).toContain('Avrunda')
     expect(prompt).toContain('2026-11-13')
     expect(prompt).toContain('november 2026')
+    expect(prompt).toContain('hamta_vanor')
   })
 })

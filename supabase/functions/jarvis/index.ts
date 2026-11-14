@@ -1,9 +1,9 @@
-// Jarvis: svarar på frågor om hushållets ekonomi med Claude (Anthropic API). Läser bara.
+// Jarvis: svarar på frågor om hushållets ekonomi och dina egna vanor med Claude (Anthropic API). Läser bara.
 //
 // POST { question: "Vad blir över i december?" }  med appens inloggning ("Authorization: Bearer <JWT>").
 // Svar: { answer: "…", used: 7, limit: 50 }. Fel: { error: "kod", message: "text på svenska" }.
 //
-// - Modellen får inte hela ekonomin i prompten. Den får två verktyg (tools.ts) och hämtar det frågan gäller.
+// - Modellen får inte allt i prompten. Den får tre verktyg (tools.ts) och hämtar det frågan gäller.
 // - All läsning sker med användarens egen JWT, så radsäkerheten (RLS) gäller. Ingen service role-nyckel används.
 // - Högst 50 frågor per användare och dag. Räknas i tabellen jarvis_usage av jarvis_count_call().
 // - ANTHROPIC_API_KEY ligger som hemlighet i Supabase och lämnar aldrig servern.
@@ -16,7 +16,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@1.8.0'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.49.4'
 import { stockholmToday } from '../inbox/parse.ts'
 import type { Holding, PricePoint } from '../inbox/types.ts'
-import { DAILY_LIMIT, MAX_QUESTION, MODEL, runTool, systemPrompt, toEconomy, TOOLS, type Economy } from './tools.ts'
+import { DAILY_LIMIT, MAX_QUESTION, MODEL, runTool, systemPrompt, toDay, toEconomy, TOOLS, type Day, type Economy } from './tools.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -50,6 +50,8 @@ async function loadEconomy(db: SupabaseClient, userId: string): Promise<Economy 
   const { data: member, error } = await db.from('household_members').select('household_id').eq('user_id', userId).maybeSingle()
   if (error) throw error
   if (!member) return null
+  // Vanorna läses samtidigt som ekonomin, så att svaret inte dröjer.
+  const day = loadDay(db, userId)
   const rows = await allRows<{ store: string; data: unknown }>((from, to) =>
     db.from('records').select('store, data').eq('household_id', member.household_id).eq('deleted', false).order('store').order('id').range(from, to),
   )
@@ -67,7 +69,27 @@ async function loadEconomy(db: SupabaseClient, userId: string): Promise<Economy 
       // Utan kurser räknas innehaven utan värde. Resten av ekonomin går att svara om ändå.
     }
   }
-  return toEconomy(rows, prices, stockholmToday())
+  return { ...toEconomy(rows, prices, stockholmToday()), day: await day }
+}
+
+/** Dina vanor, bockningar, pausdagar och Att göra (personal_records). Null om de inte gick att läsa. */
+async function loadDay(db: SupabaseClient, userId: string): Promise<Day | null> {
+  try {
+    const [rows, checks] = await Promise.all([
+      allRows<{ store: string; data: unknown }>((from, to) =>
+        db.from('personal_records').select('store, data').eq('user_id', userId).in('store', ['habits', 'pauses', 'tasks']).eq('deleted', false).order('id').range(from, to),
+      ),
+      // Alla bockningar, inte bara veckans: "dagar i rad" och vanor som ökar gradvis räknas bakåt i tiden.
+      allRows<{ data: unknown }>((from, to) =>
+        db.from('personal_records').select('data').eq('user_id', userId).eq('store', 'checks').eq('deleted', false).order('id').range(from, to),
+      ),
+    ])
+    return toDay(rows, checks)
+  } catch (error) {
+    // Utan vanor går ekonomin att svara om ändå. Verktyget hamta_vanor säger då att de inte gick att läsa.
+    console.error('jarvis: vanorna gick inte att läsa', error instanceof Error ? error.message : error)
+    return null
+  }
 }
 
 /** Frågar Claude och kör verktygen tills det finns ett svar i text. */
@@ -84,7 +106,7 @@ async function answer(question: string, economy: Economy): Promise<string> {
       messages,
     })
 
-    if (response.stop_reason === 'refusal') return 'Det kan jag inte svara på. Fråga mig om budgeten, kontona, sparmålet eller lånet.'
+    if (response.stop_reason === 'refusal') return 'Det kan jag inte svara på. Fråga mig om budgeten, kontona, sparmålet, lånet eller vanorna.'
 
     if (response.stop_reason === 'tool_use') {
       // Hela svaret skickas tillbaka oförändrat (även modellens tankeblock), sedan alla verktygssvar i ett meddelande.
