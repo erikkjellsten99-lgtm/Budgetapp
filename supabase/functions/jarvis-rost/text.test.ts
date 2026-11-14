@@ -3,9 +3,9 @@ import { MAX_SPEECH, speakable } from './text.ts'
 
 describe('speakable', () => {
   it('skriver ihop tusental och skriver ut kronor', () => {
-    expect(speakable('Gemensamt sparmål: 69 940 kr av 1 000 000 kr, 7 %.')).toBe('Gemensamt sparmål: 69940 kronor av 1000000 kronor, 7 procent.')
+    expect(speakable('Gemensamt sparmål: 69\u00A0940 kr av 1\u00A0000\u00A0000 kr, 7 %.')).toBe('Gemensamt sparmål: 69940 kronor av 1000000 kronor, 7 procent.')
     expect(speakable('runt 96 000 kronor')).toBe('runt 96000 kronor')
-    expect(speakable('Kvar: 1 586 kr.')).toBe('Kvar: 1586 kronor')
+    expect(speakable('Kvar: 1\u202F586 kr.')).toBe('Kvar: 1586 kronor')
   })
 
   it('rör inte tal som inte är tusental', () => {

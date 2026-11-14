@@ -12,11 +12,11 @@ export const SPEECH_LIMIT = 150
 export function speakable(text: string): string {
   return text
     .replace(/[*_#`]/g, '')
-    .replace(/(\d)[   ](?=\d{3}(?!\d))/g, '$1')
+    .replace(/(\d)\s(?=\d{3}(?!\d))/g, '$1')
     .replace(/(^|[^\d])[−-](?=\d)/g, '$1minus ')
     .replace(/(\d)\s*kr\b\.?/g, '$1 kronor')
     .replace(/(\d)\s*%/g, '$1 procent')
-    .replace(/[\s  ]+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
     .slice(0, MAX_SPEECH)
 }
