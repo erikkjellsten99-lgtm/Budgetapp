@@ -2,7 +2,9 @@
 
 import type { CardType, KunskapCard } from './cards';
 import {
+  batchesLastDay,
   leaning,
+  MAX_BATCHES_PER_DAY,
   personKey,
   STALE_MS,
   weights,
@@ -86,9 +88,29 @@ export function feed(cards: KunskapCard[], people: FollowedPerson[], votes: Map<
   return filter === 'alla' ? mine : mine.filter((c) => c.type === filter);
 }
 
-/** Genererade kort (nyast först) före exempelkorten. Ett genererat kort som också finns som exempel visas en gång. */
-export function allCards(generated: KunskapCard[], examples: KunskapCard[]): KunskapCard[] {
-  const mine = [...generated].sort((a, b) => (b.created ?? 0) - (a.created ?? 0));
+/**
+ * Ordningen på de genererade korten medan Kunskap är öppen. Första gången: nyast först. Kort som kommer till
+ * senare läggs sist, alltså precis där man är när man bläddrat förbi de förra, i stället för att hoppa in överst.
+ * Kort som försvunnit tas bort. Nästa gång appen öppnas är det nyast först igen.
+ */
+export function sessionOrder(prev: string[] | null, cards: KunskapCard[]): string[] {
+  const newest = [...cards].sort((a, b) => (b.created ?? 0) - (a.created ?? 0)).map((c) => c.id);
+  if (!prev) return newest;
+  const have = new Set(newest);
+  const kept = prev.filter((id) => have.has(id));
+  const known = new Set(kept);
+  return [...kept, ...newest.filter((id) => !known.has(id))];
+}
+
+/**
+ * Genererade kort före exempelkorten. Utan `order` nyast först, annars i den ordningen (se sessionOrder).
+ * Ett genererat kort som också finns som exempel visas en gång.
+ */
+export function allCards(generated: KunskapCard[], examples: KunskapCard[], order?: string[]): KunskapCard[] {
+  const rank = new Map((order ?? []).map((id, i) => [id, i]));
+  const mine = [...generated].sort((a, b) =>
+    order ? (rank.get(a.id) ?? order.length) - (rank.get(b.id) ?? order.length) : (b.created ?? 0) - (a.created ?? 0),
+  );
   const ids = new Set(mine.map((c) => c.id));
   return [...mine, ...examples.filter((c) => !ids.has(c.id))];
 }
@@ -174,3 +196,29 @@ export function ownPeople(people: FollowedPerson[], library: string[]): Followed
 
 /** Korten om en person, i flödets ordning. */
 export const cardsOf = (cards: KunskapCard[], name: string) => cards.filter((c) => personKey(c.person) === personKey(name));
+
+// Nya kort när man bläddrar
+
+export type MoreKind = 'off' | 'nopeople' | 'busy' | 'error' | 'limit' | 'ready';
+
+/**
+ * Vad som gäller för "nya kort när du bläddrar" just nu. Bara `ready` får starta en omgång.
+ * off: inte påslaget. nopeople: följer ingen. busy: en omgång pågår (här eller på en annan telefon).
+ * error: förra försöket misslyckades, och inget nytt görs förrän man trycker. limit: dygnets omgångar är slut.
+ */
+export function moreKind(input: {
+  auto: boolean;
+  people: number;
+  batches: Batch[];
+  now: number;
+  busy: boolean;
+  error: boolean;
+}): MoreKind {
+  if (!input.auto) return 'off';
+  if (input.people === 0) return 'nopeople';
+  const running = input.batches.some((b) => b.status === 'pagar' && b.trigger !== 'profil' && input.now - b.created <= STALE_MS);
+  if (input.busy || running) return 'busy';
+  if (input.error) return 'error';
+  if (batchesLastDay(input.batches, input.now) >= MAX_BATCHES_PER_DAY) return 'limit';
+  return 'ready';
+}

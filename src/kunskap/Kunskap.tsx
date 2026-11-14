@@ -5,6 +5,7 @@ import { EXAMPLE_CARDS, SUGGESTED, TYPE_LABEL, type KunskapCard } from './cards'
 import { askAboutCard, QUESTION_MAX, TURNS_BACK, type ChatTurn } from './chatApi';
 import {
   COUNT_MAX,
+  MAX_BATCHES_PER_DAY,
   PREF_LABEL_MAX,
   prefKey,
   type Batch,
@@ -27,8 +28,10 @@ import {
   formatWhen,
   isFollowed,
   monthCost,
+  moreKind,
   NAME_MAX,
   ownPeople,
+  sessionOrder,
   parseTopics,
   personKey,
   tasteOf,
@@ -37,6 +40,7 @@ import {
   withManual,
   type Filter,
   type FollowedPerson,
+  type MoreKind,
   type Vote,
 } from './kunskapState';
 import { follow, generateNow, savePrefs, saveSettings, unfollow, useKunskap, vote, writeProfile, type GenerateReply } from './kunskapStore';
@@ -334,7 +338,7 @@ function SettingsSheet({
   // Egen kopia, så att två snabba tryck på plus blir två steg och inte ett (inställningen kommer tillbaka först efter sparningen).
   const [draft, setDraft] = useState(settings);
   const latest = useRef(settings);
-  function change(part: Partial<Pick<KunskapSettings, 'frequency' | 'count'>>) {
+  function change(part: Partial<Pick<KunskapSettings, 'frequency' | 'count' | 'auto'>>) {
     latest.current = { ...latest.current, ...part };
     setDraft(latest.current);
     void saveSettings(latest.current);
@@ -398,6 +402,13 @@ function SettingsSheet({
           </button>
         </div>
       </div>
+      <label className="kunskap-check">
+        <input type="checkbox" checked={draft.auto} onChange={(e) => change({ auto: e.target.checked })} />
+        <span>
+          Hämta nya kort när jag bläddrar
+          <small>När du bläddrat förbi de nya korten görs en omgång till, högst {MAX_BATCHES_PER_DAY} per dygn. Varje omgång kostar.</small>
+        </span>
+      </label>
       <div className="kunskap-generate">
         <button type="button" className="primary" disabled={busy || !hasPeople} onClick={() => void run()}>
           {busy ? 'Genererar …' : 'Generera nu'}
@@ -759,6 +770,85 @@ export function OwnPersonPage({
   );
 }
 
+/**
+ * Platsen i flödet där nästa omgång kort hämtas: efter de genererade korten, före exemplen. När den syns
+ * (man har bläddrat hit) säger den till, och visar vad som händer.
+ */
+export function MoreCards({
+  kind,
+  message,
+  note,
+  onVisible,
+  onEnable,
+  onRetry,
+  onFollow,
+}: {
+  kind: MoreKind;
+  /** Felet från förra försöket (kind error). */
+  message?: string | null;
+  /** Resultatet av förra omgången, t.ex. "4 nya kort". */
+  note?: string | null;
+  onVisible: (visible: boolean) => void;
+  onEnable: () => void;
+  onRetry: () => void;
+  onFollow: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const report = useRef(onVisible);
+  report.current = onVisible;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => report.current(entries.some((e) => e.isIntersecting)), { rootMargin: '200px 0px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className={`kunskap-more ${kind}`} role="status" aria-live="polite">
+      {kind === 'off' && (
+        <>
+          <p>
+            <strong>Nya kort när du bläddrar hit?</strong> Claude gör en ny omgång kort när du kommit förbi de förra, högst{' '}
+            {MAX_BATCHES_PER_DAY} gånger per dygn. Varje omgång kostar pengar, och kostnaden syns under inställningarna.
+          </p>
+          <button type="button" className="primary" onClick={onEnable}>
+            Slå på
+          </button>
+        </>
+      )}
+      {kind === 'nopeople' && (
+        <>
+          <p>Följ minst en person, så hämtas nya kort hit.</p>
+          <button type="button" onClick={onFollow}>
+            Följ personer
+          </button>
+        </>
+      )}
+      {kind === 'busy' && (
+        <p className="kunskap-more-busy">
+          <span className="kunskap-msg claude thinking" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          Hämtar nya kort. Det tar upp till ett par minuter, bläddra gärna vidare så länge.
+        </p>
+      )}
+      {kind === 'error' && (
+        <>
+          <p className="kunskap-error">{message || 'Det gick inte att hämta nya kort.'}</p>
+          <button type="button" onClick={onRetry}>
+            Försök igen
+          </button>
+        </>
+      )}
+      {kind === 'limit' && <p>{note ? `${note} ` : ''}Dagens {MAX_BATCHES_PER_DAY} omgångar är slut. Nya kort kommer i morgon.</p>}
+      {kind === 'ready' && <p>{note ?? 'Nya kort hämtas när du bläddrar hit.'}</p>}
+    </div>
+  );
+}
+
 /** Personens sida i biblioteket (Lär), om hen har en. */
 const libraryId = (name: string) => PEOPLE.find((p) => personKey(p.name) === personKey(name))?.id;
 
@@ -815,9 +905,65 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
 
   const people = data?.people ?? [];
   const votes = voteMap(data?.votes ?? []);
-  const everything = allCards(data?.cards ?? [], EXAMPLE_CARDS);
+  // Kort som kommer till medan Kunskap är öppen läggs efter de förra, där man är, inte överst.
+  const order = useRef<string[] | null>(null);
+  if (data) order.current = sessionOrder(order.current, data.cards);
+  const everything = allCards(data?.cards ?? [], EXAMPLE_CARDS, order.current ?? undefined);
+
+  // Nya kort när man bläddrar: en omgång startas när platsen efter de nya korten kommer i bild.
+  const [more, setMore] = useState<{ busy: boolean; error: string | null; note: string | null }>({ busy: false, error: null, note: null });
+  const moreVisible = useRef(false);
+  // Laddad = platsen har kommit i bild sedan förra omgången. Hindrar att en omgång till startar av sig själv.
+  const moreArmed = useRef(false);
+  const kind: MoreKind | null = data
+    ? moreKind({ auto: data.settings.auto, people: people.length, batches: data.batches, now: Date.now(), busy: more.busy, error: !!more.error })
+    : null;
+
+  async function loadMore() {
+    if (more.busy) return;
+    moreArmed.current = false;
+    setMore({ busy: true, error: null, note: null });
+    const reply = await generateNow();
+    setMore(
+      reply.ok
+        ? { busy: false, error: null, note: reply.cards === 0 ? 'Inga nya kort den här gången.' : reply.cards === 1 ? '1 nytt kort ovanför.' : `${reply.cards} nya kort ovanför.` }
+        : { busy: false, error: reply.message, note: null },
+    );
+  }
+
+  function moreSeen(visible: boolean) {
+    if (visible && !moreVisible.current) moreArmed.current = true;
+    moreVisible.current = visible;
+    if (visible && moreArmed.current && kind === 'ready') void loadMore();
+  }
+
+  // Om platsen redan syns när allt blir klart (appen öppnas, datan har laddats): starta då.
+  useEffect(() => {
+    if (kind === 'ready' && mode === 'flode' && moreVisible.current && moreArmed.current) void loadMore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind, mode]);
+
+  const moreCards =
+    kind && filter !== 'gillade' ? (
+      <MoreCards
+        key="more"
+        kind={kind}
+        message={more.error}
+        note={more.note}
+        onVisible={moreSeen}
+        onEnable={() => {
+          if (!data) return;
+          void saveSettings({ ...data.settings, auto: true });
+          if (people.length > 0) void loadMore();
+        }}
+        onRetry={() => void loadMore()}
+        onFollow={() => setManaging(true)}
+      />
+    ) : null;
   const cards = feed(everything, people, votes, filter);
   const pending = waiting(everything, people);
+  /** Sista genererade kortet i det som visas. Platsen för nya kort ligger direkt efter (eller överst om inget finns). */
+  const lastGenerated = cards.reduce((last, c, i) => (c.created ? i : last), -1);
   const mine = ownPeople(people, PEOPLE.map((p) => p.name));
   const ownPerson = own ? people.find((p) => p.id === own.id) : undefined;
   /** Knappen på kortets namn: den granskade sidan, annars din egen sida, annars ingen. */
@@ -835,7 +981,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
       <div className="view-intro">
         <div>
           <p className="eyebrow">{mode === 'flode' ? 'Flöde' : 'Bibliotek'}</p>
-          <h2>Kunskap</h2>
+          <h2>Mindhub</h2>
         </div>
         {mode === 'flode' && (
         <div className="kunskap-head-actions">
@@ -931,6 +1077,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
               Inga kort än för {pending.map((p) => p.name).join(', ')}. De får kort vid nästa generering.
             </p>
           )}
+          {cards.length === 0 && moreCards}
           {cards.length === 0 ? (
             <div className="empty">
               <p>
@@ -948,7 +1095,8 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
             </div>
           ) : (
             <div className="kunskap-feed">
-              {cards.map((card) => (
+              {lastGenerated === -1 && moreCards}
+              {cards.flatMap((card, i) => [
                 <CardView
                   key={card.id}
                   card={card}
@@ -957,8 +1105,9 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
                   onDeeper={() => setChat(card)}
                   onFollow={card.discovery && !isFollowed(people, card.person) ? () => void follow(card.person, [card.topic]) : undefined}
                   onPerson={personLink(card.person)}
-                />
-              ))}
+                />,
+                i === lastGenerated ? moreCards : null,
+              ])}
             </div>
           )}
         </>

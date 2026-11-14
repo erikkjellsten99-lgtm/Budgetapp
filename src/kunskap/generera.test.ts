@@ -35,7 +35,7 @@ import {
   type VoteRow,
 } from '../../supabase/functions/kunskap-generera/shared.ts';
 import { EXAMPLE_CARDS } from './cards';
-import { allCards, batchLog, describeWeight, feed, formatUsd, formatWhen, monthCost, tasteOf, withManual } from './kunskapState';
+import { allCards, batchLog, moreKind, sessionOrder, describeWeight, feed, formatUsd, formatWhen, monthCost, tasteOf, withManual } from './kunskapState';
 import { loadKunskap, readGenerateReply, savePrefs, saveSettings } from './kunskapStore';
 
 const PEOPLE: Person[] = [{ name: 'Susanna Søberg', topics: ['bastu', 'kallbad'] }];
@@ -284,9 +284,9 @@ describe('inställningar, schema och kostnad', () => {
   const now = Date.UTC(2026, 10, 14, 4, 10);
 
   it('utan inställning genereras ingenting, och värdena hålls inom gränserna', () => {
-    expect(cleanSettings(undefined)).toEqual({ id: 'settings', frequency: 'av', count: 5 });
-    expect(cleanSettings({ frequency: 'ofta', count: 99 })).toEqual({ id: 'settings', frequency: 'av', count: 10 });
-    expect(cleanSettings({ frequency: 'vecka', count: 0 })).toEqual({ id: 'settings', frequency: 'vecka', count: 1 });
+    expect(cleanSettings(undefined)).toEqual({ id: 'settings', frequency: 'av', count: 5, auto: false });
+    expect(cleanSettings({ frequency: 'ofta', count: 99 })).toEqual({ id: 'settings', frequency: 'av', count: 10, auto: false });
+    expect(cleanSettings({ frequency: 'vecka', count: 0 })).toEqual({ id: 'settings', frequency: 'vecka', count: 1, auto: false });
     expect(cleanSettings({ frequency: 'dag', count: 'tre' }).count).toBe(5);
   });
 
@@ -354,6 +354,51 @@ describe('inställningar, schema och kostnad', () => {
   });
 });
 
+describe('nya kort när man bläddrar', () => {
+  const now = Date.UTC(2026, 10, 15, 12);
+  const card = (id: string, created: number) => ({ ...EXAMPLE_CARDS[0], id, created });
+  const b = (ago: number, over: Partial<Batch> = {}): Batch => ({
+    id: `b${ago}`, created: now - ago, status: 'klar', trigger: 'manuell', requested: 5, cards: 5, quotesVerified: 0, quotesRewritten: 0, dropped: 0, model: 'm', usage: NO_USAGE, costUsd: 0.2, ...over,
+  });
+  const base = { auto: true, people: 3, batches: [] as Batch[], now, busy: false, error: false };
+
+  it('kort som kommer till under tiden läggs efter de förra, och nästa gång är det nyast först', () => {
+    const first = [card('a', 1), card('b', 3), card('c', 2)];
+    const order = sessionOrder(null, first);
+    expect(order).toEqual(['b', 'c', 'a']);
+    const later = [...first, card('e', 9), card('d', 10)];
+    expect(sessionOrder(order, later)).toEqual(['b', 'c', 'a', 'd', 'e']);
+    expect(sessionOrder(order, later.filter((c) => c.id !== 'c'))).toEqual(['b', 'a', 'd', 'e']);
+    expect(sessionOrder(null, later)).toEqual(['d', 'e', 'b', 'c', 'a']);
+    expect(allCards(later, [], sessionOrder(order, later)).map((c) => c.id)).toEqual(['b', 'c', 'a', 'd', 'e']);
+    expect(allCards(later, []).map((c) => c.id)).toEqual(['d', 'e', 'b', 'c', 'a']);
+  });
+
+  it('bara påslaget, med någon att följa, utan fel och under dygnets gräns får starta en omgång', () => {
+    expect(moreKind(base)).toBe('ready');
+    expect(moreKind({ ...base, auto: false })).toBe('off');
+    expect(moreKind({ ...base, people: 0 })).toBe('nopeople');
+    expect(moreKind({ ...base, busy: true })).toBe('busy');
+    expect(moreKind({ ...base, error: true })).toBe('error');
+    expect(moreKind({ ...base, batches: [b(3_600_000), b(7_200_000), b(10_800_000)] })).toBe('limit');
+    expect(moreKind({ ...base, batches: [b(3_600_000), b(7_200_000), b(90_000_000)] })).toBe('ready');
+  });
+
+  it('en omgång som pågår på en annan telefon räknas, men inte en som hängt sig eller en presentation', () => {
+    expect(moreKind({ ...base, batches: [b(60_000, { status: 'pagar' })] })).toBe('busy');
+    expect(moreKind({ ...base, batches: [b(20 * 60_000, { status: 'pagar' })] })).toBe('ready');
+    expect(moreKind({ ...base, batches: [b(60_000, { status: 'pagar', trigger: 'profil' })] })).toBe('ready');
+    // Presentationer tar inte av dygnets omgångar.
+    expect(moreKind({ ...base, batches: [b(1, { trigger: 'profil' }), b(2, { trigger: 'profil' }), b(3, { trigger: 'profil' })] })).toBe('ready');
+  });
+
+  it('inställningen är av tills man slår på den, och följer med när annat ändras', async () => {
+    expect(cleanSettings({ frequency: 'dag', count: 3 }).auto).toBe(false);
+    expect(cleanSettings({ auto: 'ja' }).auto).toBe(false);
+    expect(cleanSettings({ auto: true })).toEqual({ id: 'settings', frequency: 'av', count: 5, auto: true });
+  });
+});
+
 describe('appen', () => {
   it('genererade kort visas före exemplen, nyast först', () => {
     const mine = [
@@ -368,9 +413,9 @@ describe('appen', () => {
   });
 
   it('inställningen sparas städad och läses tillbaka', async () => {
-    expect((await loadKunskap()).settings).toEqual({ id: 'settings', frequency: 'av', count: 5 });
+    expect((await loadKunskap()).settings).toEqual({ id: 'settings', frequency: 'av', count: 5, auto: false });
     await saveSettings({ frequency: 'vecka', count: 42 });
-    expect((await loadKunskap()).settings).toEqual({ id: 'settings', frequency: 'vecka', count: 10 });
+    expect((await loadKunskap()).settings).toEqual({ id: 'settings', frequency: 'vecka', count: 10, auto: false });
     // Smaken ligger i samma store med eget id, och de två skriver inte över varandra.
     expect((await loadKunskap()).prefs).toEqual(NO_PREFS);
     await savePrefs(withManual(NO_PREFS, 'topic', 'Sömn', prefKey('topic', 'Sömn'), 'mer'));

@@ -125,7 +125,7 @@ export default function Vanor() {
   }
 
   const headline = !habits.length && !summary.total
-    ? 'Vanor'
+    ? 'Habits'
     : pausedToday && !open.length && !tasksDue.length
       ? 'Vilodag'
       : summary.done < summary.total

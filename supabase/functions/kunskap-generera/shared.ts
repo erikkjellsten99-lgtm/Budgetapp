@@ -87,17 +87,19 @@ export interface KunskapSettings {
   id: 'settings'
   frequency: Frequency
   count: number
+  /** Appen ber om en ny omgång kort när man bläddrat förbi de nya. Av tills man slår på det. Läses bara av appen. */
+  auto: boolean
 }
 
 export const COUNT_DEFAULT = 5
 export const COUNT_MAX = 10
-export const DEFAULT_SETTINGS: KunskapSettings = { id: 'settings', frequency: 'av', count: COUNT_DEFAULT }
+export const DEFAULT_SETTINGS: KunskapSettings = { id: 'settings', frequency: 'av', count: COUNT_DEFAULT, auto: false }
 
 export function cleanSettings(raw: unknown): KunskapSettings {
   const r = (raw ?? {}) as Record<string, unknown>
   const frequency: Frequency = r.frequency === 'dag' || r.frequency === 'vecka' ? r.frequency : 'av'
   const n = typeof r.count === 'number' && Number.isFinite(r.count) ? Math.round(r.count) : COUNT_DEFAULT
-  return { id: 'settings', frequency, count: Math.min(COUNT_MAX, Math.max(1, n)) }
+  return { id: 'settings', frequency, count: Math.min(COUNT_MAX, Math.max(1, n)), auto: r.auto === true }
 }
 
 // Smak: viktning av personer, ämnen och korttyper utifrån gilla/ogilla, och det användaren själv ställt in

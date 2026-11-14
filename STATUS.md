@@ -100,6 +100,10 @@
   Inte prövat: en riktig batch, en riktig presentation och en riktig chatt (kräver Eriks inloggning).
 - Sett 2026-11-15: på kontot fanns inställningen sparad men inga personer (`kunskap_people`). Schemat hoppar över
   den som inte följer någon. Personerna kommer upp när appen med automatisk följning är öppnad inloggad.
+- Nya kort när man bläddrar (2026-11-15): i flödet, efter de genererade korten, finns en plats som hämtar en ny
+  omgång när man bläddrat dit. Av tills man trycker Slå på (eller kryssar i det under inställningarna). Högst 3
+  omgångar per dygn, samma gräns som förut. Prövat i webbläsare med låtsad server; inte prövat mot riktig server.
+  Ingen ändring på servern behövdes.
 - Bibliotekets personer följs automatiskt sedan 2026-11-15 (Eriks önskan: alla i biblioteket ska finnas i flödet).
   De går att ta bort under Följer och kommer då inte tillbaka. Inte prövat inloggad mot riktig synk på två telefoner.
 
@@ -140,7 +144,9 @@
   anteckningar.
 - Design och plan: `docs/superpowers/specs/2026-11-13-lar-design.md`, `docs/superpowers/plans/2026-11-13-lar.md`.
 
-## Kunskap (ny flik, 2026-11-14)
+## Kunskap (ny flik, 2026-11-14; heter Mindhub i menyn sedan 2026-11-15)
+- Flikarna heter Today, Finance, Habits, News och Mindhub sedan 2026-11-15. Resten av appen är på svenska, även
+  underflikarna i Ekonomi, lägena Flöde och Bibliotek, och Jarvis svar (som nämner flikarna med svenska namn).
 - Sammanslaget med Lär 2026-11-15 (Eriks beslut): fem flikar i menyn, och Kunskap har lägena Flöde och Bibliotek.
   Biblioteket är Lär oförändrat. Namnet på ett kort öppnar personsidan, och Tillbaka går till samma ställe i flödet.
   En sparad Lär-flik öppnar Kunskap.

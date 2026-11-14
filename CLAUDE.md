@@ -32,6 +32,9 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
   Önskelista öppnas från rader i Översikt), Vanor, Nyheter, Kunskap (fem flikar). Kunskap har två lägen: Flöde
   och Bibliotek (Lär). Jarvis är ingen flik: orben i sidhuvudet öppnar
   Jarvis i specialrummet (`Room.tsx`). Galaxen öppnas inifrån Vanor → Månad och är också ett specialrum.
+- **Flikarnas namn är på engelska** (Eriks val 2026-11-15): Today, Finance, Habits, News, Mindhub. Mindhub är
+  Kunskap. Bara namnen i menyn och rubrikerna News och Mindhub är bytta; id:n, kod, mappar, underflikar och all
+  annan text i appen är på svenska, och det här dokumentet använder de svenska namnen för delarna.
 - **Idag** och **Jarvis** läser allt via `summaryFacts` (`summary.ts`). Jarvis svar byggs i `ask.ts`, utan AI.
 - **Stilen** följer designspecen "Två rum" (`docs/design/designspec-tva-rum.md`). Vardagsrummet (Idag, Ekonomi,
   Vanor, Nyheter, Lär, Kunskap) ligger i `styles.css`, `vanor/vanor.css`, `lar/lar.css` och `kunskap/kunskap.css`; specialrummet (Jarvis och galaxen) i `room.css`,

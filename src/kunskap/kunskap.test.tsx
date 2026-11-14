@@ -6,7 +6,7 @@ import { getOutbox } from '../vanor/store';
 import { systemPrompt, toCard, toMessages } from '../../supabase/functions/kunskap/prompt.ts';
 import { cardWords, EXAMPLE_CARDS, MAX_WORDS, SUGGESTED, TYPE_LABEL } from './cards';
 import { cardPayload, NOT_DEPLOYED, readChatReply, SIGNED_OUT } from './chatApi';
-import Kunskap, { CardView, OwnPersonPage } from './Kunskap';
+import Kunskap, { CardView, MoreCards, OwnPersonPage } from './Kunskap';
 import { cardsOf, cleanName, feed, isFollowed, nextVote, ownPeople, parseTopics, personKey, voteMap, waiting, type FollowedPerson } from './kunskapState';
 import { follow, followLibrary, loadKunskap, unfollow, vote } from './kunskapStore';
 
@@ -150,7 +150,7 @@ describe('bibliotekets personer följs från början', () => {
     people = (await loadKunskap()).people;
     expect(people.some((p) => p.name === 'Wim Hof')).toBe(false);
     // Inställningen för genereringen ligger i samma store och rörs inte.
-    expect((await loadKunskap()).settings).toEqual({ id: 'settings', frequency: 'av', count: 5 });
+    expect((await loadKunskap()).settings).toEqual({ id: 'settings', frequency: 'av', count: 5, auto: false });
 
     for (const p of people) await unfollow(p.id);
   });
@@ -159,7 +159,7 @@ describe('bibliotekets personer följs från början', () => {
 describe('vyn', () => {
   it('visar rubrik, filter och laddning innan datan lästs', () => {
     const html = renderToStaticMarkup(<Kunskap />);
-    expect(html).toContain('>Kunskap</h2>');
+    expect(html).toContain('>Mindhub</h2>');
     for (const label of ['Alla', 'Citat', 'Insikter', 'Protokoll', 'Gillade']) expect(html).toContain(`>${label}</button>`);
     expect(html).toContain('aria-busy="true"');
   });
@@ -185,7 +185,7 @@ describe('biblioteket (Lär) inuti Kunskap', () => {
   it('läget Bibliotek visar en sida per person, utan egen rubrik och utan flödets knappar', () => {
     const html = renderToStaticMarkup(<Kunskap initialMode="bibliotek" />);
     expect((html.match(/class="card lar-card"/g) ?? []).length).toBe(PEOPLE.length);
-    expect(html).toContain('>Kunskap</h2>');
+    expect(html).toContain('>Mindhub</h2>');
     expect(html).not.toContain('>Lär</h2>');
     expect(html).toContain('>Bibliotek</p>');
     expect(html).not.toContain('Inställningar för nya kort');
@@ -257,6 +257,27 @@ describe('egna personer i biblioteket', () => {
     const html = renderToStaticMarkup(<Kunskap initialMode="bibliotek" />);
     expect(html).toContain('>Egna personer</h3>');
     expect(html).toContain('Lägg till person');
+  });
+});
+
+describe('platsen för nya kort i flödet', () => {
+  const at = (kind: Parameters<typeof MoreCards>[0]['kind'], extra: { message?: string; note?: string } = {}) =>
+    renderToStaticMarkup(<MoreCards kind={kind} {...extra} onVisible={() => {}} onEnable={() => {}} onRetry={() => {}} onFollow={() => {}} />);
+
+  it('är av från början och säger att det kostar', () => {
+    const html = at('off');
+    expect(html).toContain('Nya kort när du bläddrar hit?');
+    expect(html).toContain('kostar pengar');
+    expect(html).toContain('>Slå på</button>');
+  });
+
+  it('visar vad som händer i varje läge', () => {
+    expect(at('busy')).toContain('Hämtar nya kort');
+    expect(at('error', { message: 'Du är inte uppkopplad.' })).toContain('Du är inte uppkopplad.');
+    expect(at('error')).toContain('>Försök igen</button>');
+    expect(at('limit')).toContain('Dagens 3 omgångar är slut');
+    expect(at('nopeople')).toContain('>Följ personer</button>');
+    expect(at('ready', { note: '4 nya kort ovanför.' })).toContain('4 nya kort ovanför.');
   });
 });
 

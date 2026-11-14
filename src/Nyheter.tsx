@@ -42,7 +42,7 @@ export default function Nyheter({ active }: { active: boolean }) {
       <div className="view-intro news-intro">
         <div>
           <p className="eyebrow">{news ? `Uppdaterad ${clock(news.updated)}, SVT` : 'SVT'}</p>
-          <h2>Nyheter</h2>
+          <h2>News</h2>
         </div>
         <button type="button" className="news-refresh" onClick={load} disabled={loading}>
           {loading ? 'Hämtar…' : 'Uppdatera'}
