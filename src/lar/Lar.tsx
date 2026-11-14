@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, type Ref } from 'react';
+import { useEffect, useReducer, useRef, useState, type Ref } from 'react';
 import { larReducer, visiblePerson } from './larState';
 import { AREAS, EVIDENCE_LABEL, PEOPLE, type AreaId, type Claim, type Person, type Quote, type Source } from './people';
 import './lar.css';
@@ -90,7 +90,16 @@ function StartHere({ sources }: { sources: Source[] }) {
 }
 
 /** En person som visas i listan men inte hör till det fasta innehållet (tillagd av användaren i Kunskap). */
-export type ExtraPerson = { id: string; name: string; kind: string; teaser: string };
+export type ExtraPerson = {
+  id: string;
+  name: string;
+  kind: string;
+  teaser: string;
+  /** Området personen hör till, om det är ett av bibliotekets egna. */
+  area?: AreaId;
+  /** Annars en egen grupp (se `extraGroups`), så att personen går att filtrera fram. */
+  group?: string;
+};
 
 /** Korten i listan. `extra` visas i samma lista, efter de fasta. Tom lista får en förklaring. */
 export function LarList({
@@ -197,24 +206,31 @@ export default function Lar({
   embedded,
   onBack,
   onOpenChange,
-  extra,
+  extra = [],
   onOpenExtra,
+  extraGroups = [],
 }: {
   initialArea?: AreaId | 'alla';
   initialOpenId?: string;
   embedded?: boolean;
   onBack?: () => void;
   onOpenChange?: (open: boolean) => void;
-  /** Personer som användaren lagt till själv i Kunskap. Visas i samma lista under Alla (de har inget område). */
+  /** Personer som användaren lagt till själv i Kunskap. Visas i samma lista, efter de fasta. */
   extra?: ExtraPerson[];
   onOpenExtra?: (id: string) => void;
+  /** Fler filter efter bibliotekets egna områden, för personer i `extra` som hör till andra genrer. */
+  extraGroups?: { id: string; label: string }[];
 }) {
   const [state, dispatch] = useReducer(larReducer, { area: initialArea ?? 'alla', openId: initialOpenId ?? null });
   const person = visiblePerson(state);
   const cards = useRef(new Map<string, HTMLButtonElement | null>());
   const from = useRef<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
-  const shown = PEOPLE.filter((p) => state.area === 'alla' || p.areas.includes(state.area));
+  // En vald egen grupp (genre utanför bibliotekets områden). Finns gruppen inte kvar gäller områdesfiltret igen.
+  const [chosenGroup, setGroup] = useState<string | null>(null);
+  const group = chosenGroup && extraGroups.some((g) => g.id === chosenGroup) ? chosenGroup : null;
+  const shown = group ? [] : PEOPLE.filter((p) => state.area === 'alla' || p.areas.includes(state.area));
+  const shownExtra = extra.filter((p) => (group ? p.group === group : state.area === 'alla' || p.area === state.area));
 
   useEffect(() => {
     if (person) {
@@ -251,17 +267,25 @@ export default function Lar({
           <button
             key={a.id}
             type="button"
-            className={a.id === state.area ? 'chip active' : 'chip'}
-            aria-pressed={a.id === state.area}
-            onClick={() => dispatch({ type: 'filter', area: a.id })}
+            className={!group && a.id === state.area ? 'chip active' : 'chip'}
+            aria-pressed={!group && a.id === state.area}
+            onClick={() => {
+              setGroup(null);
+              dispatch({ type: 'filter', area: a.id });
+            }}
           >
             {a.label}
+          </button>
+        ))}
+        {extraGroups.map((g) => (
+          <button key={`grupp-${g.id}`} type="button" className={g.id === group ? 'chip active' : 'chip'} aria-pressed={g.id === group} onClick={() => setGroup(g.id)}>
+            {g.label}
           </button>
         ))}
       </nav>
       <LarList
         people={shown}
-        extra={state.area === 'alla' ? extra : []}
+        extra={shownExtra}
         onOpenExtra={onOpenExtra}
         cardRef={(id) => (el) => void cards.current.set(id, el)}
         onOpen={(id) => {

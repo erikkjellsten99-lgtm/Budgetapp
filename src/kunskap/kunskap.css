@@ -719,6 +719,14 @@
   color: var(--cobalt);
 }
 
+/* På bredare skärmar får bibliotekets filter radbrytas i stället för att rulla i sidled. */
+@media (min-width: 640px) {
+  .kunskap .lar-chips {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
 /* Egna personer i biblioteket */
 .kunskap-own-list {
   display: grid;

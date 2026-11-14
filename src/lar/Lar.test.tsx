@@ -27,6 +27,21 @@ describe('Lär', () => {
     expect(cards(renderToStaticMarkup(<Lar embedded extra={extra} initialArea="meditation" />))).toBe(PEOPLE.filter((p) => p.areas.includes('meditation')).length);
   });
 
+  it('egna personer filtreras med bibliotekets områden, och andra genrer får egna filter', () => {
+    const extra = [
+      { id: 'x1', name: 'Tara Brach', kind: 'meditation', teaser: 't', area: 'meditation' as const },
+      { id: 'x2', name: 'Ramit Sethi', kind: 'pengar', teaser: 't', group: 'pengar' },
+    ];
+    const groups = [{ id: 'pengar', label: 'Pengar och investeringar' }];
+    const all = renderToStaticMarkup(<Lar embedded extra={extra} extraGroups={groups} />);
+    expect(cards(all)).toBe(11);
+    expect(all).toContain('>Pengar och investeringar</button>');
+    const meditation = renderToStaticMarkup(<Lar embedded extra={extra} extraGroups={groups} initialArea="meditation" />);
+    expect(cards(meditation)).toBe(PEOPLE.filter((p) => p.areas.includes('meditation')).length + 1);
+    expect(meditation).toContain('Tara Brach');
+    expect(meditation).not.toContain('Ramit Sethi');
+  });
+
   it('personsidans rubrik kan få fokus och länkarna nämner ny flik', () => {
     const html = renderToStaticMarkup(<Lar initialOpenId="wim-hof" />);
     expect(html).toMatch(/<h2 tabindex="-1">Wim Hof<\/h2>/);

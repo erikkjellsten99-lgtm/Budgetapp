@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import Lar from '../lar/Lar';
 import { PEOPLE } from '../lar/people';
 import { EXAMPLE_CARDS, SUGGESTED, TYPE_LABEL, type KunskapCard } from './cards';
-import { discover, GENRES } from './discover';
+import { discover, GENRES, libraryGroups, libraryPlace } from './discover';
 import { askAboutCard, QUESTION_MAX, TURNS_BACK, type ChatTurn } from './chatApi';
 import {
   COUNT_MAX,
@@ -1261,7 +1261,14 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
           initialOpenId={fromCard ?? undefined}
           onBack={fromCard ? backToFeed : undefined}
           onOpenChange={setPersonOpen}
-          extra={mine.map((p) => ({ id: p.id, name: p.name, kind: p.topics.length > 0 ? p.topics.join(', ') : 'Tillagd av dig', teaser: ownTeaser(p) }))}
+          extra={mine.map((p) => ({
+            id: p.id,
+            name: p.name,
+            kind: p.topics.length > 0 ? p.topics.join(', ') : 'Tillagd av dig',
+            teaser: ownTeaser(p),
+            ...libraryPlace(p.name, p.topics),
+          }))}
+          extraGroups={libraryGroups(mine)}
           onOpenExtra={(id) => openOwn(id, false)}
         />
       )}
