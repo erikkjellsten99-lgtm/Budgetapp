@@ -51,7 +51,7 @@
 - **Utlagt 2026-11-14:** migrationen `jarvis_speech` är körd, `jarvis` version 3 (tre verktyg, `history`, ny prompt)
   och `jarvis-rost` version 2 ligger ute, båda med verify_jwt på. Båda startar och nekar den som inte är inloggad.
   Inte prövat: ett riktigt svar från nya `jarvis`, rösten mot ElevenLabs (nyckeln saknas tills Erik lagt in den),
-  och uppspelningen på iPhone. Appens del går ut först när PR 115 är sammanfogad.
+  och uppspelningen på iPhone. Appens del går ut först när PR:en med samtalston och röst är sammanfogad (PR 115 hann bara få med `hamta_vanor`).
 - MCP-verktyget gör om `\u00A0` i källan till ett vanligt tecken vid utläggning. Skriv `\s` i reguljära uttryck i
   funktioner i stället för att räkna upp mellanslagstecken (`jarvis-rost/text.ts`).
 - `ANTHROPIC_API_KEY` lades in som hemlighet 2026-11-14. Första riktiga svaret från Claude samma dag.
