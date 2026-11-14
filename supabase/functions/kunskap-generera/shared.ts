@@ -78,6 +78,56 @@ export interface PersonProfile {
   model: string
 }
 
+// Upptäck: personer som Claude hittat åt en sökning på en genre
+
+export const FOUND_ABOUT_MAX = 110
+/** Högst så här många personer per sökning, och så här många sparade totalt. */
+export const FOUND_PER_SEARCH = 6
+export const FOUND_KEPT = 40
+export const GENRE_MAX = 60
+
+/** En person som Claude hittat med webbsökning. Inte granskad: en rad om vem det är, och sidan den kom från. */
+export interface FoundPerson {
+  name: string
+  about: string
+  topics: string[]
+  /** Genren som användaren sökte på. */
+  genre: string
+  source: { title: string; url: string }
+  created: number
+}
+
+/** De sparade träffarna (posten "found" i kunskap_settings), städade. Trasiga rader tas bort. */
+export function cleanFound(raw: unknown): FoundPerson[] {
+  const list = (raw as { people?: unknown } | null)?.people
+  const out: FoundPerson[] = []
+  const seen = new Set<string>()
+  for (const item of Array.isArray(list) ? list : []) {
+    const r = (item ?? {}) as Record<string, unknown>
+    const source = (r.source ?? {}) as Record<string, unknown>
+    const text = (value: unknown, max: number) => (typeof value === 'string' ? tidy(value).slice(0, max).trim() : '')
+    const person: FoundPerson = {
+      name: text(r.name, 60),
+      about: text(r.about, FOUND_ABOUT_MAX),
+      topics: (Array.isArray(r.topics) ? r.topics : []).map((t) => text(t, 30)).filter(Boolean).slice(0, 3),
+      genre: text(r.genre, GENRE_MAX),
+      source: { title: text(source.title, 160), url: text(source.url, 600) },
+      created: typeof r.created === 'number' && Number.isFinite(r.created) ? r.created : 0,
+    }
+    const key = personKey(person.name)
+    if (!person.name || !person.about || !/^https:\/\//.test(person.source.url) || seen.has(key)) continue
+    seen.add(key)
+    out.push(person)
+    if (out.length === FOUND_KEPT) break
+  }
+  return out
+}
+
+/** Nya träffar först, utan dubbletter av samma person, högst FOUND_KEPT. */
+export function mergeFound(old: FoundPerson[], fresh: FoundPerson[]): FoundPerson[] {
+  return cleanFound({ people: [...fresh, ...old] })
+}
+
 // Inställningar
 
 export type Frequency = 'av' | 'dag' | 'vecka'
@@ -206,10 +256,12 @@ export interface Batch {
   id: string
   created: number
   status: 'pagar' | 'klar' | 'fel'
-  /** `profil`: en presentation av en person skrevs (inga kort). */
+  /** `profil`: något annat än kort gjordes: en presentation av en person, eller en sökning i Upptäck (`search`). */
   trigger: 'schema' | 'manuell' | 'profil'
-  /** `profil`: vem presentationen gäller. */
+  /** `profil`: vem presentationen gäller, eller genren som söktes. */
   person?: string
+  /** En sökning efter personer i Upptäck. Räknas för sig, inte mot presentationerna. */
+  search?: boolean
   requested: number
   /** Kort som sparades. */
   cards: number
@@ -263,8 +315,14 @@ export const batchesLastDay = (batches: Pick<Batch, 'created' | 'trigger'>[], no
 /** Högst så här många presentationer per dygn och person som frågar. Räknas för sig, inte mot batcharna. */
 export const MAX_PROFILES_PER_DAY = 5
 
-export const profilesLastDay = (batches: Pick<Batch, 'created' | 'trigger'>[], now: number) =>
-  batches.filter((b) => b.trigger === 'profil' && now - b.created < 24 * HOUR).length
+export const profilesLastDay = (batches: Pick<Batch, 'created' | 'trigger' | 'search'>[], now: number) =>
+  batches.filter((b) => b.trigger === 'profil' && !b.search && now - b.created < 24 * HOUR).length
+
+/** Högst så här många sökningar i Upptäck per dygn och person som frågar. */
+export const MAX_SEARCHES_PER_DAY = 5
+
+export const searchesLastDay = (batches: Pick<Batch, 'created' | 'search'>[], now: number) =>
+  batches.filter((b) => b.search && now - b.created < 24 * HOUR).length
 
 /** En batch som stått som pågående längre än så här har avbrutits (funktionen hann inte klart). */
 export const STALE_MS = 10 * 60_000

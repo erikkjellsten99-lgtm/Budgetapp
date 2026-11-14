@@ -709,6 +709,16 @@
   font-weight: 700;
 }
 
+/* Upptäck: fråga Claude efter fler */
+.kunskap-ask {
+  border-style: solid;
+  background: var(--surface);
+}
+
+.kunskap-suggestions a {
+  color: var(--cobalt);
+}
+
 /* Egna personer i biblioteket */
 .kunskap-own-list {
   display: grid;

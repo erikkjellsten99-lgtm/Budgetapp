@@ -10,6 +10,13 @@
   för, högst 90 tecken, inga påståenden om vad som fungerar, inga siffror, inga citat, inga länkar (låst i
   `discover.test.tsx`). Är du osäker på en uppgift, ta inte med personen. Följ lägger till personen som egen person.
 
+- **Fråga Claude efter fler** (Eriks beslut 2026-11-15): i Upptäck kan Erik be Claude söka på nätet efter personer
+  i en genre han skriver (`searchPeople` → edge function `kunskap-upptack`). Högst 6 personer per sökning, var och en
+  med en källa som finns bland webbsökningens resultat (`toFound`), annars kastas den. Träffarna sparas i posten
+  `found` i `kunskap_settings` (högst 40) och visas under "Hittade av Claude" med källänk, märkta som inte granskade.
+  Bara på en tryckning, högst 5 sökningar per dygn, och kostnaden loggas som en batch med `trigger: 'profil'` och
+  `search: true`. Egen funktion, så att knappen aldrig kan starta en batch med kort.
+
 - **Egna personer i biblioteket:** de Erik följer som inte finns i `PEOPLE` visas under Egna personer i läget
   Bibliotek och har en egen sida (`OwnPersonPage`). Sidan är inte granskad och säger det: den visar bara ämnena
   och korten om personen, med källa. Inga texter om personen, inga påståenden och inga märkningar av belägg

@@ -5,7 +5,19 @@ import { useEffect, useState } from 'react';
 import { deleteKunskapRecord, getMeta, loadKunskapRecords, newId, onHabitChange, saveKunskapRecord } from '../vanor/store';
 import { supabase } from '../sync';
 import { syncHabits } from '../vanor/sync';
-import { cleanPrefs, cleanSettings, DEFAULT_SETTINGS, NO_PREFS, type Batch, type KunskapPrefs, type KunskapSettings } from '../../supabase/functions/kunskap-generera/shared.ts';
+import {
+  cleanFound,
+  cleanPrefs,
+  cleanSettings,
+  DEFAULT_SETTINGS,
+  GENRE_MAX,
+  mergeFound,
+  NO_PREFS,
+  type Batch,
+  type FoundPerson,
+  type KunskapPrefs,
+  type KunskapSettings,
+} from '../../supabase/functions/kunskap-generera/shared.ts';
 import { SUGGESTED, type KunskapCard } from './cards';
 import { cleanName, isFollowed, nextVote, parseTopics, type FollowedPerson, type Vote } from './kunskapState';
 
@@ -19,6 +31,8 @@ export interface KunskapData {
   prefs: KunskapPrefs;
   /** Kostnadsloggen, skriven av servern. */
   batches: Batch[];
+  /** Personer som Claude hittat åt dina sökningar i Upptäck, nyast först. */
+  found: FoundPerson[];
 }
 
 export async function loadKunskap(): Promise<KunskapData> {
@@ -33,7 +47,8 @@ export async function loadKunskap(): Promise<KunskapData> {
   // Inställningen och smaken ligger i samma store, med olika id.
   const saved = settings.find((r) => r.id === 'settings');
   const prefs = settings.find((r) => r.id === 'prefs');
-  return { people, votes, cards, settings: saved ? cleanSettings(saved) : DEFAULT_SETTINGS, prefs: prefs ? cleanPrefs(prefs) : NO_PREFS, batches };
+  const found = cleanFound(settings.find((r) => r.id === 'found'));
+  return { people, votes, cards, settings: saved ? cleanSettings(saved) : DEFAULT_SETTINGS, prefs: prefs ? cleanPrefs(prefs) : NO_PREFS, batches, found };
 }
 
 /** Sparar hur ofta kort ska genereras och hur många. Synkas till kontot, där servern läser det. */
@@ -74,6 +89,44 @@ async function callGenerate(name: 'kunskap-generera' | 'kunskap-presentation', b
     return reply;
   } catch {
     return readGenerateReply(0, null);
+  }
+}
+
+export type SearchReply = { ok: true; people: FoundPerson[]; costUsd: number } | { ok: false; message: string };
+
+/** Svaret från kunskap-upptack tolkat. Egen funktion så att den kan testas utan nätverk. */
+export function readSearchReply(status: number, body: unknown): SearchReply {
+  const b = (body ?? {}) as { people?: unknown; costUsd?: unknown; message?: unknown };
+  const people = cleanFound(b);
+  if (status >= 200 && status < 300 && people.length > 0) return { ok: true, people, costUsd: Number(b.costUsd) || 0 };
+  if (status === 401) return { ok: false, message: 'Logga in under Konto först. Sökningen körs på ditt konto.' };
+  if (status === 404) return { ok: false, message: 'Det här är inte påslaget på servern än.' };
+  return { ok: false, message: typeof b.message === 'string' && b.message.trim() ? b.message.trim() : 'Sökningen misslyckades. Försök igen.' };
+}
+
+/**
+ * Ber Claude söka efter personer i en genre. `exclude` är personer som redan visas (biblioteket och katalogen).
+ * Träffarna sparas i posten "found" i kunskap_settings, så att de finns kvar och synkas. Kastar aldrig.
+ */
+export async function searchPeople(genre: string, exclude: string[]): Promise<SearchReply> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, message: 'Du är inte uppkopplad.' };
+  try {
+    const { data: auth } = await supabase.auth.getSession();
+    if (!auth.session) return readSearchReply(401, null);
+    // Servern läser vilka du följer och vad du gillar från kontot: skicka upp det som ändrats här först.
+    await syncHabits();
+    const body = { genre: genre.trim().slice(0, GENRE_MAX), exclude: exclude.slice(0, 150) };
+    const { data, error, response } = await supabase.functions.invoke('kunskap-upptack', { body });
+    const reply = !error ? readSearchReply(200, data) : response ? readSearchReply(response.status, await response.json().catch(() => null)) : readSearchReply(0, null);
+    if (reply.ok) {
+      const old = cleanFound((await loadKunskapRecords<{ id?: string }>('kunskap_settings')).find((r) => r.id === 'found'));
+      await saveKunskapRecord('kunskap_settings', { id: 'found', people: mergeFound(old, reply.people) });
+    }
+    // Hämta kostnadsraden.
+    void syncHabits();
+    return reply;
+  } catch {
+    return readSearchReply(0, null);
   }
 }
 
