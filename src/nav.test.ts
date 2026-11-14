@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { ECONOMY, ECONOMY_TABS, isEconomy, restoreView, sectionOf, SECTIONS, tabOf } from './nav';
 
 describe('huvudmenyn', () => {
-  it('fem flikar i rätt ordning', () => {
-    expect(SECTIONS.map((s) => s.id)).toEqual(['idag', 'ekonomi', 'vanor', 'nyheter', 'lar']);
+  it('sex flikar i rätt ordning', () => {
+    expect(SECTIONS.map((s) => s.id)).toEqual(['idag', 'ekonomi', 'vanor', 'nyheter', 'lar', 'kunskap']);
   });
 
   it('Lär hör till sin egen flik', () => {
     expect(sectionOf('lar')).toBe('lar');
+  });
+
+  it('Kunskap hör till sin egen flik', () => {
+    expect(sectionOf('kunskap')).toBe('kunskap');
   });
 });
 
@@ -22,7 +26,7 @@ describe('restoreView', () => {
   });
 
   it('giltiga vyer behålls', () => {
-    for (const v of ['idag', 'vanor', 'nyheter', 'lar', 'account', 'overview', 'budget', 'goal', 'assets', 'investments', 'wishlist'])
+    for (const v of ['idag', 'vanor', 'nyheter', 'lar', 'kunskap', 'account', 'overview', 'budget', 'goal', 'assets', 'investments', 'wishlist'])
       expect(restoreView(v)).toBe(v);
   });
 });

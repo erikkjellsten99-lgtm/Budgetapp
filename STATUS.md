@@ -124,6 +124,20 @@
   anteckningar.
 - Design och plan: `docs/superpowers/specs/2026-11-13-lar-design.md`, `docs/superpowers/plans/2026-11-13-lar.md`.
 
+## Kunskap (ny flik, 2026-11-14)
+- Fungerar: flöde med kort (citat, insikt, protokoll, högst 80 ord) med person, ämne, typ och källänk. Följ personer
+  (namn och ämnen), gilla/ogilla, filter (Alla, Citat, Insikter, Protokoll, Gillade). Personer och röster sparas i
+  telefonen och synkas privat via `personal_records` (nya stores `kunskap_people`, `kunskap_votes`, vanor-databasen
+  version 5). Ingen ändring i Supabase behövdes för det.
+- Exempelkort: byggs av det granskade innehållet i Lär (`people.ts`), inget nytt innehåll. Protokollkorten är
+  personens `method` med första Börja här-länken som källa; för forskare (t.ex. Laukkanen) beskriver de
+  forskningsmetoden snarare än något att göra själv.
+- Halvfärdigt: **Gå djupare** (chatt med Claude om kortet). Appens del och edge function `kunskap` finns i repot, men
+  funktionen är **inte utlagd**; chatten svarar då "Chatten är inte påslagen på servern än". Väntar på "Lägg ut".
+  Delar räknaren med Jarvis (50 frågor per dag tillsammans). Inte prövat mot Claude.
+- Inte byggt: generering av kort för personer man lägger till själv (de visas som "inga kort än").
+- Inte prövat: synken mot riktig Supabase (testat lokalt med blockerat nät) och på iPhone.
+
 ## Design
 - Designspecen "Två rum" valdes 2026-11-07: lugnt vardagsrum (Idag, Ekonomi, Vanor, Nyheter) och mörkt specialrum
   (Jarvis, galaxen). Spec och genomförandeplan i `docs/design/`.

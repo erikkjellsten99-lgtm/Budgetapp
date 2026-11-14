@@ -1,6 +1,6 @@
 # Groundwork – regler för Claude
 
-Eriks app för ekonomi, vanor, Jarvis, galaxen och Lär. Vite + React + TypeScript, IndexedDB lokalt, Supabase för synk och
+Eriks app för ekonomi, vanor, Jarvis, galaxen, Lär och Kunskap. Vite + React + TypeScript, IndexedDB lokalt, Supabase för synk och
 servern "inbox", publiceras på GitHub Pages från `main` (`.github/workflows/deploy.yml`). Svara på svenska, kort.
 Läs `STATUS.md` först: där står vad som är klart, halvfärdigt och trasigt.
 
@@ -21,6 +21,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 | Vanor | `src/vanor/` | `src/vanor/CLAUDE.md` |
 | Jarvis | `src/Jarvis.tsx`, `jarvis.ts`, `speech.ts`, `Today.tsx` | föreslagen mapp `src/jarvis/` (inte flyttat än) |
 | Lär | `src/lar/` (`people.ts` innehållet, `Lar.tsx` vyn, `larState.ts`, `lar.css`) | `src/lar/CLAUDE.md` |
+| Kunskap | `src/kunskap/` (`cards.ts` korten, `Kunskap.tsx` vyn, `kunskapState.ts`, `kunskapStore.ts`, `chatApi.ts`), servern `supabase/functions/kunskap/` | `src/kunskap/CLAUDE.md` |
 | Galax | `src/vanor/CosmosView.tsx`, `Galaxy.tsx`, `*3d.ts`, `CameraRig.ts`, `cosmos*.ts`, `universe.ts` | föreslagen mapp `src/galax/` (inte flyttat än) |
 | Servern | `supabase/functions/inbox/` | `supabase/functions/inbox/CLAUDE.md` |
 
@@ -28,11 +29,11 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
   Appen importerar den direkt eller via shims i `src/` (`export * from '../supabase/functions/inbox/X.ts'`).
   Så räknar app, Siri och Jarvis alltid samma siffror. Ändra aldrig en siffra på bara ett ställe.
 - **Navigationen** är `App.tsx` och `nav.ts`: Idag, Ekonomi (underflikar Översikt, Budget, Prognos; Konton och
-  Önskelista öppnas från rader i Översikt), Vanor, Nyheter, Lär (fem flikar). Jarvis är ingen flik: orben i sidhuvudet öppnar
+  Önskelista öppnas från rader i Översikt), Vanor, Nyheter, Lär, Kunskap (sex flikar). Jarvis är ingen flik: orben i sidhuvudet öppnar
   Jarvis i specialrummet (`Room.tsx`). Galaxen öppnas inifrån Vanor → Månad och är också ett specialrum.
 - **Idag** och **Jarvis** läser allt via `summaryFacts` (`summary.ts`). Jarvis svar byggs i `ask.ts`, utan AI.
 - **Stilen** följer designspecen "Två rum" (`docs/design/designspec-tva-rum.md`). Vardagsrummet (Idag, Ekonomi,
-  Vanor, Nyheter, Lär) ligger i `styles.css`, `vanor/vanor.css` och `lar/lar.css`; specialrummet (Jarvis och galaxen) i `room.css`,
+  Vanor, Nyheter, Lär, Kunskap) ligger i `styles.css`, `vanor/vanor.css`, `lar/lar.css` och `kunskap/kunskap.css`; specialrummet (Jarvis och galaxen) i `room.css`,
   där varje regel börjar med `.room`. Färger via tokens (`--bg`, `--surface`, `--ink`, `--pine`, `--cobalt`,
   `--lingon` …), låsta i `design.test.ts`; mörkt läge i både `prefers-color-scheme` och `[data-theme='dark']`.
   Typsnitt: systemets i vardagsrummet, `ui-rounded` för belopp, Space Grotesk och JetBrains Mono bara i rummet.
@@ -75,7 +76,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 - `npm test` och `npm run build` gröna före push.
 - IndexedDB: höj aldrig en befintlig version i efterhand, lägg till ny version med uppgraderingssteg
   (`src/db.ts` DB_VERSION, `src/vanor/store.ts` DB_VERSION).
-- Supabase (databas, edge functions `inbox`, `reminders` och `jarvis`) ändras bara efter att Erik skrivit "Lägg ut".
+- Supabase (databas, edge functions `inbox`, `reminders`, `jarvis` och `kunskap`) ändras bara efter att Erik skrivit "Lägg ut".
 - Fråga innan ny teknik eller tjänst som kostar pengar. Erik vill inte betala något.
 - Max ett förslag på förbättring per leverans. Bygg det inte utan att fråga.
 
