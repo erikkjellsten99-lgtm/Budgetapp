@@ -1,6 +1,9 @@
 // Kunskap: ren logik för personer att följa, gilla/ogilla och vilka kort som visas. Inget här rör lagringen.
 
 import type { CardType, KunskapCard } from './cards';
+import { personKey, STALE_MS, type Batch } from '../../supabase/functions/kunskap-generera/shared.ts';
+
+export { personKey };
 
 /** En person du följer. Sparas i kunskap_people och synkas privat till kontot. */
 export interface FollowedPerson {
@@ -28,15 +31,6 @@ export const TOPICS_MAX = 6;
 const tidy = (text: string) => text.trim().replace(/\s+/g, ' ');
 
 export const cleanName = (name: string) => tidy(name).slice(0, NAME_MAX).trim();
-
-/** Jämför namn utan hänsyn till stora bokstäver och accenter: "Susanna Soberg" är samma som "Susanna Søberg". */
-export const personKey = (name: string) =>
-  tidy(name)
-    .toLowerCase()
-    .replace(/ø/g, 'o')
-    .replace(/æ/g, 'ae')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
 
 /** "bastu, kallbad" blir ['bastu', 'kallbad']: utan tomma, utan dubbletter, högst TOPICS_MAX. */
 export function parseTopics(input: string): string[] {
@@ -79,10 +73,49 @@ export function feed(cards: KunskapCard[], people: FollowedPerson[], votes: Map<
   return filter === 'alla' ? mine : mine.filter((c) => c.type === filter);
 }
 
-/** Personer du följer som inte har några kort än (de får kort när genereringen kopplas på). */
+/** Genererade kort (nyast först) före exempelkorten. Ett genererat kort som också finns som exempel visas en gång. */
+export function allCards(generated: KunskapCard[], examples: KunskapCard[]): KunskapCard[] {
+  const mine = [...generated].sort((a, b) => (b.created ?? 0) - (a.created ?? 0));
+  const ids = new Set(mine.map((c) => c.id));
+  return [...mine, ...examples.filter((c) => !ids.has(c.id))];
+}
+
+/** Personer du följer som inte har några kort än (de får kort vid nästa generering). */
 export function waiting(cards: KunskapCard[], people: FollowedPerson[]): FollowedPerson[] {
   const have = new Set(cards.map((c) => personKey(c.person)));
   return people.filter((p) => !have.has(personKey(p.name)));
 }
 
 export const voteMap = (votes: Vote[]) => new Map(votes.map((v) => [v.cardId, v.value]));
+
+// Kostnadsloggen
+
+/** Batcharna nyast först. En batch som stått som pågående för länge visas som avbruten. */
+export function batchLog(batches: Batch[], now: number): (Batch & { stale: boolean })[] {
+  return [...batches].sort((a, b) => b.created - a.created).map((b) => ({ ...b, stale: b.status === 'pagar' && now - b.created > STALE_MS }));
+}
+
+/** Summan i USD för batcharna i samma månad som `now` (lokal tid). */
+export function monthCost(batches: Batch[], now: number): number {
+  const d = new Date(now);
+  const sum = batches
+    .filter((b) => {
+      const c = new Date(b.created);
+      return c.getFullYear() === d.getFullYear() && c.getMonth() === d.getMonth();
+    })
+    .reduce((total, b) => total + (b.costUsd || 0), 0);
+  return Math.round(sum * 10_000) / 10_000;
+}
+
+/** "0,31 USD". Under en cent visas tre decimaler, så att små belopp inte ser ut som noll. */
+export function formatUsd(amount: number): string {
+  const digits = amount > 0 && amount < 0.01 ? 3 : 2;
+  return `${amount.toLocaleString('sv-SE', { minimumFractionDigits: digits, maximumFractionDigits: digits })} USD`;
+}
+
+/** "2026-11-14 04:10" i lokal tid. */
+export function formatWhen(ms: number): string {
+  const d = new Date(ms);
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
+}

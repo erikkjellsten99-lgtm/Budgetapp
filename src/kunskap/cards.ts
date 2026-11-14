@@ -2,46 +2,15 @@
 // MAX_WORDS ord, alltid med person, ämne och källa med länk.
 //
 // Exempelkorten nedan byggs av det redan granskade innehållet i Lär (../lar/people.ts), så att inget är
-// påhittat: citaten är kontrollerade ordagrant, påståendena har öppnade källor. När genereringen kopplas på
-// kommer korten i stället från servern, i samma form.
+// påhittat: citaten är kontrollerade ordagrant, påståendena har öppnade källor. Genererade kort kommer från
+// servern (supabase/functions/kunskap-generera) i samma form och visas före exemplen.
 
 import { AREAS, EVIDENCE_LABEL, PEOPLE, type Person, type Source } from '../lar/people';
+import { cardWords, hash, MAX_WORDS, type CardType, type KunskapCard } from '../../supabase/functions/kunskap-generera/shared.ts';
 
-export type CardType = 'citat' | 'insikt' | 'protokoll';
+export { cardWords, MAX_WORDS, wordCount, type CardType, type KunskapCard } from '../../supabase/functions/kunskap-generera/shared.ts';
 
 export const TYPE_LABEL: Record<CardType, string> = { citat: 'Citat', insikt: 'Insikt', protokoll: 'Protokoll' };
-
-export const MAX_WORDS = 80;
-
-export interface KunskapCard {
-  id: string;
-  person: string;
-  topic: string;
-  type: CardType;
-  /** Citatet på originalspråket, eller insikten. Tom för protokoll. */
-  text: string;
-  /** Citat: svensk översättning. */
-  sv?: string;
-  /** Protokoll: stegen i ordning. */
-  steps?: string[];
-  /** Insikt: hur väl belagd den är (Väl belagt, Svagt stöd, Egen åsikt). */
-  label?: string;
-  /** Varningsrad för sådant som kan vara riskabelt (andning, kyla). */
-  warning?: string;
-  source: { title: string; url: string };
-}
-
-export const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
-
-/** Orden som räknas mot gränsen: texten och stegen (inte översättningen, som är samma sak en gång till). */
-export const cardWords = (card: Pick<KunskapCard, 'text' | 'steps'>) => wordCount([card.text, ...(card.steps ?? [])].join(' '));
-
-/** Kort och stabilt id av texten, så att gilla/ogilla sitter kvar även om ordningen i Lär ändras. */
-function hash(text: string): string {
-  let h = 5381;
-  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0;
-  return h.toString(36);
-}
 
 const link = (s: Source) => ({ title: s.title, url: s.url });
 
