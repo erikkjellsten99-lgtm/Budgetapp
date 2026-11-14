@@ -2,13 +2,16 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import Lar from '../lar/Lar';
 import { PEOPLE } from '../lar/people';
 import { EXAMPLE_CARDS, SUGGESTED, TYPE_LABEL, type KunskapCard } from './cards';
+import { discover, GENRES } from './discover';
 import { askAboutCard, QUESTION_MAX, TURNS_BACK, type ChatTurn } from './chatApi';
 import {
   COUNT_MAX,
   MAX_BATCHES_PER_DAY,
   PREF_LABEL_MAX,
   prefKey,
+  MAX_SEARCHES_PER_DAY,
   type Batch,
+  type FoundPerson,
   type Frequency,
   type KunskapPrefs,
   type KunskapSettings,
@@ -43,7 +46,19 @@ import {
   type MoreKind,
   type Vote,
 } from './kunskapState';
-import { follow, generateNow, savePrefs, saveSettings, unfollow, useKunskap, vote, writeProfile, type GenerateReply } from './kunskapStore';
+import {
+  follow,
+  generateNow,
+  savePrefs,
+  saveSettings,
+  searchPeople,
+  unfollow,
+  useKunskap,
+  vote,
+  writeProfile,
+  type GenerateReply,
+  type SearchReply,
+} from './kunskapStore';
 import './kunskap.css';
 
 const ICON = {
@@ -438,7 +453,13 @@ function SettingsSheet({
                     <strong>{formatUsd(b.costUsd)}</strong>
                   </p>
                   <p className={b.status === 'fel' || b.stale ? 'kunskap-batch-line bad' : 'kunskap-batch-line'}>
-                    {b.trigger === 'schema' ? 'Schemat' : b.trigger === 'profil' ? `Presentation av ${b.person ?? 'en person'}` : 'Manuellt'}
+                    {b.trigger === 'schema'
+                      ? 'Schemat'
+                      : b.search
+                        ? `Sökning efter personer inom ${b.person ?? 'en genre'}`
+                        : b.trigger === 'profil'
+                          ? `Presentation av ${b.person ?? 'en person'}`
+                          : 'Manuellt'}
                     {': '}
                     {b.stale ? 'avbröts' : STATUS[b.status].toLowerCase()}
                     {b.status === 'klar' && b.trigger !== 'profil' && `, ${b.cards} kort`}
@@ -852,11 +873,176 @@ export function MoreCards({
 /** Personens sida i biblioteket (Lär), om hen har en. */
 const libraryId = (name: string) => PEOPLE.find((p) => personKey(p.name) === personKey(name))?.id;
 
-type Mode = 'flode' | 'bibliotek';
+type Mode = 'flode' | 'bibliotek' | 'upptack';
 const MODES: { id: Mode; label: string }[] = [
   { id: 'flode', label: 'Flöde' },
   { id: 'bibliotek', label: 'Bibliotek' },
+  { id: 'upptack', label: 'Upptäck' },
 ];
+const EYEBROW: Record<Mode, string> = { flode: 'Flöde', bibliotek: 'Bibliotek', upptack: 'Upptäck' };
+
+/**
+ * Upptäck: sök på genre och få förslag på personer att följa, med det som passar dig först. Katalogen är fast
+ * (discover.ts), så inget hämtas och inget kostar. Den som följs blir en egen person i biblioteket.
+ */
+export function Discover({
+  taste,
+  already,
+  found = [],
+  onFollow,
+  onSearch,
+}: {
+  taste: Weight[];
+  already: string[];
+  /** Personer som Claude hittat åt tidigare sökningar. */
+  found?: FoundPerson[];
+  onFollow: (name: string, topics: string[]) => void;
+  /** Ber Claude söka efter personer i en genre. Kostar pengar, så bara på en tryckning. */
+  onSearch?: (genre: string) => Promise<SearchReply>;
+}) {
+  const [query, setQuery] = useState('');
+  const [only, setOnly] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ text: string; error: boolean } | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  const matches = discover(taste, already, query, only ?? undefined);
+  // Det Claude ska söka på: det du skrivit, annars den valda genren.
+  const genre = query.trim() || GENRES.find((g) => g.id === only)?.label || '';
+  const followed = new Set(already.map(personKey));
+  const q = personKey(query);
+  const hits = found.filter((p) => !q || [p.name, p.about, p.genre, ...p.topics].some((text) => personKey(text).includes(q)));
+
+  async function search() {
+    if (busy || !onSearch || genre.length < 2) return;
+    setBusy(true);
+    setResult(null);
+    const reply = await onSearch(genre);
+    if (!alive.current) return;
+    setBusy(false);
+    setResult(
+      reply.ok
+        ? { text: `${reply.people.length === 1 ? '1 person hittad' : `${reply.people.length} personer hittade`}. Det kostade ${formatUsd(reply.costUsd)}.`, error: false }
+        : { text: reply.message, error: true },
+    );
+  }
+  return (
+    <div className="kunskap-discover">
+      <p className="kunskap-hint">
+        Förslag på personer att följa, sorterade efter vad du gillar. Beskrivningarna är korta och inte granskade som biblioteket.
+        Den du följer får en egen sida och kommer med i flödet.
+      </p>
+      <input
+        className="kunskap-search"
+        type="search"
+        value={query}
+        maxLength={60}
+        placeholder="Sök genre eller person, t.ex. framgång"
+        aria-label="Sök genre eller person"
+        autoComplete="off"
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <nav className="kunskap-chips" aria-label="Genrer">
+        <button type="button" className={only === null ? 'chip active' : 'chip'} aria-pressed={only === null} onClick={() => setOnly(null)}>
+          Alla
+        </button>
+        {discover(taste, already).map(({ genre }) => (
+          <button key={genre.id} type="button" className={only === genre.id ? 'chip active' : 'chip'} aria-pressed={only === genre.id} onClick={() => setOnly(genre.id)}>
+            {genre.label}
+          </button>
+        ))}
+      </nav>
+      {hits.length > 0 && only === null && (
+        <section className="kunskap-genre" aria-labelledby="kunskap-genre-found">
+          <h3 id="kunskap-genre-found">Hittade av Claude</h3>
+          <ul className="kunskap-suggestions">
+            {hits.map((p) => (
+              <li key={p.name}>
+                <div>
+                  <span className="kunskap-people-name">{p.name}</span>
+                  <span className="kunskap-suggestion-about">{p.about}</span>
+                  <span className="kunskap-people-topics">
+                    {[p.genre, ...p.topics].filter(Boolean).join(', ')}
+                    {'. Källa: '}
+                    <a href={p.source.url} target="_blank" rel="noopener noreferrer">
+                      {p.source.title}
+                      <span className="visually-hidden"> (öppnas i ny flik)</span>
+                    </a>
+                  </span>
+                </div>
+                {followed.has(personKey(p.name)) ? (
+                  <span className="kunskap-followed">Följer</span>
+                ) : (
+                  <button type="button" className="kunskap-follow" onClick={() => onFollow(p.name, p.topics.length ? p.topics : [p.genre])}>
+                    Följ
+                    <span className="visually-hidden"> {p.name}</span>
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="kunskap-hint">Hittade med webbsökning. Inte granskade: öppna källan om du vill kontrollera.</p>
+        </section>
+      )}
+      {matches.length === 0 && hits.length === 0 ? (
+        <div className="empty">
+          <p>Inga förslag för ”{query.trim()}” i katalogen. Fråga Claude nedan, eller lägg till personen själv under Bibliotek.</p>
+        </div>
+      ) : (
+        matches.map(({ genre, fits, people }) => (
+          <section key={genre.id} className="kunskap-genre" aria-labelledby={`kunskap-genre-${genre.id}`}>
+            <h3 id={`kunskap-genre-${genre.id}`}>
+              {genre.label}
+              {fits && <span className="kunskap-type upptackt">Passar dig</span>}
+            </h3>
+            <ul className="kunskap-suggestions">
+              {people.map((p) => (
+                <li key={p.name}>
+                  <div>
+                    <span className="kunskap-people-name">{p.name}</span>
+                    <span className="kunskap-suggestion-about">{p.about}</span>
+                    <span className="kunskap-people-topics">{p.topics.join(', ')}</span>
+                  </div>
+                  {p.followed ? (
+                    <span className="kunskap-followed">Följer</span>
+                  ) : (
+                    <button type="button" className="kunskap-follow" onClick={() => onFollow(p.name, p.topics)}>
+                      Följ
+                      <span className="visually-hidden"> {p.name}</span>
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      )}
+      {onSearch && (
+        <section className="kunskap-more kunskap-ask" aria-labelledby="kunskap-ask-title">
+          <p>
+            <strong id="kunskap-ask-title">Fråga Claude efter fler</strong>
+            {genre.length >= 2
+              ? ` Claude söker på nätet efter personer inom ”${genre}” som passar dig. Det tar upp till en minut och kostar en liten summa, högst ${MAX_SEARCHES_PER_DAY} sökningar per dygn.`
+              : ' Skriv en genre i sökfältet ovan, eller välj en, så kan Claude söka på nätet efter fler personer.'}
+          </p>
+          <button type="button" className="primary" disabled={busy || genre.length < 2} onClick={() => void search()}>
+            {busy ? 'Söker …' : 'Sök med Claude'}
+          </button>
+          {result && (
+            <p className={result.error ? 'kunskap-error' : 'kunskap-ok'} role={result.error ? 'alert' : 'status'}>
+              {result.text}
+            </p>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
 
 /**
  * Kunskap: två lägen. Flödet är korta kort från personer du följer, med gilla/ogilla och en chatt per kort.
@@ -980,7 +1166,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
         <>
       <div className="view-intro">
         <div>
-          <p className="eyebrow">{mode === 'flode' ? 'Flöde' : 'Bibliotek'}</p>
+          <p className="eyebrow">{EYEBROW[mode]}</p>
           <h2>Mindhub</h2>
         </div>
         {mode === 'flode' && (
@@ -997,7 +1183,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
         </div>
         )}
       </div>
-      <div className="kunskap-segment two kunskap-modes" role="group" aria-label="Läge">
+      <div className="kunskap-segment kunskap-modes" role="group" aria-label="Läge">
         {MODES.map((m) => (
           <button key={m.id} type="button" className={m.id === mode ? 'active' : undefined} aria-pressed={m.id === mode} onClick={() => showMode(m.id)}>
             {m.label}
@@ -1005,6 +1191,15 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
         ))}
       </div>
         </>
+      )}
+      {mode === 'upptack' && (
+        <Discover
+          taste={tasteOf(data?.votes ?? [], data?.prefs ?? { id: 'prefs', manual: {} }, people)}
+          already={[...people.map((p) => p.name), ...PEOPLE.map((p) => p.name)]}
+          found={data?.found ?? []}
+          onFollow={(name, topics) => void follow(name, topics)}
+          onSearch={(genre) => searchPeople(genre, [...PEOPLE.map((p) => p.name), ...GENRES.flatMap((g) => g.people.map((p) => p.name))])}
+        />
       )}
       {mode === 'bibliotek' && ownPerson && (
         <OwnPersonPage

@@ -104,6 +104,13 @@
   omgång när man bläddrat dit. Av tills man trycker Slå på (eller kryssar i det under inställningarna). Högst 3
   omgångar per dygn, samma gräns som förut. Prövat i webbläsare med låtsad server; inte prövat mot riktig server.
   Ingen ändring på servern behövdes.
+- Upptäck (2026-11-15): tredje läget i Mindhub. Sök på genre eller person och följ med ett tryck. Elva genrer och
+  ett fyrtiotal personer i en fast katalog (`discover.ts`), sorterade efter smaken. Beskrivningarna är skrivna ur
+  minnet och inte kontrollerade mot källor; vyn säger att de inte är granskade.
+- Fråga Claude efter fler (2026-11-15, i repot, **inte utlagd**): knappen "Sök med Claude" i Upptäck anropar den
+  nya funktionen `kunskap-upptack`. Före utläggning svarar den "inte påslaget på servern än". Vid utläggning bör
+  även `kunskap-presentation` läggas ut igen, så att sökningar inte räknas mot dygnets presentationer
+  (`profilesLastDay` räknar numera bara det som inte är en sökning). Prövat i webbläsare med låtsad server.
 - Bibliotekets personer följs automatiskt sedan 2026-11-15 (Eriks önskan: alla i biblioteket ska finnas i flödet).
   De går att ta bort under Följer och kommer då inte tillbaka. Inte prövat inloggad mot riktig synk på två telefoner.
 

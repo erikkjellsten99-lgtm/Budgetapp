@@ -1,8 +1,21 @@
 # Kunskap – regler för den här delen
 
-- Två lägen i samma flik: **Flöde** (korten, den här mappen) och **Bibliotek** (Lär, `../lar/`, fast och granskat
-  innehåll). Namnet på ett kort är en knapp till personsidan när personen finns i `PEOPLE`; Tillbaka går då till
+- Tre lägen i samma flik: **Flöde** (korten, den här mappen), **Bibliotek** (Lär, `../lar/`, fast och granskat
+  innehåll) och **Upptäck** (förslag på personer att följa, se nedan). Namnet på ett kort är en knapp till personsidan när personen finns i `PEOPLE`; Tillbaka går då till
   flödet på samma ställe. Personer utan sida i biblioteket får ingen, och sådana sidor genereras aldrig av Claude.
+
+- **Upptäck** (`discover.ts`, Eriks önskan 2026-11-15): en fast katalog med genrer och personer att följa, sökbar,
+  med genrerna som passar smaken (`weights`) först och personer man valt mindre av dolda. Inget hämtas och inget
+  kostar. Katalogen är förslag skrivna ur minnet, inte granskat innehåll: bara vem personen är och vad hen är känd
+  för, högst 90 tecken, inga påståenden om vad som fungerar, inga siffror, inga citat, inga länkar (låst i
+  `discover.test.tsx`). Är du osäker på en uppgift, ta inte med personen. Följ lägger till personen som egen person.
+
+- **Fråga Claude efter fler** (Eriks beslut 2026-11-15): i Upptäck kan Erik be Claude söka på nätet efter personer
+  i en genre han skriver (`searchPeople` → edge function `kunskap-upptack`). Högst 6 personer per sökning, var och en
+  med en källa som finns bland webbsökningens resultat (`toFound`), annars kastas den. Träffarna sparas i posten
+  `found` i `kunskap_settings` (högst 40) och visas under "Hittade av Claude" med källänk, märkta som inte granskade.
+  Bara på en tryckning, högst 5 sökningar per dygn, och kostnaden loggas som en batch med `trigger: 'profil'` och
+  `search: true`. Egen funktion, så att knappen aldrig kan starta en batch med kort.
 
 - **Egna personer i biblioteket:** de Erik följer som inte finns i `PEOPLE` visas under Egna personer i läget
   Bibliotek och har en egen sida (`OwnPersonPage`). Sidan är inte granskad och säger det: den visar bara ämnena
