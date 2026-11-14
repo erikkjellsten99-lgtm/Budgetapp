@@ -5,6 +5,8 @@ import {
   batchesLastDay,
   leaning,
   MAX_BATCHES_PER_DAY,
+  MAX_PROFILES_PER_DAY,
+  profilesLastDay,
   personKey,
   STALE_MS,
   weights,
@@ -221,4 +223,17 @@ export function moreKind(input: {
   if (input.error) return 'error';
   if (batchesLastDay(input.batches, input.now) >= MAX_BATCHES_PER_DAY) return 'limit';
   return 'ready';
+}
+
+// Presentationer skrivs av sig själva
+
+/**
+ * Nästa egna person som ska få en presentation skriven, eller null. En i taget, bara de som saknar presentation
+ * och inte redan prövats den här gången, inte medan en presentation skrivs (här eller på en annan telefon), och
+ * inte när dygnets presentationer är slut. `people` är de egna personerna, i den ordning de lades till.
+ */
+export function nextToPresent(people: FollowedPerson[], tried: Set<string>, batches: Batch[], now: number): FollowedPerson | null {
+  if (profilesLastDay(batches, now) >= MAX_PROFILES_PER_DAY) return null;
+  if (batches.some((b) => b.trigger === 'profil' && !b.search && b.status === 'pagar' && now - b.created <= STALE_MS)) return null;
+  return people.find((p) => !p.profile && !tried.has(p.id)) ?? null;
 }
