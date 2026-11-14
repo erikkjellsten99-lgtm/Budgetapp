@@ -37,7 +37,7 @@ export async function loadKunskap(): Promise<KunskapData> {
 }
 
 /** Sparar hur ofta kort ska genereras och hur många. Synkas till kontot, där servern läser det. */
-export const saveSettings = (settings: Pick<KunskapSettings, 'frequency' | 'count'>) => saveKunskapRecord('kunskap_settings', cleanSettings(settings));
+export const saveSettings = (settings: Pick<KunskapSettings, 'frequency' | 'count'> & Partial<Pick<KunskapSettings, 'auto'>>) => saveKunskapRecord('kunskap_settings', cleanSettings(settings));
 
 /** Sparar det du själv ställt in om vad du gillar. Synkas till kontot, där servern läser det vid nästa generering. */
 export const savePrefs = (prefs: KunskapPrefs) => saveKunskapRecord('kunskap_settings', cleanPrefs(prefs));

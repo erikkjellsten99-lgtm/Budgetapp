@@ -45,6 +45,12 @@
   Följ-knapp.
 - Skriv inga `\u`-koder eller osynliga tecken i `kunskap-generera`: bygg mönstren med `ch()` (`shared.ts`).
   Schemats hemlighet finns bara i Vault och läses med `kunskap_cron_secret()`.
+- **Nya kort när man bläddrar** (Eriks önskan 2026-11-15): platsen `MoreCards` ligger efter de genererade korten.
+  När den kommer i bild och `settings.auto` är på startar appen en vanlig omgång (`generateNow`). Kort som kommer
+  under tiden läggs efter de förra (`sessionOrder`), inte överst. Spärrar som inte får tas bort: av tills man slår
+  på det (alla inloggade följer biblioteket, så annars skulle vem som helst starta omgångar som kostar), en omgång
+  åt gången, ingen ny omgång förrän platsen lämnat bilden och kommit tillbaka, inget nytt försök efter ett fel
+  utan en tryckning, och serverns gräns på 3 omgångar per dygn.
 - Kostnadsskydd: utan sparad inställning (`kunskap_settings`) genereras ingenting, högst 3 batchar per person och
   dygn, högst 10 kort per batch, tak på antal sökningar. Varje batch loggas med token, sökningar och USD, även när
   den misslyckas. Priserna står i `PRICE` i `shared.ts` och ska ändras där om Anthropic ändrar dem.

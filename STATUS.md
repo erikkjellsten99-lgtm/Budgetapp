@@ -100,6 +100,10 @@
   Inte prövat: en riktig batch, en riktig presentation och en riktig chatt (kräver Eriks inloggning).
 - Sett 2026-11-15: på kontot fanns inställningen sparad men inga personer (`kunskap_people`). Schemat hoppar över
   den som inte följer någon. Personerna kommer upp när appen med automatisk följning är öppnad inloggad.
+- Nya kort när man bläddrar (2026-11-15): i flödet, efter de genererade korten, finns en plats som hämtar en ny
+  omgång när man bläddrat dit. Av tills man trycker Slå på (eller kryssar i det under inställningarna). Högst 3
+  omgångar per dygn, samma gräns som förut. Prövat i webbläsare med låtsad server; inte prövat mot riktig server.
+  Ingen ändring på servern behövdes.
 - Bibliotekets personer följs automatiskt sedan 2026-11-15 (Eriks önskan: alla i biblioteket ska finnas i flödet).
   De går att ta bort under Följer och kommer då inte tillbaka. Inte prövat inloggad mot riktig synk på två telefoner.
 
