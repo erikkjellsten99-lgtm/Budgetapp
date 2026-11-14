@@ -1,11 +1,14 @@
-// Jarvis verktyg: det modellen får fråga om i hushållets ekonomi, och systemprompten.
+// Jarvis verktyg: det modellen får fråga om i hushållets ekonomi och i dina egna vanor, och systemprompten.
 // Rena funktioner utan Deno och utan nätverk, så att de kan testas (tools.test.ts). Siffrorna räknas med
 // samma delade kod som appen (../inbox), så att Jarvis aldrig räknar på ett eget sätt. Läser bara.
 
 import { monthName, monthPlans } from '../inbox/months.ts'
 import { MAX_MONTHS } from '../inbox/goalPlan.ts'
 import { overviewNumbers, summaryFacts } from '../inbox/summary.ts'
-import { prioritizeToday } from '../inbox/priority.ts'
+import { firstThing, prioritizeToday, type PriorityRow } from '../inbox/priority.ts'
+import { daySummary, rampToday, type Habit, type Log } from '../inbox/habits.ts'
+import { doneToday, whenText, type Task } from '../inbox/tasks.ts'
+import { weekday } from '../inbox/dates.ts'
 import { sumLeftToBuy } from '../inbox/wishes.ts'
 import type { Loan } from '../inbox/forecast.ts'
 import type { Asset, Category, Debt, Holding, MonthBudget, MonthlyIncome, PricePoint, SavingsGoal, Trade, Wish } from '../inbox/types.ts'
@@ -31,6 +34,34 @@ export interface Economy {
   loan: Loan | null
   wishes: Wish[]
   debts: Debt[]
+  /** Dina egna vanor och Att göra. Saknas om de inte gick att läsa. */
+  day?: Day | null
+}
+
+/** Vanor, bockningar, pausdagar och Att göra som de ligger i personal_records. Privata: bara dina egna. */
+export interface Day {
+  /** I listans ordning. */
+  habits: Habit[]
+  /** Datum → id:n för vanorna som är bockade den dagen. */
+  log: Log
+  paused: Set<string>
+  tasks: Task[]
+}
+
+/** Raderna från personal_records till Day. `rows` är habits, pauses och tasks, `checks` är bockningarna. */
+export function toDay(rows: { store: string; data: unknown }[], checks: { data: unknown }[]): Day {
+  const pick = <T>(store: string) => rows.filter((r) => r.store === store && r.data).map((r) => r.data as T)
+  const log: Log = {}
+  for (const r of checks) {
+    const c = r.data as { date?: string; habitId?: string } | null
+    if (c?.date && c.habitId) (log[c.date] ??= []).push(c.habitId)
+  }
+  return {
+    habits: pick<Habit>('habits').sort((a, b) => a.order - b.order),
+    log,
+    paused: new Set(pick<{ date: string }>('pauses').map((p) => p.date)),
+    tasks: pick<Task>('tasks'),
+  }
 }
 
 /** Raderna från records till Economy. Okända `store` hoppas över. */
@@ -75,7 +106,17 @@ export const TOOLS = [
     description:
       'Hämtar läget just nu: konton med saldo, nettovärde, sparmålet (sparat, mål, procent, när det nås), billånet ' +
       '(kvar och nästa betalning), investeringarna, önskelistan, skulder och vad som är obetalt av månadens budget. ' +
-      'Använd den för frågor som inte gäller en viss månads budget.',
+      'Använd den för frågor om ekonomin som inte gäller en viss månads budget.',
+    strict: true,
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'hamta_vanor',
+    description:
+      'Hämtar dagens vanor och Att göra för den som frågar: vilka vanor som måste göras idag, vilka som kan vänta, ' +
+      'vilka som redan är bockade, hur långt varje vana har kommit mot veckans mål, och saker under Att göra som gäller ' +
+      'idag eller är försenade. Använd den för frågor om vanor, vad som är kvar att bocka av, vad som ska göras idag ' +
+      'och vad man bör börja med. Den innehåller ingen ekonomi och ingen hälsodata.',
     strict: true,
     input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
   },
@@ -126,7 +167,7 @@ export function stateTool(e: Economy) {
     goal: e.goal,
     loan: e.loan,
     wishes: e.wishes,
-    // Vanor, Att göra och hälsa hör inte till ekonomin och läses inte av Jarvis.
+    // Vanor och Att göra har ett eget verktyg (habitsTool). Hälsa läses inte av Jarvis.
     priority: prioritizeToday([], {}, new Set(), [], e.today),
     tasks: [],
     health: [],
@@ -157,6 +198,49 @@ export function stateTool(e: Economy) {
   }
 }
 
+const WEEKDAYS = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag']
+
+/** Dagens vanor och Att göra, med samma uträkning som Prioritera idag i Vanor (prioritizeToday). */
+export function habitsTool(e: Economy) {
+  const d = e.day
+  if (!d) return { fel: 'Det gick inte att läsa vanorna just nu.' }
+  const p = prioritizeToday(d.habits, d.log, d.paused, d.tasks, e.today)
+  if (p.rows.length === 0 && d.tasks.length === 0) return { fel: 'Det finns inga vanor och inget under Att göra i Groundwork än.' }
+  const row = (r: PriorityRow) => {
+    const length = rampToday(r.habit, d.log, e.today)
+    return {
+      namn: r.habit.name,
+      ...(r.info.goal > 0 ? { denna_vecka: `${r.info.count} av ${r.info.goal}` } : {}),
+      ...(r.info.pills.length ? { lage: r.info.pills.map((x) => x.text) } : {}),
+      ...(length !== null && r.habit.ramp ? { langd_idag: `${length} ${r.habit.ramp.unit}` } : {}),
+      ...(r.habit.minimum ? { minsta_version: r.habit.minimum } : {}),
+    }
+  }
+  const summary = daySummary(p.rows.map((r) => r.info))
+  const doneTasks = doneToday(d.tasks, e.today)
+  return {
+    datum: e.today,
+    veckodag: WEEKDAYS[weekday(e.today)],
+    pausad_idag: p.pausedToday,
+    kvar_att_bocka_av: {
+      maste_goras_idag: p.must.map(row),
+      kan_vanta: p.flexible.map(row),
+    },
+    bockade_idag: p.rows.filter((r) => r.info.done).map(row),
+    inte_aktuella_idag: p.rows.filter((r) => !r.info.done && !r.info.due).map(row),
+    att_gora: {
+      kvar: p.tasksDue.map((t) => ({ titel: t.title, nar: whenText(t, e.today) })),
+      klart_idag: doneTasks.map((t) => t.title),
+    },
+    borja_med: firstThing(p),
+    klart_idag: `${summary.done + doneTasks.length} av ${summary.total + p.tasksDue.length + doneTasks.length}`,
+    forklaring:
+      'maste_goras_idag är vanor som måste bockas idag för att hinna veckans mål. kan_vanta går att göra idag men hinns senare i veckan, ' +
+      'mest bråttom först. inte_aktuella_idag ska inte göras idag (veckomålet är klart, dagen är pausad eller vanan hör ihop med ett pass ' +
+      'som inte är gjort). klart_idag räknar måsten och Att göra, inte det som kan vänta.',
+  }
+}
+
 /** Kör ett verktyg. Svaret är JSON som text, som modellen läser. Okänt verktyg eller fel indata ger ett felsvar. */
 export function runTool(name: string, input: unknown, e: Economy): { content: string; isError: boolean } {
   const done = (result: object) => ({ content: JSON.stringify(result), isError: 'fel' in result })
@@ -166,6 +250,7 @@ export function runTool(name: string, input: unknown, e: Economy): { content: st
       return done(monthTool(e, typeof month === 'string' ? month.trim() : ''))
     }
     if (name === 'hamta_lage') return done(stateTool(e))
+    if (name === 'hamta_vanor') return done(habitsTool(e))
     return done({ fel: `Okänt verktyg: ${name}` })
   } catch {
     return done({ fel: 'Det gick inte att räkna fram siffrorna.' })
@@ -175,8 +260,8 @@ export function runTool(name: string, input: unknown, e: Economy): { content: st
 /** Systemprompten. Svaren läses upp, så de ska låta som tal. */
 export function systemPrompt(today: string): string {
   return [
-    'Du är Jarvis, rösten i appen Groundwork, där ett hushåll i Sverige håller ordning på sin ekonomi.',
-    'Den du pratar med äger siffrorna och frågar om dem, oftast med rösten.',
+    'Du är Jarvis, rösten i appen Groundwork, där ett hushåll i Sverige håller ordning på sin ekonomi och var och en på sina vanor.',
+    'Den du pratar med äger siffrorna och vanorna och frågar om dem, oftast med rösten.',
     '',
     `Dagens datum är ${today}. "Den här månaden" är ${monthName(today.slice(0, 7))}.`,
     '',
@@ -187,12 +272,14 @@ export function systemPrompt(today: string): string {
     '- Månader skrivs med namn, "i december", inte som 2026-12. Procent skrivs "sju procent".',
     '',
     'Siffrorna:',
-    '- Hämta alltid siffrorna med verktygen innan du svarar på en fråga om ekonomin. Gissa aldrig ett belopp och räkna inte ur minnet.',
+    '- Hämta alltid siffrorna med verktygen innan du svarar på en fråga om ekonomin eller vanorna. Gissa aldrig ett belopp och räkna inte ur minnet.',
     '- Du kan bara läsa. Du kan inte ändra, lägga till eller ta bort något. Vill någon ändra något säger du att det görs i appen.',
     '- Groundwork innehåller budget per månad och kategori, inkomster, konton, sparmål, billån, investeringar och önskelista. Det finns inga enskilda köp eller kontoutdrag. Gäller frågan något som inte finns, säg det med en mening och berätta vad du kan svara på i stället.',
+    '- Groundwork innehåller också personens egna vanor och Att göra. Hämta dem med hamta_vanor. Säg vanornas namn som de står. Räkna upp högst fem saker i ett svar, och säg hur många som är kvar om det är fler. Frågar någon vad som är kvar att bocka av, svara med det som måste göras idag och nämn kort det som kan vänta.',
+    '- Sömn, steg och annan hälsodata kan du inte läsa. Den finns under Vanor i appen.',
     '- "Blir över" är det som är kvar av månadens inkomster efter kostnader och planerat sparande.',
     '- Ge inga råd om vad pengarna bör placeras i. Du berättar vad siffrorna säger.',
     '',
-    'Är frågan inte om ekonomin, till exempel en hälsning, svara kort och vänligt och säg vad du kan hjälpa till med.',
+    'Är frågan varken om ekonomin eller vanorna, till exempel en hälsning, svara kort och vänligt och säg vad du kan hjälpa till med.',
   ].join('\n')
 }
