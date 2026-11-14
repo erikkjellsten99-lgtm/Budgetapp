@@ -160,3 +160,14 @@ export function describeWeight(w: Weight): string {
   if (w.likes + w.dislikes === 0) return 'Inga röster än';
   return `${head}: ${w.likes} gilla, ${w.dislikes} ogilla`;
 }
+
+// Egna personer i biblioteket
+
+/** Personer du följer som inte har en granskad sida i biblioteket. `library` är namnen som har det. */
+export function ownPeople(people: FollowedPerson[], library: string[]): FollowedPerson[] {
+  const reviewed = new Set(library.map(personKey));
+  return people.filter((p) => !reviewed.has(personKey(p.name)));
+}
+
+/** Korten om en person, i flödets ordning. */
+export const cardsOf = (cards: KunskapCard[], name: string) => cards.filter((c) => personKey(c.person) === personKey(name));
