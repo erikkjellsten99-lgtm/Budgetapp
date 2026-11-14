@@ -45,6 +45,11 @@ export function hash(text: string): string {
 
 const tidy = (text: string) => text.trim().replace(/\s+/g, ' ')
 
+/** Tecken från kodpunkter. Mönster med osynliga tecken byggs så, så att källfilen bara innehåller synliga tecken. */
+export const ch = (...codes: number[]) => String.fromCharCode(...codes)
+/** Kombinerande accenter, U+0300 till U+036F. */
+const ACCENTS = new RegExp(`[${ch(0x300)}-${ch(0x36f)}]`, 'g')
+
 /** Jämför namn utan hänsyn till stora bokstäver och accenter: "Susanna Soberg" är samma som "Susanna Søberg". */
 export const personKey = (name: string) =>
   tidy(name)
@@ -52,7 +57,7 @@ export const personKey = (name: string) =>
     .replace(/ø/g, 'o')
     .replace(/æ/g, 'ae')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(ACCENTS, '')
 
 // Inställningar
 

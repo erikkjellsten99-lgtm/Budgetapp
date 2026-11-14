@@ -147,9 +147,16 @@
   nytt ämne), märkta i flödet med Följ-knapp. Inte prövat: om modellen faktiskt följer viktningen och andelen.
 - PR 119 mergades 2026-11-14 med bara flödet (vanor-databasen version 5). Genereringen (version 6) och det personliga
   ligger i en ny PR från samma gren.
-- **Att lägga ut efter "Lägg ut":** funktionerna `kunskap` (verify_jwt på) och `kunskap-generera` (verify_jwt AV),
-  hemligheten `KUNSKAP_CRON_SECRET` (samma värde i Vault som `kunskap_cron_secret`), och migrationen
-  `20261115120000_kunskap_generera_cron.sql`. `ANTHROPIC_API_KEY` finns redan.
+- **Utlagt 2026-11-15:** `kunskap` version 1 (verify_jwt på, källfilerna som de står i repot) och
+  `kunskap-generera` version 1 (verify_jwt av, hopslagen till en fil med esbuild `--bundle --minify --charset=utf8`).
+  Migrationen `kunskap_generera_cron` är körd: schemat `kunskap-generera` går 04:10 UTC, och hemligheten som skiljer
+  schemats anrop från andras skapades slumpad i Vault (`kunskap_cron_secret`). Funktionen läser den med
+  `kunskap_cron_secret()`, som bara service role får anropa. Ingen hemlighet behöver skrivas in för hand.
+  Prövat från databasen (pg_net): utan inloggning 401, fel hemlighet 401, schemats anrop 200 med tom lista (ingen
+  hade sparat någon inställning än), chatten utan inloggning 401.
+- Mönster med osynliga tecken (accenter, typografiska citattecken, tankstreck) byggs i `kunskap-generera` från
+  kodpunkter (`ch()` i `shared.ts`), eftersom verktygen gör om `\u`-koder i källan till riktiga tecken och kan tappa
+  de osynliga.
 - Inte prövat: ett riktigt anrop till Claude med webbsökning (verktygsversion `web_search_20260209`, fältet
   `usage.server_tool_use.web_search_requests`, och om en batch hinner klart inom funktionens tidsgräns på 150 s),
   hur många citat som går att bekräfta mot riktiga sidor (sidor som kräver skript eller blockerar servern ger

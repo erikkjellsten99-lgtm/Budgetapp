@@ -21,6 +21,8 @@
   ett nytt ämne. Servern släpper bara in en icke följd person på ett kort som är märkt `discovery`, och aldrig fler än
   batchens andel. Källkravet och citatkontrollen gäller dem också. I flödet visas de med märket Upptäckt och en
   Följ-knapp.
+- Skriv inga `\u`-koder eller osynliga tecken i `kunskap-generera`: bygg mönstren med `ch()` (`shared.ts`).
+  Schemats hemlighet finns bara i Vault och läses med `kunskap_cron_secret()`.
 - Kostnadsskydd: utan sparad inställning (`kunskap_settings`) genereras ingenting, högst 3 batchar per person och
   dygn, högst 10 kort per batch, tak på antal sökningar. Varje batch loggas med token, sökningar och USD, även när
   den misslyckas. Priserna står i `PRICE` i `shared.ts` och ska ändras där om Anthropic ändrar dem.

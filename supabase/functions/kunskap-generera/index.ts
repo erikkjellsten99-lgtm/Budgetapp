@@ -3,7 +3,7 @@
 // kostnaden i personal_records, så att de synkas till appen som allt annat i Kunskap.
 //
 // Två sätt att anropa (POST):
-// - Schemat (pg_cron, en gång per dygn): rubriken "x-cron-secret" med hemligheten KUNSKAP_CRON_SECRET. Kör alla
+// - Schemat (pg_cron, en gång per dygn): rubriken "x-cron-secret" med hemligheten ur Vault (kunskap_cron_secret). Kör alla
 //   som har Varje dag eller Varje vecka och står på tur (isDue).
 // - Appen ("Generera nu"): "Authorization: Bearer <JWT>". Kör en batch åt den inloggade.
 // Svar: { batches: [{ id, status, cards, costUsd }] }. Fel: { error, message }.
@@ -12,8 +12,8 @@
 // och dygn, högst COUNT_MAX kort per batch och ett tak på antal webbsökningar. Varje batch loggas med token,
 // sökningar och kostnad i USD (kunskap_batches), även när den misslyckas.
 //
-// verify_jwt ska vara AV (schemat har ingen JWT; funktionen kontrollerar själv). Hemligheter: ANTHROPIC_API_KEY
-// (samma som Jarvis) och KUNSKAP_CRON_SECRET. Läggs bara ut efter att Erik skrivit "Lägg ut".
+// verify_jwt ska vara AV (schemat har ingen JWT; funktionen kontrollerar själv). Hemlighet: ANTHROPIC_API_KEY
+// (samma som Jarvis). Schemats hemlighet skapas av migrationen och läses med kunskap_cron_secret(). Läggs bara ut efter att Erik skrivit "Lägg ut".
 
 import Anthropic from 'npm:@anthropic-ai/sdk@1.8.0'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4'
@@ -205,10 +205,11 @@ Deno.serve(async (req) => {
 
   try {
     // Schemat: alla som står på tur.
-    const secret = Deno.env.get('KUNSKAP_CRON_SECRET')
     const given = req.headers.get('x-cron-secret')
     if (given) {
-      if (!secret || given !== secret) return fail(401, 'hemlighet', 'Fel hemlighet.')
+      // Hemligheten ligger bara i databasen (Vault). Schemat läser den där, och funktionen frågar efter den här.
+      const { data: secret, error } = await admin.rpc('kunskap_cron_secret')
+      if (error || typeof secret !== 'string' || !secret || given !== secret) return fail(401, 'hemlighet', 'Fel hemlighet.')
       const rows = await loadRows()
       const now = Date.now()
       const due = [...new Set(rows.map((r) => r.user_id))].filter((userId) => {

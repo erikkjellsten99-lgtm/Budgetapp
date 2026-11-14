@@ -3,7 +3,7 @@
 // - ett kort utan en källa som webbsökningen faktiskt hittade kastas,
 // - ett citat som inte står ordagrant i källsidans text görs om till en insikt (eller kastas).
 
-import { cardWords, hash, leaning, MAX_WORDS, personKey, wordCount, type KunskapCard, type VoteRow, type Weight } from './shared.ts'
+import { cardWords, ch, hash, leaning, MAX_WORDS, personKey, wordCount, type KunskapCard, type VoteRow, type Weight } from './shared.ts'
 
 export type { VoteRow }
 
@@ -155,7 +155,8 @@ export interface Candidate {
 }
 
 const str = (value: unknown, max: number) => (typeof value === 'string' ? cut(value, max) : '')
-const unquote = (text: string) => text.replace(/^["'“”„«»‘’\s]+|["'“”„«»‘’\s]+$/g, '')
+const QUOTES = `"'${ch(0x201c, 0x201d, 0x201e, 0xab, 0xbb, 0x2018, 0x2019)}\\s`
+const unquote = (text: string) => text.replace(new RegExp(`^[${QUOTES}]+|[${QUOTES}]+$`, 'g'), '')
 
 /**
  * Ett kort från modellen, städat och kontrollerat mot personerna och källorna. Null om det ska kastas:
@@ -222,13 +223,18 @@ export function htmlToText(html: string): string {
 }
 
 /** Bara det som får skilja mellan citatet och sidan: blanksteg, hårt mellanslag, typografiska citattecken och tankstreck. */
+const SINGLE = new RegExp(`[${ch(0x2018, 0x2019, 0x201a, 0x2032)}]`, 'g')
+const DOUBLE = new RegExp(`[${ch(0x201c, 0x201d, 0x201e, 0xab, 0xbb)}]`, 'g')
+const DASH = new RegExp(`[${ch(0x2010)}-${ch(0x2015)}${ch(0x2212)}]`, 'g')
+const DOTS = new RegExp(ch(0x2026), 'g')
 const forMatch = (text: string) =>
   text
-    .replace(/[‘’‚′]/g, "'")
-    .replace(/[“”„«»]/g, '"')
-    .replace(/[‐-―−]/g, '-')
-    .replace(/…/g, '...')
-    .replace(/[\s   ]+/g, ' ')
+    .replace(SINGLE, "'")
+    .replace(DOUBLE, '"')
+    .replace(DASH, '-')
+    .replace(DOTS, '...')
+    // \s täcker även hårt och smalt mellanslag.
+    .replace(/\s+/g, ' ')
     .trim()
 
 /** Står citatet ordagrant i sidans text? Skiftläge och ordföljd måste stämma. */
