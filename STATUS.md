@@ -135,7 +135,19 @@
 - Halvfärdigt: **Gå djupare** (chatt med Claude om kortet). Appens del och edge function `kunskap` finns i repot, men
   funktionen är **inte utlagd**; chatten svarar då "Chatten är inte påslagen på servern än". Väntar på "Lägg ut".
   Delar räknaren med Jarvis (50 frågor per dag tillsammans). Inte prövat mot Claude.
-- Inte byggt: generering av kort för personer man lägger till själv (de visas som "inga kort än").
+- Generering (2026-11-14, i repot, **inte utlagd**): edge function `kunskap-generera` gör kort med Claude och
+  webbsökning, på schema (pg_cron 04:10 UTC, funktionen avgör vem som står på tur) eller med "Generera nu".
+  Inställningar i appen (Av, Varje dag, Varje vecka; 1 till 10 kort, standard 5; Av tills man väljer). Kort utan källa
+  bland sökresultaten kastas, citat som inte står ordagrant på källsidan blir insikter. Kostnad per batch (token,
+  sökningar, USD) visas under inställningarna. Vanor-databasen är version 6 (`kunskap_cards`, `kunskap_settings`,
+  `kunskap_batches`).
+- **Att lägga ut efter "Lägg ut":** funktionerna `kunskap` (verify_jwt på) och `kunskap-generera` (verify_jwt AV),
+  hemligheten `KUNSKAP_CRON_SECRET` (samma värde i Vault som `kunskap_cron_secret`), och migrationen
+  `20261115120000_kunskap_generera_cron.sql`. `ANTHROPIC_API_KEY` finns redan.
+- Inte prövat: ett riktigt anrop till Claude med webbsökning (verktygsversion `web_search_20260209`, fältet
+  `usage.server_tool_use.web_search_requests`, och om en batch hinner klart inom funktionens tidsgräns på 150 s),
+  hur många citat som går att bekräfta mot riktiga sidor (sidor som kräver skript eller blockerar servern ger
+  insikter i stället), och den verkliga kostnaden per batch.
 - Inte prövat: synken mot riktig Supabase (testat lokalt med blockerat nät) och på iPhone.
 
 ## Design

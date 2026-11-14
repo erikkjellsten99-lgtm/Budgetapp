@@ -1,8 +1,25 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { EXAMPLE_CARDS, SUGGESTED, TYPE_LABEL, type KunskapCard } from './cards';
 import { askAboutCard, QUESTION_MAX, TURNS_BACK, type ChatTurn } from './chatApi';
-import { cleanName, feed, FILTERS, isFollowed, NAME_MAX, parseTopics, voteMap, waiting, type Filter, type FollowedPerson } from './kunskapState';
-import { follow, unfollow, useKunskap, vote } from './kunskapStore';
+import { COUNT_MAX, type Batch, type Frequency, type KunskapSettings } from '../../supabase/functions/kunskap-generera/shared.ts';
+import {
+  allCards,
+  batchLog,
+  cleanName,
+  feed,
+  FILTERS,
+  formatUsd,
+  formatWhen,
+  isFollowed,
+  monthCost,
+  NAME_MAX,
+  parseTopics,
+  voteMap,
+  waiting,
+  type Filter,
+  type FollowedPerson,
+} from './kunskapState';
+import { follow, generateNow, saveSettings, unfollow, useKunskap, vote } from './kunskapStore';
 import './kunskap.css';
 
 const ICON = {
@@ -10,6 +27,7 @@ const ICON = {
   down: 'M17 14V4h3v10h-3zm0 0-4.2 6.3a1.6 1.6 0 0 1-2.9-1.2l.7-5.1H6a2 2 0 0 1-2-2.4l1.2-6A2 2 0 0 1 7.2 4H17',
   chat: 'M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z',
   close: 'M6 6l12 12M18 6 6 18',
+  settings: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 4.5v5M9 14.5v5',
 };
 
 function Icon({ d }: { d: string }) {
@@ -25,7 +43,7 @@ function CardBody({ card }: { card: KunskapCard }) {
   if (card.type === 'citat')
     return (
       <>
-        <blockquote className="kunskap-quote" lang="en">
+        <blockquote className="kunskap-quote" lang={card.sv ? (card.created ? undefined : 'en') : 'sv'}>
           <p>{card.text}</p>
         </blockquote>
         {card.sv && <p className="kunskap-sv">{card.sv}</p>}
@@ -56,6 +74,7 @@ function CardMeta({ card }: { card: KunskapCard }) {
       <span className={`kunskap-type ${card.type}`}>{TYPE_LABEL[card.type]}</span>
       <span className="kunskap-topic">{card.topic}</span>
       {card.label && <span className="kunskap-label">{card.label}</span>}
+      {card.verified && <span className="kunskap-label">Ordagrant ur källan</span>}
     </p>
   );
 }
@@ -236,6 +255,153 @@ function PeopleSheet({ people, onClose }: { people: FollowedPerson[]; onClose: (
   );
 }
 
+const FREQUENCIES: { id: Frequency; label: string }[] = [
+  { id: 'av', label: 'Av' },
+  { id: 'dag', label: 'Varje dag' },
+  { id: 'vecka', label: 'Varje vecka' },
+];
+
+const STATUS: Record<Batch['status'], string> = { pagar: 'Pågår', klar: 'Klar', fel: 'Misslyckades' };
+const tokens = (n: number) => n.toLocaleString('sv-SE');
+
+/** Inställningar för genereringen, knappen Generera nu och kostnadsloggen per batch. */
+function SettingsSheet({
+  settings,
+  batches,
+  hasPeople,
+  onClose,
+}: {
+  settings: KunskapSettings;
+  batches: Batch[];
+  hasPeople: boolean;
+  onClose: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ text: string; error: boolean } | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  // Egen kopia, så att två snabba tryck på plus blir två steg och inte ett (inställningen kommer tillbaka först efter sparningen).
+  const [draft, setDraft] = useState(settings);
+  const latest = useRef(settings);
+  function change(part: Partial<Pick<KunskapSettings, 'frequency' | 'count'>>) {
+    latest.current = { ...latest.current, ...part };
+    setDraft(latest.current);
+    void saveSettings(latest.current);
+  }
+  const now = Date.now();
+  const log = batchLog(batches, now);
+  const thisMonth = monthCost(batches, now);
+
+  async function run() {
+    if (busy) return;
+    setBusy(true);
+    setResult(null);
+    const reply = await generateNow();
+    if (!alive.current) return;
+    setBusy(false);
+    setResult(
+      reply.ok
+        ? { text: `${reply.cards === 1 ? '1 nytt kort' : `${reply.cards} nya kort`}. Batchen kostade ${formatUsd(reply.costUsd)}.`, error: false }
+        : { text: reply.message, error: true },
+    );
+  }
+
+  return (
+    <Sheet title="Nya kort" onClose={onClose}>
+      <p className="kunskap-hint">
+        Korten görs på servern av Claude med webbsökning, från dem du följer. Varje kort får en källa, och citat som inte står
+        ordagrant i källan görs om till insikter. Varje batch kostar pengar, se nedan.
+      </p>
+      <fieldset className="kunskap-field">
+        <legend>Hur ofta</legend>
+        <div className="kunskap-segment">
+          {FREQUENCIES.map((f) => (
+            <label key={f.id} className={f.id === draft.frequency ? 'active' : undefined}>
+              <input
+                type="radio"
+                name="kunskap-frequency"
+                className="visually-hidden"
+                checked={f.id === draft.frequency}
+                onChange={() => change({ frequency: f.id })}
+              />
+              {f.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="kunskap-field">
+        <span id="kunskap-count-label">Kort per batch</span>
+        <div className="kunskap-stepper" role="group" aria-labelledby="kunskap-count-label">
+          <button type="button" aria-label="Färre kort" disabled={draft.count <= 1} onClick={() => change({ count: Math.max(1, latest.current.count - 1) })}>
+            −
+          </button>
+          <output aria-live="polite">{draft.count}</output>
+          <button
+            type="button"
+            aria-label="Fler kort"
+            disabled={draft.count >= COUNT_MAX}
+            onClick={() => change({ count: Math.min(COUNT_MAX, latest.current.count + 1) })}
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div className="kunskap-generate">
+        <button type="button" className="primary" disabled={busy || !hasPeople} onClick={() => void run()}>
+          {busy ? 'Genererar …' : 'Generera nu'}
+        </button>
+        {busy && <p className="kunskap-hint">Det tar upp till ett par minuter. Du kan stänga arket under tiden.</p>}
+        {!hasPeople && <p className="kunskap-hint">Följ minst en person först.</p>}
+        {result && (
+          <p className={result.error ? 'kunskap-error' : 'kunskap-ok'} role={result.error ? 'alert' : 'status'}>
+            {result.text}
+          </p>
+        )}
+      </div>
+      <section className="kunskap-cost" aria-labelledby="kunskap-cost-title">
+        <h3 id="kunskap-cost-title">Kostnad</h3>
+        {log.length === 0 ? (
+          <p className="kunskap-hint">Ingen batch har körts än. Här visas token, sökningar och kostnad för varje batch.</p>
+        ) : (
+          <>
+            <p className="kunskap-cost-sum">
+              Den här månaden: <strong>{formatUsd(thisMonth)}</strong>
+            </p>
+            <ul className="kunskap-batches">
+              {log.slice(0, 20).map((b) => (
+                <li key={b.id}>
+                  <p className="kunskap-batch-head">
+                    <span>{formatWhen(b.created)}</span>
+                    <strong>{formatUsd(b.costUsd)}</strong>
+                  </p>
+                  <p className={b.status === 'fel' || b.stale ? 'kunskap-batch-line bad' : 'kunskap-batch-line'}>
+                    {b.trigger === 'schema' ? 'Schemat' : 'Manuellt'}
+                    {': '}
+                    {b.stale ? 'avbröts' : STATUS[b.status].toLowerCase()}
+                    {b.status === 'klar' && `, ${b.cards} kort`}
+                    {b.status === 'klar' && b.quotesVerified + b.quotesRewritten > 0 && ` (${b.quotesVerified} citat bekräftade, ${b.quotesRewritten} omskrivna)`}
+                    {b.status === 'fel' && b.error ? `. ${b.error}` : ''}
+                  </p>
+                  <p className="kunskap-batch-line">
+                    {tokens(b.usage.input + b.usage.cacheRead + b.usage.cacheWrite)} token in, {tokens(b.usage.output)} ut, {b.usage.searches}{' '}
+                    {b.usage.searches === 1 ? 'sökning' : 'sökningar'}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <p className="kunskap-hint">Räknat med listpriser. Fakturan från Anthropic är det som gäller.</p>
+          </>
+        )}
+      </section>
+    </Sheet>
+  );
+}
+
 const STARTERS = ['Vad säger forskningen?', 'Hur gör jag i praktiken?', 'Vad talar emot?'];
 
 type Message = { from: 'du' | 'claude'; text: string; error?: boolean };
@@ -336,12 +502,14 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
   const { data, failed } = useKunskap();
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [managing, setManaging] = useState(false);
+  const [configuring, setConfiguring] = useState(false);
   const [chat, setChat] = useState<KunskapCard | null>(null);
 
   const people = data?.people ?? [];
   const votes = voteMap(data?.votes ?? []);
-  const cards = feed(EXAMPLE_CARDS, people, votes, filter);
-  const pending = waiting(EXAMPLE_CARDS, people);
+  const everything = allCards(data?.cards ?? [], EXAMPLE_CARDS);
+  const cards = feed(everything, people, votes, filter);
+  const pending = waiting(everything, people);
 
   return (
     <div className="kunskap">
@@ -350,9 +518,14 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
           <p className="eyebrow">Flöde</p>
           <h2>Kunskap</h2>
         </div>
-        <button type="button" className="kunskap-manage" onClick={() => setManaging(true)}>
-          {people.length === 0 ? 'Följ personer' : `Följer ${people.length}`}
-        </button>
+        <div className="kunskap-head-actions">
+          <button type="button" className="kunskap-manage" onClick={() => setManaging(true)}>
+            {people.length === 0 ? 'Följ personer' : `Följer ${people.length}`}
+          </button>
+          <button type="button" className="kunskap-close" onClick={() => setConfiguring(true)} aria-label="Inställningar för nya kort" disabled={!data}>
+            <Icon d={ICON.settings} />
+          </button>
+        </div>
       </div>
       <nav className="kunskap-chips" aria-label="Filter">
         {FILTERS.map((f) => (
@@ -378,7 +551,7 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
           )}
           {pending.length > 0 && filter !== 'gillade' && (
             <p className="kunskap-notice">
-              Inga kort än för {pending.map((p) => p.name).join(', ')}. De får kort när genereringen är påkopplad.
+              Inga kort än för {pending.map((p) => p.name).join(', ')}. De får kort vid nästa generering.
             </p>
           )}
           {cards.length === 0 ? (
@@ -413,6 +586,7 @@ export default function Kunskap({ initialFilter = 'alla' }: { initialFilter?: Fi
       )}
 
       {managing && <PeopleSheet people={people} onClose={() => setManaging(false)} />}
+      {configuring && data && <SettingsSheet settings={data.settings} batches={data.batches} hasPeople={people.length > 0} onClose={() => setConfiguring(false)} />}
       {chat && <ChatSheet card={chat} onClose={() => setChat(null)} />}
     </div>
   );

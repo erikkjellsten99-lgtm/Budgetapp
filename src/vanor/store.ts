@@ -12,15 +12,29 @@ import { cleanArea } from './areas';
 import { METRICS, RULE_METRICS, type AutoRule, type HealthDay } from '../../supabase/functions/inbox/health';
 
 const DB_NAME = 'vanor';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 /**
  * Allt som synkas privat till kontot. Träningspassen (workouts, version 2) används inte längre i appen,
  * men ligger kvar så att inget som loggats försvinner. Att göra-sakerna (tasks) finns sedan version 3.
  * Hälsodata från Apple Hälsa (health, en post per dag) finns sedan version 4 och skrivs av servern.
  * Kunskap (version 5): personerna du följer (kunskap_people) och gilla/ogilla per kort (kunskap_votes).
+ * Kunskap (version 6): genererade kort (kunskap_cards) och kostnadsloggen (kunskap_batches), som skrivs av
+ * servern, och inställningen för genereringen (kunskap_settings).
  */
-export const HABIT_STORES = ['habits', 'checks', 'pauses', 'workouts', 'tasks', 'health', 'kunskap_people', 'kunskap_votes'] as const;
+export const HABIT_STORES = [
+  'habits',
+  'checks',
+  'pauses',
+  'workouts',
+  'tasks',
+  'health',
+  'kunskap_people',
+  'kunskap_votes',
+  'kunskap_cards',
+  'kunskap_settings',
+  'kunskap_batches',
+] as const;
 export type HabitStore = (typeof HABIT_STORES)[number];
 
 /** En bockning: vanan var klar den dagen. `min` = bara minimiversionen gjordes. */
@@ -93,6 +107,11 @@ function openDb(): Promise<IDBDatabase> {
       if (event.oldVersion < 5) {
         db.createObjectStore('kunskap_people', { keyPath: 'id' });
         db.createObjectStore('kunskap_votes', { keyPath: 'cardId' });
+      }
+      if (event.oldVersion < 6) {
+        db.createObjectStore('kunskap_cards', { keyPath: 'id' });
+        db.createObjectStore('kunskap_settings', { keyPath: 'id' });
+        db.createObjectStore('kunskap_batches', { keyPath: 'id' });
       }
     };
     request.onsuccess = () => {
@@ -394,7 +413,7 @@ export function deleteTaskRecord(id: string) {
 
 // Kunskap (se ../kunskap/): personer att följa och gilla/ogilla. Synkas privat som allt annat här.
 
-export type KunskapStore = 'kunskap_people' | 'kunskap_votes';
+export type KunskapStore = 'kunskap_people' | 'kunskap_votes' | 'kunskap_cards' | 'kunskap_settings' | 'kunskap_batches';
 
 export function loadKunskapRecords<T>(store: KunskapStore): Promise<T[]> {
   return getAll<T>(store);
