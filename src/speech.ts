@@ -99,7 +99,7 @@ export interface VoiceSettings {
   rate: number;
 }
 
-export const DEFAULT_VOICE: VoiceSettings = { pitch: 0.85, rate: 1.05 };
+export const DEFAULT_VOICE: VoiceSettings = { pitch: 1, rate: 1 };
 const VOICE_SETTINGS_KEY = 'jarvis-röst';
 
 export function readVoice(): VoiceSettings {

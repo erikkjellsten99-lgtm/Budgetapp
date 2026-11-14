@@ -1,6 +1,7 @@
 // Jarvis: svarar på frågor om hushållets ekonomi och dina egna vanor med Claude (Anthropic API). Läser bara.
 //
-// POST { question: "Vad blir över i december?" }  med appens inloggning ("Authorization: Bearer <JWT>").
+// POST { question: "Vad blir över i december?", history?: [{ question, answer }] }  med appens inloggning
+// ("Authorization: Bearer <JWT>"). `history` är de senaste utbytena i samtalet, så att följdfrågor går att förstå.
 // Svar: { answer: "…", used: 7, limit: 50 }. Fel: { error: "kod", message: "text på svenska" }.
 //
 // - Modellen får inte allt i prompten. Den får tre verktyg (tools.ts) och hämtar det frågan gäller.
@@ -16,7 +17,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@1.8.0'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.49.4'
 import { stockholmToday } from '../inbox/parse.ts'
 import type { Holding, PricePoint } from '../inbox/types.ts'
-import { DAILY_LIMIT, MAX_QUESTION, MODEL, runTool, systemPrompt, toDay, toEconomy, TOOLS, type Day, type Economy } from './tools.ts'
+import { DAILY_LIMIT, MAX_QUESTION, MODEL, runTool, systemPrompt, toDay, toEconomy, toMessages, TOOLS, type Day, type Economy } from './tools.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -93,15 +94,15 @@ async function loadDay(db: SupabaseClient, userId: string): Promise<Day | null> 
 }
 
 /** Frågar Claude och kör verktygen tills det finns ett svar i text. */
-async function answer(question: string, economy: Economy): Promise<string> {
-  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: question }]
+async function answer(question: string, history: unknown, economy: Economy, firstName: string | null): Promise<string> {
+  const messages: Anthropic.MessageParam[] = toMessages(history, question)
   for (let turn = 0; turn < MAX_TURNS; turn++) {
     const response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 4000,
       // Röstsvar ska komma fort: låg ansträngning räcker för att slå upp och återge siffror.
       output_config: { effort: 'low' },
-      system: systemPrompt(economy.today),
+      system: systemPrompt(economy.today, firstName),
       tools: TOOLS as unknown as Anthropic.Tool[],
       messages,
     })
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
   const { data: auth } = await db.auth.getUser(token)
   if (!auth?.user) return fail(401, 'utloggad', 'Logga in i Groundwork för att fråga Jarvis.')
 
-  let body: { question?: unknown }
+  let body: { question?: unknown; history?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -170,7 +171,9 @@ Deno.serve(async (req) => {
       return json({ error: 'grans', message: `Du har ställt ${DAILY_LIMIT} frågor i dag, och det är gränsen. I morgon går det igen.`, used: count.used, limit: DAILY_LIMIT }, 429)
     }
 
-    return json({ answer: await answer(question, economy), used: count.used, limit: DAILY_LIMIT })
+    const meta = auth.user.user_metadata as { first_name?: unknown } | null
+    const firstName = typeof meta?.first_name === 'string' ? meta.first_name : null
+    return json({ answer: await answer(question, body.history, economy, firstName), used: count.used, limit: DAILY_LIMIT })
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {
       console.error('jarvis: API-nyckeln godtas inte', error.status)

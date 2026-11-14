@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { habitsTool, monthTool, runTool, stateTool, systemPrompt, toDay, toEconomy, TOOLS } from './tools.ts'
+import { habitsTool, monthTool, runTool, stateTool, systemPrompt, toDay, toEconomy, toMessages, TOOLS } from './tools.ts'
 import { overviewNumbers, summaryFacts } from '../inbox/summary.ts'
 import { monthPlans } from '../inbox/months.ts'
 import { MAX_MONTHS } from '../inbox/goalPlan.ts'
@@ -208,5 +208,42 @@ describe('systemPrompt', () => {
     expect(prompt).toContain('2026-11-13')
     expect(prompt).toContain('november 2026')
     expect(prompt).toContain('hamta_vanor')
+  })
+
+  it('ber om ett samtal, inte bara siffror, och hittar inte på', () => {
+    const prompt = systemPrompt(today)
+    expect(prompt).toContain('Det här är ett samtal')
+    expect(prompt).toContain('Hitta inte på')
+    expect(prompt).toContain('Du kan bara läsa')
+  })
+
+  it('använder förnamnet om det finns', () => {
+    expect(systemPrompt(today, ' Erik ')).toContain('Du pratar med Erik,')
+    expect(systemPrompt(today, '')).not.toContain('Du pratar med')
+    expect(systemPrompt(today, null)).not.toContain('Du pratar med')
+  })
+})
+
+describe('toMessages', () => {
+  it('utan historik blir det bara frågan', () => {
+    expect(toMessages(undefined, 'Vad blir över?')).toEqual([{ role: 'user', content: 'Vad blir över?' }])
+    expect(toMessages('skräp', 'Vad blir över?')).toHaveLength(1)
+  })
+
+  it('lägger de senaste utbytena före frågan, äldst först', () => {
+    const history = Array.from({ length: 6 }, (_, i) => ({ question: `fråga ${i}`, answer: `svar ${i}` }))
+    const m = toMessages(history, 'och i januari då?')
+    expect(m).toHaveLength(9)
+    expect(m[0]).toEqual({ role: 'user', content: 'fråga 2' })
+    expect(m[7]).toEqual({ role: 'assistant', content: 'svar 5' })
+    expect(m[8]).toEqual({ role: 'user', content: 'och i januari då?' })
+    expect(m.map((x) => x.role).join(',')).toBe('user,assistant,user,assistant,user,assistant,user,assistant,user')
+  })
+
+  it('hoppar över fel form och kortar långa texter', () => {
+    const m = toMessages([null, { question: 'a' }, { question: 5, answer: 'x' }, { question: ' ok ', answer: 'y'.repeat(5000) }], 'ny')
+    expect(m).toHaveLength(3)
+    expect(m[0].content).toBe('ok')
+    expect(m[1].content).toHaveLength(800)
   })
 })

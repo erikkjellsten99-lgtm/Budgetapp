@@ -5,11 +5,12 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/600.css';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ask, EXAMPLES } from './jarvis';
-import { askServer, greeting } from './jarvisApi';
+import { addTurn, askServer, greeting, type Turn } from './jarvisApi';
 import { firstNameOf, supabase } from './sync';
 // Tal och uppläsning går via gränssnittet i voice.ts. speech.ts används bara för röstinställningarna.
 import { stt, tts, type ListenSession } from './voice';
-import { onVoicesChanged, pickVoice, readVoice, saveVoice, speak, swedishVoices, type VoiceSettings } from './speech';
+import { onVoicesChanged, pickVoice, readVoice, saveVoice, swedishVoices, type VoiceSettings } from './speech';
+import { readCloudVoice, saveCloudVoice } from './cloudVoice';
 
 interface Message {
   id: number;
@@ -94,6 +95,8 @@ export default function JarvisView({ active }: { active: boolean }) {
   const [hideMoney, setHideMoney] = useState(readHideSetting);
   const [full, setFull] = useState(false);
   const alive = useRef(true);
+  /** Samtalet hittills (äldst först), som följer med nästa fråga. Glöms när rummet stängs. */
+  const talk = useRef<Turn[]>([]);
 
   function stopAll() {
     greeting_.current = false;
@@ -122,6 +125,7 @@ export default function JarvisView({ active }: { active: boolean }) {
     if (!active) {
       stopAll();
       setFull(false);
+      talk.current = [];
       return;
     }
     let cancelled = false;
@@ -152,6 +156,7 @@ export default function JarvisView({ active }: { active: boolean }) {
         if (alive.current) setMode((m) => (m === 'speaking' ? 'idle' : m));
       }, SPEAK_START_MS);
       tts.speak(text, {
+        keep: true,
         onStart: () => (started = true),
         onEnd: () => {
           clearTimeout(watchdog);
@@ -203,9 +208,11 @@ export default function JarvisView({ active }: { active: boolean }) {
         // Visningsläget: bara den enklare Jarvis, som vet vilka svar som innehåller belopp.
         reply = await ask(q, { hideMoney });
       } else {
-        const server = await askServer(q);
-        if (server.ok) reply = server.answer;
-        else {
+        const server = await askServer(q, talk.current);
+        if (server.ok) {
+          reply = server.answer;
+          talk.current = addTurn(talk.current, { question: q, answer: reply });
+        } else {
           // Utloggad, utan nät, dagens gräns nådd eller fel på servern: säg varför, och ge det enklare svaret.
           setError(`${server.message} Här är ett enklare svar som räknas i telefonen.`);
           reply = await ask(q);
@@ -298,7 +305,10 @@ export default function JarvisView({ active }: { active: boolean }) {
     const next = !hideMoney;
     setHideMoney(next);
     // Svar som redan visas kan innehålla belopp: ta bort dem när visningsläget slås på.
-    if (next) setMessages([]);
+    if (next) {
+      setMessages([]);
+      talk.current = [];
+    }
     try {
       localStorage.setItem(HIDE_KEY, next ? 'på' : 'av');
     } catch {
@@ -499,6 +509,7 @@ function VoicePanel({
   const [voices, setVoices] = useState(swedishVoices);
   useEffect(() => onVoicesChanged(() => setVoices(swedishVoices())), []);
   const current = pickVoice(voices, settings.voice);
+  const [cloud, setCloud] = useState(readCloudVoice);
 
   return (
     <div className="jarvis-voice" role="dialog" aria-modal="true" aria-labelledby="jarvis-voice-title">
@@ -507,9 +518,25 @@ function VoicePanel({
         <span>Läs upp svaren</span>
         <input type="checkbox" checked={on} onChange={onToggle} />
       </label>
+      <label className="jarvis-voice-row">
+        <span>Mänsklig röst</span>
+        <input
+          type="checkbox"
+          checked={cloud}
+          onChange={() => {
+            saveCloudVoice(!cloud);
+            setCloud(!cloud);
+          }}
+        />
+      </label>
+      <p className="jarvis-voice-hint">
+        {cloud
+          ? 'Svaren läses upp med en röst från ElevenLabs när du är inloggad och uppkopplad. Inställningarna nedan gäller telefonens röst, som tar över annars.'
+          : 'Svaren läses upp med telefonens röst.'}
+      </p>
       {voices.length > 0 ? (
         <label className="jarvis-voice-field">
-          <span>Röst</span>
+          <span>{cloud ? 'Reservröst' : 'Röst'}</span>
           <select value={current?.voiceURI ?? ''} onChange={(e) => onChange({ ...settings, voice: e.target.value })}>
             {voices.map((v) => (
               <option key={v.voiceURI} value={v.voiceURI}>
@@ -553,7 +580,13 @@ function VoicePanel({
         Röster → Svenska. Starta om appen efteråt.
       </p>
       <div className="jarvis-voice-actions">
-        <button type="button" onClick={() => speak('Hej, jag är Jarvis. Vad vill du veta?', () => {}, settings)}>
+        <button
+          type="button"
+          onClick={() => {
+            tts.unlock();
+            tts.speak('Hej, jag är Jarvis. Vad vill du veta?', { onEnd: () => {} });
+          }}
+        >
           Testa rösten
         </button>
         <button type="button" className="primary" onClick={onClose}>

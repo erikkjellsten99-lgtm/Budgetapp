@@ -46,6 +46,9 @@
   `?jarvis=1&listen=1` öppnar Jarvis direkt. Tal och uppläsning ligger bakom `voice.ts`.
 - Nytt 2026-11-14 (PR, inte utlagt): verktyget `hamta_vanor`, så att Jarvis i appen kan svara om vanor och Att göra
   (måsten idag, kan vänta, bockat, veckans läge). Kräver ny utläggning av `jarvis`. Hälsodata läses inte.
+- Nytt 2026-11-14 (PR, inte utlagt): Jarvis pratar mer som en människa (ny systemprompt, förnamn, följdfrågor med
+  de senaste fyra utbytena) och får röst från ElevenLabs (funktionen `jarvis-rost`, migrationen
+  `20261114120000_jarvis_speech.sql`, hemligheten `ELEVENLABS_API_KEY`). Inte prövat mot ElevenLabs eller på iPhone.
 - `ANTHROPIC_API_KEY` lades in som hemlighet 2026-11-14. Första riktiga svaret från Claude samma dag.
 - **Utlagt 2026-11-13:** migrationen `jarvis_usage` är körd och `jarvis` version 1 ligger ute (verify_jwt på).
   Räknaren är prövad i en tillbakarullad transaktion: fråga 1–50 går igenom, 51 nekas, räknaren står kvar på 50.

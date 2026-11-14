@@ -21,13 +21,28 @@ export function readReply(status: number, body: unknown): JarvisReply {
   return { ok: false, reason: 'fel', message };
 }
 
-/** Ställer en fråga till Jarvis på servern. Kastar aldrig: fel kommer tillbaka som ett svar att visa. */
-export async function askServer(question: string): Promise<JarvisReply> {
+/** Ett tidigare utbyte i samtalet. Skickas med så att följdfrågor ("och i januari då?") går att förstå. */
+export interface Turn {
+  question: string;
+  answer: string;
+}
+
+/** Så många tidigare utbyten följer med en fråga. Servern tar ändå aldrig emot fler. */
+export const TURNS_BACK = 4;
+
+/** Samtalet med ett nytt utbyte sist, kortat till det som skickas med nästa fråga. */
+export const addTurn = (talk: Turn[], turn: Turn): Turn[] => [...talk, turn].slice(-TURNS_BACK);
+
+/**
+ * Ställer en fråga till Jarvis på servern, med de senaste utbytena i samtalet (äldst först).
+ * Kastar aldrig: fel kommer tillbaka som ett svar att visa.
+ */
+export async function askServer(question: string, history: Turn[] = []): Promise<JarvisReply> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, reason: 'offline', message: 'Du är inte uppkopplad.' };
   try {
     const { data: auth } = await supabase.auth.getSession();
     if (!auth.session) return { ok: false, reason: 'utloggad', message: SIGNED_OUT };
-    const { data, error, response } = await supabase.functions.invoke('jarvis', { body: { question } });
+    const { data, error, response } = await supabase.functions.invoke('jarvis', { body: { question, history: history.slice(-TURNS_BACK) } });
     if (!error) return readReply(200, data);
     // Vid ett felsvar från funktionen ligger svaret kvar oläst i `response`.
     if (response) return readReply(response.status, await response.json().catch(() => null));
