@@ -622,6 +622,38 @@
   cursor: pointer;
 }
 
+/* Egna personer i biblioteket */
+.kunskap-own-list {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  margin-top: 1.5rem;
+}
+
+.kunskap-own-list h3 {
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.kunskap-own-list .lar-list {
+  width: 100%;
+}
+
+.kunskap-own .kunskap-feed {
+  margin-bottom: 1.25rem;
+}
+
+.kunskap-own-remove {
+  margin-top: 1rem;
+  white-space: normal;
+  text-align: left;
+}
+
 /* Upptäckt och smak */
 .kunskap-type.upptackt {
   background: color-mix(in srgb, var(--pine) 14%, var(--surface));

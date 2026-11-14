@@ -4,6 +4,11 @@
   innehåll). Namnet på ett kort är en knapp till personsidan när personen finns i `PEOPLE`; Tillbaka går då till
   flödet på samma ställe. Personer utan sida i biblioteket får ingen, och sådana sidor genereras aldrig av Claude.
 
+- **Egna personer i biblioteket:** de Erik följer som inte finns i `PEOPLE` visas under Egna personer i läget
+  Bibliotek och har en egen sida (`OwnPersonPage`). Sidan är inte granskad och säger det: den visar bara ämnena
+  och korten om personen, med källa. Inga texter om personen, inga påståenden och inga märkningar av belägg
+  skrivs där, varken för hand eller av Claude. Att lägga till i biblioteket är samma sak som att följa.
+
 - Alla personer i biblioteket följs från början (`followLibrary` i `kunskapStore.ts`), så att de finns i flödet och
   får nya kort. Vilka som lagts till står i posten `library` i `kunskap_settings`: den Erik tar bort kommer inte
   tillbaka, en ny person i `PEOPLE` läggs till en gång. Id:t är `lib-<person-id>`, lika på alla telefoner. Inloggad

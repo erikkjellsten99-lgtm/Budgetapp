@@ -18,6 +18,7 @@ import {
 import {
   allCards,
   batchLog,
+  cardsOf,
   cleanName,
   describeWeight,
   feed,
@@ -27,6 +28,7 @@ import {
   isFollowed,
   monthCost,
   NAME_MAX,
+  ownPeople,
   parseTopics,
   personKey,
   tasteOf,
@@ -634,6 +636,67 @@ function ChatSheet({ card, onClose }: { card: KunskapCard; onClose: () => void }
   );
 }
 
+/**
+ * Sidan för en person du lagt till själv. Den är inte granskad som bibliotekets egna sidor: den visar bara
+ * ämnena du angett och korten som gjorts om personen, vart och ett med sin källa.
+ */
+export function OwnPersonPage({
+  person,
+  cards,
+  votes,
+  onBack,
+  onVote,
+  onDeeper,
+  onRemove,
+}: {
+  person: FollowedPerson;
+  cards: KunskapCard[];
+  votes: Map<string, 1 | -1>;
+  onBack: () => void;
+  onVote: (card: KunskapCard, pressed: 1 | -1) => void;
+  onDeeper: (card: KunskapCard) => void;
+  onRemove: () => void;
+}) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    heading.current?.focus({ preventScroll: true });
+  }, []);
+  return (
+    <article className="lar-person kunskap-own">
+      <button type="button" className="lar-back" onClick={onBack}>
+        Tillbaka
+      </button>
+      <div className="view-intro">
+        <div>
+          <p className="eyebrow">{['Egen person', ...person.topics].join(', ')}</p>
+          <h2 tabIndex={-1} ref={heading}>
+            {person.name}
+          </h2>
+        </div>
+      </div>
+      <p className="kunskap-notice" role="note">
+        Du har lagt till den här personen själv. Sidan är inte granskad som de andra i biblioteket: den visar korten som
+        gjorts om personen, med källa på varje kort.
+      </p>
+      {cards.length === 0 ? (
+        <div className="empty">
+          <p>Inga kort om {person.name} än. De kommer vid nästa generering.</p>
+        </div>
+      ) : (
+        <div className="kunskap-feed">
+          {cards.map((card) => (
+            <CardView key={card.id} card={card} value={votes.get(card.id)} onVote={(pressed) => onVote(card, pressed)} onDeeper={() => onDeeper(card)} />
+          ))}
+        </div>
+      )}
+      <button type="button" className="kunskap-remove kunskap-own-remove" onClick={onRemove}>
+        Ta bort {person.name} ur biblioteket
+      </button>
+    </article>
+  );
+}
+
 /** Personens sida i biblioteket (Lär), om hen har en. */
 const libraryId = (name: string) => PEOPLE.find((p) => personKey(p.name) === personKey(name))?.id;
 
@@ -658,12 +721,22 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
   // Personsidan som öppnats från ett kort (då går Tillbaka till flödet, på samma ställe som förut).
   const [fromCard, setFromCard] = useState<string | null>(null);
   const [personOpen, setPersonOpen] = useState(false);
+  // Sidan för en person du lagt till själv (id i kunskap_people), och om den öppnades från ett kort.
+  const [own, setOwn] = useState<{ id: string; fromCard: boolean } | null>(null);
   const scrollBack = useRef(0);
 
   function showMode(next: Mode) {
     setFromCard(null);
     setPersonOpen(false);
+    setOwn(null);
     setMode(next);
+  }
+
+  function openOwn(id: string, fromFeed: boolean) {
+    if (fromFeed) scrollBack.current = window.scrollY;
+    setFromCard(null);
+    setOwn({ id, fromCard: fromFeed });
+    setMode('bibliotek');
   }
 
   function openPerson(id: string) {
@@ -683,10 +756,19 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
   const everything = allCards(data?.cards ?? [], EXAMPLE_CARDS);
   const cards = feed(everything, people, votes, filter);
   const pending = waiting(everything, people);
+  const mine = ownPeople(people, PEOPLE.map((p) => p.name));
+  const ownPerson = own ? people.find((p) => p.id === own.id) : undefined;
+  /** Knappen på kortets namn: den granskade sidan, annars din egen sida, annars ingen. */
+  const personLink = (name: string) => {
+    const id = libraryId(name);
+    if (id) return () => openPerson(id);
+    const followed = mine.find((p) => personKey(p.name) === personKey(name));
+    return followed ? () => openOwn(followed.id, true) : undefined;
+  };
 
   return (
     <div className="kunskap">
-      {!personOpen && (
+      {!personOpen && !ownPerson && (
         <>
       <div className="view-intro">
         <div>
@@ -716,8 +798,47 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
       </div>
         </>
       )}
-      {mode === 'bibliotek' && (
+      {mode === 'bibliotek' && ownPerson && (
+        <OwnPersonPage
+          person={ownPerson}
+          cards={cardsOf(everything, ownPerson.name)}
+          votes={votes}
+          onBack={own?.fromCard ? backToFeed : () => setOwn(null)}
+          onVote={(card, pressed) => void vote(card, pressed)}
+          onDeeper={setChat}
+          onRemove={() => {
+            void unfollow(ownPerson.id);
+            if (own?.fromCard) backToFeed();
+            else setOwn(null);
+          }}
+        />
+      )}
+      {mode === 'bibliotek' && !ownPerson && (
         <Lar key={fromCard ?? 'lista'} embedded initialOpenId={fromCard ?? undefined} onBack={fromCard ? backToFeed : undefined} onOpenChange={setPersonOpen} />
+      )}
+      {mode === 'bibliotek' && !ownPerson && !personOpen && (
+        <section className="kunskap-own-list" aria-labelledby="kunskap-own-title">
+          <h3 id="kunskap-own-title">Egna personer</h3>
+          {mine.length === 0 ? (
+            <p className="kunskap-hint">Lägg till vem du vill. Personen får en egen sida med korten som görs om hen, och kommer med i flödet.</p>
+          ) : (
+            <div className="lar-list">
+              {mine.map((p) => (
+                <button key={p.id} type="button" className="card lar-card" onClick={() => openOwn(p.id, false)}>
+                  <span className="lar-card-name">{p.name}</span>
+                  <span className="lar-kind">Egen person</span>
+                  <span className="lar-teaser">
+                    {p.topics.length > 0 ? p.topics.join(', ') : 'Inga ämnen angivna'}
+                    {`. ${cardsOf(everything, p.name).length} kort.`}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          <button type="button" className="kunskap-manage" onClick={() => setManaging(true)} disabled={!data}>
+            Lägg till person
+          </button>
+        </section>
       )}
       <div hidden={mode !== 'flode'}>
       <nav className="kunskap-chips" aria-label="Filter">
@@ -772,7 +893,7 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
                   onVote={(pressed) => void vote(card, pressed)}
                   onDeeper={() => setChat(card)}
                   onFollow={card.discovery && !isFollowed(people, card.person) ? () => void follow(card.person, [card.topic]) : undefined}
-                  onPerson={libraryId(card.person) ? () => openPerson(libraryId(card.person)!) : undefined}
+                  onPerson={personLink(card.person)}
                 />
               ))}
             </div>

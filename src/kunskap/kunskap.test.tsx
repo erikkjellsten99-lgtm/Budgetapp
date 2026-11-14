@@ -6,8 +6,8 @@ import { getOutbox } from '../vanor/store';
 import { systemPrompt, toCard, toMessages } from '../../supabase/functions/kunskap/prompt.ts';
 import { cardWords, EXAMPLE_CARDS, MAX_WORDS, SUGGESTED, TYPE_LABEL } from './cards';
 import { cardPayload, NOT_DEPLOYED, readChatReply, SIGNED_OUT } from './chatApi';
-import Kunskap, { CardView } from './Kunskap';
-import { cleanName, feed, isFollowed, nextVote, parseTopics, personKey, voteMap, waiting, type FollowedPerson } from './kunskapState';
+import Kunskap, { CardView, OwnPersonPage } from './Kunskap';
+import { cardsOf, cleanName, feed, isFollowed, nextVote, ownPeople, parseTopics, personKey, voteMap, waiting, type FollowedPerson } from './kunskapState';
 import { follow, followLibrary, loadKunskap, unfollow, vote } from './kunskapStore';
 
 const person = (name: string, topics: string[] = []): FollowedPerson => ({ id: name, name, topics, created: 0 });
@@ -206,6 +206,43 @@ describe('biblioteket (Lär) inuti Kunskap', () => {
     const plain = renderToStaticMarkup(<CardView card={card} onVote={() => {}} onDeeper={() => {}} />);
     expect(plain).not.toContain('kunskap-person-link');
     expect(plain).toContain(card.person);
+  });
+});
+
+describe('egna personer i biblioteket', () => {
+  const naval = person('Naval Ravikant', ['lycka', 'rikedom']);
+
+  it('de du följer som saknar granskad sida räknas som egna', () => {
+    const people = [person('susanna soberg'), naval, person('Wim Hof')];
+    expect(ownPeople(people, PEOPLE.map((p) => p.name))).toEqual([naval]);
+    expect(ownPeople([], PEOPLE.map((p) => p.name))).toEqual([]);
+  });
+
+  it('sidan visar personens kort med källa och säger att den inte är granskad', () => {
+    const card = { ...EXAMPLE_CARDS.find((c) => c.type === 'insikt')!, id: 'g-n', person: 'naval ravikant', label: undefined };
+    expect(cardsOf([card, ...EXAMPLE_CARDS], 'Naval Ravikant')).toEqual([card]);
+    const html = renderToStaticMarkup(
+      <OwnPersonPage person={naval} cards={[card]} votes={new Map()} onBack={() => {}} onVote={() => {}} onDeeper={() => {}} onRemove={() => {}} />,
+    );
+    expect(html).toContain('>Naval Ravikant</h2>');
+    expect(html).toContain('Egen person, lycka, rikedom');
+    expect(html).toContain('inte granskad');
+    expect(html).toContain(`href="${card.source.url}"`);
+    expect(html).toContain('Ta bort Naval Ravikant ur biblioteket');
+    expect(html).not.toContain('Väl belagt');
+  });
+
+  it('utan kort visas ett tomt läge', () => {
+    const html = renderToStaticMarkup(
+      <OwnPersonPage person={naval} cards={[]} votes={new Map()} onBack={() => {}} onVote={() => {}} onDeeper={() => {}} onRemove={() => {}} />,
+    );
+    expect(html).toContain('Inga kort om Naval Ravikant än');
+  });
+
+  it('biblioteket har en plats för egna personer', () => {
+    const html = renderToStaticMarkup(<Kunskap initialMode="bibliotek" />);
+    expect(html).toContain('>Egna personer</h3>');
+    expect(html).toContain('Lägg till person');
   });
 });
 

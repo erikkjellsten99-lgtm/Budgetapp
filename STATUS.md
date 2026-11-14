@@ -87,6 +87,9 @@
 - Beslut: ton positiv/negativ/neutral via ordlistor, orden som avgjorde visas. Neutral finns för att inte tvinga
   en ton.
 
+- Egna personer i biblioteket (2026-11-15): den som läggs till själv visas under Egna personer i Bibliotek och har
+  en sida med sina kort. Sidan är märkt som inte granskad. Beslut: inga genererade personsidor (text om personen,
+  påståenden, märkning av belägg), bara korten med källa.
 - Bibliotekets personer följs automatiskt sedan 2026-11-15 (Eriks önskan: alla i biblioteket ska finnas i flödet).
   De går att ta bort under Följer och kommer då inte tillbaka. Inte prövat inloggad mot riktig synk på två telefoner.
 
