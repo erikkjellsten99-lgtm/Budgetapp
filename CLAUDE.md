@@ -20,7 +20,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 | Ekonomi | `src/App.tsx` (flikarna), `Categories/Forecast/Goal/Assets/Wishlist/Income.tsx`, `db.ts`, `sync.ts` | föreslagen mapp `src/ekonomi/` (inte flyttat än) |
 | Vanor | `src/vanor/` | `src/vanor/CLAUDE.md` |
 | Jarvis | `src/Jarvis.tsx`, `jarvis.ts`, `speech.ts`, `Today.tsx` | föreslagen mapp `src/jarvis/` (inte flyttat än) |
-| Lär | `src/lar/` (`people.ts` innehållet, `Lar.tsx` vyn, `larState.ts`, `lar.css`) | `src/lar/CLAUDE.md` |
+| Lär (biblioteket i Kunskap, ingen egen flik) | `src/lar/` (`people.ts` innehållet, `Lar.tsx` vyn, `larState.ts`, `lar.css`) | `src/lar/CLAUDE.md` |
 | Kunskap | `src/kunskap/` (`cards.ts` korten, `Kunskap.tsx` vyn, `kunskapState.ts`, `kunskapStore.ts`, `chatApi.ts`), servern `supabase/functions/kunskap/` (chatten) och `kunskap-generera/` (korten, på schema) | `src/kunskap/CLAUDE.md` |
 | Galax | `src/vanor/CosmosView.tsx`, `Galaxy.tsx`, `*3d.ts`, `CameraRig.ts`, `cosmos*.ts`, `universe.ts` | föreslagen mapp `src/galax/` (inte flyttat än) |
 | Servern | `supabase/functions/inbox/` | `supabase/functions/inbox/CLAUDE.md` |
@@ -29,7 +29,8 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
   Appen importerar den direkt eller via shims i `src/` (`export * from '../supabase/functions/inbox/X.ts'`).
   Så räknar app, Siri och Jarvis alltid samma siffror. Ändra aldrig en siffra på bara ett ställe.
 - **Navigationen** är `App.tsx` och `nav.ts`: Idag, Ekonomi (underflikar Översikt, Budget, Prognos; Konton och
-  Önskelista öppnas från rader i Översikt), Vanor, Nyheter, Lär, Kunskap (sex flikar). Jarvis är ingen flik: orben i sidhuvudet öppnar
+  Önskelista öppnas från rader i Översikt), Vanor, Nyheter, Kunskap (fem flikar). Kunskap har två lägen: Flöde
+  och Bibliotek (Lär). Jarvis är ingen flik: orben i sidhuvudet öppnar
   Jarvis i specialrummet (`Room.tsx`). Galaxen öppnas inifrån Vanor → Månad och är också ett specialrum.
 - **Idag** och **Jarvis** läser allt via `summaryFacts` (`summary.ts`). Jarvis svar byggs i `ask.ts`, utan AI.
 - **Stilen** följer designspecen "Två rum" (`docs/design/designspec-tva-rum.md`). Vardagsrummet (Idag, Ekonomi,

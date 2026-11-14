@@ -12,6 +12,12 @@ describe('Lär', () => {
     expect(cards(html)).toBe(9);
   });
 
+  it('som bibliotek i Kunskap visas listan utan egen rubrik', () => {
+    const html = renderToStaticMarkup(<Lar embedded />);
+    expect(html).not.toContain('>Lär</h2>');
+    expect(cards(html)).toBe(9);
+  });
+
   it('personsidans rubrik kan få fokus och länkarna nämner ny flik', () => {
     const html = renderToStaticMarkup(<Lar initialOpenId="wim-hof" />);
     expect(html).toMatch(/<h2 tabindex="-1">Wim Hof<\/h2>/);

@@ -1,5 +1,8 @@
 # Lär – regler för den här delen
 
+- Lär har ingen egen flik sedan 2026-11-15. Den visas som läget Bibliotek i Kunskap (`../kunskap/Kunskap.tsx`), och
+  personens namn på ett kort i flödet öppnar personsidan här. Reglerna nedan gäller oförändrat.
+
 - Innehållet är fast och bor i `people.ts`: personer, metoder, påståenden och källor. Ingen databas, ingen synk,
   ingen server. Delen läser inget från ekonomin och skriver ingenting någonstans.
 - Sammanfattningar skrivs med egna ord och innehåller aldrig citat. Inga `"`, `”` eller tankstreck (`–`, `—`) i

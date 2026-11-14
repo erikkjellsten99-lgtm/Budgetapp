@@ -87,7 +87,7 @@
 - Beslut: ton positiv/negativ/neutral via ordlistor, orden som avgjorde visas. Neutral finns för att inte tvinga
   en ton.
 
-## Lär (ny flik)
+## Lär (biblioteket i Kunskap, ingen egen flik sedan 2026-11-15)
 - Fungerar: bibliotek med nio personer (Wim Hof, Susanna Søberg, Jari Laukkanen, Andrew Huberman, Rhonda Patrick,
   Jon Kabat-Zinn, Sam Harris, James Clear, Chris Williamson), filter på område, sida per person med metod, påståenden märkta
   Väl belagt / Svagt stöd / Egen åsikt, källänkar och varningsrad. Fast innehåll i `src/lar/people.ts`, ingen
@@ -125,6 +125,9 @@
 - Design och plan: `docs/superpowers/specs/2026-11-13-lar-design.md`, `docs/superpowers/plans/2026-11-13-lar.md`.
 
 ## Kunskap (ny flik, 2026-11-14)
+- Sammanslaget med Lär 2026-11-15 (Eriks beslut): fem flikar i menyn, och Kunskap har lägena Flöde och Bibliotek.
+  Biblioteket är Lär oförändrat. Namnet på ett kort öppnar personsidan, och Tillbaka går till samma ställe i flödet.
+  En sparad Lär-flik öppnar Kunskap.
 - Fungerar: flöde med kort (citat, insikt, protokoll, högst 80 ord) med person, ämne, typ och källänk. Följ personer
   (namn och ämnen), gilla/ogilla, filter (Alla, Citat, Insikter, Protokoll, Gillade). Personer och röster sparas i
   telefonen och synkas privat via `personal_records` (nya stores `kunskap_people`, `kunskap_votes`, vanor-databasen

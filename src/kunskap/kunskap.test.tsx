@@ -152,6 +152,34 @@ describe('vyn', () => {
   });
 });
 
+describe('biblioteket (Lär) inuti Kunskap', () => {
+  it('läget Bibliotek visar en sida per person, utan egen rubrik och utan flödets knappar', () => {
+    const html = renderToStaticMarkup(<Kunskap initialMode="bibliotek" />);
+    expect((html.match(/class="card lar-card"/g) ?? []).length).toBe(PEOPLE.length);
+    expect(html).toContain('>Kunskap</h2>');
+    expect(html).not.toContain('>Lär</h2>');
+    expect(html).toContain('>Bibliotek</p>');
+    expect(html).not.toContain('Inställningar för nya kort');
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Bibliotek<\/button>/);
+  });
+
+  it('flödet är förvalt och biblioteket laddas inte förrän det väljs', () => {
+    const html = renderToStaticMarkup(<Kunskap />);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Flöde<\/button>/);
+    expect(html).not.toContain('lar-card');
+  });
+
+  it('namnet på kortet är en knapp till personsidan när personen finns i biblioteket', () => {
+    const card = EXAMPLE_CARDS[0];
+    const linked = renderToStaticMarkup(<CardView card={card} onVote={() => {}} onDeeper={() => {}} onPerson={() => {}} />);
+    expect(linked).toContain('class="kunskap-person-link"');
+    expect(linked).toContain('öppna i biblioteket');
+    const plain = renderToStaticMarkup(<CardView card={card} onVote={() => {}} onDeeper={() => {}} />);
+    expect(plain).not.toContain('kunskap-person-link');
+    expect(plain).toContain(card.person);
+  });
+});
+
 describe('Gå djupare', () => {
   it('svaret från servern tolkas, även när funktionen inte är utlagd', () => {
     expect(readChatReply(200, { answer: ' Hej ' })).toEqual({ ok: true, answer: 'Hej' });
