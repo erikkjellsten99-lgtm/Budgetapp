@@ -1,0 +1,650 @@
+/* Challenges. Vardagsrum: samma färger och former som Vanor (vyn ligger i .vanor och ärver dess ark, fält och knappar).
+   Allt här börjar med .challenges. Grön = klart (--pine), gul = delvis (--warn), röd = missad (--danger). */
+
+.challenges .ch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.challenges .ch-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+
+.challenges .ch-list,
+.challenges .ch-tasks,
+.challenges .ch-draft-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.challenges .ch-card {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius-group);
+  color: var(--ink);
+}
+
+.challenges .ch-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.challenges .ch-skeleton {
+  min-height: 92px;
+  opacity: 0.6;
+}
+
+.challenges .ch-card-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.challenges .ch-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.challenges .ch-card-meta,
+.challenges .ch-card-status,
+.challenges .ch-card-notice {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.challenges .ch-card-status.ok {
+  color: var(--pine);
+  font-weight: 650;
+}
+
+.challenges .ch-card-notice {
+  color: var(--danger);
+}
+
+/* Ringen: dag X av Y */
+.challenges .ch-ring {
+  flex: none;
+  width: 64px;
+  height: 64px;
+}
+
+.challenges .ch-ring-track,
+.challenges .ch-ring-fill {
+  fill: none;
+  stroke-width: 6;
+}
+
+.challenges .ch-ring-track {
+  stroke: var(--line);
+}
+
+.challenges .ch-ring-fill {
+  stroke: var(--act);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.3s;
+}
+
+.challenges .ch-ring.is-done .ch-ring-fill {
+  stroke: var(--pine);
+}
+
+.challenges .ch-ring text {
+  fill: var(--ink);
+  font-family: var(--font-amount);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.challenges .ch-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.challenges .ch-detail-head .ch-ring {
+  width: 84px;
+  height: 84px;
+}
+
+.challenges .ch-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.challenges .ch-section-head .section-title {
+  margin: 0;
+}
+
+.challenges .ch-pill {
+  padding: 4px 10px;
+  background: var(--surface);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.challenges .ch-pill.ok {
+  background: var(--done-soft);
+  color: var(--pine);
+}
+
+.challenges .ch-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 18px 16px;
+  background: var(--surface);
+  border-radius: var(--radius-group);
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.challenges .ch-empty p {
+  margin: 0;
+}
+
+.challenges .ch-empty-title {
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Det som hände: omstart eller klart */
+.challenges .ch-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 16px 6px;
+  background: var(--danger-soft);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius-group);
+  line-height: 1.45;
+}
+
+.challenges .ch-notice.ok {
+  background: var(--done-soft);
+  border-left-color: var(--pine);
+}
+
+.challenges .ch-notice .text-btn {
+  margin-left: -12px;
+}
+
+/* Dagens uppgifter */
+.challenges .ch-task {
+  padding: 12px 14px;
+  background: var(--surface);
+  border-radius: var(--radius-group);
+}
+
+.challenges .ch-task-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.challenges .ch-task-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.challenges .ch-task-title {
+  font-size: 1.05rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.challenges .ch-task.is-done .ch-task-title {
+  color: var(--muted);
+}
+
+.challenges .ch-task-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.challenges .check:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.challenges .check:disabled:not(.on) {
+  border-style: dashed;
+}
+
+.challenges .ch-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-left: 66px;
+}
+
+.challenges .ch-inline {
+  flex-direction: row;
+  gap: 8px;
+}
+
+.challenges .ch-fields .ch-inline {
+  display: flex;
+}
+
+.challenges .ch-fields input,
+.challenges .ch-fields select,
+.challenges .ch-draft input,
+.challenges .ch-draft select,
+.challenges .ch-textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px; /* under 16px zoomar iPhone in */
+}
+
+.challenges .ch-draft input,
+.challenges .ch-draft select,
+.challenges .ch-textarea {
+  background: var(--surface);
+}
+
+.challenges .ch-fields input:focus,
+.challenges .ch-fields select:focus,
+.challenges .ch-draft input:focus,
+.challenges .ch-draft select:focus,
+.challenges .ch-textarea:focus {
+  border-color: var(--act);
+  outline: none;
+}
+
+.challenges .ch-fields :disabled {
+  opacity: 0.75;
+}
+
+.challenges .ch-fields select {
+  flex: 0 1 9.5rem;
+}
+
+.challenges .ch-fields .ch-pages,
+.challenges .ch-draft .ch-target {
+  flex: 0 0 5.5rem;
+}
+
+.challenges .ch-draft .ch-time {
+  flex: 0 0 7rem;
+}
+
+.challenges .ch-textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.challenges .ch-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.challenges .ch-toggle,
+.challenges .ch-step {
+  min-height: 40px;
+  padding: 8px 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.challenges .ch-toggle.on {
+  background: var(--act);
+  border-color: var(--act);
+  color: var(--done-ink);
+}
+
+.challenges .ch-step.plus {
+  background: color-mix(in srgb, var(--act) 10%, var(--surface));
+  border-color: transparent;
+  color: var(--act);
+}
+
+.challenges .ch-step:disabled {
+  opacity: 0.45;
+}
+
+.challenges .ch-counter-value {
+  font-family: var(--font-amount);
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.challenges .ch-counter .bar {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  background: var(--line);
+  border-radius: 999px;
+}
+
+.challenges .ch-counter .bar span {
+  display: block;
+  height: 100%;
+  background: var(--pine);
+  border-radius: 999px;
+  transition: width 0.2s;
+}
+
+.challenges .ch-counter-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.challenges .ch-photo {
+  align-items: flex-start;
+}
+
+.challenges .ch-photo img {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.challenges .ch-photo-missing,
+.challenges .ch-requirement {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.challenges .ch-requirement {
+  padding: 10px 14px;
+  background: var(--warn-soft);
+  border-radius: 12px;
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.challenges .ch-diet {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Alla dagar: en ruta per dag, sju i bredd med måndag först */
+.challenges .ch-heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  padding: 14px;
+  background: var(--surface);
+  border-radius: var(--radius-group);
+}
+
+.challenges .ch-weekday {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.challenges .ch-cell {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0;
+  background: var(--bg);
+  border: 2px solid transparent;
+  border-radius: 9px;
+  color: var(--muted);
+  font-family: var(--font-amount);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.challenges .ch-cell:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.challenges .ch-cell.done,
+.challenges .ch-dot.done {
+  background: var(--pine);
+  color: var(--surface);
+}
+
+.challenges .ch-cell.partial,
+.challenges .ch-dot.partial {
+  background: var(--ch-yellow);
+  color: var(--ch-yellow-ink);
+}
+
+.challenges .ch-cell.missed,
+.challenges .ch-dot.missed {
+  background: var(--danger);
+  color: var(--surface);
+}
+
+.challenges .ch-cell.void,
+.challenges .ch-dot.void {
+  background: repeating-linear-gradient(135deg, var(--line) 0 3px, var(--bg) 3px 6px);
+}
+
+.challenges .ch-cell.is-today {
+  border-color: var(--act);
+}
+
+.challenges .ch-cell.is-selected {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink);
+}
+
+.challenges .ch-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.challenges .ch-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border-radius: 4px;
+}
+
+.challenges .ch-dot:first-child {
+  margin-left: 0;
+}
+
+.challenges {
+  --ch-yellow: #e9b949;
+  --ch-yellow-ink: #3d2c05;
+}
+
+/* Bilder */
+.challenges .ch-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.challenges .ch-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.challenges .ch-thumb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.challenges .ch-thumb img,
+.challenges .ch-thumb-empty {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: var(--line);
+  border-radius: 10px;
+}
+
+.challenges .ch-thumb figcaption {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.challenges .ch-thumb.large figcaption {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.challenges .ch-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 4px;
+}
+
+.challenges .text-btn.ch-danger {
+  color: var(--danger);
+}
+
+.challenges .section-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.challenges .group-row .row-name {
+  white-space: normal;
+}
+
+/* Formuläret */
+.challenges .ch-label {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.challenges .ch-gap {
+  margin-top: 14px;
+}
+
+.challenges .ch-two {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+}
+
+.challenges .ch-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.challenges .ch-draft-row {
+  display: flex;
+  gap: 8px;
+}
+
+.challenges .ch-remove {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+}
+
+.challenges .ch-remove svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.challenges .ch-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 600;
+}
+
+.challenges .ch-switch input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--act);
+}
+
+@media (max-width: 420px) {
+  .challenges .ch-fields {
+    padding-left: 0;
+  }
+}
+
+.challenges .ch-head .primary {
+  flex: none;
+  white-space: nowrap;
+}

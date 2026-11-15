@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Habit } from '../inbox/habits.ts';
 import type { Task } from '../inbox/tasks.ts';
-import { asHabit, asTask, isDue, plannedReminders, reportTime, toLog, type PlanInput } from './plan.ts';
+import { asHabit, asTask, challengeReminders, isDue, plannedReminders, reportTime, toLog, type PlanInput } from './plan.ts';
 
 // Torsdag 5 november 2026. Veckan började måndag 2 november.
 const THU = '2026-11-05';
@@ -136,5 +136,30 @@ describe('hjälpfunktioner', () => {
   it('asHabit och asTask fyller i fält som äldre poster saknar', () => {
     expect(asHabit({ id: 'x', name: 'X', goal: 3 })).toEqual({ id: 'x', name: 'X', goal: 3, created: '2000-01-01', after: [], order: 0, archived: false });
     expect(asTask({ id: 't', title: 'T', date: THU })).toEqual({ id: 't', title: 'T', date: THU, created: 0 });
+  });
+});
+
+describe('notiser för Challenges', () => {
+  const hard = {
+    id: 'c1',
+    title: '75 Hard',
+    start_date: '2026-11-02',
+    settings: { reminders: [{ time: '19:45', title: 'Skärmstopp', body: 'Läggdags 20:30.' }, { time: '20:30', title: 'I säng nu' }] },
+  };
+
+  it('skickas vid sin tid, med utmaningens namn när texten saknas', () => {
+    expect(challengeReminders([hard], THU, at('19:44'))).toEqual([]);
+    expect(challengeReminders([hard], THU, at('19:45'))).toEqual([
+      { key: 'challenge:c1:19:45', title: 'Skärmstopp', body: 'Läggdags 20:30.', tag: 'challenge-c1-19:45' },
+    ]);
+    expect(challengeReminders([hard], THU, at('20:30')).map((r) => [r.title, r.body])).toEqual([
+      ['Skärmstopp', 'Läggdags 20:30.'],
+      ['I säng nu', '75 Hard'],
+    ]);
+  });
+
+  it('inget före startdatumet och inget utan inställda notiser', () => {
+    expect(challengeReminders([{ ...hard, start_date: '2026-11-06' }], THU, at('19:45'))).toEqual([]);
+    expect(challengeReminders([{ ...hard, settings: null }], THU, at('19:45'))).toEqual([]);
   });
 });

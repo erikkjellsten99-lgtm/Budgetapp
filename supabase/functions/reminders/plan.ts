@@ -132,3 +132,27 @@ export function plannedReminders({ habits, checks, paused, tasks, date, minutes,
 
   return out;
 }
+
+/** En aktiv utmaning (tabellen challenges) med notiserna i settings.reminders. */
+export interface ChallengeRow {
+  id: string;
+  title: string;
+  start_date: DateKey;
+  settings: { reminders?: { time?: string; title?: string; body?: string }[] } | null;
+}
+
+/**
+ * Notiser för Challenges: varje tid i utmaningens inställningar, varje dag från startdatumet medan den är aktiv.
+ * Pausade, avklarade och borttagna utmaningar skickas aldrig hit (index.ts hämtar bara aktiva).
+ */
+export function challengeReminders(challenges: ChallengeRow[], date: DateKey, minutes: number): Reminder[] {
+  const out: Reminder[] = [];
+  for (const c of challenges) {
+    if (c.start_date > date) continue;
+    for (const r of c.settings?.reminders ?? []) {
+      if (!r.title || !isDue(r.time, minutes)) continue;
+      out.push({ key: `challenge:${c.id}:${r.time}`, title: r.title, body: r.body || c.title, tag: `challenge-${c.id}-${r.time}` });
+    }
+  }
+  return out;
+}

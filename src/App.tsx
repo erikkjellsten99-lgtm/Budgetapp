@@ -37,6 +37,7 @@ import Room from './Room';
 import { ECONOMY_TABS, isEconomy, restoreView, SECTIONS, sectionOf, tabOf, type EconomyView, type Section, type View } from './nav';
 const Nyheter = lazy(() => import('./Nyheter'));
 const Kunskap = lazy(() => import('./kunskap/Kunskap'));
+const Challenges = lazy(() => import('./challenges/Challenges'));
 import { formatKr, formatKrOre, formatPct } from './money';
 import { usePortfolio } from './usePortfolio';
 import { missingValues, totals, withHoldingValues } from '../supabase/functions/inbox/portfolio.ts';
@@ -370,6 +371,15 @@ export default function App() {
               <Kunskap />
             </Suspense>
           )}
+        </div>
+        <div hidden={view !== 'challenges'}>
+          <div className="vanor-column">
+            {visited.has('challenges') && (
+              <Suspense fallback={<ViewLoading />}>
+                <Challenges />
+              </Suspense>
+            )}
+          </div>
         </div>
         <div hidden={view !== 'vanor'}>
           <div className="vanor-column">

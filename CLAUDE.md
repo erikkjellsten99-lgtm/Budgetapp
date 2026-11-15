@@ -1,6 +1,6 @@
 # Groundwork – regler för Claude
 
-Eriks app för ekonomi, vanor, Jarvis, galaxen, Lär och Kunskap. Vite + React + TypeScript, IndexedDB lokalt, Supabase för synk och
+Eriks app för ekonomi, vanor, Challenges, Jarvis, galaxen, Lär och Kunskap. Vite + React + TypeScript, IndexedDB lokalt, Supabase för synk och
 servern "inbox", publiceras på GitHub Pages från `main` (`.github/workflows/deploy.yml`). Svara på svenska, kort.
 Läs `STATUS.md` först: där står vad som är klart, halvfärdigt och trasigt.
 
@@ -19,6 +19,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 |---|---|---|
 | Ekonomi | `src/App.tsx` (flikarna), `Categories/Forecast/Goal/Assets/Wishlist/Income.tsx`, `db.ts`, `sync.ts` | föreslagen mapp `src/ekonomi/` (inte flyttat än) |
 | Vanor | `src/vanor/` | `src/vanor/CLAUDE.md` |
+| Challenges | `src/challenges/` (`logic.ts` reglerna, `templates.ts` mallarna, `store.ts`, `sync.ts`, vyerna) | `src/challenges/CLAUDE.md` |
 | Jarvis | `src/Jarvis.tsx`, `jarvis.ts`, `speech.ts`, `Today.tsx` | föreslagen mapp `src/jarvis/` (inte flyttat än) |
 | Lär (biblioteket i Kunskap, ingen egen flik) | `src/lar/` (`people.ts` innehållet, `Lar.tsx` vyn, `larState.ts`, `lar.css`) | `src/lar/CLAUDE.md` |
 | Kunskap | `src/kunskap/` (`cards.ts` korten, `Kunskap.tsx` vyn, `kunskapState.ts`, `kunskapStore.ts`, `chatApi.ts`), servern `supabase/functions/kunskap/` (chatten), `kunskap-generera/` (korten, på schema), `kunskap-presentation/` och `kunskap-upptack/` | `src/kunskap/CLAUDE.md` |
@@ -29,10 +30,10 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
   Appen importerar den direkt eller via shims i `src/` (`export * from '../supabase/functions/inbox/X.ts'`).
   Så räknar app, Siri och Jarvis alltid samma siffror. Ändra aldrig en siffra på bara ett ställe.
 - **Navigationen** är `App.tsx` och `nav.ts`: Idag, Ekonomi (underflikar Översikt, Budget, Prognos; Konton och
-  Önskelista öppnas från rader i Översikt), Vanor, Nyheter, Kunskap (fem flikar). Kunskap har två lägen: Flöde
+  Önskelista öppnas från rader i Översikt), Vanor, Challenges, Nyheter, Kunskap (sex flikar). Kunskap har två lägen: Flöde
   och Bibliotek (Lär). Jarvis är ingen flik: orben i sidhuvudet öppnar
   Jarvis i specialrummet (`Room.tsx`). Galaxen öppnas inifrån Vanor → Månad och är också ett specialrum.
-- **Flikarnas namn är på engelska** (Eriks val 2026-11-15): Today, Finance, Habits, News, Mindhub. Mindhub är
+- **Flikarnas namn är på engelska** (Eriks val 2026-11-15): Today, Finance, Habits, Challenges, News, Mindhub. Mindhub är
   Kunskap. Bara namnen i menyn och rubrikerna News och Mindhub är bytta; id:n, kod, mappar, underflikar och all
   annan text i appen är på svenska, och det här dokumentet använder de svenska namnen för delarna.
 - **Idag** och **Jarvis** läser allt via `summaryFacts` (`summary.ts`). Jarvis svar byggs i `ask.ts`, utan AI.
@@ -79,7 +80,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
   "Så testar du". Erik mergar själv.
 - `npm test` och `npm run build` gröna före push.
 - IndexedDB: höj aldrig en befintlig version i efterhand, lägg till ny version med uppgraderingssteg
-  (`src/db.ts` DB_VERSION, `src/vanor/store.ts` DB_VERSION).
+  (`src/db.ts` DB_VERSION, `src/vanor/store.ts` DB_VERSION, `src/challenges/store.ts` DB_VERSION).
 - Supabase (databas, edge functions `inbox`, `reminders`, `jarvis`, `kunskap`, `kunskap-generera`, `kunskap-presentation` och `kunskap-upptack`) ändras bara efter att Erik skrivit "Lägg ut".
 - Fråga innan ny teknik eller tjänst som kostar pengar. Erik vill inte betala något.
 - Max ett förslag på förbättring per leverans. Bygg det inte utan att fråga.

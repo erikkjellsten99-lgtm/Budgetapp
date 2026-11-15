@@ -8,6 +8,7 @@
 // - Att göra-saker med tid: vid tiden den dagen, om de inte är bockade (även pausade dagar).
 // - Rapport på söndagkvällen (en timme efter kvällspåminnelsen, annars 21:00): veckans procent och vad som drog ner.
 //   Är det månadens sista vecka blir det en månadsrapport (report.ts).
+// - Challenges: notiserna i utmaningens inställningar (settings.reminders), varje dag medan den är aktiv.
 // Samma påminnelse skickas högst en gång per dag (tabellen push_sent).
 //
 // Utläggning: funktionen importerar filer från ../inbox, så de måste följa med när den läggs ut
@@ -16,7 +17,7 @@
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4';
 import { addDays } from './report.ts';
-import { asHabit, asTask, plannedReminders, type Check } from './plan.ts';
+import { asHabit, asTask, challengeReminders, plannedReminders, type ChallengeRow, type Check } from './plan.ts';
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
@@ -132,6 +133,15 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
   if (habitRows.error) throw habitRows.error;
   if (checkRows.error) throw checkRows.error;
   if (taskRows.error) throw taskRows.error;
+  // Challenges: aktiva utmaningar med notiser i inställningarna (19:45 och 20:30 i mallen 75 Hard).
+  const challengeRows = await admin
+    .from('challenges')
+    .select('id, user_id, title, start_date, settings')
+    .in('user_id', users)
+    .eq('status', 'active')
+    .eq('deleted', false)
+    .limit(1000);
+  if (challengeRows.error) throw challengeRows.error;
   const rows = [...(habitRows.data ?? []), ...(checkRows.data ?? []), ...(taskRows.data ?? [])];
 
   let sent = 0;
@@ -143,7 +153,11 @@ async function runReminders(keys: { public_key: string; private_key: string }) {
     const paused = new Set(mine.filter((r) => r.store === 'pauses').map((r) => (r.data as { date: string }).date));
     const tasks = mine.filter((r) => r.store === 'tasks').map((r) => asTask(r.data)).filter((t) => !t.doneOn);
 
-    const outgoing = plannedReminders({ habits, checks, paused, tasks, date, minutes, evening: sub.evening }).map(
+    const challenges = (challengeRows.data ?? []).filter((c) => c.user_id === sub.user_id) as ChallengeRow[];
+    const outgoing = [
+      ...plannedReminders({ habits, checks, paused, tasks, date, minutes, evening: sub.evening }),
+      ...challengeReminders(challenges, date, minutes),
+    ].map(
       ({ key, ...payload }) => ({ key, payload: { ...payload, url: APP_URL } }),
     );
 
