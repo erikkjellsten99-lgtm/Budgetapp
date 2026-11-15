@@ -87,7 +87,12 @@ function take(week: Week, work: WorkMap, section: SectionId, result: Anthropic.M
   const w = work[section]
   if (!r || !w || r.status !== 'vantar') return
   delete w.batchId
-  if (result.type !== 'succeeded') return void failed(r, result.type === 'errored' ? 'Fel från Claude.' : 'Frågan hann inte besvaras.')
+  if (result.type !== 'succeeded') {
+    // Felet från Claude sparas i klartext, så att det går att se i tabellen vad som var fel med frågan.
+    const detail = result.type === 'errored' ? JSON.stringify(result.error).slice(0, 300) : ''
+    console.error('nyheter: frågan misslyckades', section, result.type, detail)
+    return void failed(r, result.type === 'errored' ? `Fel från Claude. ${detail}` : 'Frågan hann inte besvaras.')
+  }
 
   const message = result.message
   const usage = usageOf(message.usage)

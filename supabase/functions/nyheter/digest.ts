@@ -83,7 +83,7 @@ export function leaningOf(url: string): Side | null {
   return null
 }
 
-/** Verktyget modellen avslutar med. Strikt schema: alla fält krävs, det som inte gäller är null eller tom lista. */
+/** Verktyget modellen avslutar med. Strikt schema: alla fält krävs, det som inte gäller är "ingen" eller tom lista. */
 export const SAVE_TOOL = {
   name: 'spara_nyheter',
   description:
@@ -133,9 +133,9 @@ export const SAVE_TOOL = {
               },
             },
             blindspot: {
-              type: ['string', 'null'],
-              enum: ['vanster', 'hoger', null],
-              description: 'Sidan som inte bevakar nyheten fast den andra gör det, om du sökt och inte hittat något där. Annars null.',
+              type: 'string',
+              enum: ['vanster', 'hoger', 'ingen'],
+              description: 'Sidan som inte bevakar nyheten fast den andra gör det, om du sökt och inte hittat något där. Annars "ingen".',
             },
           },
         },
