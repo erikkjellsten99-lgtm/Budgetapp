@@ -2571,12 +2571,6 @@ body.jarvis-locked {
 }
 
 /* Nyheter (Nyheter.tsx) */
-.news {
-  --tone-pos: var(--pine);
-  --tone-neg: var(--danger);
-  --tone-neu: var(--muted);
-}
-
 .news-intro {
   display: flex;
   align-items: flex-end;
@@ -2639,131 +2633,41 @@ body.jarvis-locked {
   font-size: 0.88rem;
 }
 
-.news-mood {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-  padding: 0.8rem;
+.news-count {
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+  font-size: 0.86rem;
 }
 
-.news-mood .segmented-row {
-  margin: 0;
-}
-
-/* Tonen som en tunn linje i varje knapp: linjens längd är andelen nyheter med den tonen (--share, 0–1). */
-.news-tone .seg {
-  position: relative;
-  min-height: 2.75rem;
-  padding-bottom: 0.7rem;
-}
-
-.news-tone .seg::after {
-  content: '';
-  position: absolute;
-  bottom: 0.35rem;
-  left: 0.6rem;
-  width: calc((100% - 1.2rem) * var(--share, 0));
-  height: 3px;
-  border-radius: 2px;
-  background: var(--tone-neu);
-}
-
-/* "Alla" bär ingen information: linjen syns bara svagt i den valda knappen */
-.news-tone .seg.alla::after {
-  background: var(--border);
-}
-
-.news-tone .seg.positiv::after {
-  background: var(--tone-pos);
-}
-
-.news-tone .seg.negativ::after {
-  background: var(--tone-neg);
-}
-
-/* Nyheterna som rader i en grupp; två spalter på skrivbord */
+/* En nyhet per kort; två spalter på skrivbord */
 .news-list {
   display: grid;
-}
-
-.news-item + .news-item {
-  border-top: 1px solid var(--line);
+  gap: 0.75rem;
 }
 
 @media (min-width: 900px) {
   .news-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .news-item:nth-child(2) {
-    border-top: 0;
-  }
-
-  .news-item:nth-child(even) {
-    border-left: 1px solid var(--line);
+    align-items: start;
   }
 }
 
 .news-item {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.55rem;
+  min-width: 0;
   margin: 0;
-  padding: 0.9rem 1rem;
-}
-
-.news-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-
-.news .news-title {
-  display: block;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  color: var(--text);
-  font-size: 1.02rem;
-  font-weight: 650;
-  line-height: 1.35;
-  letter-spacing: -0.01em;
-  text-transform: none;
-}
-
-.news-title a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.news-title a:hover {
-  text-decoration: underline;
-}
-
-.news-summary {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.news-tone-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.1rem 0 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
 }
 
 .news-badge {
-  padding: 0.15rem 0.5rem;
+  align-self: flex-start;
+  margin: 0;
+  padding: 0.15rem 0.55rem;
   border: 1px solid currentColor;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -2771,20 +2675,98 @@ body.jarvis-locked {
 }
 
 .news-badge.positiv {
-  color: var(--tone-pos);
+  color: var(--pine);
 }
 
-.news-badge.negativ {
-  color: var(--tone-neg);
+.news .news-title {
+  display: block;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  overflow-wrap: anywhere;
 }
 
-.news-badge.neutral {
-  color: var(--tone-neu);
+.news-summary {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.94rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
-.news-because {
+/* Vinklarna: en rad per sida, med en färgad kant (vänster lingon, mitten grå, höger kobolt) */
+.news-angles {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.2rem 0 0;
+}
+
+.news-angle {
+  padding-left: 0.7rem;
+  border-left: 3px solid var(--muted);
+}
+
+.news-angle.vanster {
+  border-left-color: var(--lingon);
+}
+
+.news-angle.hoger {
+  border-left-color: var(--cobalt);
+}
+
+.news-angle.missing {
+  border-left-color: var(--line);
+}
+
+.news-angle dt {
+  margin: 0;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.news-angle dd {
+  margin: 0.1rem 0 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.news-angle.missing dd {
+  color: var(--muted);
+}
+
+.news-blindspot {
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.news-sources {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.news-item a {
+  color: var(--cobalt);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .news-foot {

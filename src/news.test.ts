@@ -1,19 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { newsMeta } from './news';
+import { blindspotLine, countLine, NEWS_URL, usd, weekLine, type Story } from './news';
 
-const now = Date.parse('2026-11-07T12:00:00Z');
-const item = { source: 'SVT Sport', published: now - 16 * 60000, topic: 'fotboll' as const };
+const story = (positive: boolean): Story => ({ id: positive ? 'a' : 'b', title: 'Rubrik', summary: 'Text.', positive, sources: [], angles: [], blindspot: null });
 
-describe('newsMeta', () => {
-  it('källa och tid', () => {
-    expect(newsMeta(item, { now })).toBe('SVT Sport, för 16 min sedan');
+describe('veckonyheter i appen', () => {
+  it('adressen går till funktionen nyheter', () => {
+    expect(NEWS_URL).toMatch(/\/functions\/v1\/nyheter$/);
   });
 
-  it('med ämne', () => {
-    expect(newsMeta(item, { now, withTopic: true })).toBe('Fotboll, SVT Sport, för 16 min sedan');
+  it('veckans rad', () => {
+    expect(weekLine({ week: '2026-W47', created: Date.parse('2026-11-16T03:00:00Z'), updated: 0, sections: {} })).toBe('Vecka 47, skriven 2026-11-16');
   });
 
-  it('utan tid inget komma på slutet', () => {
-    expect(newsMeta({ ...item, published: 0 }, { now })).toBe('SVT Sport');
+  it('räknar nyheter och positiva', () => {
+    expect(countLine([story(true), story(false), story(true)])).toBe('3 nyheter, 2 positiva');
+    expect(countLine([story(true)])).toBe('1 nyhet, 1 positiv');
+  });
+
+  it('blind fläck i klartext', () => {
+    expect(blindspotLine('hoger')).toBe('Blind fläck: högermedier har inte bevakat nyheten.');
+    expect(blindspotLine('vanster')).toBe('Blind fläck: vänstermedier har inte bevakat nyheten.');
+  });
+
+  it('kostnad med svenskt decimalkomma', () => {
+    expect(usd(3.4)).toBe('3,40');
   });
 });

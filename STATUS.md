@@ -14,7 +14,7 @@
    (github.com/apps/claude/installations) och testa push. Pages-adressen blir
    `erikkjellsten99-lgtm.github.io/groundwork/`; den installerade appen på telefonen pekar på den gamla adressen
    och måste installeras om. `README.md` nämner fortfarande Budgetapp-adressen.
-3. Öppna fliken Nyheter en gång och kontrollera i serverloggarna att alla fyra SVT-flöden kom fram.
+3. Lägg ut veckonyheterna (funktionen `nyheter` och migrationen), kör schemat en gång och läs loggarna. Se Nyheter nedan.
 4. ~~Lägg ut `reminders` med inbox-filerna~~ Klart: version 6 utlagd 2026-11-06, bootar och svarar 200 var 5:e minut.
    `inbox/health.ts` tappades av verktyget (sista filen, bara typer) och saknas på servern; följer med nästa gång.
 5. ~~Öppna källänkarna i Lär~~ Klart 2026-11-13: alla länkar i `src/lar/people.ts` är öppnade, sammanfattningarna är
@@ -92,10 +92,15 @@
   Hälsa; inte reproducerat på riktig enhet.
 - Att veta: renderas med swiftshader i sandboxen, en skärmbild tar 2–4 minuter.
 
-## Nyheter (ny flik, #99)
-- Fungerar i appen med testdata. Servern v16 har `?action=nyheter`. Riktiga SVT-flöden ej verifierade.
-- Beslut: ton positiv/negativ/neutral via ordlistor, orden som avgjorde visas. Neutral finns för att inte tvinga
-  en ton.
+## Nyheter (veckonyheter, gjorda om 2026-11-15)
+- I repot, **inte utlagt**: edge function `nyheter`, migrationen `20261117120000_nyheter.sql` (tabellen `news_weeks`
+  och schemat). Appen visar "Inga veckonyheter än" (eller fel) tills funktionen är utlagd. Lägg ut före merge.
+- Inte provat mot riktiga Claude: ingen API-nyckel i sandboxen. Kontrollerna (`digest.ts`) är testade med testdata,
+  batch-flödet i `index.ts` är inte kört. Efter utläggning: kör schemat en gång för hand och läs loggarna.
+- Kostnaden är en uppskattning (ungefär 2–5 USD per vecka med Fable 5.2 via batch), inte uppmätt. Den riktiga
+  står i appens fot och i loggen efter första veckan. Blir den för hög: byt `MODEL` i `nyheter/shared.ts`.
+- SVT-flödet och `?action=nyheter` är borttagna ur repot. Den utlagda inbox har åtgärden kvar, vilket inte skadar.
+- Beslut: lutningen för kända medier är fast i koden (`LEANING`), övriga får modellens bedömning.
 
 - Egna personer i biblioteket (2026-11-15): den som läggs till själv visas i samma lista som bibliotekets nio
   (sammanslaget samma dag på Eriks önskan, ingen egen rubrik) och har en sida med sina kort. Bibliotekets filter

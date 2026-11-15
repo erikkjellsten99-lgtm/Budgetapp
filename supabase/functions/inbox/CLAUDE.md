@@ -4,12 +4,12 @@ Projekt `gnmbtioxwgzdooswpwxy`, funktion `inbox`, `verify_jwt: false` (funktione
 Läggs bara ut efter att Erik skrivit "Lägg ut".
 
 ## Åtgärder (se kommentaren överst i `index.ts`)
-`token`, `morgon`, `lasnyckel`, `sammanfattning`, `fraga` (POST), `nyheter` (GET, ingen nyckel), samt default
+`token`, `morgon`, `lasnyckel`, `sammanfattning`, `fraga` (POST), samt default
 POST för påminnelser, Siri-uppgifter och hälsodata. Nycklar: `gw_` (skriva, `inbox_tokens`) och `gr_` (bara läsa,
 `read_tokens`). Hashar sparas, aldrig nycklar.
 
 ## Delad kod
-Allt här utom `index.ts`, `parse.ts`, `spoken.ts`, `news.ts` används också av appen. Filerna importeras med
+Allt här utom `index.ts`, `parse.ts`, `spoken.ts` används också av appen. Filerna importeras med
 `.ts`-ändelse. Inga Deno-specifika saker i de delade filerna.
 
 ## Utläggning (så funkar det, och fällorna)
@@ -34,5 +34,5 @@ Allt här utom `index.ts`, `parse.ts`, `spoken.ts`, `news.ts` används också av
   reminders för sig.
 
 ## Nyheter
-SVT:s RSS, fyra ämnen, ton via ordlistor i `news.ts` (ingen AI). Cache 10 min i minnet. Krig = utrikes filtrerat
-med `isWar`. Ej verifierat mot riktiga flöden från sandboxen: kontrollera i loggarna efter första körningen.
+Flyttade 2026-11-15 till en egen funktion, `supabase/functions/nyheter/` (veckonyheter skrivna av Claude). SVT-flödena
+och `?action=nyheter` är borttagna ur repot; den utlagda versionen har åtgärden kvar tills inbox läggs ut nästa gång.
