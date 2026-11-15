@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { ECONOMY, ECONOMY_TABS, isEconomy, restoreView, sectionOf, SECTIONS, tabOf } from './nav';
 
 describe('huvudmenyn', () => {
-  it('fem flikar i rätt ordning', () => {
-    expect(SECTIONS.map((s) => s.id)).toEqual(['idag', 'ekonomi', 'vanor', 'nyheter', 'kunskap']);
+  it('sex flikar i rätt ordning', () => {
+    expect(SECTIONS.map((s) => s.id)).toEqual(['idag', 'ekonomi', 'vanor', 'challenges', 'nyheter', 'kunskap']);
   });
 
   it('Kunskap hör till sin egen flik', () => {
@@ -13,7 +13,7 @@ describe('huvudmenyn', () => {
 
 describe('flikarnas namn', () => {
   it('är på engelska, och Kunskap heter Mindhub', () => {
-    expect(SECTIONS.map((s) => s.label)).toEqual(['Today', 'Finance', 'Habits', 'News', 'Mindhub']);
+    expect(SECTIONS.map((s) => s.label)).toEqual(['Today', 'Finance', 'Habits', 'Challenges', 'News', 'Mindhub']);
   });
 });
 
@@ -32,7 +32,7 @@ describe('restoreView', () => {
   });
 
   it('giltiga vyer behålls', () => {
-    for (const v of ['idag', 'vanor', 'nyheter', 'kunskap', 'account', 'overview', 'budget', 'goal', 'assets', 'investments', 'wishlist'])
+    for (const v of ['idag', 'vanor', 'challenges', 'nyheter', 'kunskap', 'account', 'overview', 'budget', 'goal', 'assets', 'investments', 'wishlist'])
       expect(restoreView(v)).toBe(v);
   });
 });

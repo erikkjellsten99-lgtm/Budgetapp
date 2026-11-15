@@ -30,6 +30,16 @@
 - Beslut: "Blir över" är ordet för kvar efter utgifter och sparande. Sparmålet matas av valda sparkategorier plus
   det som blir över. Skulderna är betalda och visas inte.
 
+## Challenges
+- Nytt 2026-11-15 (PR, **inte utlagt**): fliken Challenges med lista (dag X/Y, ring, streak, försök), dagvy, alla
+  dagar som rutor, skapa från mall (75 Hard) eller egen, regler med automatisk omstart, progressbilder.
+- Fungerar bara i telefonen tills servern är utlagd. Kvar för Erik ("Lägg ut"): migrationen
+  `20261116120000_challenges.sql` (fyra tabeller, radsäkerhet, bucketen `challenge-photos`) och ny version av
+  `reminders` (notiserna 19:45 och 20:30). Utan migrationen misslyckas synken tyst och allt ligger kvar lokalt.
+- Inte prövat: synk mot riktiga tabeller, bilduppladdning till bucketen, notiserna, två telefoner.
+- Kända begränsningar: tidigare dagar går inte att ändra, uppgifter går inte att ändra efter start, reglerna körs
+  bara när fliken öppnas, Idag och Jarvis känner inte till utmaningarna.
+
 ## Vanor
 - Fungerar: vanor med veckomål, planerade dagar, gradvis ökning, Att göra, pausdag, hälsa från Apple Hälsa
   (genväg), automatisk bockning via regler, påminnelser, morgonbesked till klockan (genväg kl. 07).

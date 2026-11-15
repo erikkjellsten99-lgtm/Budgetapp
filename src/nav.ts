@@ -1,10 +1,10 @@
 /**
- * Navigeringen (designspec "Två rum"): fem flikar i vardagsrummet. Jarvis är inte en flik utan ett rum
+ * Navigeringen (designspec "Två rum"): sex flikar i vardagsrummet. Jarvis är inte en flik utan ett rum
  * som öppnas med orben. Ekonomi har egna underflikar.
  */
-export type Section = 'idag' | 'ekonomi' | 'vanor' | 'nyheter' | 'kunskap';
+export type Section = 'idag' | 'ekonomi' | 'vanor' | 'challenges' | 'nyheter' | 'kunskap';
 export type EconomyView = 'overview' | 'budget' | 'goal' | 'assets' | 'investments' | 'wishlist';
-export type View = 'idag' | 'nyheter' | 'vanor' | 'kunskap' | 'account' | EconomyView;
+export type View = 'idag' | 'nyheter' | 'vanor' | 'challenges' | 'kunskap' | 'account' | EconomyView;
 
 /** Huvudflikarna. Namnen är på engelska (Eriks val 2026-11-15); id:n och resten av appen är på svenska.
  * Kunskap heter Mindhub i menyn.
@@ -13,6 +13,7 @@ export const SECTIONS: { id: Section; label: string; icon: string }[] = [
   { id: 'idag', label: 'Today', icon: 'M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4 7 17M17 7l1.4-1.4M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
   { id: 'ekonomi', label: 'Finance', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
   { id: 'vanor', label: 'Habits', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12.2l2.7 2.6L16.2 9.4' },
+  { id: 'challenges', label: 'Challenges', icon: 'M6 21V4M6 4h11l-2 4 2 4H6' },
   { id: 'nyheter', label: 'News', icon: 'M5 4h11v15a1 1 0 0 0 2 0V8h2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM8 8h5M8 12h5M8 16h3' },
   { id: 'kunskap', label: 'Mindhub', icon: 'M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z' },
 ];
@@ -42,13 +43,13 @@ export const tabOf = (view: EconomyView): EconomyTab =>
 export const isEconomy = (view: string): view is EconomyView => ECONOMY.some((item) => item.id === view);
 
 export const sectionOf = (view: View): Section | null =>
-  view === 'idag' || view === 'vanor' || view === 'nyheter' || view === 'kunskap' ? view : isEconomy(view) ? 'ekonomi' : null;
+  view === 'idag' || view === 'vanor' || view === 'challenges' || view === 'nyheter' || view === 'kunskap' ? view : isEconomy(view) ? 'ekonomi' : null;
 
 /** Vyn att öppna appen på, från det som sparats. Vyer som inte längre finns (Jarvis, Träning) leder rätt. */
 export function restoreView(saved: string | null): View {
   if (saved === 'traning') return 'vanor'; // Träning fanns en tid som egen flik.
   if (saved === 'lar') return 'kunskap'; // Lär är biblioteket i Kunskap.
-  if (saved === 'idag' || saved === 'vanor' || saved === 'nyheter' || saved === 'kunskap' || saved === 'account') return saved;
+  if (saved === 'idag' || saved === 'vanor' || saved === 'challenges' || saved === 'nyheter' || saved === 'kunskap' || saved === 'account') return saved;
   if (saved && isEconomy(saved)) return saved;
   return 'idag';
 }
