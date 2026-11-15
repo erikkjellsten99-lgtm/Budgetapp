@@ -1,56 +1,60 @@
-// Nyheter i appen: hämtas från inbox-funktionen (?action=nyheter), som läser SVT:s öppna RSS-flöden
-// och bedömer tonen (supabase/functions/inbox/news.ts). Senaste svaret sparas på telefonen, så att
-// nyheterna syns även utan uppkoppling.
+// Veckonyheter i appen: hämtas från edge-funktionen nyheter (GET, ingen nyckel), som en gång i veckan låter Claude
+// skriva en sammanställning i sex sektioner (supabase/functions/nyheter). Senaste svaret sparas på telefonen, så
+// att nyheterna syns även utan uppkoppling.
 
 import { INBOX_URL } from './vanor/InboxSettings';
-import { TOPICS, type NewsItem, type NewsResult } from '../supabase/functions/inbox/news';
+import { SIDES, weekNumber, type Side, type Story, type Week } from '../supabase/functions/nyheter/shared';
 
-export type { NewsItem, NewsResult, NewsTopic, Tone } from '../supabase/functions/inbox/news';
-export { TOPICS } from '../supabase/functions/inbox/news';
+export type { Angle, SectionId, Side, Story, Week } from '../supabase/functions/nyheter/shared';
+export { readySections, SECTIONS, SIDES, weekCost } from '../supabase/functions/nyheter/shared';
 
-const KEY = 'nyheter-cache';
+export const NEWS_URL = INBOX_URL.replace(/inbox$/, 'nyheter');
 
-export function cachedNews(): NewsResult | null {
+const KEY = 'veckonyheter-cache';
+
+interface Cached {
+  /** När svaret hämtades (ms). */
+  fetched: number
+  week: Week | null
+}
+
+export function cachedNews(): Cached | null {
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) ?? 'null') as NewsResult | null;
-    return saved && Array.isArray(saved.items) ? saved : null;
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Cached | null;
+    return saved && typeof saved.fetched === 'number' && (saved.week === null || typeof saved.week?.sections === 'object') ? saved : null;
   } catch {
     return null;
   }
 }
 
-export async function fetchNews(): Promise<NewsResult> {
-  const res = await fetch(`${INBOX_URL}?action=nyheter`, { method: 'GET' });
+/** Senaste veckan, eller null om ingen sammanställning finns än. */
+export async function fetchNews(now = Date.now()): Promise<Cached> {
+  const res = await fetch(NEWS_URL, { method: 'GET' });
   if (!res.ok) throw new Error(`${res.status}`);
-  const result = (await res.json()) as NewsResult;
-  if (!Array.isArray(result.items)) throw new Error('Fel svar');
+  const body = (await res.json()) as { week?: Week | null };
+  if (body.week !== null && typeof body.week?.sections !== 'object') throw new Error('Fel svar');
+  const result: Cached = { fetched: now, week: body.week ?? null };
   try {
     localStorage.setItem(KEY, JSON.stringify(result));
+    // De gamla SVT-nyheterna används inte längre.
+    localStorage.removeItem('nyheter-cache');
   } catch {
     // Utan lagring syns nyheterna bara tills appen stängs.
   }
   return result;
 }
 
-/** "nyss", "för 25 min sedan", "för 3 tim sedan", annars "6 nov". */
-export function ago(time: number, now = Date.now()): string {
-  if (!time) return '';
-  const minutes = Math.round((now - time) / 60000);
-  if (minutes < 2) return 'nyss';
-  if (minutes < 60) return `för ${minutes} min sedan`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `för ${hours} tim sedan`;
-  return new Date(time).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '');
+/** "Vecka 47, skriven 2026-11-16" */
+export const weekLine = (week: Week) => `Vecka ${weekNumber(week.week)}, skriven ${new Date(week.created).toLocaleDateString('sv-SE')}`;
+
+/** "5 nyheter, 3 positiva" */
+export function countLine(stories: Story[]): string {
+  const positive = stories.filter((s) => s.positive).length;
+  return `${stories.length} ${stories.length === 1 ? 'nyhet' : 'nyheter'}, ${positive} ${positive === 1 ? 'positiv' : 'positiva'}`;
 }
 
-/** Metaraden under en nyhet: "SVT Sport, för 16 min sedan", med ämnet först när alla ämnen visas. */
-export function newsMeta(
-  item: Pick<NewsItem, 'source' | 'published' | 'topic'>,
-  { now = Date.now(), withTopic = false }: { now?: number; withTopic?: boolean } = {},
-): string {
-  const topic = withTopic ? TOPICS.find((t) => t.id === item.topic)?.label : undefined;
-  return [topic, item.source, ago(item.published, now)].filter(Boolean).join(', ');
-}
+/** "Blind fläck: högermedier har inte bevakat nyheten." */
+export const blindspotLine = (side: Side) => `Blind fläck: ${SIDES.find((s) => s.id === side)?.plural ?? side} har inte bevakat nyheten.`;
 
-/** "14:05" */
-export const clock = (time: number) => new Date(time).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+/** "3,42" */
+export const usd = (amount: number) => amount.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

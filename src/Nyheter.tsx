@@ -1,19 +1,62 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
-import { cachedNews, clock, fetchNews, newsMeta, TOPICS, type NewsResult, type NewsTopic, type Tone } from './news';
+import { useCallback, useEffect, useState } from 'react';
+import { blindspotLine, cachedNews, countLine, fetchNews, readySections, SECTIONS, SIDES, usd, weekCost, weekLine, type SectionId, type Story } from './news';
 
-const FRESH = 10 * 60 * 1000;
-const TONE_LABEL: Record<Tone, string> = { positiv: 'Positiv', negativ: 'Negativ', neutral: 'Neutral' };
-const topicLabel = (id: NewsTopic) => TOPICS.find((t) => t.id === id)?.label ?? id;
+const FRESH = 30 * 60 * 1000;
 
-type ToneFilter = 'alla' | 'positiv' | 'negativ';
+function StoryCard({ story }: { story: Story }) {
+  return (
+    <article className="news-item">
+      {story.positive && <p className="news-badge positiv">Positiv</p>}
+      <h3 className="news-title">{story.title}</h3>
+      <p className="news-summary">{story.summary}</p>
 
-/** Nyheter om ekonomi, krig, fotboll och Sverige, med en enkel bedömning av tonen. */
+      {story.angles.length > 0 && (
+        <dl className="news-angles">
+          {SIDES.map((side) => {
+            const angle = story.angles.find((a) => a.side === side.id);
+            return (
+              <div key={side.id} className={angle ? `news-angle ${side.id}` : `news-angle ${side.id} missing`}>
+                <dt>{side.label}</dt>
+                <dd>
+                  {angle ? (
+                    <>
+                      {angle.text}{' '}
+                      <a href={angle.url} target="_blank" rel="noopener noreferrer">
+                        {angle.outlet}
+                      </a>
+                    </>
+                  ) : (
+                    'Ingen artikel hittad.'
+                  )}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+      )}
+      {story.blindspot && <p className="news-blindspot">{blindspotLine(story.blindspot)}</p>}
+
+      <p className="news-sources">
+        Källor:{' '}
+        {story.sources.map((source, i) => (
+          <span key={source.url}>
+            {i > 0 && ', '}
+            <a href={source.url} target="_blank" rel="noopener noreferrer">
+              {source.title}
+            </a>
+          </span>
+        ))}
+      </p>
+    </article>
+  );
+}
+
+/** Veckans nyheter i sex sektioner, med vinklar från vänster, mitten och höger. */
 export default function Nyheter({ active }: { active: boolean }) {
-  const [news, setNews] = useState<NewsResult | null>(cachedNews);
+  const [news, setNews] = useState(cachedNews);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [topic, setTopic] = useState<NewsTopic | 'alla'>('alla');
-  const [tone, setTone] = useState<ToneFilter>('alla');
+  const [section, setSection] = useState<SectionId>('varlden');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -27,21 +70,21 @@ export default function Nyheter({ active }: { active: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (active && (!news || Date.now() - news.updated > FRESH)) load();
+    if (active && (!news || Date.now() - news.fetched > FRESH)) load();
     // Bara när fliken öppnas.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  const inTopic = (news?.items ?? []).filter((item) => topic === 'alla' || item.topic === topic);
-  const shown = inTopic.filter((item) => tone === 'alla' || item.tone === tone);
-  const count = (t: Tone) => inTopic.filter((item) => item.tone === t).length;
-  const total = inTopic.length;
+  const week = news?.week ?? null;
+  const ready = readySections(week).map((s) => s.id);
+  const stories = week?.sections[section]?.status === 'klar' ? week.sections[section]!.stories : [];
+  const label = SECTIONS.find((s) => s.id === section)?.label ?? '';
 
   return (
     <div className="news">
       <div className="view-intro news-intro">
         <div>
-          <p className="eyebrow">{news ? `Uppdaterad ${clock(news.updated)}, SVT` : 'SVT'}</p>
+          <p className="eyebrow">{week ? weekLine(week) : 'Veckans nyheter'}</p>
           <h2>News</h2>
         </div>
         <button type="button" className="news-refresh" onClick={load} disabled={loading}>
@@ -49,23 +92,9 @@ export default function Nyheter({ active }: { active: boolean }) {
         </button>
       </div>
 
-      <nav className="news-topics" aria-label="Ämnen">
-        {[{ id: 'alla' as const, label: 'Alla' }, ...TOPICS].map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={t.id === topic ? 'chip active' : 'chip'}
-            aria-pressed={t.id === topic}
-            onClick={() => setTopic(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
       {failed && news && (
         <p className="news-notice" role="status">
-          Kunde inte hämta nya nyheter. Visar de från {clock(news.updated)}.
+          Kunde inte hämta nyheterna just nu. Visar de som är sparade på telefonen.
         </p>
       )}
       {failed && !news && (
@@ -74,34 +103,6 @@ export default function Nyheter({ active }: { active: boolean }) {
           <button type="button" className="primary" onClick={load} disabled={loading}>
             Försök igen
           </button>
-        </div>
-      )}
-      {news && news.missing.length > 0 && (
-        <p className="news-notice">{news.missing.map(topicLabel).join(', ')} gick inte att hämta just nu.</p>
-      )}
-
-      {total > 0 && (
-        <div className="card news-mood">
-          <div className="segmented-row news-tone" role="group" aria-label="Visa">
-            {(
-              [
-                ['alla', `Alla ${total}`, 1],
-                ['positiv', `Positiva ${count('positiv')}`, count('positiv') / total],
-                ['negativ', `Negativa ${count('negativ')}`, count('negativ') / total],
-              ] as [ToneFilter, string, number][]
-            ).map(([id, label, share]) => (
-              <button
-                key={id}
-                type="button"
-                className={tone === id ? `seg ${id} active` : `seg ${id}`}
-                style={{ '--share': share } as CSSProperties}
-                aria-pressed={tone === id}
-                onClick={() => setTone(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
@@ -114,52 +115,59 @@ export default function Nyheter({ active }: { active: boolean }) {
         </div>
       )}
 
-      {news && shown.length === 0 && !loading && (
+      {news && !week && (
         <div className="empty">
-          <p>
-            {tone === 'alla'
-              ? `Inga nyheter om ${topic === 'alla' ? 'de här ämnena' : topicLabel(topic).toLowerCase()} just nu.`
-              : `Inga ${tone === 'positiv' ? 'positiva' : 'negativa'} nyheter${topic === 'alla' ? '' : ` om ${topicLabel(topic).toLowerCase()}`} just nu.`}
-          </p>
-          {(topic !== 'alla' || tone !== 'alla') && (
-            <button
-              type="button"
-              className="primary"
-              onClick={() => {
-                setTopic('alla');
-                setTone('alla');
-              }}
-            >
-              Visa alla nyheter
-            </button>
-          )}
+          <p>Inga veckonyheter än. Den första sammanställningen skrivs natten mot måndag.</p>
         </div>
       )}
 
-      {shown.length > 0 && (
-        <div className="group news-list">
-          {shown.map((item) => (
-            <article key={item.id} className={`news-item ${item.tone}`}>
-              <p className="news-meta">{newsMeta(item, { withTopic: topic === 'alla' })}</p>
-              <h3 className="news-title">
-                <a href={item.link} target="_blank" rel="noopener noreferrer">
-                  {item.title}
-                </a>
-              </h3>
-              {item.summary && <p className="news-summary">{item.summary}</p>}
-              <p className="news-tone-row">
-                <span className={`news-badge ${item.tone}`}>{TONE_LABEL[item.tone]}</span>
-                {item.because.length > 0 && <span className="news-because">{item.because.join(', ')}</span>}
+      {week && (
+        <>
+          <nav className="news-topics" aria-label="Sektioner">
+            {SECTIONS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className={s.id === section ? 'chip active' : 'chip'}
+                aria-pressed={s.id === section}
+                onClick={() => setSection(s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </nav>
+
+          {stories.length > 0 ? (
+            <>
+              <p className="news-count">{countLine(stories)}</p>
+              <div className="news-list">
+                {stories.map((story) => (
+                  <StoryCard key={story.id} story={story} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="empty">
+              <p>
+                {week.sections[section]?.status === 'vantar'
+                  ? `${label} skrivs just nu. Titta in igen om en stund.`
+                  : `${label} blev inte klar den här veckan.`}
               </p>
-            </article>
-          ))}
-        </div>
-      )}
+              {ready.length > 0 && (
+                <button type="button" className="primary" onClick={() => setSection(ready[0])}>
+                  Visa {SECTIONS.find((s) => s.id === ready[0])?.label}
+                </button>
+              )}
+            </div>
+          )}
 
-      <p className="news-foot">
-        Rubrikerna kommer från SVT:s öppna RSS-flöden. Tonen bedöms automatiskt med svenska ordlistor, inte AI, och kan ha fel.
-        Orden som avgjorde står bredvid.
-      </p>
+          <p className="news-foot">
+            Skrivet av Claude med webbsökning en gång i veckan, inte granskat av någon människa. Varje källa är en sida som
+            sökningen hittade. Vänster, mitten och höger är en grov indelning: svenska tidningar efter ledarsidans beteckning,
+            utländska efter gängse bedömningar. Veckan kostade {usd(weekCost(week))} USD.
+          </p>
+        </>
+      )}
     </div>
   );
 }

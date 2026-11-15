@@ -23,6 +23,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 | Jarvis | `src/Jarvis.tsx`, `jarvis.ts`, `speech.ts`, `Today.tsx` | föreslagen mapp `src/jarvis/` (inte flyttat än) |
 | Lär (biblioteket i Kunskap, ingen egen flik) | `src/lar/` (`people.ts` innehållet, `Lar.tsx` vyn, `larState.ts`, `lar.css`) | `src/lar/CLAUDE.md` |
 | Kunskap | `src/kunskap/` (`cards.ts` korten, `Kunskap.tsx` vyn, `kunskapState.ts`, `kunskapStore.ts`, `chatApi.ts`), servern `supabase/functions/kunskap/` (chatten), `kunskap-generera/` (korten, på schema), `kunskap-presentation/` och `kunskap-upptack/` | `src/kunskap/CLAUDE.md` |
+| Nyheter | `src/Nyheter.tsx`, `news.ts`, servern `supabase/functions/nyheter/` (`digest.ts` prompten och kontrollerna, `shared.ts` delas med appen, `index.ts`) | regler nedan |
 | Galax | `src/vanor/CosmosView.tsx`, `Galaxy.tsx`, `*3d.ts`, `CameraRig.ts`, `cosmos*.ts`, `universe.ts` | föreslagen mapp `src/galax/` (inte flyttat än) |
 | Servern | `supabase/functions/inbox/` | `supabase/functions/inbox/CLAUDE.md` |
 
@@ -75,13 +76,28 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 - Tal och uppläsning går via gränssnittet i `src/voice.ts` (`stt`, `tts`). Byt motor där, inte i `Jarvis.tsx`.
 - Jarvis öppnas också med adressen `?jarvis=1&listen=1` (eller `/jarvis?listen=1`, som skickar vidare dit).
 
+## Nyheter (veckonyheter)
+- Eriks beslut 2026-11-15: SVT-flödet är ersatt av en sammanställning per vecka i sex sektioner (världen, Sverige,
+  Karlstad, AI, Anthropic, OpenAI), skriven av Claude (`claude-fable-5-2`, andra försöket `claude-opus-5-5`) med
+  webbsökning. Minst hälften positiva nyheter, vinklar från vänster, mitten och höger, och blinda fläckar.
+- Edge function `nyheter`: GET ger senaste veckan (inte personligt, ingen nyckel), POST med schemats hemlighet för
+  arbetet ett steg framåt. Frågorna går via Anthropics batch-API (halva priset, ingen tidsgräns). Schemat går
+  måndagar 02:00–07:50 UTC var tionde minut. Veckan sparas i tabellen `news_weeks` (bara service role).
+- Kontrollerna i `digest.ts` är kravet, inte prompten: en nyhet eller vinkel vars adress inte finns bland
+  webbsökningens resultat kastas, en blind fläck godtas bara om vinklarna stämmer med den, och andelen positiva
+  hålls genom att de sista av de andra kastas. Lätta aldrig på dem för att få fler nyheter.
+- Lutningen för kända medier är fast i `LEANING` (`digest.ts`) och går före modellens. Lägg bara till medier vars
+  lutning är allmänt vedertagen.
+- Kostnadsskydd: bara schemat kan starta något, högst 2 försök per sektion och vecka, högst 10 sökningar per
+  sektion. Kostnaden sparas per sektion och visas i appen. Priserna står i `PRICE` i `nyheter/shared.ts`.
+
 ## Arbetssätt
 - Pusha aldrig till `main`. Egen gren mot `main` (inte staplade grenar), PR med kort svensk beskrivning och
   "Så testar du". Erik mergar själv.
 - `npm test` och `npm run build` gröna före push.
 - IndexedDB: höj aldrig en befintlig version i efterhand, lägg till ny version med uppgraderingssteg
   (`src/db.ts` DB_VERSION, `src/vanor/store.ts` DB_VERSION, `src/challenges/store.ts` DB_VERSION).
-- Supabase (databas, edge functions `inbox`, `reminders`, `jarvis`, `kunskap`, `kunskap-generera`, `kunskap-presentation` och `kunskap-upptack`) ändras bara efter att Erik skrivit "Lägg ut".
+- Supabase (databas, edge functions `inbox`, `reminders`, `jarvis`, `nyheter`, `kunskap`, `kunskap-generera`, `kunskap-presentation` och `kunskap-upptack`) ändras bara efter att Erik skrivit "Lägg ut".
 - Fråga innan ny teknik eller tjänst som kostar pengar. Erik vill inte betala något.
 - Max ett förslag på förbättring per leverans. Bygg det inte utan att fråga.
 

@@ -14,7 +14,7 @@
    (github.com/apps/claude/installations) och testa push. Pages-adressen blir
    `erikkjellsten99-lgtm.github.io/groundwork/`; den installerade appen på telefonen pekar på den gamla adressen
    och måste installeras om. `README.md` nämner fortfarande Budgetapp-adressen.
-3. Öppna fliken Nyheter en gång och kontrollera i serverloggarna att alla fyra SVT-flöden kom fram.
+3. ~~Lägg ut veckonyheterna~~ Klart 2026-11-15, se Nyheter nedan. Kvar: merga grenen så att appen visar dem.
 4. ~~Lägg ut `reminders` med inbox-filerna~~ Klart: version 6 utlagd 2026-11-06, bootar och svarar 200 var 5:e minut.
    `inbox/health.ts` tappades av verktyget (sista filen, bara typer) och saknas på servern; följer med nästa gång.
 5. ~~Öppna källänkarna i Lär~~ Klart 2026-11-13: alla länkar i `src/lar/people.ts` är öppnade, sammanfattningarna är
@@ -92,10 +92,19 @@
   Hälsa; inte reproducerat på riktig enhet.
 - Att veta: renderas med swiftshader i sandboxen, en skärmbild tar 2–4 minuter.
 
-## Nyheter (ny flik, #99)
-- Fungerar i appen med testdata. Servern v16 har `?action=nyheter`. Riktiga SVT-flöden ej verifierade.
-- Beslut: ton positiv/negativ/neutral via ordlistor, orden som avgjorde visas. Neutral finns för att inte tvinga
-  en ton.
+## Nyheter (veckonyheter, gjorda om 2026-11-15)
+- **Utlagt 2026-11-15:** edge function `nyheter` version 2 (verify_jwt av, hopslagen till en fil med esbuild
+  `--bundle --minify --charset=utf8 --format=esm --external:npm:*`), migrationen `nyheter` (tabellen `news_weeks`,
+  schemat `nyheter` måndagar 02:00–07:50 UTC var tionde minut). Appens nya flik ligger på grenen, inte mergad.
+- Provkört 2026-11-15 för vecka 46: alla sex sektioner klara på första försöket med Fable 5.2, 26 nyheter, 14
+  positiva, inga kastade. Uppmätt kostnad 4,08 USD för veckan (0,41–0,94 per sektion), alla 10 sökningar använda
+  i varje sektion.
+- Svagt: vinklarna. 11 vinklar på 26 nyheter, mest bara "mitten", ingen i Karlstad och ingen blind fläck. Taket på
+  10 sökningar räcker inte till att både hitta nyheterna och leta upp tre sidors bevakning. Inget ändrat än.
+- Version 1 avvisades av Claude för alla sektioner (0 USD). Feltexten sparades inte då; version 2 sparar den i
+  sektionens `error`. Troligen `null` i en enum i det strikta schemat, som är borttaget.
+- SVT-flödet och `?action=nyheter` är borttagna ur repot. Den utlagda inbox har åtgärden kvar, vilket inte skadar.
+- Beslut: lutningen för kända medier är fast i koden (`LEANING`), övriga får modellens bedömning.
 
 - Egna personer i biblioteket (2026-11-15): den som läggs till själv visas i samma lista som bibliotekets nio
   (sammanslaget samma dag på Eriks önskan, ingen egen rubrik) och har en sida med sina kort. Bibliotekets filter
