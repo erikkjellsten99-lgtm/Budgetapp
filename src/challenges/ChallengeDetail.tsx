@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import type { HealthDay } from '../../supabase/functions/inbox/health';
 import { longDate, weekStart, weekday, type DateKey } from '../vanor/dates';
 import { currentSubscription, enablePush, PushError, pushSupport } from '../vanor/push';
+import { loadHabitData, onHabitChange } from '../vanor/store';
 import { Ring, statusLine } from './Challenges';
 import { dayResult, isComplete, pause, progress, resume, workoutSummary, type Cell, type CheckinMap } from './logic';
+import { FORM_LABEL, readiness, suggestion, type Readiness } from './readiness';
 import { deleteChallenge, saveChallenge, saveCheckin, savePhoto } from './store';
 import { forgetPhotoUrl, photoUrl } from './sync';
 import { checkinId, WORKOUT_KINDS, type Attempt, type Challenge, type ChallengeTask, type Checkin, type Notice } from './types';
@@ -28,8 +31,50 @@ async function write(challenge: Challenge, task: ChallengeTask, date: DateKey, e
   await saveCheckin(next);
 }
 
+/** Hälsodatan från Apple Hälsa, ur Vanors lokala lagring. Tom lista tills den är läst (eller om inget finns). */
+function useHealth(): HealthDay[] {
+  const [health, setHealth] = useState<HealthDay[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      loadHabitData()
+        .then((data) => alive && setHealth(data.health))
+        .catch(() => undefined);
+    load();
+    const off = onHabitChange(load);
+    return () => {
+      alive = false;
+      off();
+    };
+  }, []);
+  return health;
+}
+
+/** Dagens form: ett råd inför passen, räknat ur hälsodatan (readiness.ts). Ändrar inga regler. */
+export function FormCard({ readiness: r }: { readiness: Readiness }) {
+  if (!r.form) {
+    return (
+      <div className="ch-form">
+        <p className="ch-form-title">Dagens form</p>
+        <p className="ch-form-facts">
+          Ingen sömn från i natt än. Kör genvägen Hälsa Groundwork daglig, så räknas formen och passen får förslag.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className={`ch-form is-${r.form}`}>
+      <p className="ch-form-title">
+        Dagens form: <b>{FORM_LABEL[r.form]}</b>
+      </p>
+      <p className="ch-form-facts">{r.facts.join(' · ')}</p>
+    </div>
+  );
+}
+
 export default function ChallengeDetail({ challenge, tasks, attempts, checkins, map, today, onBack }: Props) {
   const p = progress(challenge, tasks, map, today);
+  const health = useHealth();
   const [selected, setSelected] = useState<DateKey>(today);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Efter midnatt följer dagvyn med till den nya dagen.
@@ -39,6 +84,8 @@ export default function ChallengeDetail({ challenge, tasks, attempts, checkins, 
   const editable = selected === today && challenge.status === 'active' && started;
   const result = dayResult(challenge, tasks, map, selected);
   const selectedCell = p.cells.find((c) => c.date === selected);
+  // Formen gäller bara idag, i en pågående utmaning som har pass.
+  const form = editable && tasks.some((t) => t.type === 'workout') ? readiness(health, today) : null;
   const lastBook = [...checkins].sort((a, b) => b.date.localeCompare(a.date)).find((c) => c.data.book)?.data.book ?? '';
   const photos = checkins.filter((c) => c.data.photo).sort((a, b) => a.date.localeCompare(b.date));
   const summary = workoutSummary(tasks, map, weekStart(selected));
@@ -104,9 +151,19 @@ export default function ChallengeDetail({ challenge, tasks, attempts, checkins, 
                 Tidigare dagar går inte att ändra.
               </p>
             )}
+            {form && <FormCard readiness={form} />}
             <ul className="ch-tasks">
               {tasks.map((task) => (
-                <TaskItem key={`${task.id}-${selected}`} challenge={challenge} task={task} date={selected} checkin={map.get(checkinId(task.id, selected))} editable={editable} lastBook={lastBook} />
+                <TaskItem
+                  key={`${task.id}-${selected}`}
+                  challenge={challenge}
+                  task={task}
+                  date={selected}
+                  checkin={map.get(checkinId(task.id, selected))}
+                  editable={editable}
+                  lastBook={lastBook}
+                  hint={form?.form && task.type === 'workout' ? suggestion(form.form, task.title) : null}
+                />
               ))}
             </ul>
             {editable &&
@@ -270,9 +327,11 @@ interface ItemProps {
   checkin: Checkin | undefined;
   editable: boolean;
   lastBook: string;
+  /** Dagens förslag för passet, utifrån formen. */
+  hint?: string | null;
 }
 
-function TaskItem({ challenge, task, date, checkin, editable, lastBook }: ItemProps) {
+function TaskItem({ challenge, task, date, checkin, editable, lastBook, hint }: ItemProps) {
   const done = !!checkin?.done;
   const save = (patch: Partial<Pick<Checkin, 'done' | 'value' | 'data'>>) => write(challenge, task, date, checkin, patch);
   const manual = task.type === 'check' || task.type === 'workout';
@@ -289,6 +348,7 @@ function TaskItem({ challenge, task, date, checkin, editable, lastBook }: ItemPr
         <div className="ch-task-text">
           <span className="ch-task-title">{task.title}</span>
           {task.subtitle && <span className="ch-task-sub">{task.subtitle}</span>}
+          {hint && <span className="ch-task-form">Idag: {hint}</span>}
         </div>
       </div>
       {task.type === 'workout' && (editable || checkin) && <WorkoutFields checkin={checkin} editable={editable} save={save} />}

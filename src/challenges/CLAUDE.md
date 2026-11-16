@@ -20,3 +20,6 @@
   i `plan.ts`). Ingen väckning i appen.
 - Stilen: vyn ligger i `.vanor.challenges` och ärver Vanors ark, fält och knappar. Egna regler i `challenges.css`,
   alla börjar med `.challenges`. Grön = klar, gul = delvis, röd = missad.
+- **Dagens form** (`readiness.ts`): ett råd inför dagens pass, räknat ur hälsodatan från Vanors lagring (sömn,
+  vilopuls mot eget snitt, gårdagens träning). Visas bara idag i en pågående utmaning med pass. Det är aldrig en
+  regel: `logic.ts` känner inte till formen och ingenting bockas av den. Utan nattens sömn visas ingen form.
