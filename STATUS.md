@@ -31,12 +31,19 @@
   det som blir över. Skulderna är betalda och visas inte.
 
 ## Challenges
-- Nytt 2026-11-15 (PR, **inte utlagt**): fliken Challenges med lista (dag X/Y, ring, streak, försök), dagvy, alla
-  dagar som rutor, skapa från mall (75 Hard) eller egen, regler med automatisk omstart, progressbilder.
-- Fungerar bara i telefonen tills servern är utlagd. Kvar för Erik ("Lägg ut"): migrationen
-  `20261116120000_challenges.sql` (fyra tabeller, radsäkerhet, bucketen `challenge-photos`) och ny version av
-  `reminders` (notiserna 19:45 och 20:30). Utan migrationen misslyckas synken tyst och allt ligger kvar lokalt.
-- Inte prövat: synk mot riktiga tabeller, bilduppladdning till bucketen, notiserna, två telefoner.
+- Nytt 2026-11-15 (PR 133): fliken Challenges med lista (dag X/Y, ring, streak, försök), dagvy, alla dagar som
+  rutor, skapa från mall (75 Hard) eller egen, regler med automatisk omstart, progressbilder.
+- **Utlagt 2026-11-15:** migrationen `challenges` är körd (fyra tabeller med radsäkerhet, bucketen
+  `challenge-photos` med policyer per ägare) och `reminders` version 9 ligger ute (verify_jwt av, som förut).
+  Version 9 är en enda fil byggd med esbuild (`--bundle --minify --format=esm --external:npm:*`, 12,6 kB) plus
+  `note.ts` sist. Kontrollerat: `?action=key` svarar 200, och säkerhetsrådgivaren har inga nya anmärkningar.
+- Inte prövat: synk från appen mot tabellerna, bilduppladdning, en riktig notis 19:45/20:30, två telefoner.
+  Appens del går ut först när PR 133 är mergad.
+- Nytt 2026-11-16 (PR, bara appen, inget på servern): Dagsform överst i utmaningar med träningspass. Räknar ur
+  sömn, pulsvariabilitet, vilopuls, andning och handledstemperatur mot personens egen normalnivå och säger Kör som
+  vanligt, Ta det lite lugnare eller Ta det lugnt. Eriks genväg skickar i dag sömn, steg, syresättning, VO2 max och
+  sömnpoäng men inte `vilopuls`, `hrv`, `andning` eller `handled`; tills de läggs till i genvägen bygger
+  bedömningen bara på sömnen. Prövat med testdata i webbläsare, inte med riktiga värden.
 - Kända begränsningar: tidigare dagar går inte att ändra, uppgifter går inte att ändra efter start, reglerna körs
   bara när fliken öppnas, Idag och Jarvis känner inte till utmaningarna.
 

@@ -648,3 +648,75 @@
   flex: none;
   white-space: nowrap;
 }
+
+/* Dagsform: hur utvilad man är, ur hälsodatan */
+.challenges .ch-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-left: 4px solid var(--line);
+  border-radius: var(--radius-group);
+}
+
+.challenges .ch-form.go {
+  border-left-color: var(--pine);
+}
+
+.challenges .ch-form.easy {
+  border-left-color: var(--ch-yellow);
+}
+
+.challenges .ch-form.rest {
+  border-left-color: var(--danger);
+}
+
+.challenges .ch-form-eyebrow,
+.challenges .ch-form-missing {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.challenges .ch-form-missing {
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.challenges .ch-form-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 750;
+}
+
+.challenges .ch-form-advice {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.challenges .ch-form-signals {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.challenges .ch-form-signals li::before {
+  content: '• ';
+}
+
+.challenges .ch-form-signals .down {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.challenges .ch-form-signals .up {
+  color: var(--pine);
+  font-weight: 600;
+}
