@@ -39,6 +39,11 @@
   `note.ts` sist. Kontrollerat: `?action=key` svarar 200, och säkerhetsrådgivaren har inga nya anmärkningar.
 - Inte prövat: synk från appen mot tabellerna, bilduppladdning, en riktig notis 19:45/20:30, två telefoner.
   Appens del går ut först när PR 133 är mergad.
+- Nytt 2026-11-16 (PR, bara appen, inget på servern): Dagsform överst i utmaningar med träningspass. Räknar ur
+  sömn, pulsvariabilitet, vilopuls, andning och handledstemperatur mot personens egen normalnivå och säger Kör som
+  vanligt, Ta det lite lugnare eller Ta det lugnt. Eriks genväg skickar i dag sömn, steg, syresättning, VO2 max och
+  sömnpoäng men inte `vilopuls`, `hrv`, `andning` eller `handled`; tills de läggs till i genvägen bygger
+  bedömningen bara på sömnen. Prövat med testdata i webbläsare, inte med riktiga värden.
 - Kända begränsningar: tidigare dagar går inte att ändra, uppgifter går inte att ändra efter start, reglerna körs
   bara när fliken öppnas, Idag och Jarvis känner inte till utmaningarna.
 

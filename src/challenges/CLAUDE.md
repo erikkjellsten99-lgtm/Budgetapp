@@ -20,3 +20,6 @@
   i `plan.ts`). Ingen väckning i appen.
 - Stilen: vyn ligger i `.vanor.challenges` och ärver Vanors ark, fält och knappar. Egna regler i `challenges.css`,
   alla börjar med `.challenges`. Grön = klar, gul = delvis, röd = missad.
+- Dagsform: kortet överst i en utmaning med träningspass räknas i delad kod (`supabase/functions/inbox/readiness.ts`)
+  ur hälsodatan i Vanors lagring. Varje mått jämförs med personens egen median (minst 5 dagar). Kortet ger råd,
+  det ändrar aldrig regler eller bockar. Gränserna är en bedömning, inte medicinska värden.

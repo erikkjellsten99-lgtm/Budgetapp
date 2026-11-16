@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { longDate, weekStart, weekday, type DateKey } from '../vanor/dates';
+import { loadHabitData, onHabitChange } from '../vanor/store';
+import { METRICS, type HealthDay } from '../../supabase/functions/inbox/health.ts';
+import { readiness, READINESS_TITLE, type ReadinessLevel } from '../../supabase/functions/inbox/readiness.ts';
 import { currentSubscription, enablePush, PushError, pushSupport } from '../vanor/push';
 import { Ring, statusLine } from './Challenges';
 import { dayResult, isComplete, pause, progress, resume, workoutSummary, type Cell, type CheckinMap } from './logic';
@@ -76,6 +79,8 @@ export default function ChallengeDetail({ challenge, tasks, attempts, checkins, 
           </button>
         </div>
       )}
+
+      {started && challenge.status === 'active' && tasks.some((t) => t.type === 'workout') && <ReadinessCard today={today} />}
 
       <section className="section" aria-labelledby="ch-day-title">
         <div className="ch-section-head">
@@ -623,5 +628,53 @@ function Reminders({ challenge }: { challenge: Challenge }) {
         </p>
       )}
     </>
+  );
+}
+
+/** Vad dagsformen betyder för dagens pass. Reglerna ändras inte: allt ska fortfarande bockas av. */
+const WORKOUT_ADVICE: Record<ReadinessLevel, string> = {
+  go: 'Du är utvilad nog för ett tufft pass som planerat.',
+  easy: 'Gör det tuffa passet, men kortare eller lite lättare än planerat. Håll det lätta passet riktigt lugnt.',
+  rest: 'Håll båda passen lugna idag, till exempel promenad och rörlighet. Passen ska fortfarande göras för att dagen ska räknas.',
+  unknown: 'Det finns inga hälsovärden för idag än. De kommer när genvägen "Hälsa till Groundwork" har körts.',
+};
+
+/** Dagsformen ur hälsodatan (samma lagring som Vanor), med råd för dagens pass. */
+function ReadinessCard({ today }: { today: DateKey }) {
+  const [days, setDays] = useState<HealthDay[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => loadHabitData().then((d) => alive && setDays(d.health));
+    load();
+    const stop = onHabitChange(load);
+    return () => {
+      alive = false;
+      stop();
+    };
+  }, []);
+  if (!days) return null;
+  const r = readiness(days, today);
+  return (
+    <section className={`ch-form ${r.level}`} aria-labelledby="ch-form-title">
+      <p className="ch-form-eyebrow">Dagsform</p>
+      <h3 className="ch-form-title" id="ch-form-title">
+        {READINESS_TITLE[r.level]}
+      </h3>
+      <p className="ch-form-advice">{WORKOUT_ADVICE[r.level]}</p>
+      {r.signals.length > 0 && (
+        <ul className="ch-form-signals">
+          {r.signals.map((s) => (
+            <li key={s.metric} className={s.points < 0 ? 'down' : s.points > 0 ? 'up' : ''}>
+              {s.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      {r.missing.length > 0 && (
+        <p className="ch-form-missing">
+          Saknas idag: {r.missing.map((m) => METRICS[m].label.toLowerCase()).join(', ')}. Bedömningen blir säkrare när genvägen skickar dem.
+        </p>
+      )}
+    </section>
   );
 }
