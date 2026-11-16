@@ -10,6 +10,8 @@ import { sameName, type Habit, type Log, type Ramp } from './habits';
 import type { Task } from './tasks';
 import { cleanArea } from './areas';
 import { METRICS, RULE_METRICS, type AutoRule, type HealthDay } from '../../supabase/functions/inbox/health';
+import type { ImportDay } from './appleExport';
+import { mergeHealthImport } from './healthImport';
 
 const DB_NAME = 'vanor';
 const DB_VERSION = 6;
@@ -395,6 +397,16 @@ export async function importHabits(data: { habits: Habit[]; checks: Omit<Check, 
   for (const p of data.pauses) if (!pausedDays.has(p.date)) puts.push({ store: 'pauses', record: { date: p.date } });
   await change(puts);
   return { habits: puts.filter((p) => p.store === 'habits').length, checks: puts.filter((p) => p.store === 'checks').length };
+}
+
+/**
+ * Läser in hälsodata från en fil (Apple Hälsas export, se ./healthImport.ts). Fyller bara i dagar och mått som
+ * saknas; det som redan finns ändras inte. Synkas till kontot som allt annat.
+ */
+export async function importHealthDays(days: ImportDay[]) {
+  const merged = mergeHealthImport(await getAll<HealthDay>('health'), days, Date.now());
+  if (merged.puts.length) await change(merged.puts.map((record) => ({ store: 'health' as const, record })));
+  return { newDays: merged.newDays, filledDays: merged.filledDays, values: merged.values };
 }
 
 // Att göra (se ./tasks.ts)

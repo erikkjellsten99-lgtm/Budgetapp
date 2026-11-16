@@ -7,6 +7,9 @@
   `supabase/functions/inbox/`. Servern (morgonbesked, Siri, Jarvis) och appen måste säga samma sak.
 - Hälsodata kommer från iPhone-genvägen "Hälsa till Groundwork" och skrivs av servern. Siffror kan komma med
   hårda eller smala mellanslag ("8 432"); tolkningen i `health.ts` måste tåla det.
+- Historik från Apple Hälsa läses in ur en fil: `scripts/halsa-export.ts` gör om Hälsas export till
+  `groundwork-halsa.json` (`appleExport.ts`), som väljs under Mina vanor → Importera från Apple Hälsa
+  (`healthImport.ts`). Importen fyller bara i dagar och mått som saknas och ändrar aldrig det som finns.
 - "Att göra" = enstaka saker med datum. Vanor med veckomål listas under "Måste"/"Kan vänta", inte under Att göra.
 - Pausad dag: inga måsten, streaks bryts inte, veckomål sänks.
 - Typsnitt och färger: designspecen "Två rum". Vanor är vardagsrum: systemets typsnitt, siffror i `--font-amount`,
