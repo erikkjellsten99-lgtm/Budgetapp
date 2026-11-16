@@ -6,7 +6,9 @@ import ThemePicker from '../ThemePicker';
 import { START_HABITS } from './defaults';
 import { todayKey } from './dates';
 import type { Habit } from './habits';
-import { importHabits, newId } from './store';
+import { parseHealthFile } from './healthImport';
+import type { ImportDay } from './appleExport';
+import { importHabits, importHealthDays, newId } from './store';
 import { parseTransfer } from './transfer';
 
 interface Props {
@@ -44,6 +46,7 @@ export default function HabitSheet({ habits, onClose }: Props) {
         {!empty && <PushSettings habits={habits} />}
         {!empty && <InboxSettings />}
         <ImportFromOldApp />
+        <ImportHealthFile />
         {empty && <StartPack />}
         <ManageHabits all={habits} />
         <div className="theme-in-sheet">
@@ -164,6 +167,109 @@ function ImportFromOldApp() {
         <div className="form-actions">
           <button type="submit" className="primary" disabled={busy || !code.trim()}>
             Flytta hit
+          </button>
+          <button type="button" className="text-btn" onClick={() => setOpen(false)}>
+            Stäng
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+const count = (n: number) => n.toLocaleString('sv-SE');
+const plural = (n: number, one: string, many: string) => `${count(n)} ${n === 1 ? one : many}`;
+
+/** Läs in historiken från Apple Hälsa ur en fil (groundwork-halsa.json, se scripts/halsa-export.ts). */
+function ImportHealthFile() {
+  const [open, setOpen] = useState(false);
+  const [days, setDays] = useState<ImportDay[] | null>(null);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function choose(file: File | undefined) {
+    setError('');
+    setResult('');
+    setDays(null);
+    if (!file) return;
+    try {
+      setDays(parseHealthFile(await file.text()));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy || !days) return;
+    setError('');
+    setBusy(true);
+    try {
+      const added = await importHealthDays(days);
+      setResult(
+        added.values
+          ? `Klart! ${plural(added.newDays, 'ny dag', 'nya dagar')} och ${plural(added.filledDays, 'kompletterad dag', 'kompletterade dagar')} (${plural(added.values, 'värde', 'värden')}). Det som redan fanns är orört.`
+          : 'Allt i filen fanns redan här. Inget behövde läggas in.',
+      );
+      setDays(null);
+    } catch {
+      setError('Det gick inte att spara. Försök igen.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="import-open" onClick={() => setOpen(true)}>
+        <b>Importera från Apple Hälsa</b>
+        <span>Läs in din historik från en fil</span>
+      </button>
+    );
+  }
+
+  return (
+    <section className="import-box">
+      <h3>Importera från Apple Hälsa</h3>
+      <ol className="steps">
+        <li>
+          Öppna <b>Hälsa</b>, tryck på din bild uppe till höger och välj <b>Exportera all hälsodata</b>.
+        </li>
+        <li>
+          Gör om exporten till filen <b>groundwork-halsa.json</b> på datorn (skriptet <code>scripts/halsa-export.ts</code>).
+        </li>
+        <li>Välj filen nedan. Dagar och mått som saknas fylls i. Det som redan finns ändras inte.</li>
+      </ol>
+      <form className="habit-form" onSubmit={submit} noValidate>
+        <label className="field">
+          <span>Hälsofil</span>
+          <input
+            id="health-file"
+            type="file"
+            accept=".json,application/json"
+            aria-invalid={!!error}
+            onChange={(e) => choose(e.target.files?.[0])}
+          />
+        </label>
+        {days && (
+          <p className="field-help" role="status">
+            Filen har {plural(days.length, 'dag', 'dagar')}, {days[0].date} – {days[days.length - 1].date}.
+          </p>
+        )}
+        {error && (
+          <p className="field-error" role="alert">
+            {error}
+          </p>
+        )}
+        {result && (
+          <p className="field-ok" role="status">
+            {result}
+          </p>
+        )}
+        <div className="form-actions">
+          <button type="submit" className="primary" disabled={busy || !days}>
+            {busy ? 'Läser in …' : 'Läs in'}
           </button>
           <button type="button" className="text-btn" onClick={() => setOpen(false)}>
             Stäng
