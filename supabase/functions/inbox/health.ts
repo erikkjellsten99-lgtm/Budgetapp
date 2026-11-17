@@ -260,6 +260,24 @@ function readSleepParts(raw: unknown): SleepPart[] {
   return parts
 }
 
+/**
+ * Raderna som hör till natten mot `date`. En natt hör till dagen du vaknar: allt som börjar från 15:00 dagen
+ * före till 15:00 samma dag (samma gräns som läggtiden ovan). Genvägen kan då skicka flera dygns sömn utan att
+ * nätter blandas ihop, och det du sov före midnatt kommer med. Rader utan klockslag går inte att placera och
+ * behålls. Klockslaget läses som det står i texten (lokal tid).
+ */
+export function sleepForNight(raw: unknown, date: string): string[] {
+  if (raw === null || raw === undefined) return []
+  const lines = (Array.isArray(raw) ? raw.map(String) : String(raw).split(/\r?\n/)).map((l) => l.trim()).filter(Boolean)
+  return lines.filter((line) => {
+    const m = [...line.matchAll(ISO_TIME)][0]
+    if (!m) return true
+    const [y, mo, d] = m[1].split('-').map(Number)
+    const night = new Date(Date.UTC(y, mo - 1, d, Number(m[2]) + 9, Number(m[3])))
+    return Number.isFinite(night.getTime()) && night.toISOString().slice(0, 10) === date
+  })
+}
+
 /** Nattens faser med start och slut i tidsordning, för sömndiagrammet. "I säng" och rader utan tider tas inte med. */
 export function parseSleepStages(raw: unknown): SleepStage[] {
   const out: SleepStage[] = []
