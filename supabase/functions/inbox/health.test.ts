@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatGoal, formatHealth, formatProgress, guessRule, isHealthBody, metRules, parseHealthBody, parseHealthValue, estimateSleepScore, sleepRating, parseSleepStages } from './health'
+import { formatGoal, formatHealth, formatProgress, guessRule, isHealthBody, metRules, parseHealthBody, parseHealthValue, estimateSleepScore, sleepRating, parseSleepStages, parseSleep, sleepForNight } from './health'
 
 describe('hälsodata från genvägen', () => {
   it('läser siffror med svenska tusental och decimaler', () => {
@@ -188,5 +188,37 @@ describe('fler hälsomått', () => {
     expect(metRules(gym, { workouts: 1 }, '2026-11-05')).toEqual([{ id: 'gym', min: false }])
     expect(metRules(gym, {}, '2026-11-05')).toEqual([])
     expect(formatGoal('workouts', 1)).toBe('1\u00a0träningspass')
+  })
+})
+
+describe('natten som hör till dagen', () => {
+  // Natten 16–17 november: somnade 22:24, dessutom gårnatten och början på nästa natt i samma sändning
+  const lines = [
+    'Kärna | 2026-11-15T23:49:06+01:00 | 2026-11-16T04:59:10+01:00',
+    'Kärna | 2026-11-16T22:24:00+01:00 | 2026-11-16T23:38:00+01:00',
+    'Djup | 2026-11-16T23:38:00+01:00 | 2026-11-17T00:38:00+01:00',
+    'Vaken | 2026-11-17T00:38:00+01:00 | 2026-11-17T00:48:00+01:00',
+    'REM | 2026-11-17T00:48:00+01:00 | 2026-11-17T05:29:00+01:00',
+    'Kärna | 2026-11-17T20:30:00+01:00 | 2026-11-17T23:45:00+01:00',
+  ]
+
+  it('tar med det du sov före midnatt och inget från andra nätter', () => {
+    const night = sleepForNight(lines, '2026-11-17')
+    expect(night).toEqual(lines.slice(1, 5))
+    expect(parseSleep(night)).toMatchObject({ sleepH: 6.92, bedtime: 22.4, sleepAwakeMin: 10 })
+    expect(sleepForNight(lines, '2026-11-16')).toEqual(lines.slice(0, 1))
+    expect(sleepForNight(lines, '2026-11-18')).toEqual(lines.slice(5))
+  })
+
+  it('går gränsen vid 15:00', () => {
+    const nap = ['Sover | 2026-11-17T14:59:00+01:00 | 2026-11-17T15:20:00+01:00', 'Sover | 2026-11-17T15:00:00+01:00 | 2026-11-17T15:30:00+01:00']
+    expect(sleepForNight(nap, '2026-11-17')).toEqual(nap.slice(0, 1))
+    expect(sleepForNight(nap, '2026-11-18')).toEqual(nap.slice(1))
+  })
+
+  it('behåller rader utan klockslag och tål text med radbrytningar och tomt', () => {
+    expect(sleepForNight('Kärna | 45:00\n\nDjup | 2026-11-10T01:00:00+01:00 | 2026-11-10T02:00:00+01:00', '2026-11-17')).toEqual(['Kärna | 45:00'])
+    expect(sleepForNight(undefined, '2026-11-17')).toEqual([])
+    expect(sleepForNight('', '2026-11-17')).toEqual([])
   })
 })

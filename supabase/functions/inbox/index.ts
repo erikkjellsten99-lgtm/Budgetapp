@@ -39,7 +39,7 @@ import type { Loan } from './forecast.ts'
 import type { Asset, Category, Holding, MonthBudget, MonthlyIncome, PricePoint, SavingsGoal, Trade, Wish } from './types.ts'
 import type { Habit, Log } from './habits.ts'
 import type { Task } from './tasks.ts'
-import { FIELD_METRICS, formatHealth, isHealthBody, metRules, parseHealthBody, parseSleepStages, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
+import { FIELD_METRICS, formatHealth, isHealthBody, metRules, parseHealthBody, parseSleepStages, sleepForNight, type AutoRule, type HealthDay, type RampInfo } from './health.ts'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
@@ -314,6 +314,8 @@ async function save(userId: string, items: InboxItem[], idSuffix = ''): Promise<
 /** Sparar dagens hälsodata (slås ihop med det som redan finns den dagen) och bockar vanor med uppfylld regel. */
 async function saveHealth(userId: string, body: Record<string, unknown>, today: string): Promise<string> {
   const date = typeof body.datum === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.datum.trim()) ? body.datum.trim() : today
+  // Bara natten som hör till dagen räknas, även om genvägen skickar flera dygns sömn
+  if ('somn' in body) body = { ...body, somn: sleepForNight(body.somn, date) }
   const values = parseHealthBody(body)
   if (!Object.keys(values).length) return 'Inga siffror kom fram från Hälsa. Kontrollera genvägen.'
 
