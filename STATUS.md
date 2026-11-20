@@ -233,8 +233,15 @@
   med quiz, repetition av frågor (upp till 3 per dag) och sökbar ordlista. Framsteg och svar sparas i vanor-databasen
   och synkas privat, så allt fungerar utan nät efter första öppnandet.
 - Halvfärdigt: Mina bolag och Beslutsdagbok visas som rader med texten kommer. Kurs 2 till 10 är bara planerade.
-- Inte prövat: skärmbilder på 375 px och 1200 px i ljust och mörkt, iPhone, synk mellan två telefoner, offline-läsning
-  efter uppdatering.
+- Repetitionen: högst 3 frågor per dag (en fråga räknas när den repeterats, också vid fel svar). Raden, kortet Dagens
+  lektion och repetitionen räknar likadant, dagen byter vid midnatt och när appen visas igen, och svar på frågor som
+  inte finns i appens version (från en nyare telefon) hoppas över.
+- Synken är prövad i test (`src/vanor/sync.test.ts`): två lokala databaser och en låtsasserver, också en telefon på
+  den gamla koden som uppgraderas till version 7.
+- Kontrollerat i webbläsare på 375 px och 320 px, ljust och mörkt: startsidan, en lektion, quiz med fel svar och
+  dubbeltryck, klart-läget och omladdning.
+- Inte prövat: skrivbordsbredd (900 px och mer), två riktiga telefoner, en riktig iPhone, offline-läsning efter
+  uppdatering.
 - Regler för innehållet: `src/akademin/CLAUDE.md`. Ingen köp- eller säljsignal, inget anrop till Claude, inget skrivs i
   ekonomidatan.
 

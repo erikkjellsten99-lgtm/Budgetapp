@@ -203,7 +203,7 @@ export const K1_04: Lesson = {
       ],
       correct: 2,
       why:
-        'En vanlig fond får ett nytt pris en gång per dag, och alla order den dagen görs till det priset oavsett klockslag. ' +
+        'En vanlig fond får ett nytt pris en gång per dag, och order som kommer in i tid samma dag görs alla till det priset. ' +
         'Det är en av skillnaderna mot en ETF, som handlas till aktuellt pris under dagen.',
     },
     {

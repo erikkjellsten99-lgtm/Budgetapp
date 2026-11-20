@@ -147,7 +147,7 @@ export const K1_01: Lesson = {
       'A-aktierna är alltså ungefär 22 procent av aktierna men står för ungefär 73 procent av de 599 474 006,5 rösterna. ' +
       'Den som äger 100 aktier äger alltså ungefär en tjugomiljondel av Volvo. I rapporten för helåret 2025, publicerad i ' +
       'januari 2026, föreslog styrelsen 8,50 kronor i ordinarie utdelning och 4,50 kronor i extra utdelning per aktie, alltså ' +
-      '13 kronor. Med det förslaget blir det 1 300 kronor före skatt för den som äger 100 aktier när utdelningen betalas ut, ' +
+      '13 kronor. Med det förslaget blir det 1 300 kronor före skatt för den som äger 100 aktier, ' +
       'oavsett aktieslag.',
     source: VOLVO_VOTES,
   },
