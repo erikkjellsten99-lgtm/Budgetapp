@@ -3,20 +3,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Answer, Progress } from './types';
 
 /** Nytt modulläge med färsk databas: store.ts håller sin anslutning på modulnivå. */
-const hook = { failNext: 0 };
+/** failAt: vilken sparning (räknat från 1 efter nollställning) som ska misslyckas, 0 för ingen. */
+const hook = { failAt: 0, saves: 0 };
 
 async function freshStore() {
   const { IDBFactory, IDBKeyRange } = await import('fake-indexeddb');
   vi.resetModules();
-  hook.failNext = 0;
-  // Låter ett visst antal sparningar misslyckas, för att pröva delvis misslyckade skrivningar.
+  hook.failAt = 0;
+  hook.saves = 0;
+  // Låter en viss sparning misslyckas, för att pröva delvis misslyckade skrivningar.
   vi.doMock('../vanor/store', async (orig) => {
     const real = await orig<typeof import('../vanor/store')>();
     return {
       ...real,
       saveAkademinRecord: (...args: Parameters<typeof real.saveAkademinRecord>) => {
-        if (hook.failNext > 0) {
-          hook.failNext--;
+        hook.saves++;
+        if (hook.saves === hook.failAt) {
           return Promise.reject(new Error('skrivning misslyckades'));
         }
         return real.saveAkademinRecord(...args);
@@ -77,16 +79,18 @@ describe('Akademins lagring', () => {
     expect(a['k1-01-q2'].streak).toBe(0);
   });
 
-  it('ett misslyckat anrop lämnar lektionen ogjord och kan göras om samma dag', async () => {
-    hook.failNext = 1;
+  it('ett anrop som misslyckas mitt i lämnar lektionen ogjord och kan göras om samma dag', async () => {
+    // Första sparningen lyckas, den andra misslyckas: med Progress först hade doneAt redan legat sparad här.
+    hook.failAt = 2;
     await expect(s.completeLesson('k1-01', FIRST, '2026-11-20')).rejects.toThrow();
     expect((await s.loadAkademin()).progress).toEqual([]);
-    hook.failNext = 0;
+    hook.failAt = 0;
     await s.completeLesson('k1-01', FIRST, '2026-11-20');
     const d = await s.loadAkademin();
     expect(d.progress).toEqual([{ id: 'k1-01', doneAt: '2026-11-20' }]);
     expect(d.answers).toHaveLength(4);
     expect(d.answers.every((x: Answer) => x.streak <= 1 && x.last === '2026-11-20')).toBe(true);
+    expect(d.answers.find((x: Answer) => x.id === 'k1-01-q1')?.streak).toBe(1);
   });
 
   it('en fråga som repeterats idag räknas inte igen när lektionen görs klar', async () => {
@@ -99,7 +103,7 @@ describe('Akademins lagring', () => {
   });
 
   it('kön fortsätter efter ett misslyckat anrop', async () => {
-    hook.failNext = 1;
+    hook.failAt = 1;
     await expect(s.recordReview('k1-01-q1', true, '2026-11-20')).rejects.toThrow();
     await s.recordReview('k1-01-q2', true, '2026-11-20');
     expect((await s.loadAkademin()).answers.map((x: Answer) => x.id)).toEqual(['k1-01-q2']);
