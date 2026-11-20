@@ -1,5 +1,6 @@
 // Akademin: quiz och repetition. Rena funktioner, ingen I/O.
 import { addDays } from '../vanor/dates';
+import { questionById } from './kurser';
 import type { Answer, DateKey } from './types';
 
 export interface QuizState {
@@ -49,4 +50,21 @@ export function dueQuestions(answers: Answer[], today: DateKey, max = 3): string
     .sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
     .slice(0, max)
     .map((a) => a.id);
+}
+
+/** Högst så många repetitionsfrågor per dag. */
+export const REVIEWS_PER_DAY = 3;
+
+const knownQuestion = (id: string) => questionById(id) !== undefined;
+
+/**
+ * Repetitionsfrågorna som erbjuds idag. Används av startsidans rad, kortet Dagens lektion och repetitionen, så att de
+ * alltid säger samma sak. Svar på frågor som inte finns i den här versionen av appen (synkade från en telefon med
+ * nyare kurser) räknas inte alls. Varje fråga som redan repeterats idag (reviewedOn, rätt eller fel) tar en av dagens
+ * platser, så att det blir högst REVIEWS_PER_DAY om dagen.
+ */
+export function reviewToday(answers: Answer[], today: DateKey, known: (id: string) => boolean = knownQuestion): string[] {
+  const valid = answers.filter((a) => known(a.id));
+  const left = Math.max(0, REVIEWS_PER_DAY - valid.filter((a) => a.reviewedOn === today).length);
+  return dueQuestions(valid, today, left);
 }

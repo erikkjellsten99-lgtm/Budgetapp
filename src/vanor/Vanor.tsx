@@ -6,32 +6,13 @@ import { formatProgress } from '../../supabase/functions/inbox/health'
 import TaskSheet from './TaskSheet'
 import { doneToday, upcomingTasks, whenText, type Task } from './tasks'
 import HabitSheet from './HabitSheet'
-import { addDays, isoWeek, longDate, todayKey, weekStart, type DateKey } from './dates'
+import { addDays, isoWeek, longDate, weekStart, type DateKey } from './dates'
 import { daySummary, habitPlan, isDaily, isDone, rampToday, type Habit, type TodayInfo } from './habits'
 import { prioritizeToday } from '../../supabase/functions/inbox/priority'
 import { loadHabitData, minimumKeys, onHabitChange, saveTaskRecord, toggleCheck, togglePause, toLog, type HabitData } from './store'
 import { dayQuote } from './quotes'
+import { useToday } from './useToday'
 import './vanor.css'
-
-/** Dagens datum som byter vid midnatt, även om appen står öppen. */
-function useToday(): DateKey {
-  const [today, setToday] = useState(todayKey)
-  useEffect(() => {
-    const check = () => setToday(todayKey())
-    const now = new Date()
-    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-    const timer = window.setTimeout(check, midnight.getTime() - now.getTime() + 1000)
-    // Telefonen kan sova över midnatt – kolla igen när appen visas.
-    document.addEventListener('visibilitychange', check)
-    window.addEventListener('focus', check)
-    return () => {
-      window.clearTimeout(timer)
-      document.removeEventListener('visibilitychange', check)
-      window.removeEventListener('focus', check)
-    }
-  }, [today])
-  return today
-}
 
 /** Vanorna från databasen, uppdateras vid varje ändring (här eller via synken). */
 export function useHabitData(): HabitData | null {

@@ -1,8 +1,9 @@
 // Akademin: en lektion. Först texten, sedan frågorna, och när alla är rätt sparas lektionen som klar.
 import { useEffect, useState } from 'react';
+import { todayKey } from '../vanor/dates';
 import { completeLesson } from './akademinStore';
 import Quiz, { createQuiz } from './Quiz';
-import type { Block, Lesson } from './types';
+import type { Block, DateKey, Lesson } from './types';
 
 function Blocks({ blocks }: { blocks: Block[] }) {
   return (
@@ -43,9 +44,29 @@ export function LessonDone({ lesson, saveFailed, onClose }: { lesson: Lesson; sa
   );
 }
 
+/**
+ * Lektionens quiz: när alla frågor är rätt sparas lektionen med `complete` och onDone anropas. Dagen läses med `now`
+ * just då, så att en lektion som börjar före midnatt och blir klar efter sparas på rätt dag.
+ */
+export function lessonQuiz(
+  lesson: Lesson,
+  onDone: () => void,
+  onSaveFailed: () => void,
+  complete: (lessonId: string, firstTry: Record<string, boolean>, today: DateKey) => Promise<void> = completeLesson,
+  now: () => DateKey = todayKey,
+) {
+  return createQuiz(
+    lesson.questions.map((q) => q.id),
+    (firstTry) => {
+      complete(lesson.id, firstTry, now()).catch(onSaveFailed);
+      onDone();
+    },
+  );
+}
+
 type Phase = 'read' | 'quiz' | 'done';
 
-export function LessonView({ lesson, today, onClose }: { lesson: Lesson; today: string; onClose: () => void }) {
+export function LessonView({ lesson, onClose }: { lesson: Lesson; onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>('read');
   const [saveFailed, setSaveFailed] = useState(false);
 
@@ -55,12 +76,10 @@ export function LessonView({ lesson, today, onClose }: { lesson: Lesson; today: 
   }, [phase]);
 
   const [quiz] = useState(() =>
-    createQuiz(
-      lesson.questions.map((q) => q.id),
-      (firstTry) => {
-        completeLesson(lesson.id, firstTry, today).catch(() => setSaveFailed(true));
-        setPhase('done');
-      },
+    lessonQuiz(
+      lesson,
+      () => setPhase('done'),
+      () => setSaveFailed(true),
     ),
   );
 

@@ -60,11 +60,11 @@ export function completeLesson(lessonId: string, firstTry: Record<string, boolea
   });
 }
 
-/** Sparar resultatet av en repetitionsfråga. Rör bara den frågans svar. */
+/** Sparar resultatet av en repetitionsfråga och att den repeterats idag (också vid fel svar). Rör bara den frågans svar. */
 export function recordReview(questionId: string, right: boolean, today: DateKey): Promise<void> {
   return serial(async () => {
     const prev = (await loadAkademinRecords<Answer>('akademin_answers')).find((a) => a.id === questionId);
-    await saveAkademinRecord('akademin_answers', nextAnswer(prev, questionId, right, today));
+    await saveAkademinRecord('akademin_answers', { ...nextAnswer(prev, questionId, right, today), reviewedOn: today } satisfies Answer);
   });
 }
 

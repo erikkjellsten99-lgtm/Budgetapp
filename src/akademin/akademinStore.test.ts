@@ -111,7 +111,15 @@ describe('Akademins lagring', () => {
 
   it('recordReview på en fråga utan svar skapar ett', async () => {
     await s.recordReview('k1-02-q1', false, '2026-11-20');
-    expect((await s.loadAkademin()).answers).toEqual([{ id: 'k1-02-q1', streak: 0, due: '2026-11-21', last: '2026-11-20' }]);
+    expect((await s.loadAkademin()).answers).toEqual([{ id: 'k1-02-q1', streak: 0, due: '2026-11-21', last: '2026-11-20', reviewedOn: '2026-11-20' }]);
+  });
+
+  it('completeLesson sätter inte reviewedOn, recordReview gör det också vid fel svar', async () => {
+    await s.completeLesson('k1-01', FIRST, '2026-11-20');
+    expect((await s.loadAkademin()).answers.every((x: Answer) => x.reviewedOn === undefined)).toBe(true);
+    await s.recordReview('k1-01-q2', false, '2026-11-21');
+    const a = (await s.loadAkademin()).answers.find((x: Answer) => x.id === 'k1-01-q2');
+    expect(a).toEqual({ id: 'k1-01-q2', streak: 0, due: '2026-11-22', last: '2026-11-21', reviewedOn: '2026-11-21' });
   });
 
   it('görs lektionen om en senare dag behålls doneAt och svaren uppdateras', async () => {
@@ -143,7 +151,7 @@ describe('Akademins lagring', () => {
     await s.recordReview('k1-01-q1', true, '2026-11-21');
     const d = await s.loadAkademin();
     const a = Object.fromEntries(d.answers.map((x: Answer) => [x.id, x]));
-    expect(a['k1-01-q1']).toEqual({ id: 'k1-01-q1', streak: 2, due: '2026-11-24', last: '2026-11-21' });
+    expect(a['k1-01-q1']).toEqual({ id: 'k1-01-q1', streak: 2, due: '2026-11-24', last: '2026-11-21', reviewedOn: '2026-11-21' });
     expect(a['k1-01-q2']).toEqual({ id: 'k1-01-q2', streak: 0, due: '2026-11-21', last: '2026-11-20' });
     expect(d.answers).toHaveLength(4);
     expect(d.progress).toHaveLength(1);

@@ -2,13 +2,14 @@
 // Läser och sparar bara framsteg och svar (akademinStore). Ingenting här rör ekonomin.
 import { useEffect, useState } from 'react';
 import { todayKey } from '../vanor/dates';
+import { useToday } from '../vanor/useToday';
 import { doneToday, nextLesson, recordReview, useAkademin, type AkademinData } from './akademinStore';
 import Glossary, { glossaryEntries } from './Glossary';
 import { COURSES, PLANNED, lessonById, questionById } from './kurser';
 import { LessonView } from './LessonView';
-import { dueQuestions } from './logic';
+import { reviewToday } from './logic';
 import Quiz, { createQuiz } from './Quiz';
-import type { Answer, Lesson, Progress } from './types';
+import type { Answer, DateKey, Lesson, Progress } from './types';
 import './akademin.css';
 
 export type TodayCard = { kind: 'next'; lesson: Lesson } | { kind: 'done'; next: Lesson | null } | { kind: 'review' } | { kind: 'coming' };
@@ -18,7 +19,7 @@ export function todayCard(progress: Progress[], answers: Answer[], today: string
   const next = nextLesson(progress);
   if (doneToday(progress, today)) return { kind: 'done', next };
   if (next) return { kind: 'next', lesson: next };
-  return dueQuestions(answers, today).length > 0 ? { kind: 'review' } : { kind: 'coming' };
+  return reviewToday(answers, today).length > 0 ? { kind: 'review' } : { kind: 'coming' };
 }
 
 const Chevron = () => (
@@ -90,7 +91,7 @@ export function StartPage({
   onGlossary: () => void;
 }) {
   const doneIds = new Set(data.progress.map((p) => p.id));
-  const due = dueQuestions(data.answers, today).length;
+  const due = reviewToday(data.answers, today).length;
   const words = glossaryEntries(data.progress, '').length;
   return (
     <div className="akademin-start">
@@ -166,16 +167,21 @@ export function StartPage({
   );
 }
 
-/** Repetitionens quiz: varje fråga sparas med `record` vid första svaret, och onDone anropas när alla är rätt. */
+/**
+ * Repetitionens quiz: varje fråga sparas med `record` vid första svaret, och onDone anropas när alla är rätt. Frågor
+ * som inte finns i den här versionen av appen hoppas över. Dagen läses med `now` när frågan besvaras.
+ */
 export function reviewQuiz(
   ids: string[],
-  today: string,
+  now: () => DateKey,
   onSaveFailed: () => void,
   onDone: () => void,
-  record: (id: string, right: boolean, today: string) => Promise<void> = recordReview,
+  record: (id: string, right: boolean, today: DateKey) => Promise<void> = recordReview,
 ) {
-  return createQuiz(ids, onDone, (id, right) => void record(id, right, today).catch(onSaveFailed));
+  return createQuiz(knownIds(ids), onDone, (id, right) => void record(id, right, now()).catch(onSaveFailed));
 }
+
+const knownIds = (ids: string[]) => ids.filter((id) => questionById(id) !== undefined);
 
 export function ReviewFinished({ saveFailed, onClose }: { saveFailed: boolean; onClose: () => void }) {
   return (
@@ -190,11 +196,11 @@ export function ReviewFinished({ saveFailed, onClose }: { saveFailed: boolean; o
 }
 
 /** Repetitionen: dagens förfallna frågor i samma quiz som lektionerna. `record` sparar varje första svar. */
-export function Review({ ids, today, onClose, record }: { ids: string[]; today: string; onClose: () => void; record?: (id: string, right: boolean, today: string) => Promise<void> }) {
+export function Review({ ids, onClose, record }: { ids: string[]; onClose: () => void; record?: (id: string, right: boolean, today: DateKey) => Promise<void> }) {
   const [finished, setFinished] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
-  const [quiz] = useState(() => reviewQuiz(ids, today, () => setSaveFailed(true), () => setFinished(true), record));
-  const questions = ids.flatMap((id) => questionById(id)?.question ?? []);
+  const [quiz] = useState(() => reviewQuiz(ids, todayKey, () => setSaveFailed(true), () => setFinished(true), record));
+  const questions = knownIds(ids).flatMap((id) => questionById(id)?.question ?? []);
   if (finished) return <ReviewFinished saveFailed={saveFailed} onClose={onClose} />;
   return (
     <div>
@@ -204,7 +210,12 @@ export function Review({ ids, today, onClose, record }: { ids: string[]; today: 
   );
 }
 
-type View = { kind: 'start' } | { kind: 'lesson'; id: string } | { kind: 'review'; ids: string[] } | { kind: 'glossary' };
+export type View = { kind: 'start' } | { kind: 'lesson'; id: string; from: 'start' | 'glossary' } | { kind: 'review'; ids: string[] } | { kind: 'glossary' };
+
+/** Vart Tillbaka leder: en lektion som öppnats från ordlistan går tillbaka dit, allt annat till startsidan. */
+export function backFrom(view: View): View {
+  return view.kind === 'lesson' && view.from === 'glossary' ? { kind: 'glossary' } : { kind: 'start' };
+}
 
 export default function Akademin() {
   const { data, failed } = useAkademin();
@@ -212,10 +223,11 @@ export default function Akademin() {
 }
 
 /** Laddar, fel eller innehåll. Felet visas bara när det inte finns något att visa, så att ett misslyckat omläsande inte tar bort en pågående lektion. */
-export function AkademinBody({ data, failed }: { data: AkademinData | null; failed: boolean }) {
-  const [view, setView] = useState<View>({ kind: 'start' });
-  const today = todayKey();
-  const back = () => setView({ kind: 'start' });
+export function AkademinBody({ data, failed, initialView = { kind: 'start' } }: { data: AkademinData | null; failed: boolean; initialView?: View }) {
+  const [view, setView] = useState<View>(initialView);
+  // Byter vid midnatt och när appen visas igen, så att kortet och repetitionen följer dagen.
+  const today = useToday();
+  const back = () => setView(backFrom(view));
   // Varje ny vy börjar överst.
   useEffect(() => {
     if (typeof window !== 'undefined') window.scrollTo(0, 0);
@@ -249,14 +261,19 @@ export function AkademinBody({ data, failed }: { data: AkademinData | null; fail
         <StartPage
           data={data}
           today={today}
-          onOpenLesson={(id) => setView({ kind: 'lesson', id })}
-          onReview={() => setView({ kind: 'review', ids: dueQuestions(data.answers, today) })}
+          onOpenLesson={(id) => setView({ kind: 'lesson', id, from: 'start' })}
+          onReview={() => setView({ kind: 'review', ids: reviewToday(data.answers, today) })}
           onGlossary={() => setView({ kind: 'glossary' })}
         />
       )}
-      {lesson && <LessonView key={lesson.id} lesson={lesson} today={today} onClose={back} />}
-      {view.kind === 'review' && <Review ids={view.ids} today={today} onClose={back} />}
-      {view.kind === 'glossary' && <Glossary progress={data.progress} onOpenLesson={(id) => setView({ kind: 'lesson', id })} />}
+      {lesson && <LessonView key={lesson.id} lesson={lesson} onClose={back} />}
+      {view.kind === 'lesson' && !lesson && (
+        <div className="empty" role="status">
+          <p>Lektionen finns inte i den här versionen av appen.</p>
+        </div>
+      )}
+      {view.kind === 'review' && <Review ids={view.ids} onClose={back} />}
+      {view.kind === 'glossary' && <Glossary progress={data.progress} onOpenLesson={(id) => setView({ kind: 'lesson', id, from: 'glossary' })} />}
     </div>
   );
 }

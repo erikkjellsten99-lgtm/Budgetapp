@@ -2,11 +2,11 @@ import 'fake-indexeddb/auto';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Kunskap, { AkademinUnavailable, EYEBROW, MODES } from '../kunskap/Kunskap';
-import { AkademinBody, Review, ReviewFinished, reviewQuiz, StartPage, todayCard } from './Akademin';
+import { AkademinBody, backFrom, Review, ReviewFinished, reviewQuiz, StartPage, todayCard } from './Akademin';
 import type { AkademinData } from './akademinStore';
 import { glossaryEntries } from './Glossary';
 import { createQuiz, QuizView } from './Quiz';
-import { LessonDone, LessonView } from './LessonView';
+import { LessonDone, LessonView, lessonQuiz } from './LessonView';
 import { ALL_LESSONS, lessonById } from './kurser';
 import type { Answer, Progress } from './types';
 
@@ -152,7 +152,7 @@ describe('Quiz', () => {
 describe('lektionen', () => {
   it('visar text, exempel, Det viktigaste, nya ord, källor med datum och Till frågorna', () => {
     const l = lesson1;
-    const html = renderToStaticMarkup(<LessonView lesson={l} today={TODAY} onClose={noop} />);
+    const html = renderToStaticMarkup(<LessonView lesson={l} onClose={noop} />);
     expect(html).toContain(l.title);
     expect(html).toContain(l.example.title);
     expect(html).toContain('Det viktigaste');
@@ -232,7 +232,7 @@ describe('repetitionen', () => {
   it('raden är en knapp, och repetitionen visar första frågan', () => {
     const due: Answer = { id: q[0], streak: 0, due: TODAY, last: '2026-11-19' };
     expect(start(withData({ answers: [due] }))).toMatch(/<button[^>]*akademin-row[^>]*><span>Repetition · 1 fråga<\/span>/);
-    const html = renderToStaticMarkup(<Review ids={[q[0]]} today={TODAY} onClose={noop} />);
+    const html = renderToStaticMarkup(<Review ids={[q[0]]} onClose={noop} />);
     expect(html).toContain('Repetition');
     expect(html).toContain(lesson1.questions[0].text);
   });
@@ -240,7 +240,7 @@ describe('repetitionen', () => {
   it('varje fråga sparas vid första svaret, och ett fel svar sparas som fel en gång', async () => {
     const record = vi.fn(wait);
     const onDone = vi.fn();
-    const quiz = reviewQuiz(q, TODAY, noop, onDone, record);
+    const quiz = reviewQuiz(q, () => TODAY, noop, onDone, record);
     quiz.answer(q[0], false);
     quiz.next();
     quiz.answer(q[1], true);
@@ -254,7 +254,7 @@ describe('repetitionen', () => {
 
   it('ett misslyckat sparande meddelas, och klart-läget säger det', async () => {
     const failed = vi.fn();
-    const quiz = reviewQuiz([q[0]], TODAY, failed, noop, () => Promise.reject(new Error('x')));
+    const quiz = reviewQuiz([q[0]], () => TODAY, failed, noop, () => Promise.reject(new Error('x')));
     quiz.answer(q[0], true);
     await wait();
     await wait();
@@ -277,6 +277,110 @@ describe('efter lektionens quiz', () => {
     const html = renderToStaticMarkup(<LessonDone lesson={lesson1} saveFailed onClose={noop} />);
     expect(html).toContain('Lektionen sparades inte.');
     expect(html).not.toContain('Lektionen är klar.');
+  });
+});
+
+describe('repetitionen per dag', () => {
+  const due = (id: string): Answer => ({ id, streak: 0, due: TODAY, last: '2026-11-19' });
+
+  it('högst tre frågor om dagen, fel svar räknas också, och nästa dag erbjuds de igen', async () => {
+    const { IDBFactory, IDBKeyRange } = await import('fake-indexeddb');
+    vi.resetModules();
+    vi.stubGlobal('indexedDB', new IDBFactory());
+    vi.stubGlobal('IDBKeyRange', IDBKeyRange);
+    const store = await import('./akademinStore');
+    const { reviewToday } = await import('./logic');
+    // En lektion klar 2026-11-19 ger fyra svar som förfaller 2026-11-20.
+    await store.completeLesson('k1-01', { 'k1-01-q1': true, 'k1-01-q2': true, 'k1-01-q3': true, 'k1-01-q4': true }, '2026-11-19');
+    let data = await store.loadAkademin();
+    const ids = reviewToday(data.answers, TODAY);
+    expect(ids).toEqual(['k1-01-q1', 'k1-01-q2', 'k1-01-q3']);
+    const page = (d: AkademinData, day: string) =>
+      renderToStaticMarkup(<StartPage data={d} today={day} onOpenLesson={noop} onReview={noop} onGlossary={noop} />);
+    expect(page(data, TODAY)).toContain('Repetition · 3 frågor');
+
+    await store.recordReview(ids[0], false, TODAY);
+    await store.recordReview(ids[1], true, TODAY);
+    await store.recordReview(ids[2], true, TODAY);
+    data = await store.loadAkademin();
+    expect(data.answers.filter((a) => a.reviewedOn === TODAY)).toHaveLength(3);
+    expect(reviewToday(data.answers, TODAY)).toEqual([]);
+    expect(page(data, TODAY)).not.toContain('Repetition');
+    const all = ALL_LESSONS.map((l) => ({ id: l.id, doneAt: '2026-11-01' }));
+    expect(todayCard(all, data.answers, TODAY)).toEqual({ kind: 'coming' });
+
+    // Nästa dag: den fjärde och den som blev fel.
+    expect(reviewToday(data.answers, '2026-11-21')).toEqual(['k1-01-q4', 'k1-01-q1']);
+    expect(page(data, '2026-11-21')).toContain('Repetition · 2 frågor');
+    expect(todayCard(all, data.answers, '2026-11-21')).toEqual({ kind: 'review' });
+  });
+
+  it('ett svar på en okänd fråga räknas inte, erbjuds inte, och repetitionen av de kända blir klar', () => {
+    const answers = [due('k9-01-q1'), due('k1-01-q1')];
+    expect(start(withData({ answers }))).toContain('Repetition · 1 fråga');
+    const all = ALL_LESSONS.map((l) => ({ id: l.id, doneAt: '2026-11-01' }));
+    expect(todayCard(all, [due('k9-01-q1')], TODAY)).toEqual({ kind: 'coming' });
+    expect(start(withData({ answers: [due('k9-01-q1')] }))).not.toContain('Repetition');
+
+    // Repetitionen får en okänd fråga: den hoppas över och quizet blir klart.
+    const onDone = vi.fn();
+    const quiz = reviewQuiz(['k9-01-q1', 'k1-01-q1'], () => TODAY, noop, onDone, vi.fn(() => Promise.resolve()));
+    quiz.answer('k1-01-q1', true);
+    expect(onDone).toHaveBeenCalledTimes(1);
+    const html = renderToStaticMarkup(<Review ids={['k9-01-q1', 'k1-01-q1']} onClose={noop} />);
+    expect(html).toContain(lesson1.questions[0].text);
+    expect(html).toContain('Fråga 1 av 1');
+  });
+});
+
+describe('dagen läses när svaret ges', () => {
+  it('repetitionen sparar med datumet då frågan besvaras, inte då quizet skapades', () => {
+    let day = '2026-11-20';
+    const record = vi.fn(() => Promise.resolve());
+    const quiz = reviewQuiz(['k1-01-q1'], () => day, noop, noop, record);
+    day = '2026-11-21';
+    quiz.answer('k1-01-q1', true);
+    expect(record).toHaveBeenCalledWith('k1-01-q1', true, '2026-11-21');
+  });
+
+  it('lektionen sparas med datumet då quizet blir klart', () => {
+    let day = '2026-11-20';
+    const complete = vi.fn(() => Promise.resolve());
+    const onDone = vi.fn();
+    const quiz = lessonQuiz(lesson1, onDone, noop, complete, () => day);
+    for (const q of lesson1.questions.slice(0, 3)) quiz.answer(q.id, true);
+    day = '2026-11-21';
+    quiz.answer(lesson1.questions[3].id, true);
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(complete.mock.calls[0]).toEqual(['k1-01', Object.fromEntries(lesson1.questions.map((q) => [q.id, true])), '2026-11-21']);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('ett misslyckat sparande av lektionen meddelas', async () => {
+    const failed = vi.fn();
+    const quiz = lessonQuiz(lesson1, noop, failed, () => Promise.reject(new Error('x')), () => TODAY);
+    for (const q of lesson1.questions) quiz.answer(q.id, true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(failed).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('navigeringen', () => {
+  it('en lektion öppnad från ordlistan går tillbaka till ordlistan, annars till startsidan', () => {
+    expect(backFrom({ kind: 'lesson', id: 'k1-01', from: 'glossary' })).toEqual({ kind: 'glossary' });
+    expect(backFrom({ kind: 'lesson', id: 'k1-01', from: 'start' })).toEqual({ kind: 'start' });
+    expect(backFrom({ kind: 'glossary' })).toEqual({ kind: 'start' });
+    expect(backFrom({ kind: 'review', ids: [] })).toEqual({ kind: 'start' });
+  });
+
+  it('en okänd lektion visar ett tomt läge', () => {
+    const html = renderToStaticMarkup(<AkademinBody data={EMPTY} failed={false} initialView={{ kind: 'lesson', id: 'k9-01', from: 'start' }} />);
+    expect(html).toContain('Lektionen finns inte i den här versionen av appen.');
+    expect(html).toContain('Tillbaka');
+    expect(renderToStaticMarkup(<AkademinBody data={EMPTY} failed={false} initialView={{ kind: 'lesson', id: 'k1-01', from: 'start' }} />)).not.toContain(
+      'Lektionen finns inte',
+    );
   });
 });
 

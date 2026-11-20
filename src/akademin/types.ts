@@ -15,6 +15,8 @@ export interface Answer {
   streak: number;
   due: DateKey;
   last: DateKey;
+  /** Dagen frågan senast togs i en repetition (rätt eller fel). Saknas i äldre poster. Sätts bara av recordReview. */
+  reviewedOn?: DateKey;
 }
 
 export type CompanyStatus = 'bevakar' | 'ager' | 'salt';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { answerQuiz, continueQuiz, dueQuestions, nextAnswer, quizDone, startQuiz } from './logic';
+import { answerQuiz, continueQuiz, dueQuestions, nextAnswer, quizDone, reviewToday, startQuiz } from './logic';
 import type { Answer } from './types';
 
 const TODAY = '2026-11-20';
@@ -83,5 +83,34 @@ describe('dueQuestions', () => {
     ];
     expect(dueQuestions(list, TODAY)).toEqual(['d', 'b', 'z']);
     expect(dueQuestions(list, TODAY, 10)).toEqual(['d', 'b', 'z', 'a']);
+  });
+});
+
+describe('reviewToday', () => {
+  const known = (id: string) => id.startsWith('k');
+  const due = (id: string, reviewedOn?: string): Answer => ({ id, streak: 0, due: '2026-11-20', last: '2026-11-19', ...(reviewedOn ? { reviewedOn } : {}) });
+  const reviewed = (id: string, on: string): Answer => ({ id, streak: 1, due: '2026-11-23', last: on, reviewedOn: on });
+
+  it('fyra förfallna och inget repeterat idag ger tre', () => {
+    expect(reviewToday([due('k1'), due('k2'), due('k3'), due('k4')], TODAY, known)).toEqual(['k1', 'k2', 'k3']);
+  });
+
+  it('tre repeterade idag ger inga fler, nästa dag erbjuds de igen', () => {
+    const answers = [reviewed('k1', TODAY), reviewed('k2', TODAY), { ...reviewed('k3', TODAY), streak: 0, due: '2026-11-21' }, due('k4')];
+    expect(reviewToday(answers, TODAY, known)).toEqual([]);
+    expect(reviewToday(answers, '2026-11-21', known)).toEqual(['k4', 'k3']);
+  });
+
+  it('en repeterad idag lämnar två platser', () => {
+    expect(reviewToday([reviewed('k0', TODAY), due('k1'), due('k2'), due('k3')], TODAY, known)).toEqual(['k1', 'k2']);
+  });
+
+  it('svar på okända frågor räknas inte, varken som förfallna eller som repeterade idag', () => {
+    const answers = [due('x-okand'), reviewed('y-okand', TODAY), reviewed('z-okand', TODAY), due('k1')];
+    expect(reviewToday(answers, TODAY, known)).toEqual(['k1']);
+  });
+
+  it('utan egen kontroll känns frågorna igen ur kurserna', () => {
+    expect(reviewToday([due('k1-01-q1'), due('k9-99-q1')], TODAY)).toEqual(['k1-01-q1']);
   });
 });

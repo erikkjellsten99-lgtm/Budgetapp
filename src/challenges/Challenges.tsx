@@ -1,32 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import '../vanor/vanor.css';
 import './challenges.css';
-import { todayKey, type DateKey } from '../vanor/dates';
+import type { DateKey } from '../vanor/dates';
+import { useToday } from '../vanor/useToday';
 import { evaluate, progress, toMap, type CheckinMap, type Progress } from './logic';
 import { loadAll, onChallengeChange, saveRows } from './store';
 import { startChallengeSync, syncNow } from './sync';
 import type { Challenge, ChallengeData } from './types';
 import ChallengeDetail from './ChallengeDetail';
 import CreateSheet from './CreateSheet';
-
-/** Dagens datum, uppdateras vid midnatt och när appen visas igen. */
-function useToday(): DateKey {
-  const [today, setToday] = useState(todayKey);
-  useEffect(() => {
-    const check = () => setToday(todayKey());
-    const now = new Date();
-    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    const timer = window.setTimeout(check, midnight.getTime() - now.getTime() + 1000);
-    document.addEventListener('visibilitychange', check);
-    window.addEventListener('focus', check);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener('visibilitychange', check);
-      window.removeEventListener('focus', check);
-    };
-  }, [today]);
-  return today;
-}
 
 function useChallengeData(): ChallengeData | null {
   const [data, setData] = useState<ChallengeData | null>(null);
