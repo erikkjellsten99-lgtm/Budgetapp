@@ -84,3 +84,44 @@ export interface HabitSetting {
   answer: 'ja' | 'nej';
   habitId?: string;
 }
+
+// Lektionerna: fast innehåll i ./kurser, inget av det sparas.
+
+export interface Source {
+  title: string;
+  url: string;
+  /** Dagen sidan öppnades och kontrollerades. */
+  checked: DateKey;
+}
+
+export type Block = { kind: 'p'; text: string } | { kind: 'h'; text: string } | { kind: 'list'; items: string[] };
+
+export interface Question {
+  /** T.ex. 'k1-03-q2'. Ändras aldrig efter publicering. */
+  id: string;
+  text: string;
+  options: [string, string, string, string];
+  correct: 0 | 1 | 2 | 3;
+  why: string;
+}
+
+export interface Lesson {
+  /** T.ex. 'k1-03'. Ändras aldrig efter publicering. */
+  id: string;
+  course: number;
+  number: number;
+  title: string;
+  body: Block[];
+  example: { title: string; text: string; source: Source };
+  key: [string, string, string];
+  terms: { word: string; meaning: string }[];
+  sources: Source[];
+  questions: [Question, Question, Question, Question];
+  lab?: string;
+}
+
+export interface Course {
+  id: number;
+  title: string;
+  lessons: Lesson[];
+}
