@@ -3,9 +3,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Answer, Progress } from './types';
 
 /** Nytt modulläge med färsk databas: store.ts håller sin anslutning på modulnivå. */
+const hook = { failNext: 0 };
+
 async function freshStore() {
   const { IDBFactory, IDBKeyRange } = await import('fake-indexeddb');
   vi.resetModules();
+  hook.failNext = 0;
+  // Låter ett visst antal sparningar misslyckas, för att pröva delvis misslyckade skrivningar.
+  vi.doMock('../vanor/store', async (orig) => {
+    const real = await orig<typeof import('../vanor/store')>();
+    return {
+      ...real,
+      saveAkademinRecord: (...args: Parameters<typeof real.saveAkademinRecord>) => {
+        if (hook.failNext > 0) {
+          hook.failNext--;
+          return Promise.reject(new Error('skrivning misslyckades'));
+        }
+        return real.saveAkademinRecord(...args);
+      },
+    };
+  });
   vi.stubGlobal('indexedDB', new IDBFactory());
   vi.stubGlobal('IDBKeyRange', IDBKeyRange);
   return import('./akademinStore');
@@ -19,7 +36,10 @@ describe('Akademins lagring', () => {
   beforeEach(async () => {
     s = await freshStore();
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.doUnmock('../vanor/store');
+  });
 
   it('completeLesson sparar en Progress och fyra svar enligt nextAnswer', async () => {
     await s.completeLesson('k1-01', FIRST, '2026-11-20');
@@ -43,13 +63,51 @@ describe('Akademins lagring', () => {
     expect(byId(after.answers)).toEqual(byId(before.answers));
   });
 
-  it('två överlappande anrop ger en Progress och fyra svar som räknats en gång', async () => {
-    await Promise.all([s.completeLesson('k1-01', FIRST, '2026-11-20'), s.completeLesson('k1-01', FIRST, '2026-11-20')]);
+  it('två överlappande anrop en senare dag räknar varje svar en gång', async () => {
+    await s.completeLesson('k1-01', FIRST, '2026-11-20');
+    // Det andra anropet har andra svar: bara om det väntar på det första ser det att dagen redan är sparad.
+    const wrong = { 'k1-01-q1': false, 'k1-01-q2': false, 'k1-01-q3': false, 'k1-01-q4': false };
+    await Promise.all([s.completeLesson('k1-01', FIRST, '2026-11-22'), s.completeLesson('k1-01', wrong, '2026-11-22')]);
     const d = await s.loadAkademin();
-    expect(d.progress).toHaveLength(1);
+    expect(d.progress).toEqual([{ id: 'k1-01', doneAt: '2026-11-20' }]);
     expect(d.answers).toHaveLength(4);
-    expect(d.answers.every((a: Answer) => a.streak <= 1)).toBe(true);
-    expect(d.answers.find((a: Answer) => a.id === 'k1-01-q1')?.streak).toBe(1);
+    const a = Object.fromEntries(d.answers.map((x: Answer) => [x.id, x]));
+    expect(a['k1-01-q1'].streak).toBe(2);
+    expect(a['k1-01-q3'].streak).toBe(2);
+    expect(a['k1-01-q2'].streak).toBe(0);
+  });
+
+  it('ett misslyckat anrop lämnar lektionen ogjord och kan göras om samma dag', async () => {
+    hook.failNext = 1;
+    await expect(s.completeLesson('k1-01', FIRST, '2026-11-20')).rejects.toThrow();
+    expect((await s.loadAkademin()).progress).toEqual([]);
+    hook.failNext = 0;
+    await s.completeLesson('k1-01', FIRST, '2026-11-20');
+    const d = await s.loadAkademin();
+    expect(d.progress).toEqual([{ id: 'k1-01', doneAt: '2026-11-20' }]);
+    expect(d.answers).toHaveLength(4);
+    expect(d.answers.every((x: Answer) => x.streak <= 1 && x.last === '2026-11-20')).toBe(true);
+  });
+
+  it('en fråga som repeterats idag räknas inte igen när lektionen görs klar', async () => {
+    await s.recordReview('k1-01-q1', true, '2026-11-20');
+    await s.completeLesson('k1-01', FIRST, '2026-11-20');
+    const d = await s.loadAkademin();
+    expect(d.answers.find((x: Answer) => x.id === 'k1-01-q1')?.streak).toBe(1);
+    expect(d.answers).toHaveLength(4);
+    expect(d.progress).toHaveLength(1);
+  });
+
+  it('kön fortsätter efter ett misslyckat anrop', async () => {
+    hook.failNext = 1;
+    await expect(s.recordReview('k1-01-q1', true, '2026-11-20')).rejects.toThrow();
+    await s.recordReview('k1-01-q2', true, '2026-11-20');
+    expect((await s.loadAkademin()).answers.map((x: Answer) => x.id)).toEqual(['k1-01-q2']);
+  });
+
+  it('recordReview på en fråga utan svar skapar ett', async () => {
+    await s.recordReview('k1-02-q1', false, '2026-11-20');
+    expect((await s.loadAkademin()).answers).toEqual([{ id: 'k1-02-q1', streak: 0, due: '2026-11-21', last: '2026-11-20' }]);
   });
 
   it('görs lektionen om en senare dag behålls doneAt och svaren uppdateras', async () => {

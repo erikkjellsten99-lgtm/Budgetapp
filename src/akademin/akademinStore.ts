@@ -42,18 +42,21 @@ function serial<T>(run: () => Promise<T>): Promise<T> {
 /**
  * Markerar en lektion som klar och uppdaterar svaren efter quizet. `firstTry` säger om varje fråga blev rätt på
  * första försöket. Redan klar idag: gör ingenting. Klar en tidigare dag: doneAt behålls och svaren uppdateras.
+ * En fråga vars svar redan har last idag hoppas alltid över (också på en lektion utan Progress, t.ex. om frågan
+ * repeterats idag), så att inget räknas två gånger. Svaren sparas före Progress: om något skrivs fel går samma
+ * anrop att göra om samma dag, eftersom spärren "klar idag" bara slår till när allt är sparat.
  */
 export function completeLesson(lessonId: string, firstTry: Record<string, boolean>, today: DateKey): Promise<void> {
   return serial(async () => {
     const [progress, answers] = await Promise.all([loadAkademinRecords<Progress>('akademin_progress'), loadAkademinRecords<Answer>('akademin_answers')]);
     const done = progress.find((p) => p.id === lessonId);
     if (done?.doneAt === today) return;
-    if (!done) await saveAkademinRecord('akademin_progress', { id: lessonId, doneAt: today } satisfies Progress);
     for (const [questionId, right] of Object.entries(firstTry)) {
       const prev = answers.find((a) => a.id === questionId);
       if (prev?.last === today) continue;
       await saveAkademinRecord('akademin_answers', nextAnswer(prev, questionId, right, today));
     }
+    if (!done) await saveAkademinRecord('akademin_progress', { id: lessonId, doneAt: today } satisfies Progress);
   });
 }
 
