@@ -1,8 +1,8 @@
 # Vanor – regler för den här delen
 
 - Vanor, bockningar, pauser, Att göra och hälsa är **personliga** (tabellen `personal_records`, egen IndexedDB
-  `store.ts`, DB_VERSION 6). Samma databas och synk bär också Kunskap (`kunskap_people`, `kunskap_votes`, `kunskap_cards`,
-  `kunskap_settings`, `kunskap_batches`, se `src/kunskap/`). Ekonomin är hushållets. Blanda aldrig.
+  `store.ts`, DB_VERSION 7). Samma databas och synk bär också Kunskap (`kunskap_people`, `kunskap_votes`, `kunskap_cards`,
+  `kunskap_settings`, `kunskap_batches`, se `src/kunskap/`) och Akademin (`akademin_*`, se `src/akademin/`). Ekonomin är hushållets. Blanda aldrig.
 - Logiken för "vad ska göras idag" ligger i delad kod: `priority.ts`, `habits.ts`, `tasks.ts`, `health.ts` i
   `supabase/functions/inbox/`. Servern (morgonbesked, Siri, Jarvis) och appen måste säga samma sak.
 - Hälsodata kommer från iPhone-genvägen "Hälsa till Groundwork" och skrivs av servern. Siffror kan komma med

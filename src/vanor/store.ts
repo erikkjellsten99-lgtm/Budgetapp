@@ -14,7 +14,7 @@ import type { ImportDay } from './appleExport';
 import { mergeHealthImport } from './healthImport';
 
 const DB_NAME = 'vanor';
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
 /**
  * Allt som synkas privat till kontot. Träningspassen (workouts, version 2) används inte längre i appen,
@@ -23,6 +23,7 @@ const DB_VERSION = 6;
  * Kunskap (version 5): personerna du följer (kunskap_people) och gilla/ogilla per kort (kunskap_votes).
  * Kunskap (version 6): genererade kort (kunskap_cards) och kostnadsloggen (kunskap_batches), som skrivs av
  * servern, och inställningen för genereringen (kunskap_settings).
+ * Akademin (version 7): lektioner, svar, bolag, rapporter, journal och inställning (akademin_*, se ../akademin/).
  */
 export const HABIT_STORES = [
   'habits',
@@ -36,6 +37,12 @@ export const HABIT_STORES = [
   'kunskap_cards',
   'kunskap_settings',
   'kunskap_batches',
+  'akademin_progress',
+  'akademin_answers',
+  'akademin_companies',
+  'akademin_reports',
+  'akademin_journal',
+  'akademin_settings',
 ] as const;
 export type HabitStore = (typeof HABIT_STORES)[number];
 
@@ -114,6 +121,21 @@ function openDb(): Promise<IDBDatabase> {
         db.createObjectStore('kunskap_cards', { keyPath: 'id' });
         db.createObjectStore('kunskap_settings', { keyPath: 'id' });
         db.createObjectStore('kunskap_batches', { keyPath: 'id' });
+      }
+      if (event.oldVersion < 7) {
+        for (const name of ['akademin_progress', 'akademin_answers', 'akademin_companies', 'akademin_reports', 'akademin_journal', 'akademin_settings']) {
+          db.createObjectStore(name, { keyPath: 'id' });
+        }
+        // En telefon på en äldre version hoppar över okända lager i applyRemote men flyttar fram lastPull.
+        // Nollställ den, så att nästa hämtning tar om allt och Akademins poster kommer med.
+        if (event.oldVersion >= 1) {
+          const meta = request.transaction!.objectStore('meta');
+          const get = meta.get('sync');
+          get.onsuccess = () => {
+            const row = get.result as { key: string; value: Record<string, unknown> } | undefined;
+            if (row) meta.put({ ...row, value: { ...row.value, lastPull: null } });
+          };
+        }
       }
     };
     request.onsuccess = () => {
@@ -437,6 +459,29 @@ export function saveKunskapRecord(store: KunskapStore, record: object) {
 
 export function deleteKunskapRecord(store: KunskapStore, id: string) {
   return change([], [{ store, id }]);
+}
+
+// Akademin (se ../akademin/): lektioner, bolag, rapporter och journal. Synkas privat som allt annat här.
+
+export type AkademinStore =
+  | 'akademin_progress'
+  | 'akademin_answers'
+  | 'akademin_companies'
+  | 'akademin_reports'
+  | 'akademin_journal'
+  | 'akademin_settings';
+
+export function loadAkademinRecords<T>(store: AkademinStore): Promise<T[]> {
+  return getAll<T>(store);
+}
+
+export function saveAkademinRecord(store: AkademinStore, record: object) {
+  return change([{ store, record }]);
+}
+
+/** Tar bort poster i flera lager i en transaktion (t.ex. ett bolag och dess rapporter). */
+export function deleteAkademinRecords(items: { store: AkademinStore; id: string }[]) {
+  return change([], items);
 }
 
 // För synken
