@@ -23,6 +23,7 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
 | Jarvis | `src/Jarvis.tsx`, `jarvis.ts`, `speech.ts`, `Today.tsx` | föreslagen mapp `src/jarvis/` (inte flyttat än) |
 | Lär (biblioteket i Kunskap, ingen egen flik) | `src/lar/` (`people.ts` innehållet, `Lar.tsx` vyn, `larState.ts`, `lar.css`) | `src/lar/CLAUDE.md` |
 | Kunskap | `src/kunskap/` (`cards.ts` korten, `Kunskap.tsx` vyn, `kunskapState.ts`, `kunskapStore.ts`, `chatApi.ts`), servern `supabase/functions/kunskap/` (chatten), `kunskap-generera/` (korten, på schema), `kunskap-presentation/` och `kunskap-upptack/` | `src/kunskap/CLAUDE.md` |
+| Akademin (läge i Kunskap, ingen egen flik) | `src/akademin/` (`kurser/` lektionerna, `logic.ts` quiz och repetition, `akademinStore.ts`, `Akademin.tsx` startsidan, `LessonView.tsx`, `Quiz.tsx`, `Glossary.tsx`, `akademin.css`) | `src/akademin/CLAUDE.md` |
 | Nyheter | `src/Nyheter.tsx`, `news.ts`, servern `supabase/functions/nyheter/` (`digest.ts` prompten och kontrollerna, `shared.ts` delas med appen, `index.ts`) | regler nedan |
 | Galax | `src/vanor/CosmosView.tsx`, `Galaxy.tsx`, `*3d.ts`, `CameraRig.ts`, `cosmos*.ts`, `universe.ts` | föreslagen mapp `src/galax/` (inte flyttat än) |
 | Servern | `supabase/functions/inbox/` | `supabase/functions/inbox/CLAUDE.md` |
@@ -31,8 +32,8 @@ testerna aldrig rör riktiga data. Starta med tom lokal databas.
   Appen importerar den direkt eller via shims i `src/` (`export * from '../supabase/functions/inbox/X.ts'`).
   Så räknar app, Siri och Jarvis alltid samma siffror. Ändra aldrig en siffra på bara ett ställe.
 - **Navigationen** är `App.tsx` och `nav.ts`: Idag, Ekonomi (underflikar Översikt, Budget, Prognos; Konton och
-  Önskelista öppnas från rader i Översikt), Vanor, Challenges, Nyheter, Kunskap (sex flikar). Kunskap har två lägen: Flöde
-  och Bibliotek (Lär). Jarvis är ingen flik: orben i sidhuvudet öppnar
+  Önskelista öppnas från rader i Översikt), Vanor, Challenges, Nyheter, Kunskap (sex flikar). Kunskap har fyra lägen: Flöde,
+  Bibliotek (Lär), Upptäck och Akademin. Jarvis är ingen flik: orben i sidhuvudet öppnar
   Jarvis i specialrummet (`Room.tsx`). Galaxen öppnas inifrån Vanor → Månad och är också ett specialrum.
 - **Flikarnas namn är på engelska** (Eriks val 2026-11-15): Today, Finance, Habits, Challenges, News, Mindhub. Mindhub är
   Kunskap. Bara namnen i menyn och rubrikerna News och Mindhub är bytta; id:n, kod, mappar, underflikar och all

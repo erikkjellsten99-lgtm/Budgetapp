@@ -1,7 +1,8 @@
 # Kunskap – regler för den här delen
 
-- Tre lägen i samma flik: **Flöde** (korten, den här mappen), **Bibliotek** (Lär, `../lar/`, fast och granskat
-  innehåll) och **Upptäck** (förslag på personer att följa, se nedan). Namnet på ett kort är en knapp till personsidan när personen finns i `PEOPLE`; Tillbaka går då till
+- Fyra lägen i samma flik: **Flöde** (korten, den här mappen), **Bibliotek** (Lär, `../lar/`, fast och granskat
+  innehåll), **Upptäck** (förslag på personer att följa, se nedan) och **Akademin** (kursen i aktier, `../akademin/`,
+  laddas med `lazy` första gången läget öppnas). Namnet på ett kort är en knapp till personsidan när personen finns i `PEOPLE`; Tillbaka går då till
   flödet på samma ställe. Personer utan sida i biblioteket får ingen, och sådana sidor genereras aldrig av Claude.
 
 - **Upptäck** (`discover.ts`, Eriks önskan 2026-11-15): en fast katalog med genrer och personer att följa, sökbar,
@@ -79,6 +80,7 @@
 - Gå djupare: `chatApi.ts` frågar edge function `kunskap` (`supabase/functions/kunskap/`), som frågar Claude med
   bara kortet och samtalet. Inga verktyg, ingen ekonomi, inga vanor. Räknas av `jarvis_count_call()` tillsammans med
   Jarvis (50 per dag). Samtalet glöms när arket stängs. Läggs bara ut efter "Lägg ut".
-- Delen läser inget från ekonomin och skriver inget dit.
+- Delen läser inget från ekonomin och skriver inget dit. Undantaget är Akademin (`../akademin/`): den läser id, namn
+  och datum på innehav och affärer för att kunna länka, och skriver aldrig dit.
 - Stil: vardagsrummet, bara tokens (`kunskap.css`). Inga medicinska råd; protokoll inom andning och kyla visar
   personens varning.

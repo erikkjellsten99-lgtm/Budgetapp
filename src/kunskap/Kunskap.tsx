@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import Lar from '../lar/Lar';
 import { PEOPLE } from '../lar/people';
 import { EXAMPLE_CARDS, SUGGESTED, TYPE_LABEL, type KunskapCard } from './cards';
@@ -879,13 +879,17 @@ export function MoreCards({
 /** Personens sida i biblioteket (Lär), om hen har en. */
 const libraryId = (name: string) => PEOPLE.find((p) => personKey(p.name) === personKey(name))?.id;
 
-type Mode = 'flode' | 'bibliotek' | 'upptack';
+// Akademin är en egen kodbit som hämtas första gången läget öppnas.
+const Akademin = lazy(() => import('../akademin/Akademin'));
+
+type Mode = 'flode' | 'bibliotek' | 'upptack' | 'akademin';
 const MODES: { id: Mode; label: string }[] = [
   { id: 'flode', label: 'Flöde' },
   { id: 'bibliotek', label: 'Bibliotek' },
   { id: 'upptack', label: 'Upptäck' },
+  { id: 'akademin', label: 'Akademin' },
 ];
-const EYEBROW: Record<Mode, string> = { flode: 'Flöde', bibliotek: 'Bibliotek', upptack: 'Upptäck' };
+const EYEBROW: Record<Mode, string> = { flode: 'Flöde', bibliotek: 'Bibliotek', upptack: 'Upptäck', akademin: 'Akademin' };
 
 /**
  * Upptäck: sök på genre och få förslag på personer att följa, med det som passar dig först. Katalogen är fast
@@ -1236,6 +1240,18 @@ export default function Kunskap({ initialFilter = 'alla', initialMode = 'flode' 
           onFollow={(name, topics) => void follow(name, topics)}
           onSearch={(genre) => searchPeople(genre, [...PEOPLE.map((p) => p.name), ...GENRES.flatMap((g) => g.people.map((p) => p.name))])}
         />
+      )}
+      {mode === 'akademin' && (
+        <Suspense
+          fallback={
+            <div className="kunskap-feed" aria-busy="true" aria-label="Laddar Akademin">
+              <div className="card kunskap-skeleton" />
+              <div className="card kunskap-skeleton" />
+            </div>
+          }
+        >
+          <Akademin />
+        </Suspense>
       )}
       {mode === 'bibliotek' && ownPerson && (
         <OwnPersonPage

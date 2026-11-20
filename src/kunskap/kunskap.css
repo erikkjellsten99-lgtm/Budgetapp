@@ -586,6 +586,7 @@
 }
 
 .kunskap-modes {
+  grid-template-columns: repeat(4, 1fr);
   max-width: 40rem;
   margin: 0 0 0.85rem;
 }
