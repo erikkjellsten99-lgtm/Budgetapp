@@ -13,7 +13,8 @@ aktier och läser en kvart om dagen på mobilen. Lektionerna är fast innehåll 
 - Akademin skriver aldrig något i ekonomidatan (`holdings`, `trades`, `assets` med flera). Den läser bara namn och
   id på innehav och affärer för att kunna länka.
 - Inget påhittat i lektionerna: ingen siffra, regel eller länk ur minnet.
-- Inget i Akademin kostar pengar eller anropar Claude eller någon annan tjänst när appen körs.
+- Inget i Akademin kostar pengar, och inget i den anropar Claude eller någon betald tjänst. Den enda nätanvändningen är
+  den vanliga synken av de personliga posterna via vanor-databasen.
 
 ## Innehållsregler
 

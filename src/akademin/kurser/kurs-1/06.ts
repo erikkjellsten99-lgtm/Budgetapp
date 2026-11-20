@@ -127,17 +127,17 @@ export const K1_06: Lesson = {
     {
       kind: 'p',
       text:
-        'Lägg inte alla ägg i samma korg. Har du allt i ett bolag hänger hela sparandet på det. Flera bolag, eller en ' +
+        'Principen brukar kallas att inte lägga alla ägg i samma korg. Den som har allt i ett bolag har hela sparandet beroende av det. Flera bolag, eller en ' +
         'aktiefond, minskar risken. Räntebärande placeringar vid sidan av aktier minskar den ytterligare, men också chansen ' +
         'till mycket hög avkastning. Spridning jämnar ut risker men skyddar inte mot förluster.',
     },
     {
       kind: 'p',
       text:
-        'Fråga dig också hur snabbt något kan bli pengar igen, det som kallas likviditet. Ett hus tar lång tid att sälja, ' +
-        'medan mycket handlade aktier på Stockholmsbörsen ofta kan säljas på några minuter. Fråga dig sedan hur länge du ' +
-        'klarar dig utan pengarna. Det du kan behöva snart är mer utsatt för en nedgång vid fel ' +
-        'tillfälle, eftersom du kanske måste sälja just då.',
+        'En annan sida av risk är hur snabbt något kan bli pengar igen, det som kallas likviditet. Ett hus tar lång tid att ' +
+        'sälja, medan mycket handlade aktier på Stockholmsbörsen ofta kan säljas på några minuter. Hur länge pengarna kan ' +
+        'vara placerade spelar också in. Pengar som behövs snart är mer utsatta för en nedgång vid fel tillfälle, eftersom ' +
+        'de kanske måste tas ut just då.',
     },
     {
       kind: 'p',

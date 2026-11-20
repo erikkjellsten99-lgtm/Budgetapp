@@ -91,7 +91,7 @@ export const K1_02: Lesson = {
     {
       kind: 'p',
       text:
-        'Enligt Nasdaqs faktablad om auktioner (2026) samlas order på Nasdaq Stockholm i en öppningsauktion mellan 08:45 och ' +
+        'Enligt Nasdaqs faktablad om auktioner (utgåva från 2026, kontrollerat 2026-11-20) samlas order på Nasdaq Stockholm i en öppningsauktion mellan 08:45 och ' +
         '09:00 och i en stängningsauktion mellan 17:25 och 17:30. Under auktionen visas inte enskilda order, bara ett ' +
         'preliminärt pris och hur mycket som kan handlas till det.',
     },
@@ -99,7 +99,8 @@ export const K1_02: Lesson = {
       kind: 'p',
       text:
         'När auktionen tar slut räknar börsens system ut, utifrån ordrarna, det pris där flest aktier kan bytas. Alla affärer i auktionen görs till samma ' +
-        'pris. Sluttiden slumpas inom några sekunder, så att ingen kan vänta till sista stund och flytta priset.',
+        'pris. Sluttiden slumpas inom en kort stund, några sekunder vid öppningen och upp till en halv minut vid stängningen, ' +
+        'så att ingen kan vänta till sista stund och flytta priset.',
     },
     {
       kind: 'p',
@@ -135,7 +136,7 @@ export const K1_02: Lesson = {
       kind: 'p',
       text:
         'När du köper och säljer aktier betalar du courtage, en avgift till banken eller mäklaren för affären. Avgifterna ' +
-        'skiljer sig mellan företag, så jämför innan du väljer var du handlar.',
+        'skiljer sig mellan företag.',
     },
     {
       kind: 'p',
@@ -199,7 +200,7 @@ export const K1_02: Lesson = {
     },
     {
       id: 'k1-02-q2',
-      text: 'Varför slutar auktionerna på Nasdaq Stockholm vid en slumpad tidpunkt inom några sekunder?',
+      text: 'Varför slutar auktionerna på Nasdaq Stockholm vid en slumpad tidpunkt i stället för på exakt utsatt sekund?',
       options: [
         'För att mäklarna ska hinna räkna ut courtaget.',
         'För att börsens datorer ska hinna starta om.',

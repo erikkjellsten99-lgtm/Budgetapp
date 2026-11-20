@@ -126,7 +126,9 @@ export const K1_05: Lesson = {
       text:
         'Skatten kallas avkastningsskatt och räknas också på en schablon. Försäkringsbolaget betalar den och drar beloppet från ' +
         'ditt sparande, 1 till 12 gånger om året beroende på bolag, och du behöver inte redovisa underlaget i deklarationen. Den skattefria grundnivån på 300 000 kronor ' +
-        'delas med ISK, och sparandet på ISK räknas av först.',
+        'delas med ISK, och sparandet på ISK räknas av först. Försäkringsbolaget tar ut avkastningsskatten som vanligt, och ' +
+        'grundnivån får du i stället automatiskt som ett avdrag i inkomstslaget kapital i din egen deklaration, utifrån ' +
+        'försäkringsbolagets kontrolluppgift.',
     },
     {
       kind: 'p',
@@ -148,7 +150,7 @@ export const K1_05: Lesson = {
       kind: 'p',
       text:
         'Den här lektionen är allmän utbildning. Vilket konto som passar beror på din situation, och lektionen tar inte ' +
-        'ställning. Kontrollera alltid de aktuella reglerna hos Skatteverket.',
+        'ställning. De aktuella reglerna finns hos Skatteverket.',
     },
   ],
   example: {
@@ -175,7 +177,7 @@ export const K1_05: Lesson = {
     { word: 'Schablonskatt', meaning: 'Skatt som räknas på ett bestämt antagande om avkastning, inte på den verkliga.' },
     { word: 'Kapitalunderlag', meaning: 'Värdet vid varje kvartals början plus årets insättningar, delat med fyra.' },
     { word: 'Statslåneränta', meaning: 'Den ränta Skatteverket utgår från när schablonintäkten räknas ut. För 2026 gäller räntan den 30 november 2025.' },
-    { word: 'Schablonintäkt', meaning: 'Den påhittade inkomsten på ISK som skatten tas ut på, för 2026 3,55 procent av kapitalunderlaget.' },
+    { word: 'Schablonintäkt', meaning: 'Den antagna inkomsten på ISK som skatten tas ut på, för 2026 3,55 procent av kapitalunderlaget.' },
     { word: 'Skattefri grundnivå', meaning: 'Den del av sparandet på ISK och kapitalförsäkring som inte beskattas, 300 000 kronor från 2026.' },
     { word: 'Kapitalförsäkring', meaning: 'En försäkring med sparande i värdepapper, som försäkringsbolaget formellt äger.' },
     { word: 'Avkastningsskatt', meaning: 'Skatten på kapitalförsäkringar, som försäkringsbolaget betalar och drar från sparandet.' },

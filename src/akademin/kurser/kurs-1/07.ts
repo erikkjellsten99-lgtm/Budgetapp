@@ -37,7 +37,7 @@ export const K1_07: Lesson = {
       kind: 'p',
       text:
         'Bolag vars aktier handlas på en marknadsplats har krav på sig att informera allmänheten. Finansinspektionen nämner ' +
-        'bland annat finansiell rapportering enligt IFRS, ett gemensamt regelverk för hur noterade bolag redovisar. ' +
+        'bland annat finansiell rapportering enligt IFRS, ett internationellt regelverk för redovisning. ' +
         'Kraven skiljer sig mellan en reglerad marknad som Nasdaq Stockholm och en handelsplattform som Nasdaq First North.',
     },
     {
@@ -130,8 +130,9 @@ export const K1_07: Lesson = {
   example: {
     title: 'Atlas Copco, tredje kvartalet 2026',
     text:
-      'Atlas Copco har enligt rapporten fyra affärsområden: tryckluft och vakuum, energilösningar, länspumpar och ' +
-      'industripumpar, samt industriverktyg, montering och maskinseende. Helåret 2025 omsatte koncernen 168 miljarder kronor ' +
+      'Atlas Copco har fyra affärsområden (kompressorteknik, vakuumteknik, industriteknik och kraftteknik), som enligt ' +
+      'rapporten erbjuder lösningar för tryckluft och vakuum, energi, länspumpar och industripumpar, samt industriverktyg, ' +
+      'montering och maskinseende. Helåret 2025 omsatte koncernen 168 miljarder kronor ' +
       'och hade ungefär 56 000 anställda vid årets slut. Under tredje kvartalet 2026 var intäkterna 47 920 miljoner kronor ' +
       '(41 621 samma kvartal 2025) och rörelseresultatet 9 950 miljoner kronor (8 546). Rörelsemarginalen blev 20,8 procent ' +
       '(20,5), alltså 9 950 delat med 47 920. Orderingången ökade med 29 procent till 52 338 miljoner kronor (40 517), och ' +
@@ -146,7 +147,7 @@ export const K1_07: Lesson = {
   ],
   terms: [
     { word: 'Sida för investerare', meaning: 'Bolagets egen webbsida med rapporter, pressmeddelanden och information om aktien.' },
-    { word: 'IFRS', meaning: 'Ett gemensamt regelverk för hur noterade bolag redovisar sina siffror.' },
+    { word: 'IFRS', meaning: 'Internationella redovisningsregler som Finansinspektionen nämner bland kraven på noterade bolag. Vilka bolag som måste följa dem beror på var aktien handlas.' },
     { word: 'Årsredovisning', meaning: 'Bolagets rapport om hela räkenskapsåret.' },
     { word: 'Kvartalsrapport', meaning: 'Bolagets rapport om ett kvartal, tre månader.' },
     { word: 'Affärsområde', meaning: 'En del av verksamheten som redovisas för sig.' },
@@ -188,7 +189,7 @@ export const K1_07: Lesson = {
       text:
         'Under tredje kvartalet 2026 hade Atlas Copco en orderingång på 52 338 miljoner kronor och intäkter på 47 920 miljoner kronor. Vad betyder det?',
       options: [
-        'Kunderna beställde mer än bolaget levererade och fick betalt för under kvartalet.',
+        'Kunderna beställde för mer än bolaget levererade och redovisade som intäkter under kvartalet.',
         'Bolaget gick med förlust under kvartalet.',
         'Bolaget tjänade 4 418 miljoner kronor extra på beställningarna.',
         'Rapporten måste innehålla ett räknefel.',

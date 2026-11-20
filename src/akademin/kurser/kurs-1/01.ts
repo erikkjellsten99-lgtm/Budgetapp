@@ -89,7 +89,7 @@ export const K1_01: Lesson = {
       text:
         'Det finns en gräns: ingen aktie får ha mer än tio gånger så många röster som någon annan aktie i samma bolag. ' +
         'Vilket aktieslag som har flest röster, och om aktieslagen får lika utdelning, står i varje bolags bolagsordning. ' +
-        'Kontrollera alltid det för de bolag du äger.',
+        'Det skiljer sig mellan bolagen.',
     },
     {
       kind: 'p',
@@ -117,7 +117,7 @@ export const K1_01: Lesson = {
       kind: 'p',
       text:
         'Aktier i ett privat aktiebolag får enligt lagen inte handlas på en reglerad marknad eller någon annan organiserad ' +
-        'marknadsplats. De bolag du kan köpa aktier i via banken är därför publika aktiebolag. Har namnet inte ordet publikt ' +
+        'marknadsplats. De svenska bolag du kan köpa aktier i via banken är därför publika aktiebolag. Har namnet inte ordet publikt ' +
         'ska bolagsordningen ange beteckningen (publ) efter namnet.',
     },
     { kind: 'h', text: 'Aktiekursen' },
@@ -145,9 +145,10 @@ export const K1_01: Lesson = {
       'Den 30 oktober 2026 fanns det 2 033 452 084 aktier i AB Volvo, varav 440 143 109 A-aktier och 1 593 308 975 B-aktier. ' +
       'Enligt Volvo ger en A-aktie en röst på stämman och en B-aktie en tiondels röst, medan utdelningen är densamma för båda. ' +
       'A-aktierna är alltså ungefär 22 procent av aktierna men står för ungefär 73 procent av de 599 474 006,5 rösterna. ' +
-      'Enligt Volvos rapport för helåret 2025 föreslog styrelsen 8,50 kronor i ordinarie utdelning och 4,50 kronor i extra utdelning per aktie, ' +
-      'alltså 13 kronor. Den som ägde 100 aktier ägde ungefär en tjugomiljondel av Volvo och skulle enligt förslaget få 1 300 kronor ' +
-      'före skatt, oavsett aktieslag.',
+      'Den som äger 100 aktier äger alltså ungefär en tjugomiljondel av Volvo. I rapporten för helåret 2025, publicerad i ' +
+      'januari 2026, föreslog styrelsen 8,50 kronor i ordinarie utdelning och 4,50 kronor i extra utdelning per aktie, alltså ' +
+      '13 kronor. Med det förslaget blir det 1 300 kronor före skatt för den som äger 100 aktier när utdelningen betalas ut, ' +
+      'oavsett aktieslag.',
     source: VOLVO_VOTES,
   },
   key: [

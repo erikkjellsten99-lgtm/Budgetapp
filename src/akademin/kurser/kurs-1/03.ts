@@ -42,7 +42,7 @@ export const K1_03: Lesson = {
     {
       kind: 'p',
       text:
-        'OMX Stockholm 30, förkortat OMXS30, ägs och räknas av Nasdaq. Enligt Nasdaqs metodbeskrivning (version från 2025) mäter ' +
+        'OMX Stockholm 30, förkortat OMXS30, ägs och räknas av Nasdaq. Enligt Nasdaqs metodbeskrivning (version från 2025, kontrollerad 2026-11-20) mäter ' +
         'det utvecklingen för ett urval av de största och mest handlade aktierna på Nasdaq Stockholm. Reglerna i korthet:',
     },
     {
@@ -100,7 +100,7 @@ export const K1_03: Lesson = {
       kind: 'list',
       items: [
         'En snabb bild av hur aktierna som grupp har rört sig en dag, ett år eller tio år.',
-        'En måttstock. Bolag som Industrivärden och Investor jämför sin aktie med ett jämförelseindex för att visa om det gått bättre eller sämre än marknaden, och du kan göra samma sak.',
+        'En måttstock. Bolag som Industrivärden jämför sin aktie med ett jämförelseindex för att visa om det gått bättre eller sämre än marknaden, och du kan göra samma sak.',
         'Något att följa. En indexfond följer ett index, till exempel OMXS30, genom att äga samma aktier som indexet.',
       ],
     },

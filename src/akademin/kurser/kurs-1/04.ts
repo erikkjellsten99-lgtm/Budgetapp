@@ -122,14 +122,15 @@ export const K1_04: Lesson = {
       kind: 'p',
       text:
         'Skatteverket nämner också ETF:er med hävstång, som rör sig flera gånger så mycket som det de följer, och omvända ' +
-        'ETF:er, som går upp när det underliggande går ner. Läs därför alltid vad en ETF följer och hur den är byggd innan ' +
-        'du köper den.',
+        'ETF:er, som går upp när det underliggande går ner. Två ETF:er kan alltså bete sig helt olika fast de följer samma ' +
+        'sak, beroende på hur de är byggda.',
     },
     { kind: 'h', text: 'Skatt på fonder utanför ISK' },
     {
       kind: 'p',
       text:
-        'Äger du fonder, även ETF:er, på ett vanligt konto finns en särskild skatt (kontrollerat 2026-11-20). Varje år tas ' +
+        'Äger du fonder, även ETF:er, på ett vanligt konto finns en särskild skatt. Regeln gäller sedan inkomståret 2012 och ' +
+        'gäller även 2026 (kontrollerat 2026-11-20). Varje år tas ' +
         '0,4 procent av fondandelarnas värde vid årets början upp som inkomst och beskattas med 30 procent. Konsumenternas ' +
         'exempel: andelar värda 10 000 kronor ger 40 kronor i inkomst och 12 kronor i skatt. Den skatten gäller inte på ett ' +
         'investeringssparkonto, som är nästa lektion.',
@@ -193,7 +194,7 @@ export const K1_04: Lesson = {
     {
       id: 'k1-04-q1',
       text:
-        'Du lägger en köporder i en vanlig fond klockan 10. En vän köper samma fond klockan 15 samma dag. Vilket pris får ni?',
+        'Du lägger en köporder i en vanlig fond klockan 09. En vän köper samma fond klockan 11 samma dag. Vilket pris får ni?',
       options: [
         'Du får ett lägre pris, eftersom du var först.',
         'Vännen får dagens högsta pris.',
