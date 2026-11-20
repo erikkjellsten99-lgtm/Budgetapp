@@ -12,7 +12,7 @@ export const K2_02: Lesson = {
       kind: 'p',
       text:
         'Resultaträkningen beskriver en period. Balansräkningen beskriver ett ögonblick: vad bolaget äger och vad det är skyldigt ' +
-        'en viss dag, balansdagen. Enligt årsredovisningslagen ska den i sammandrag visa alla tillgångar, avsättningar, skulder och ' +
+        'en viss dag, balansdagen. Enligt årsredovisningslagen (kontrollerad 2026-11-20) ska den i sammandrag visa alla tillgångar, avsättningar, skulder och ' +
         'eget kapital på balansdagen. Det är alltså en ögonblicksbild, inte en film.',
     },
     { kind: 'h', text: 'Två sidor som alltid är lika stora' },
@@ -58,7 +58,7 @@ export const K2_02: Lesson = {
       kind: 'p',
       text:
         'Lagen kräver också att ett aktiebolag delar upp det egna kapitalet i bundet och fritt eget kapital. Uppdelningen spelar ' +
-        'roll för utdelningar. Enligt aktiebolagslagen får bolaget inte föra över värde till ägarna, till exempel som utdelning, ' +
+        'roll för utdelningar. Enligt aktiebolagslagen (kontrollerad 2026-11-20) får bolaget inte föra över värde till ägarna, till exempel som utdelning, ' +
         'om det bundna egna kapitalet inte längre är fullt täckt efteråt.',
     },
     {
@@ -163,12 +163,12 @@ export const K2_02: Lesson = {
       id: 'k2-02-q2',
       text: 'Varför säger man att balansräkningen är en ögonblicksbild?',
       options: [
-        'Den visar ställningen en viss dag, balansdagen, och kan se annorlunda ut en annan dag.',
+        'Den visar intäkter och kostnader under hela året.',
         'Den visar bara de affärer som gjordes på årets sista dag.',
         'Den görs om varje dag och publiceras dagligen av bolaget.',
-        'Den visar intäkter och kostnader under hela året.',
+        'Den visar ställningen en viss dag, balansdagen, och kan se annorlunda ut en annan dag.',
       ],
-      correct: 0,
+      correct: 3,
       why:
         'Lagen säger att balansräkningen ska visa tillgångar, skulder och eget kapital på balansdagen. Atlas Copcos likvida medel ' +
         'var till exempel 24 278 miljoner den 30 september 2026 men 15 523 miljoner den 31 december 2025.',
@@ -186,12 +186,12 @@ export const K2_02: Lesson = {
       id: 'k2-02-q4',
       text: 'Vilken av de här är en omsättningstillgång?',
       options: [
-        'En fabriksbyggnad som bolaget använder i tillverkningen.',
+        'Varor på lager som bolaget räknar med att sälja.',
         'Ett patent som bolaget räknar med att använda i många år.',
         'Ett obligationslån som ska betalas tillbaka om fem år.',
-        'Varor på lager som bolaget räknar med att sälja.',
+        'En fabriksbyggnad som bolaget använder i tillverkningen.',
       ],
-      correct: 3,
+      correct: 0,
       why:
         'Byggnaden och patentet ska användas stadigvarande och är anläggningstillgångar. Obligationslånet är en skuld, inte en ' +
         'tillgång. Varor som ska säljas är en omsättningstillgång.',

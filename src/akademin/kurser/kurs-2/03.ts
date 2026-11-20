@@ -1,6 +1,6 @@
 // Kurs 2, lektion 3. Källorna öppnades och kontrollerades 2026-11-20. Regler: se ../../CLAUDE.md.
 import type { Lesson } from '../../types';
-import { ARL, ATLAS_DEF, ATLAS_Q3, HM_FY25 } from './kallor';
+import { ARL, ATLAS_DEF, ATLAS_Q3, HM_AR25, HM_FY25 } from './kallor';
 
 export const K2_03: Lesson = {
   id: 'k2-03',
@@ -12,7 +12,7 @@ export const K2_03: Lesson = {
       kind: 'p',
       text:
         'Resultaträkningen visar vinsten. Kassaflödesanalysen visar pengarna: vad som faktiskt kom in och gick ut under perioden. ' +
-        'Enligt årsredovisningslagen ska kassaflödesanalysen redovisa företagets in- och utbetalningar under räkenskapsåret, och ' +
+        'Enligt årsredovisningslagen (kontrollerad 2026-11-20) ska kassaflödesanalysen redovisa företagets in- och utbetalningar under räkenskapsåret, och ' +
         'den ska finnas i årsredovisningen för större företag. Atlas Copco och H&M visar den också i sina rapporter under året.',
     },
     { kind: 'h', text: 'Tre delar' },
@@ -27,8 +27,9 @@ export const K2_03: Lesson = {
     {
       kind: 'p',
       text:
-        'De tre delarna läggs ihop till periodens kassaflöde. Lägg till de likvida medlen vid periodens början, och justera för ' +
-        'valutakurser, så får du de likvida medlen vid periodens slut. Den siffran ska vara densamma som i balansräkningen.',
+        'De tre delarna läggs ihop till periodens kassaflöde. Lägg till de likvida medlen vid periodens början och ' +
+        'valutakursdifferenserna, alltså att pengar i utländsk valuta blir värda mer eller mindre i kronor, så får du de likvida ' +
+        'medlen vid periodens slut. Den siffran ska vara densamma som i balansräkningen.',
     },
     { kind: 'h', text: 'Varför vinst inte är pengar' },
     {
@@ -51,10 +52,17 @@ export const K2_03: Lesson = {
       kind: 'p',
       text:
         'Under räkenskapsåret 2025 var H&M:s resultat efter finansiella poster 16 202 miljoner kronor och periodens resultat ' +
-        '12 085 miljoner. Kassaflödet från den löpande verksamheten var 31 120 miljoner, mer än dubbelt så mycket som resultatet. ' +
-        'Den största förklaringen är att av- och nedskrivningar på 21 140 miljoner lades tillbaka. Betald skatt drog ' +
-        '3 890 miljoner, och mindre lager gav 3 785 miljoner, medan kundfordringar och rörelseskulder tillsammans drog ' +
+        '12 085 miljoner. Kassaflödet från den löpande verksamheten var 31 120 miljoner, mer än dubbelt så mycket som periodens ' +
+        'resultat. Den största förklaringen är att av- och nedskrivningar på 21 140 miljoner lades tillbaka. Betald skatt drog ' +
+        '3 890 miljoner, och mindre lager gav 3 785 miljoner, medan rörelsefordringar och rörelseskulder tillsammans drog ' +
         '6 416 miljoner.',
+    },
+    {
+      kind: 'p',
+      text:
+        'Mer än hälften av av- och nedskrivningarna gällde hyrda butiker, lager och kontor. Enligt not 17 i årsredovisningen var ' +
+        '12 488 miljoner avskrivningar och 202 miljoner nedskrivningar av nyttjanderättstillgångar. Hyran för lokalerna betalas ' +
+        'samma år, men den syns inte i den löpande verksamheten. Den står i finansieringen som amortering av leasingskulder.',
     },
     {
       kind: 'p',
@@ -66,7 +74,7 @@ export const K2_03: Lesson = {
     {
       kind: 'p',
       text:
-        'Lägg märke till var hyrorna hamnar. H&M redovisar amorteringen på leasingskulderna under finansieringen, inte under den ' +
+        'Lägg märke till var hyrorna hamnar. H&M redovisar amorteringen på leasingskulderna, 12 328 miljoner, under finansieringen, inte under den ' +
         'löpande verksamheten. Hur ett bolag delar upp posterna påverkar alltså hur stort kassaflödet från den löpande ' +
         'verksamheten ser ut. Läs vilka rader som ingår innan du jämför två bolag.',
     },
@@ -129,9 +137,11 @@ export const K2_03: Lesson = {
     { word: 'Amortering', meaning: 'Återbetalning av en del av ett lån eller en leasingskuld.' },
     { word: 'Återköp av aktier', meaning: 'När bolaget köper tillbaka sina egna aktier från marknaden.' },
     { word: 'Leasingskuld', meaning: 'Skulden för framtida betalningar på det bolaget hyr eller leasar, till exempel lokaler.' },
+    { word: 'Valutakursdifferens', meaning: 'Att pengar eller andra poster i utländsk valuta blir värda mer eller mindre i kronor när kursen ändras.' },
+    { word: 'Kassamässigt rörelseöverskott', meaning: 'Atlas Copcos rad för rörelseresultatet plus poster som inte är pengar, till exempel avskrivningar.' },
     { word: 'Operativt kassaflöde', meaning: 'Atlas Copcos eget mått: kassaflödet från rörelsen och investeringarna, utan köp och försäljningar av bolag.' },
   ],
-  sources: [ARL, ATLAS_Q3, ATLAS_DEF, HM_FY25],
+  sources: [ARL, ATLAS_Q3, ATLAS_DEF, HM_FY25, HM_AR25],
   questions: [
     {
       id: 'k2-03-q1',
@@ -165,12 +175,13 @@ export const K2_03: Lesson = {
         'H&M tog nya lån som räknas in i den löpande verksamheten.',
         'Kunderna betalade i förskott för nästa års varor.',
         'Rapporten räknar kassaflödet före all skatt och alla kostnader.',
-        'Av- och nedskrivningar på 21 140 miljoner är kostnader men inga utbetalningar.',
+        'Av- och nedskrivningar på 21 140 miljoner läggs tillbaka, och hyran för lokalerna står under finansieringen.',
       ],
       correct: 3,
       why:
-        'Avskrivningar dras i resultaträkningen men betalas inte den perioden, så de läggs tillbaka i kassaflödet. Nya lån hör ' +
-        'till finansieringen, och betald skatt är redan dragen i den löpande verksamheten.',
+        'Av- och nedskrivningarna läggs tillbaka i den löpande verksamheten. Över hälften av dem gäller hyrda lokaler, och hyran ' +
+        'för dem syns i stället i finansieringen som amortering av leasingskulder, 12 328 miljoner. Nya lån hör till ' +
+        'finansieringen, och betald skatt är redan dragen i den löpande verksamheten.',
     },
     {
       id: 'k2-03-q4',

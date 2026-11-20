@@ -51,6 +51,12 @@ export const SCB_SOLIDITET: Source = {
   checked: CHECKED,
 };
 
+export const RI_REVISOR: Source = {
+  title: 'Revisor, Revisorsinspektionen',
+  url: 'https://www.revisorsinspektionen.se/om-revision/r/',
+  checked: CHECKED,
+};
+
 export const RI_TILLSYN: Source = {
   title: 'Revisorsinspektionen, om myndighetens tillsyn',
   url: 'https://www.revisorsinspektionen.se/om-revision/revisorsinspektionen/',

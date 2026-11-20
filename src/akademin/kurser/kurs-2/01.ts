@@ -19,7 +19,7 @@ export const K2_01: Lesson = {
     {
       kind: 'p',
       text:
-        'Årsredovisningslagen säger att resultaträkningen i sammandrag ska visa företagets alla intäkter och kostnader under ' +
+        'Årsredovisningslagen (kontrollerad 2026-11-20) säger att resultaträkningen i sammandrag ska visa företagets alla intäkter och kostnader under ' +
         'räkenskapsåret. Lagen har två uppställningsformer. I den ena delas kostnaderna upp efter slag, till exempel ' +
         'personalkostnader, råvaror och avskrivningar. I den andra delas de upp efter funktion, alltså efter vad pengarna ' +
         'användes till: att tillverka det som såldes, att sälja och att administrera. Både Atlas Copco och H&M ställer upp sina ' +
@@ -58,8 +58,9 @@ export const K2_01: Lesson = {
     {
       kind: 'p',
       text:
-        'Längst ned står resultat per aktie, som du mötte i förra kursen. Atlas Copco delar den del av resultatet som tillhör ' +
-        'moderbolagets ägare med det genomsnittliga antalet aktier. Under tredje kvartalet 2026 var det 7 717 miljoner kronor ' +
+        'Längst ned står resultat per aktie, som du mötte i förra kursen. Ett börsbolag är ofta ett moderbolag som äger andra ' +
+        'bolag, och tillsammans kallas de en koncern. Atlas Copco delar den del av resultatet som tillhör moderbolagets ägare med ' +
+        'det genomsnittliga antalet aktier. Under tredje kvartalet 2026 var det 7 717 miljoner kronor ' +
         'delat med 4 879,9 miljoner aktier, alltså 1,58 kronor per aktie.',
     },
     { kind: 'h', text: 'Avskrivningar' },
@@ -134,6 +135,8 @@ export const K2_01: Lesson = {
     { word: 'Finansnetto', meaning: 'Ränteintäkter minus räntekostnader och andra finansiella poster.' },
     { word: 'Resultat före skatt', meaning: 'Rörelseresultatet plus finansnettot.' },
     { word: 'Periodens resultat', meaning: 'Det som blir kvar efter skatt, bolagets vinst eller förlust för perioden.' },
+    { word: 'Moderbolag', meaning: 'Bolaget som äger och styr andra bolag, dotterbolagen, i en koncern.' },
+    { word: 'Koncern', meaning: 'Ett moderbolag och de dotterbolag det äger, redovisade tillsammans.' },
     { word: 'Uppställningsform', meaning: 'Den ordning och de rader som lagen anger för resultaträkningen och balansräkningen.' },
     { word: 'Avskrivning', meaning: 'Den del av utgiften för en tillgång som räknas som kostnad varje år under nyttjandeperioden.' },
     { word: 'Nyttjandeperiod', meaning: 'Den tid som en tillgång väntas användas i verksamheten.' },

@@ -1,6 +1,6 @@
 // Kurs 2, lektion 7. Källorna öppnades och kontrollerades 2026-11-20. Regler: se ../../CLAUDE.md.
 import type { Lesson } from '../../types';
-import { ABL, ARL, HM_AR25, HM_FY25, RI_TILLSYN, VOLVO_Q4 } from './kallor';
+import { ABL, ARL, HM_AR25, HM_FY25, RI_REVISOR, RI_TILLSYN, VOLVO_Q4 } from './kallor';
 
 export const K2_07: Lesson = {
   id: 'k2-07',
@@ -19,7 +19,7 @@ export const K2_07: Lesson = {
     {
       kind: 'p',
       text:
-        'Enligt årsredovisningslagen ska en årsredovisning bestå av en balansräkning, en resultaträkning, noter och en ' +
+        'Enligt årsredovisningslagen (kontrollerad 2026-11-20) ska en årsredovisning bestå av en balansräkning, en resultaträkning, noter och en ' +
         'förvaltningsberättelse. För större företag ska den också innehålla en kassaflödesanalys. Ett moderföretag ska dessutom ' +
         'som huvudregel göra en koncernredovisning, som visar hela koncernen med dotterbolagen. Årsredovisningen ska skrivas under ' +
         'av alla styrelseledamöter och av den verkställande direktören.',
@@ -27,7 +27,7 @@ export const K2_07: Lesson = {
     {
       kind: 'p',
       text:
-        'Lagen säger också att årsredovisningen ska vara överskådlig och följa god redovisningssed, och att varje post i ' +
+        'Lagen säger också att årsredovisningen ska vara överskådlig, och att varje post i ' +
         'räkningarna ska visas med föregående års belopp bredvid. Därför kan du jämföra två år direkt i samma dokument.',
     },
     { kind: 'h', text: 'Förvaltningsberättelsen' },
@@ -59,17 +59,18 @@ export const K2_07: Lesson = {
     {
       kind: 'p',
       text:
-        'Större aktiebolag ska också ha en hållbarhetsrapport som ett eget avsnitt i förvaltningsberättelsen. Vilka bolag som ' +
-        'omfattas beror på antal anställda, balansomslutning och omsättning. Rapporten ska bland annat ta upp miljö, sociala ' +
+        'Aktiebolag över vissa storleksgränser ska också ha en hållbarhetsrapport som ett eget avsnitt i förvaltningsberättelsen. ' +
+        'Gränserna gäller antal anställda, summan av tillgångarna och omsättningen, och de är lägre för bolag vars värdepapper ' +
+        'handlas på en reglerad marknad. Rapporten ska bland annat ta upp miljö, sociala ' +
         'förhållanden, personal, mänskliga rättigheter och motverkande av korruption.',
     },
     { kind: 'h', text: 'Revisorn' },
     {
       kind: 'p',
       text:
-        'Enligt aktiebolagslagen ska revisorn granska årsredovisningen, bokföringen och hur styrelsen och den verkställande ' +
-        'direktören har skött bolaget. Granskningen ska göras med professionell skepticism. Efter varje räkenskapsår lämnar ' +
-        'revisorn en revisionsberättelse till bolagsstämman. Tidsgränserna står i lagen: bolaget ska lämna årsredovisningen till ' +
+        'Enligt aktiebolagslagen (kontrollerad 2026-11-20) ska revisorn granska årsredovisningen, bokföringen och hur styrelsen ' +
+        'och den verkställande direktören har skött bolaget. Efter varje räkenskapsår lämnar revisorn en revisionsberättelse ' +
+        'till bolagsstämman. Tidsgränserna står i lagarna (kontrollerade 2026-11-20): bolaget ska lämna årsredovisningen till ' +
         'revisorn senast sex veckor före stämman, och revisorn ska lämna revisionsberättelsen till styrelsen senast tre veckor ' +
         'före årsstämman.',
     },
@@ -77,7 +78,7 @@ export const K2_07: Lesson = {
       kind: 'list',
       items: [
         'Revisorn uttalar sig om årsredovisningen är gjord enligt lagen och ger en rättvisande bild av resultat och ställning.',
-        'Revisorn uttalar sig om stämman bör fastställa resultaträkningen och balansräkningen.',
+        'Revisorn uttalar sig om stämman bör fastställa, alltså slutligt godkänna, resultaträkningen och balansräkningen.',
         'Revisorn uttalar sig om styrelsen och den verkställande direktören bör beviljas ansvarsfrihet.',
         'Finns det väsentlig osäkerhet om bolaget kan fortsätta sin verksamhet ska det stå i berättelsen.',
       ],
@@ -85,7 +86,8 @@ export const K2_07: Lesson = {
     {
       kind: 'p',
       text:
-        'Revisorsinspektionen är myndigheten som har tillsyn över auktoriserade och godkända revisorer. Tänk på att revisorns ' +
+        'Auktoriserade och godkända revisorer kallas kvalificerade revisorer och står under Revisorsinspektionens tillsyn. ' +
+        'Revisor är däremot ingen skyddad titel. Tänk på att revisorns ' +
         'uttalande gäller redovisningen, inte om aktien är värd att köpa. Tänk också på att en rapport under året kan vara ' +
         'ogranskad. H&M skriver att helårsrapporten för 2025 inte har granskats av revisorerna, och Volvo skriver detsamma om sin ' +
         'rapport för fjärde kvartalet 2025.',
@@ -106,7 +108,7 @@ export const K2_07: Lesson = {
     {
       kind: 'p',
       text:
-        'Ett aktiebolag ska skicka in årsredovisningen och revisionsberättelsen till Bolagsverket inom en månad efter att ' +
+        'Enligt årsredovisningslagen (kontrollerad 2026-11-20) ska ett aktiebolag skicka in årsredovisningen och revisionsberättelsen till Bolagsverket inom en månad efter att ' +
         'stämman har fastställt resultaträkningen och balansräkningen. H&M har till exempel också lagt ut sin på sidan för ' +
         'investerare.',
     },
@@ -138,28 +140,29 @@ export const K2_07: Lesson = {
     { word: 'Not', meaning: 'En förklaring i årsredovisningen till en post i räkningarna, med detaljer och redovisningsprinciper.' },
     { word: 'Redovisningsprinciper', meaning: 'De regler och metoder bolaget följer när det räknar fram siffrorna.' },
     { word: 'Koncernredovisning', meaning: 'Redovisningen för en hel koncern, alltså moderbolaget och dess dotterbolag tillsammans.' },
-    { word: 'Moderbolag', meaning: 'Bolaget som äger och styr dotterbolagen i en koncern.' },
     { word: 'Bolagsstyrningsrapport', meaning: 'Rapporten om hur ett noterat bolag styrs, till exempel styrelsens arbete och intern kontroll.' },
     { word: 'Hållbarhetsrapport', meaning: 'Avsnittet om bland annat miljö, personal, mänskliga rättigheter och korruption.' },
     { word: 'Revisor', meaning: 'Den som granskar bolagets redovisning och förvaltning och lämnar en revisionsberättelse.' },
     { word: 'Revisionsberättelse', meaning: 'Revisorns rapport till bolagsstämman efter granskningen av räkenskapsåret.' },
     { word: 'Rättvisande bild', meaning: 'Att räkningarna och noterna tillsammans ger en riktig bild av bolagets ställning och resultat.' },
     { word: 'Ansvarsfrihet', meaning: 'Ett beslut på bolagsstämman om styrelsens och vd:s ansvar mot bolaget för årets förvaltning. Revisorn uttalar sig om den bör beviljas.' },
+    { word: 'Fastställa', meaning: 'Bolagsstämmans beslut att slutligt godkänna resultaträkningen och balansräkningen.' },
+    { word: 'Kvalificerad revisor', meaning: 'En auktoriserad eller godkänd revisor. De står under Revisorsinspektionens tillsyn.' },
     { word: 'Revisorsinspektionen', meaning: 'Myndigheten som har tillsyn över auktoriserade och godkända revisorer.' },
     { word: 'Bolagsverket', meaning: 'Myndigheten som aktiebolag skickar in sina årsredovisningar till.' },
   ],
-  sources: [ARL, ABL, RI_TILLSYN, HM_AR25, HM_FY25, VOLVO_Q4],
+  sources: [ARL, ABL, RI_REVISOR, RI_TILLSYN, HM_AR25, HM_FY25, VOLVO_Q4],
   questions: [
     {
       id: 'k2-07-q1',
       text: 'Du vill veta hur ett bolag räknar fram värdet på sitt varulager. Var i årsredovisningen letar du först?',
       options: [
         'I vd:ns ord i början av årsredovisningen.',
-        'I noterna, där redovisningsprinciperna och posternas detaljer står.',
-        'I bolagsstyrningsrapporten.',
         'I revisionsberättelsen.',
+        'I bolagsstyrningsrapporten.',
+        'I noterna, där redovisningsprinciperna och posternas detaljer står.',
       ],
-      correct: 1,
+      correct: 3,
       why:
         'Noterna förklarar räkningarnas poster och vilka redovisningsprinciper bolaget följer. Vd:ns ord och ' +
         'bolagsstyrningsrapporten handlar om annat, och revisorn beskriver sin granskning, inte varje post.',
@@ -169,11 +172,11 @@ export const K2_07: Lesson = {
       text: 'Vad betyder det när revisorn skriver att årsredovisningen ger en rättvisande bild?',
       options: [
         'Att aktien är rimligt värderad och värd att köpa.',
-        'Att bolaget kommer att gå med vinst nästa år.',
-        'Att revisorn har kontrollerat varje enskild affär under året.',
         'Att redovisningen enligt revisorns granskning ger en riktig bild av resultat och ställning.',
+        'Att revisorn har kontrollerat varje enskild affär under året.',
+        'Att bolaget kommer att gå med vinst nästa år.',
       ],
-      correct: 3,
+      correct: 1,
       why:
         'Revisorns uttalande gäller redovisningen, inte aktiens värde eller framtiden. Enligt aktiebolagslagen uttalar sig ' +
         'revisorn om årsredovisningen ger en rättvisande bild av bolagets resultat och ställning.',

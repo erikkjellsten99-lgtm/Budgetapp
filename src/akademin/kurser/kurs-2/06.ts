@@ -21,7 +21,7 @@ export const K2_06: Lesson = {
       kind: 'p',
       text:
         'Nettoskulden är i grunden de räntebärande skulderna minus de likvida medlen. Atlas Copco räknar lån plus pensionsskulder ' +
-        'minus likvida medel och andra kortfristiga finansiella tillgångar, med en justering för vissa räntederivat. Den 30 ' +
+        'minus likvida medel och andra kortfristiga finansiella tillgångar, med en mindre justering. Den 30 ' +
         'september 2026 var nettoskulden 14 244 miljoner kronor, varav 1 590 miljoner var pensionsskulder.',
     },
     {
@@ -36,8 +36,8 @@ export const K2_06: Lesson = {
     {
       kind: 'p',
       text:
-        'Soliditet visar hur stor del av tillgångarna som är finansierade med eget kapital. Statistiska centralbyrån definierar ' +
-        'den som justerat eget kapital delat med totala tillgångar. Atlas Copco kallar sitt mått andel eget kapital och räknar ' +
+        'Soliditet visar hur stor del av tillgångarna som är finansierade med eget kapital. Statistiska centralbyrån ' +
+        '(kontrollerat 2026-11-20) räknar den som eget kapital, med en viss justering, delat med totala tillgångar. Atlas Copco kallar sitt mått andel eget kapital och räknar ' +
         'eget kapital i procent av totala tillgångar: 51 procent den 30 september 2026. H&M:s motsvarande mått var 25,2 procent ' +
         'den 30 november 2025.',
     },
@@ -53,8 +53,9 @@ export const K2_06: Lesson = {
       kind: 'p',
       text:
         'EBITDA är rörelseresultatet före av- och nedskrivningar. Nettoskulden delad med EBITDA visar ungefär hur många års ' +
-        'sådant resultat skulden motsvarar. Atlas Copco angav 0,3 för tredje kvartalet 2026. H&M angav 1,4 i årsredovisningen ' +
-        'för 2025, räknat med leasingskulderna, och har som mål att ligga mellan 1,0 och 2,0.',
+        'sådant resultat skulden motsvarar. Atlas Copco angav 0,3 för tredje kvartalet 2026. För H&M blir nettoskulden med ' +
+        'leasingskulderna, 57 028 miljoner kronor, delat med EBITDA på 39 535 miljoner ungefär 1,4 för 2025. Bolaget anger själv ' +
+        '1,4 på ett ställe och 1,5 på andra, och har som mål att ligga mellan 1,0 och 2,0.',
     },
     {
       kind: 'p',
@@ -88,7 +89,7 @@ export const K2_06: Lesson = {
     {
       kind: 'p',
       text:
-        'Årsredovisningslagen kräver att bolaget för varje skuldpost anger hur mycket som ska betalas inom ett år och hur mycket ' +
+        'Årsredovisningslagen (kontrollerad 2026-11-20) kräver att bolaget för varje skuldpost anger hur mycket som ska betalas inom ett år och hur mycket ' +
         'senare. Atlas Copco och H&M anger också den genomsnittliga löptiden: 4,2 år för Atlas Copcos räntebärande skulder den 30 ' +
         'september 2026 och 5,2 år för H&M:s den 30 november 2025. Ett lån som förfaller måste betalas eller ersättas med ett ' +
         'nytt, och det nya lånet kan få en annan ränta. H&M gav till exempel under fjärde kvartalet 2025 ut ett obligationslån på ' +
@@ -132,6 +133,7 @@ export const K2_06: Lesson = {
     { word: 'Hävstång', meaning: 'Att lånade pengar gör ägarnas resultat större både i goda och dåliga år.' },
     { word: 'Löptid', meaning: 'Tiden tills ett lån ska betalas tillbaka.' },
     { word: 'Pensionsskuld', meaning: 'Bolagets skuld för pensioner som anställda har tjänat in.' },
+    { word: 'Likviditetsbuffert', meaning: 'Likvida medel plus outnyttjade krediter, som H&M räknar den.' },
     { word: 'Outnyttjad kredit', meaning: 'En kredit som banken har lovat men som bolaget inte har använt.' },
   ],
   sources: [ATLAS_Q3, ATLAS_DEF, HM_FY25, HM_AR25, VOLVO_Q4, SCB_SOLIDITET, ARL],

@@ -22,8 +22,9 @@ export const K2_04: Lesson = {
       text:
         'Bolaget säljer varor för 1 000 kronor på faktura. Varorna kostade 600 kronor och låg i lagret. I resultaträkningen syns ' +
         'en nettoomsättning på 1 000 och en kostnad för sålda varor på 600, alltså ett bruttoresultat på 400. I balansräkningen ' +
-        'minskar varulagret med 600 och kundfordringarna ökar med 1 000. I kassaflödesanalysen händer ingenting ännu, eftersom ' +
-        'inga pengar har kommit in.',
+        'minskar varulagret med 600 och kundfordringarna ökar med 1 000. I kassaflödesanalysen blir nettot noll, eftersom inga ' +
+        'pengar har kommit in: resultatet från försäljningen tas med, men ökningen av kundfordringarna och rörelsekapitalet dras av ' +
+        'lika mycket.',
     },
     {
       kind: 'p',
@@ -56,14 +57,14 @@ export const K2_04: Lesson = {
       text:
         'Bolaget delar ut 300 kronor till ägarna. I kassaflödesanalysen syns minus 300 i finansieringsverksamheten. I ' +
         'balansräkningen minskar pengarna och det egna kapitalet med 300 vardera. I resultaträkningen syns ingenting. Utdelningen ' +
-        'är ingen kostnad för att driva verksamheten. Aktiebolagslagen räknar vinstutdelning som en värdeöverföring från bolaget ' +
+        'är ingen kostnad för att driva verksamheten. Aktiebolagslagen (kontrollerad 2026-11-20) räknar vinstutdelning som en värdeöverföring från bolaget ' +
         'till ägarna.',
     },
     { kind: 'h', text: 'Länkarna mellan räkningarna' },
     {
       kind: 'list',
       items: [
-        'Periodens resultat från resultaträkningen hamnar i det egna kapitalet. Årets resultat är en egen post där i lagens uppställning.',
+        'Periodens resultat från resultaträkningen hamnar i det egna kapitalet. Årets resultat är en egen post där i årsredovisningslagens uppställning (kontrollerad 2026-11-20).',
         'De likvida medlen vid periodens slut i kassaflödesanalysen är samma belopp som i balansräkningen.',
         'Förändringarna i lager, kundfordringar och leverantörsskulder i balansräkningen förklarar en stor del av skillnaden mellan resultat och kassaflöde.',
         'Avskrivningarna minskar både resultatet och tillgångarnas värde, men inte pengarna.',
@@ -95,7 +96,7 @@ export const K2_04: Lesson = {
       kind: 'p',
       text:
         'Över årets första nio månader band Atlas Copco 2 984 miljoner kronor i rörelsekapital, medan samma period 2025 frigjorde ' +
-        '969 miljoner. Kassaflödet från den löpande verksamheten blev därför 23 754 miljoner, något lägre än året före då det var ' +
+        '969 miljoner. Kassaflödet från den löpande verksamheten blev främst därför 23 754 miljoner, något lägre än året före då det var ' +
         '24 173 miljoner, trots att rörelseresultatet ökade från 25 644 till 27 460 miljoner.',
     },
     {
@@ -151,12 +152,12 @@ export const K2_04: Lesson = {
       text:
         'Ett bolag köper en maskin för 5 000 kronor kontant. Den ska användas i fem år och skrivs av med lika mycket varje år. Hur påverkas resultaträkningen det första året?',
       options: [
-        'En avskrivning på 1 000 kronor.',
+        'En intäkt på 5 000 kronor.',
         'En kostnad på 5 000 kronor.',
         'Ingenting, eftersom maskinen är en tillgång.',
-        'En intäkt på 5 000 kronor.',
+        'En avskrivning på 1 000 kronor.',
       ],
-      correct: 0,
+      correct: 3,
       why:
         'Utgiften fördelas över fem år: 5 000 delat med 5 är 1 000 kronor per år. Hela betalningen på 5 000 syns i stället i ' +
         'investeringsverksamheten i kassaflödesanalysen.',
@@ -165,12 +166,12 @@ export const K2_04: Lesson = {
       id: 'k2-04-q3',
       text: 'Ett bolag betalar ut 300 kronor i utdelning. Vad händer i räkningarna?',
       options: [
-        'Resultaträkningen får en kostnad på 300 kronor.',
         'Pengarna och det egna kapitalet minskar med 300 kronor vardera, och kassaflödet från finansieringen blir minus 300.',
+        'Resultaträkningen får en kostnad på 300 kronor.',
         'Skulderna ökar med 300 kronor, och pengarna är oförändrade.',
         'Den löpande verksamheten i kassaflödesanalysen minskar med 300 kronor.',
       ],
-      correct: 1,
+      correct: 0,
       why:
         'Utdelning är ingen rörelsekostnad utan pengar till ägarna. Den minskar pengarna och det egna kapitalet i ' +
         'balansräkningen och syns i finansieringsverksamheten.',
@@ -179,8 +180,8 @@ export const K2_04: Lesson = {
       id: 'k2-04-q4',
       text:
         'Ett bolag har kundfordringar på 200 miljoner kronor, varulager på 500 miljoner och leverantörsskulder på 300 miljoner. Hur stort är rörelsekapitalet med H&M:s definition?',
-      options: ['1 000 miljoner kronor', '700 miljoner kronor', 'Minus 600 miljoner kronor', '400 miljoner kronor'],
-      correct: 3,
+      options: ['1 000 miljoner kronor', '400 miljoner kronor', 'Minus 600 miljoner kronor', '700 miljoner kronor'],
+      correct: 1,
       why:
         'Kundfordringar plus varulager minus leverantörsskulder: 200 plus 500 minus 300 är 400 miljoner kronor. ' +
         'Leverantörsskulderna dras av, eftersom de är pengar bolaget ännu inte har betalat.',

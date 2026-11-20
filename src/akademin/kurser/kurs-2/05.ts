@@ -83,8 +83,7 @@ export const K2_05: Lesson = {
       kind: 'p',
       text:
         'Inom Atlas Copco skiljer sig också avkastningen på sysselsatt kapital mellan affärsområdena. För de tolv månaderna fram ' +
-        'till och med tredje kvartalet 2026 var den 72 procent i Kompressorteknik men 13 procent i Energiteknik. Atlas Copco ' +
-        'jämför själv sin avkastning med en sammanvägd genomsnittlig kapitalkostnad på 8,0 procent.',
+        'till och med tredje kvartalet 2026 var den 72 procent i Kompressorteknik men 13 procent i Energiteknik.',
     },
     {
       kind: 'p',
@@ -96,7 +95,7 @@ export const K2_05: Lesson = {
     {
       kind: 'list',
       items: [
-        'Jämför ett bolag med sig självt över tid. Lagen kräver att årsredovisningen visar föregående års belopp bredvid årets.',
+        'Jämför ett bolag med sig självt över tid. Årsredovisningslagen (kontrollerad 2026-11-20) kräver att årsredovisningen visar föregående års belopp bredvid årets.',
         'Jämför med bolag som gör liknande saker, och med samma längd på perioden.',
         'Kontrollera att måtten är räknade på samma sätt. Läs bolagets definition.',
         'Fråga varför en marginal ändras: pris, kostnader, försäljningens sammansättning eller valutor.',
@@ -131,7 +130,6 @@ export const K2_05: Lesson = {
     { word: 'Avkastning på eget kapital', meaning: 'Resultatet i procent av det genomsnittliga egna kapitalet.' },
     { word: 'Sysselsatt kapital', meaning: 'Det kapital som ägare och långivare har satt in. Bolagen räknar det på olika sätt.' },
     { word: 'Avkastning på sysselsatt kapital', meaning: 'Resultatet med räntekostnaderna tillagda, i procent av det sysselsatta kapitalet. Bolagen räknar det olika.' },
-    { word: 'Sammanvägd genomsnittlig kapitalkostnad', meaning: 'Ett sammanvägt genomsnitt av vad lån och eget kapital antas kosta. Atlas Copco använder den som jämförelse för avkastningen.' },
     { word: 'Räntebärande skuld', meaning: 'En skuld som bolaget betalar ränta på, till exempel banklån och obligationslån.' },
     { word: 'Lönsamhet', meaning: 'Hur mycket resultat verksamheten ger i förhållande till försäljningen eller till kapitalet.' },
   ],
@@ -166,8 +164,8 @@ export const K2_05: Lesson = {
       id: 'k2-05-q3',
       text:
         'Ett bolag har ett resultat på 60 miljoner kronor och ett genomsnittligt eget kapital på 400 miljoner. Vad är avkastningen på eget kapital?',
-      options: ['15 procent', '6,7 procent', '40 procent', '24 procent'],
-      correct: 0,
+      options: ['40 procent', '6,7 procent', '15 procent', '24 procent'],
+      correct: 2,
       why:
         'Avkastning på eget kapital är resultatet i procent av det genomsnittliga egna kapitalet: 60 delat med 400 är 0,15, ' +
         'alltså 15 procent. Det är samma sätt som H&M räknar sin avkastning på eget kapital.',
@@ -176,12 +174,12 @@ export const K2_05: Lesson = {
       id: 'k2-05-q4',
       text: 'Vilken jämförelse säger mest om hur ett bolags lönsamhet har utvecklats?',
       options: [
-        'Bolagets bruttomarginal jämförd med ett bolag i en helt annan bransch.',
-        'Ett kvartals rörelsemarginal jämförd med ett annat bolags helårsmarginal.',
         'Samma bolags rörelsemarginal, räknad på samma sätt, flera år i rad.',
+        'Ett kvartals rörelsemarginal jämförd med ett annat bolags helårsmarginal.',
+        'Bolagets bruttomarginal jämförd med ett bolag i en helt annan bransch.',
         'Bolagets marginal jämförd med hur mycket aktiekursen har stigit.',
       ],
-      correct: 2,
+      correct: 0,
       why:
         'När bolaget, definitionen och periodens längd är desamma är det verksamheten som har ändrats. Andra branscher har ' +
         'andra kostnader, och olika perioder går inte att jämföra rakt av.',
