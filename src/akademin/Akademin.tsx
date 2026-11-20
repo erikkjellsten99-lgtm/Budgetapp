@@ -166,8 +166,14 @@ export function StartPage({
   );
 }
 
-/** Repetitionens quiz: varje fråga sparas med recordReview vid första svaret, och onDone anropas när alla är rätt. */
-export function reviewQuiz(ids: string[], today: string, record: (id: string, right: boolean, today: string) => Promise<void>, onSaveFailed: () => void, onDone: () => void) {
+/** Repetitionens quiz: varje fråga sparas med `record` vid första svaret, och onDone anropas när alla är rätt. */
+export function reviewQuiz(
+  ids: string[],
+  today: string,
+  onSaveFailed: () => void,
+  onDone: () => void,
+  record: (id: string, right: boolean, today: string) => Promise<void> = recordReview,
+) {
   return createQuiz(ids, onDone, (id, right) => void record(id, right, today).catch(onSaveFailed));
 }
 
@@ -183,20 +189,17 @@ export function ReviewFinished({ saveFailed, onClose }: { saveFailed: boolean; o
   );
 }
 
-/** Repetitionen: dagens förfallna frågor i samma quiz som lektionerna. */
-export function Review({ ids, today, onClose }: { ids: string[]; today: string; onClose: () => void }) {
+/** Repetitionen: dagens förfallna frågor i samma quiz som lektionerna. `record` sparar varje första svar. */
+export function Review({ ids, today, onClose, record }: { ids: string[]; today: string; onClose: () => void; record?: (id: string, right: boolean, today: string) => Promise<void> }) {
   const [finished, setFinished] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [quiz] = useState(() => reviewQuiz(ids, today, () => setSaveFailed(true), () => setFinished(true), record));
   const questions = ids.flatMap((id) => questionById(id)?.question ?? []);
   if (finished) return <ReviewFinished saveFailed={saveFailed} onClose={onClose} />;
   return (
     <div>
       <h3 className="akademin-lesson-title">Repetition</h3>
-      <Quiz
-        questions={questions}
-        onFirstAnswer={(id, right) => void recordReview(id, right, today).catch(() => setSaveFailed(true))}
-        onDone={() => setFinished(true)}
-      />
+      <Quiz questions={questions} quiz={quiz} />
     </div>
   );
 }

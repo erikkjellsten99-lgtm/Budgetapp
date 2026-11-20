@@ -101,26 +101,10 @@ export function QuizView({
   );
 }
 
-export default function Quiz({
-  questions,
-  onDone,
-  onFirstAnswer,
-}: {
-  questions: Question[];
-  onDone: (firstTry: Record<string, boolean>) => void;
-  onFirstAnswer?: (questionId: string, right: boolean) => void;
-}) {
-  const latest = useRef({ onDone, onFirstAnswer });
-  useEffect(() => {
-    latest.current = { onDone, onFirstAnswer };
-  });
-  const quiz = useRef<ReturnType<typeof createQuiz> | null>(null);
-  quiz.current ??= createQuiz(
-    questions.map((q) => q.id),
-    (firstTry) => latest.current.onDone(firstTry),
-    (id, right) => latest.current.onFirstAnswer?.(id, right),
-  );
-  const q = quiz.current;
-  const state = useSyncExternalStore(q.subscribe, q.state, q.state);
-  return <QuizView questions={questions} state={state} onAnswer={q.answer} onContinue={q.next} />;
+export type QuizController = ReturnType<typeof createQuiz>;
+
+/** Visar ett quiz som skapats med `createQuiz`. Den som äger quizet bestämmer vad som händer vid svar och när det är klart. */
+export default function Quiz({ questions, quiz }: { questions: Question[]; quiz: QuizController }) {
+  const state = useSyncExternalStore(quiz.subscribe, quiz.state, quiz.state);
+  return <QuizView questions={questions} state={state} onAnswer={quiz.answer} onContinue={quiz.next} />;
 }

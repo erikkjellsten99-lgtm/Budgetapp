@@ -1,7 +1,7 @@
 // Akademin: en lektion. Först texten, sedan frågorna, och när alla är rätt sparas lektionen som klar.
 import { useEffect, useState } from 'react';
 import { completeLesson } from './akademinStore';
-import Quiz from './Quiz';
+import Quiz, { createQuiz } from './Quiz';
 import type { Block, Lesson } from './types';
 
 function Blocks({ blocks }: { blocks: Block[] }) {
@@ -54,10 +54,15 @@ export function LessonView({ lesson, today, onClose }: { lesson: Lesson; today: 
     if (typeof window !== 'undefined') window.scrollTo(0, 0);
   }, [phase]);
 
-  function finished(firstTry: Record<string, boolean>) {
-    completeLesson(lesson.id, firstTry, today).catch(() => setSaveFailed(true));
-    setPhase('done');
-  }
+  const [quiz] = useState(() =>
+    createQuiz(
+      lesson.questions.map((q) => q.id),
+      (firstTry) => {
+        completeLesson(lesson.id, firstTry, today).catch(() => setSaveFailed(true));
+        setPhase('done');
+      },
+    ),
+  );
 
   return (
     <article className="akademin-lesson">
@@ -123,7 +128,7 @@ export function LessonView({ lesson, today, onClose }: { lesson: Lesson; today: 
         </>
       )}
 
-      {phase === 'quiz' && <Quiz questions={lesson.questions} onDone={finished} />}
+      {phase === 'quiz' && <Quiz questions={lesson.questions} quiz={quiz} />}
 
       {phase === 'done' && <LessonDone lesson={lesson} saveFailed={saveFailed} onClose={onClose} />}
     </article>

@@ -240,7 +240,7 @@ describe('repetitionen', () => {
   it('varje fråga sparas vid första svaret, och ett fel svar sparas som fel en gång', async () => {
     const record = vi.fn(wait);
     const onDone = vi.fn();
-    const quiz = reviewQuiz(q, TODAY, record, noop, onDone);
+    const quiz = reviewQuiz(q, TODAY, noop, onDone, record);
     quiz.answer(q[0], false);
     quiz.next();
     quiz.answer(q[1], true);
@@ -254,7 +254,7 @@ describe('repetitionen', () => {
 
   it('ett misslyckat sparande meddelas, och klart-läget säger det', async () => {
     const failed = vi.fn();
-    const quiz = reviewQuiz([q[0]], TODAY, () => Promise.reject(new Error('x')), failed, noop);
+    const quiz = reviewQuiz([q[0]], TODAY, failed, noop, () => Promise.reject(new Error('x')));
     quiz.answer(q[0], true);
     await wait();
     await wait();
