@@ -50,6 +50,19 @@ export function QuizView({
   onContinue: () => void;
 }) {
   const current = questions.find((q) => q.id === state.queue[0]);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const cont = useRef<HTMLButtonElement>(null);
+  const mounted = useRef(false);
+  const currentId = current?.id;
+  const showingWhy = state.showingWhy !== null;
+  // Förklaringen scrollas fram och får fokus; nästa fråga flyttar fokus till frågan (inte vid första visningen).
+  useEffect(() => {
+    if (showingWhy) {
+      cont.current?.scrollIntoView?.({ block: 'nearest' });
+      cont.current?.focus({ preventScroll: true });
+    } else if (mounted.current) heading.current?.focus();
+    mounted.current = true;
+  }, [currentId, showingWhy]);
   if (!current) return null;
   const total = questions.length;
   const number = Math.min(total, total - state.queue.length + 1);
@@ -61,7 +74,7 @@ export function QuizView({
         Fråga {number} av {total}
         {again && ' · en gång till'}
       </p>
-      <h3 id="akademin-q">{current.text}</h3>
+      <h3 id="akademin-q" ref={heading} tabIndex={-1}>{current.text}</h3>
       <div className="akademin-options">
         {current.options.map((option, i) => (
           <button
@@ -79,7 +92,7 @@ export function QuizView({
         <div className="akademin-why" role="status">
           <p className="akademin-why-title">Inte riktigt. Rätt svar är markerat.</p>
           <p>{current.why}</p>
-          <button type="button" className="primary" onClick={onContinue}>
+          <button type="button" className="primary" ref={cont} onClick={onContinue}>
             Fortsätt
           </button>
         </div>
@@ -108,6 +121,6 @@ export default function Quiz({
     (id, right) => latest.current.onFirstAnswer?.(id, right),
   );
   const q = quiz.current;
-  const state = useSyncExternalStore(q.subscribe, q.state);
+  const state = useSyncExternalStore(q.subscribe, q.state, q.state);
   return <QuizView questions={questions} state={state} onAnswer={q.answer} onContinue={q.next} />;
 }

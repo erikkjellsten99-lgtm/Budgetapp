@@ -24,6 +24,25 @@ function Blocks({ blocks }: { blocks: Block[] }) {
   );
 }
 
+/** Efter quizet: uppgiften (om lektionen har en) och Klar. Om sparningen misslyckades sägs det i rubriken. */
+export function LessonDone({ lesson, saveFailed, onClose }: { lesson: Lesson; saveFailed: boolean; onClose: () => void }) {
+  return (
+    <section className="akademin-finish" role="status">
+      <p className={saveFailed ? 'akademin-finish-title akademin-error' : 'akademin-finish-title'}>{saveFailed ? 'Lektionen sparades inte.' : 'Lektionen är klar.'}</p>
+      {saveFailed && <p className="akademin-error">Det gick inte att spara dina svar. Öppna lektionen igen och svara på frågorna.</p>}
+      {lesson.lab && (
+        <div className="akademin-lab">
+          <p className="akademin-example-label">Uppgift</p>
+          <p>{lesson.lab}</p>
+        </div>
+      )}
+      <button type="button" className="primary akademin-wide" onClick={onClose}>
+        Klar
+      </button>
+    </section>
+  );
+}
+
 type Phase = 'read' | 'quiz' | 'done';
 
 export function LessonView({ lesson, today, onClose }: { lesson: Lesson; today: string; onClose: () => void }) {
@@ -106,21 +125,7 @@ export function LessonView({ lesson, today, onClose }: { lesson: Lesson; today: 
 
       {phase === 'quiz' && <Quiz questions={lesson.questions} onDone={finished} />}
 
-      {phase === 'done' && (
-        <section className="akademin-finish" role="status">
-          <p className="akademin-finish-title">Lektionen är klar.</p>
-          {saveFailed && <p className="akademin-error">Det gick inte att spara att lektionen är klar. Öppna den igen och svara på frågorna.</p>}
-          {lesson.lab && (
-            <div className="akademin-lab">
-              <p className="akademin-example-label">Uppgift</p>
-              <p>{lesson.lab}</p>
-            </div>
-          )}
-          <button type="button" className="primary akademin-wide" onClick={onClose}>
-            Klar
-          </button>
-        </section>
-      )}
+      {phase === 'done' && <LessonDone lesson={lesson} saveFailed={saveFailed} onClose={onClose} />}
     </article>
   );
 }

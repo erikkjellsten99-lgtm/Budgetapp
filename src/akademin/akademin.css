@@ -11,6 +11,19 @@
   margin: 0;
 }
 
+/* Rubrikerna i appen har egen marginal och padding (styles.css); här ligger de i linje med texten. */
+.akademin h3 {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  color: var(--ink);
+  font-size: 1.0625rem;
+}
+
+.akademin h3:focus {
+  outline: none;
+}
+
 .akademin-meta {
   color: var(--muted);
   font-size: 0.9375rem;
@@ -33,7 +46,7 @@
   padding: 1rem;
 }
 
-.akademin-today h3 {
+.akademin .akademin-today h3 {
   color: var(--muted);
   font-size: 0.9375rem;
   font-weight: 600;
@@ -94,7 +107,8 @@
 .akademin-rows > .akademin-row + .akademin-row,
 .akademin-course + .akademin-course,
 .akademin-lessons li + li,
-.group > .akademin-soon {
+.akademin-course ~ .akademin-soon,
+.akademin-rows > .akademin-soon + .akademin-soon {
   border-top: 1px solid var(--line);
 }
 

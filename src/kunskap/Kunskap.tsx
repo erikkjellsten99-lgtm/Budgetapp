@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import Lar from '../lar/Lar';
+import { lazyWithReload } from '../lazyWithReload';
 import { PEOPLE } from '../lar/people';
 import { EXAMPLE_CARDS, SUGGESTED, TYPE_LABEL, type KunskapCard } from './cards';
 import { discover, GENRES, libraryGroups, libraryPlace } from './discover';
@@ -880,16 +881,28 @@ export function MoreCards({
 const libraryId = (name: string) => PEOPLE.find((p) => personKey(p.name) === personKey(name))?.id;
 
 // Akademin är en egen kodbit som hämtas första gången läget öppnas.
-const Akademin = lazy(() => import('../akademin/Akademin'));
+const Akademin = lazy(lazyWithReload(() => import('../akademin/Akademin'), 'akademin', AkademinUnavailable));
 
-type Mode = 'flode' | 'bibliotek' | 'upptack' | 'akademin';
-const MODES: { id: Mode; label: string }[] = [
+/** Visas när Akademin-filen inte gick att hämta (ny version publicerad, eller ingen uppkoppling). */
+export function AkademinUnavailable() {
+  return (
+    <div className="empty" role="alert">
+      <p>Akademin kunde inte laddas. Kontrollera nätet och försök igen.</p>
+      <button type="button" onClick={() => location.reload()}>
+        Försök igen
+      </button>
+    </div>
+  );
+}
+
+export type Mode = 'flode' | 'bibliotek' | 'upptack' | 'akademin';
+export const MODES: { id: Mode; label: string }[] = [
   { id: 'flode', label: 'Flöde' },
   { id: 'bibliotek', label: 'Bibliotek' },
   { id: 'upptack', label: 'Upptäck' },
   { id: 'akademin', label: 'Akademin' },
 ];
-const EYEBROW: Record<Mode, string> = { flode: 'Flöde', bibliotek: 'Bibliotek', upptack: 'Upptäck', akademin: 'Akademin' };
+export const EYEBROW: Record<Mode, string> = { flode: 'Flöde', bibliotek: 'Bibliotek', upptack: 'Upptäck', akademin: 'Akademin' };
 
 /**
  * Upptäck: sök på genre och få förslag på personer att följa, med det som passar dig först. Katalogen är fast

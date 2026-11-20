@@ -1,13 +1,13 @@
 // Akademin: kursen i aktier, ett läge i Mindhub. Startsidan, repetitionen och vägen till lektionerna och ordlistan.
 // Läser och sparar bara framsteg och svar (akademinStore). Ingenting här rör ekonomin.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { todayKey } from '../vanor/dates';
 import { doneToday, nextLesson, recordReview, useAkademin, type AkademinData } from './akademinStore';
 import Glossary, { glossaryEntries } from './Glossary';
 import { COURSES, PLANNED, lessonById, questionById } from './kurser';
 import { LessonView } from './LessonView';
 import { dueQuestions } from './logic';
-import Quiz from './Quiz';
+import Quiz, { createQuiz } from './Quiz';
 import type { Answer, Lesson, Progress } from './types';
 import './akademin.css';
 
@@ -166,21 +166,29 @@ export function StartPage({
   );
 }
 
-/** Repetitionen: dagens förfallna frågor i samma quiz som lektionerna. Varje fråga sparas vid första svaret. */
-function Review({ ids, today, onClose }: { ids: string[]; today: string; onClose: () => void }) {
+/** Repetitionens quiz: varje fråga sparas med recordReview vid första svaret, och onDone anropas när alla är rätt. */
+export function reviewQuiz(ids: string[], today: string, record: (id: string, right: boolean, today: string) => Promise<void>, onSaveFailed: () => void, onDone: () => void) {
+  return createQuiz(ids, onDone, (id, right) => void record(id, right, today).catch(onSaveFailed));
+}
+
+export function ReviewFinished({ saveFailed, onClose }: { saveFailed: boolean; onClose: () => void }) {
+  return (
+    <section className="akademin-finish" role="status">
+      <p className="akademin-finish-title">Repetitionen är klar för idag.</p>
+      {saveFailed && <p className="akademin-error">Något svar gick inte att spara.</p>}
+      <button type="button" className="primary akademin-wide" onClick={onClose}>
+        Klar
+      </button>
+    </section>
+  );
+}
+
+/** Repetitionen: dagens förfallna frågor i samma quiz som lektionerna. */
+export function Review({ ids, today, onClose }: { ids: string[]; today: string; onClose: () => void }) {
   const [finished, setFinished] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const questions = ids.flatMap((id) => questionById(id)?.question ?? []);
-  if (finished)
-    return (
-      <section className="akademin-finish" role="status">
-        <p className="akademin-finish-title">Repetitionen är klar för idag.</p>
-        {saveFailed && <p className="akademin-error">Något svar gick inte att spara.</p>}
-        <button type="button" className="primary akademin-wide" onClick={onClose}>
-          Klar
-        </button>
-      </section>
-    );
+  if (finished) return <ReviewFinished saveFailed={saveFailed} onClose={onClose} />;
   return (
     <div>
       <h3 className="akademin-lesson-title">Repetition</h3>
@@ -197,11 +205,20 @@ type View = { kind: 'start' } | { kind: 'lesson'; id: string } | { kind: 'review
 
 export default function Akademin() {
   const { data, failed } = useAkademin();
+  return <AkademinBody data={data} failed={failed} />;
+}
+
+/** Laddar, fel eller innehåll. Felet visas bara när det inte finns något att visa, så att ett misslyckat omläsande inte tar bort en pågående lektion. */
+export function AkademinBody({ data, failed }: { data: AkademinData | null; failed: boolean }) {
   const [view, setView] = useState<View>({ kind: 'start' });
   const today = todayKey();
   const back = () => setView({ kind: 'start' });
+  // Varje ny vy börjar överst.
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.scrollTo(0, 0);
+  }, [view]);
 
-  if (failed)
+  if (failed && !data)
     return (
       <div className="akademin">
         <div className="empty" role="alert">
@@ -211,7 +228,7 @@ export default function Akademin() {
     );
   if (!data)
     return (
-      <div className="akademin" aria-busy="true" aria-label="Laddar">
+      <div className="akademin" role="status" aria-busy="true" aria-label="Laddar Akademin">
         <div className="card kunskap-skeleton" />
         <div className="card kunskap-skeleton" />
       </div>
