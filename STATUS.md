@@ -239,8 +239,8 @@
 - Synken är prövad i test (`src/vanor/sync.test.ts`): två lokala databaser och en låtsasserver, också en telefon på
   den gamla koden som uppgraderas till version 7.
 - Kontrollerat i webbläsare på 375 px och 320 px, ljust och mörkt: startsidan, en lektion, quiz med fel svar och
-  dubbeltryck, klart-läget och omladdning.
-- Inte prövat: skrivbordsbredd (900 px och mer), två riktiga telefoner, en riktig iPhone, offline-läsning efter
+  dubbeltryck, klart-läget, omladdning och dagsgränsen för repetition. Startsidan även på 1200 px.
+- Inte prövat: lektion och quiz på skrivbordsbredd, två riktiga telefoner, en riktig iPhone, offline-läsning efter
   uppdatering.
 - Regler för innehållet: `src/akademin/CLAUDE.md`. Ingen köp- eller säljsignal, inget anrop till Claude, inget skrivs i
   ekonomidatan.
