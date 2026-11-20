@@ -130,7 +130,7 @@ export const K1_07: Lesson = {
   example: {
     title: 'Atlas Copco, tredje kvartalet 2026',
     text:
-      'Atlas Copco har fyra affärsområden (kompressorteknik, vakuumteknik, industriteknik och kraftteknik), som enligt ' +
+      'Atlas Copco har fyra affärsområden (kompressorteknik, vakuumteknik, industriteknik och energiteknik), som enligt ' +
       'rapporten erbjuder lösningar för tryckluft och vakuum, energi, länspumpar och industripumpar, samt industriverktyg, ' +
       'montering och maskinseende. Helåret 2025 omsatte koncernen 168 miljarder kronor ' +
       'och hade ungefär 56 000 anställda vid årets slut. Under tredje kvartalet 2026 var intäkterna 47 920 miljoner kronor ' +
