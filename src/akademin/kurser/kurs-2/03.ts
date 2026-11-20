@@ -62,7 +62,8 @@ export const K2_03: Lesson = {
       text:
         'Mer än hälften av av- och nedskrivningarna gällde hyrda butiker, lager och kontor. Enligt not 17 i årsredovisningen var ' +
         '12 488 miljoner avskrivningar och 202 miljoner nedskrivningar av nyttjanderättstillgångar. Hyran för lokalerna betalas ' +
-        'samma år, men den syns inte i den löpande verksamheten. Den står i finansieringen som amortering av leasingskulder.',
+        'samma år, men den största delen av den fasta hyran syns inte i den löpande verksamheten. Den står i finansieringen som ' +
+        'amortering av leasingskulder.',
     },
     {
       kind: 'p',
@@ -179,7 +180,7 @@ export const K2_03: Lesson = {
       ],
       correct: 3,
       why:
-        'Av- och nedskrivningarna läggs tillbaka i den löpande verksamheten. Över hälften av dem gäller hyrda lokaler, och hyran ' +
+        'Av- och nedskrivningarna läggs tillbaka i den löpande verksamheten. Över hälften av dem gäller hyrda lokaler, och den största delen av den fasta hyran ' +
         'för dem syns i stället i finansieringen som amortering av leasingskulder, 12 328 miljoner. Nya lån hör till ' +
         'finansieringen, och betald skatt är redan dragen i den löpande verksamheten.',
     },

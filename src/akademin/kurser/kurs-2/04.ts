@@ -23,8 +23,8 @@ export const K2_04: Lesson = {
         'Bolaget säljer varor för 1 000 kronor på faktura. Varorna kostade 600 kronor och låg i lagret. I resultaträkningen syns ' +
         'en nettoomsättning på 1 000 och en kostnad för sålda varor på 600, alltså ett bruttoresultat på 400. I balansräkningen ' +
         'minskar varulagret med 600 och kundfordringarna ökar med 1 000. I kassaflödesanalysen blir nettot noll, eftersom inga ' +
-        'pengar har kommit in: resultatet från försäljningen tas med, men ökningen av kundfordringarna och rörelsekapitalet dras av ' +
-        'lika mycket.',
+        'pengar har kommit in: resultatet på 400 tas med, men kundfordringarna ökade med 1 000 och lagret minskade med 600. ' +
+        'Skillnaden, 400, dras av.',
     },
     {
       kind: 'p',
