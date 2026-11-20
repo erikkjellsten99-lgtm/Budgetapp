@@ -133,11 +133,14 @@ describe('Akademins lagring', () => {
     expect(a['k1-01-q3']).toEqual({ id: 'k1-01-q3', streak: 0, due: '2026-11-23', last: '2026-11-22' });
   });
 
-  it('nextLesson ger k1-01 utan framsteg och null när alla sju är klara', async () => {
+  it('nextLesson ger k1-01 utan framsteg, går från k1-07 till k2-01 och ger null när alla är klara', async () => {
     expect(s.nextLesson([])?.id).toBe('k1-01');
     expect(s.nextLesson([{ id: 'k1-01', doneAt: '2026-11-20' }])?.id).toBe('k1-02');
-    const all: Progress[] = ['01', '02', '03', '04', '05', '06', '07'].map((n) => ({ id: `k1-${n}`, doneAt: '2026-11-20' }));
-    expect(s.nextLesson(all)).toBeNull();
+    const nums = ['01', '02', '03', '04', '05', '06', '07'];
+    const k1: Progress[] = nums.map((n) => ({ id: `k1-${n}`, doneAt: '2026-11-20' }));
+    expect(s.nextLesson(k1)?.id).toBe('k2-01');
+    const k2: Progress[] = nums.map((n) => ({ id: `k2-${n}`, doneAt: '2026-11-20' }));
+    expect(s.nextLesson([...k1, ...k2])).toBeNull();
   });
 
   it('doneToday är sant bara när någon doneAt är dagens datum', () => {

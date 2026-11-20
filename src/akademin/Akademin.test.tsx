@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Kunskap, { AkademinUnavailable, EYEBROW, MODES } from '../kunskap/Kunskap';
-import { AkademinBody, backFrom, Review, ReviewFinished, reviewQuiz, StartPage, todayCard } from './Akademin';
+import { AkademinBody, backFrom, comingNote, Review, ReviewFinished, reviewQuiz, StartPage, todayCard } from './Akademin';
 import type { AkademinData } from './akademinStore';
 import { glossaryEntries } from './Glossary';
 import { createQuiz, QuizView } from './Quiz';
@@ -29,12 +29,30 @@ describe('Akademins startsida', () => {
     expect(html).not.toContain('Repetition');
   });
 
-  it('kurslistan visar Grunderna med 0/7 och kurs 2 till 10 som kommer', () => {
+  it('kurslistan visar Grunderna och Företagets ekonomi med 0/7 och kurs 3 till 10 som kommer', () => {
     const html = start(EMPTY);
     expect(html).toContain('Grunderna');
-    expect(html).toContain('0/7');
-    for (const title of ['Företagets ekonomi', 'Examensarbete']) expect(html).toContain(title);
-    expect((html.match(/kommer/g) ?? []).length).toBeGreaterThanOrEqual(9);
+    expect(html).toContain('Företagets ekonomi');
+    expect((html.match(/>0\/7</g) ?? []).length).toBe(2);
+    for (const title of ['Kvartalsrapporten', 'Examensarbete']) expect(html).toContain(title);
+    expect((html.match(/kommer/g) ?? []).length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('räknaren gäller varje kurs för sig', () => {
+    const k1 = ALL_LESSONS.filter((l) => l.course === 1).map((l) => l.id);
+    const html = start(withData({ progress: done(...k1, 'k2-01') }));
+    expect(html).toContain('>7/7<');
+    expect(html).toContain('>1/7<');
+  });
+
+  it('efter sista lektionen i kurs 1 är nästa lektion den första i kurs 2', () => {
+    const k1 = ALL_LESSONS.filter((l) => l.course === 1).map((l) => l.id);
+    expect(todayCard(done(...k1), [], TODAY)).toMatchObject({ kind: 'next', lesson: { id: 'k2-01' } });
+    const html = start(withData({ progress: done(...k1) }));
+    expect(html).toContain('Kurs 2 · 1 av 7');
+    expect(html).toContain('Resultaträkningen: från omsättning till vinst');
+    const doneToday = [...done(...k1.slice(0, 6)), { id: 'k1-07', doneAt: TODAY }];
+    expect(todayCard(doneToday, [], TODAY)).toMatchObject({ kind: 'done', next: { id: 'k2-01' } });
   });
 
   it('alla lektioner går att öppna från kurslistan, och klara har en bock', () => {
@@ -64,10 +82,18 @@ describe('Akademins startsida', () => {
     expect(start(withData({ answers: [{ id: 'k1-01-q1', streak: 1, due: '2026-12-01', last: TODAY }] }))).not.toContain('Repetition');
   });
 
-  it('alla sju klara och inget att repetera: kortet säger att kurs 2 kommer', () => {
+  it('alla klara och inget att repetera: kortet säger att nästa planerade kurs kommer', () => {
     const all = withData({ progress: done(...ALL_LESSONS.map((l) => l.id)) });
     expect(todayCard(all.progress, all.answers, TODAY)).toEqual({ kind: 'coming' });
-    expect(start(all)).toContain('Kurs 2 kommer');
+    const html = start(all);
+    expect(html).toContain('Alla lektioner är lästa och inget väntar på repetition. Kurs 3 kommer.');
+    expect(html).not.toContain('Kurs 2 kommer');
+  });
+
+  it('meningen om nästa kurs följer listan över planerade kurser och saknas när listan är tom', () => {
+    expect(comingNote()).toBe(' Kurs 3 kommer.');
+    expect(comingNote([{ id: 5 }, { id: 6 }])).toBe(' Kurs 5 kommer.');
+    expect(comingNote([])).toBe('');
   });
 
   it('alla klara men något att repetera: kortet erbjuder repetitionen', () => {

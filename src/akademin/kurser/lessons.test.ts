@@ -13,6 +13,17 @@ const KURS_1 = [
   'Så tittar du på ett bolag första gången',
 ];
 
+// Titlarna ur uppdraget för kurs 2.
+const KURS_2 = [
+  'Resultaträkningen: från omsättning till vinst',
+  'Balansräkningen: vad bolaget äger och är skyldigt',
+  'Kassaflödesanalysen: vart pengarna tog vägen',
+  'Så hänger de tre räkningarna ihop',
+  'Marginaler och lönsamhet',
+  'Skulder och finansiell styrka',
+  'Årsredovisningen: var allt står',
+];
+
 const FORBIDDEN = /["”–—]/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -43,6 +54,12 @@ describe('Akademin: lektionernas form', () => {
     expect(COURSES[0].id).toBe(1);
     expect(COURSES[0].title).toBe('Grunderna');
     expect(COURSES[0].lessons.map(l => l.title)).toEqual(KURS_1);
+  });
+
+  it('kurs 2 har de sju lektionerna i ordning', () => {
+    expect(COURSES[1].id).toBe(2);
+    expect(COURSES[1].title).toBe('Företagets ekonomi');
+    expect(COURSES[1].lessons.map(l => l.title)).toEqual(KURS_2);
   });
 
   it('ALL_LESSONS är alla kursers lektioner i ordning', () => {
@@ -132,16 +149,21 @@ describe('Akademin: lektionernas form', () => {
     }
   });
 
+  it('lektion 7 i kurs 2 har labb som inte pekar på Mina bolag', () => {
+    const lab = lessonById('k2-07')?.lab ?? '';
+    expect(lab.length).toBeGreaterThan(0);
+    expect(lab).not.toContain('Mina bolag');
+  });
+
   it('lektion 7 i kurs 1 har labb', () => {
     expect(lessonById('k1-07')?.lab).toBe(
       'Lägg in ditt första bolag i Mina bolag och skriv tre meningar om hur det tjänar pengar.',
     );
   });
 
-  it('planerade kurser är 2 till 10', () => {
-    expect(PLANNED.map(p => p.id)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  it('planerade kurser är 3 till 10', () => {
+    expect(PLANNED.map(p => p.id)).toEqual([3, 4, 5, 6, 7, 8, 9, 10]);
     expect(PLANNED.map(p => p.title)).toEqual([
-      'Företagets ekonomi',
       'Kvartalsrapporten',
       'Värdering',
       'Affärsanalys',
