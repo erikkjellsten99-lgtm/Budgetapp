@@ -191,3 +191,27 @@ describe('Akademins lagring', () => {
     expect(d.journal).toEqual([entry]);
   });
 });
+
+describe('rapporter', () => {
+  const report = (id: string, companyId: string): Report => ({ id, companyId, year: '2026', type: 'Q3', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '' });
+
+  it('saveReport sparar, skriver över samma id, och removeReport tar bort just den', async () => {
+    const s = await freshStore();
+    await s.saveReport(report('r1', 'c1'));
+    await s.saveReport(report('r2', 'c1'));
+    await s.saveReport({ ...report('r1', 'c1'), revenue: 5 });
+    let reports = (await s.loadAkademin()).reports;
+    expect(reports.map((r: Report) => r.id).sort()).toEqual(['r1', 'r2']);
+    expect(reports.find((r: Report) => r.id === 'r1')?.revenue).toBe(5);
+    await s.removeReport('r1');
+    reports = (await s.loadAkademin()).reports;
+    expect(reports.map((r: Report) => r.id)).toEqual(['r2']);
+  });
+
+  it('newReport ger tomma texter och ny id', async () => {
+    const s = await freshStore();
+    const r = s.newReport('c1');
+    expect(r).toMatchObject({ companyId: 'c1', type: 'Q1', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '' });
+    expect(s.newReport('c1').id).not.toBe(r.id);
+  });
+});

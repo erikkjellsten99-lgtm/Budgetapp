@@ -68,10 +68,12 @@ export function recordReview(questionId: string, right: boolean, today: DateKey)
   });
 }
 
+const newId = () => crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
 /** Ett nytt bolagskort: bevakar, tomma texter. Sparas först när användaren trycker Spara. */
 export function newCompany(name: string): Company {
   return {
-    id: crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+    id: newId(),
     name,
     status: 'bevakar',
     about: '',
@@ -97,6 +99,19 @@ export function removeCompany(id: string): Promise<void> {
       ...reports.filter((r) => r.companyId === id).map((r) => ({ store: 'akademin_reports' as const, id: r.id })),
     ]);
   });
+}
+
+/** En ny, tom rapport för bolaget. Sparas först när användaren trycker Spara. */
+export function newReport(companyId: string): Report {
+  return { id: newId(), companyId, year: '', type: 'Q1', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '' };
+}
+
+export function saveReport(report: Report): Promise<void> {
+  return serial(() => saveAkademinRecord('akademin_reports', report));
+}
+
+export function removeReport(id: string): Promise<void> {
+  return serial(() => deleteAkademinRecords([{ store: 'akademin_reports', id }]));
 }
 
 /** Första olästa lektionen i kursordning, eller null när alla är klara. */

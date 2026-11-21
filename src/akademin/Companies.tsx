@@ -2,10 +2,12 @@
 // akademin_companies (akademinStore). Innehaven i Investeringar läses bara för namn och id, via economyLinks.
 import { useEffect, useRef, useState } from 'react';
 import { useToday } from '../vanor/useToday';
-import { newCompany, removeCompany, saveCompany, type AkademinData } from './akademinStore';
+import { newCompany, newReport, removeCompany, removeReport, saveCompany, saveReport, type AkademinData } from './akademinStore';
 import { loadEconomyLinks, type EconomyLinks } from './economyLinks';
 import { fromDraft, sortCompanies, toDraft, validateDraft, type Draft } from './companyDraft';
-import type { Company, CompanyStatus, DateKey } from './types';
+import { PERIOD_LABEL, sortReports } from './logic';
+import { ReportForm } from './ReportForm';
+import type { Company, CompanyStatus, DateKey, Report } from './types';
 
 export const STATUS_LABEL: Record<CompanyStatus, string> = { bevakar: 'Bevakar', ager: 'Äger', salt: 'Sålt' };
 const STATUSES: CompanyStatus[] = ['bevakar', 'ager', 'salt'];
@@ -103,6 +105,39 @@ export function DeleteConfirm({ name, reportCount, busy, onConfirm, onCancel }: 
   );
 }
 
+const THESIS_TEXT = { ja: 'ja', nej: 'nej', osaker: 'osäker' } as const;
+
+/** Bolagskortets rapportlista: nyast först, med en knapp för en ny rapport. */
+export function ReportList({ reports, onOpen }: { reports: Report[]; onOpen: (id: string | null) => void }) {
+  return (
+    <section className="akademin-reports" aria-labelledby="akademin-reports-title">
+      <h4 id="akademin-reports-title">Rapporter</h4>
+      {reports.length === 0 ? (
+        <p className="akademin-meta">Inga rapporter än. Lägg in en när bolaget har rapporterat.</p>
+      ) : (
+        <ul className="akademin-company-list group">
+          {sortReports(reports).map((r) => (
+            <li key={r.id}>
+              <button type="button" className="akademin-row akademin-company-row" onClick={() => onOpen(r.id)}>
+                <span className="akademin-company-main">
+                  <span className="akademin-company-name">
+                    {PERIOD_LABEL[r.type]} {r.year}
+                  </span>
+                  <span className="akademin-meta">{[r.date, r.thesis && `Håller tesen: ${THESIS_TEXT[r.thesis]}`].filter(Boolean).join(' · ') || 'Inga fler uppgifter'}</span>
+                </span>
+                <Chevron />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" onClick={() => onOpen(null)}>
+        Lägg till rapport
+      </button>
+    </section>
+  );
+}
+
 export interface CompanyFormProps {
   company: Company;
   isNew: boolean;
@@ -110,6 +145,10 @@ export interface CompanyFormProps {
   holdings: { id: string; name: string }[] | null;
   linksFailed?: boolean;
   reportCount: number;
+  /** Bolagets rapporter, för listan på kortet. */
+  reports?: Report[];
+  /** Öppnar en rapport, eller en ny när id är null. */
+  onOpenReport?: (id: string | null) => void;
   onSave: (company: Company) => Promise<void>;
   onRemove: () => Promise<void>;
   onClose: () => void;
@@ -283,6 +322,12 @@ export function CompanyForm(props: CompanyFormProps) {
         )}
       </label>
 
+      {isNew ? (
+        <p className="akademin-meta">Spara bolaget först, sedan går det att lägga in rapporter.</p>
+      ) : (
+        <ReportList reports={props.reports ?? []} onOpen={props.onOpenReport ?? (() => {})} />
+      )}
+
       {failed === 'save' && (
         <p className="error" role="alert">
           Det gick inte att spara. Försök igen.
@@ -315,7 +360,12 @@ export function CompanyForm(props: CompanyFormProps) {
   );
 }
 
-type CompaniesView = { kind: 'list' } | { kind: 'card'; id: string } | { kind: 'new'; company: Company };
+type CompaniesView =
+  | { kind: 'list' }
+  | { kind: 'card'; id: string }
+  | { kind: 'new'; company: Company }
+  /** reportId null: en ny rapport, som då ligger i `fresh`. */
+  | { kind: 'report'; companyId: string; reportId: string | null; fresh?: Report };
 
 /** Bolagsbiblioteket: listan och korten. Innehaven läses en gång när vyn öppnas. */
 export default function Companies({ data }: { data: AkademinData }) {
@@ -345,8 +395,9 @@ export function CompaniesBody({ data, today, holdings, linksFailed, initialView 
   if (view.kind === 'list')
     return <CompanyList companies={data.companies} today={today} onOpen={(id) => setView({ kind: 'card', id })} onAdd={() => setView({ kind: 'new', company: newCompany('') })} />;
 
-  const existing = view.kind === 'card' ? data.companies.find((c) => c.id === view.id) : undefined;
-  if (view.kind === 'card' && !existing)
+  const cardId = view.kind === 'card' ? view.id : view.kind === 'report' ? view.companyId : undefined;
+  const existing = cardId !== undefined ? data.companies.find((c) => c.id === cardId) : undefined;
+  if (cardId !== undefined && !existing)
     return (
       <div className="empty" role="status">
         <p>Bolaget finns inte längre.</p>
@@ -356,23 +407,61 @@ export function CompaniesBody({ data, today, holdings, linksFailed, initialView 
       </div>
     );
   const company = view.kind === 'new' ? view.company : existing!;
+  const toCard = () => setView({ kind: 'card', id: company.id });
+  const reports = data.reports.filter((r) => r.companyId === company.id);
+  const openReport = (id: string | null) => setView({ kind: 'report', companyId: company.id, reportId: id, fresh: id === null ? newReport(company.id) : undefined });
+  const reportOpen = view.kind === 'report';
+  const report = view.kind === 'report' ? (view.reportId === null ? view.fresh : reports.find((r) => r.id === view.reportId)) : undefined;
   return (
-    <CompanyForm
-      key={company.id}
-      company={company}
-      isNew={view.kind === 'new'}
-      holdings={holdings}
-      linksFailed={linksFailed}
-      reportCount={data.reports.filter((r) => r.companyId === company.id).length}
-      onSave={async (c) => {
-        await saveCompany(c);
-        toList();
-      }}
-      onRemove={async () => {
-        await removeCompany(company.id);
-        toList();
-      }}
-      onClose={toList}
-    />
+    <>
+      {/* Kortet ligger kvar (dolt) medan en rapport är öppen, så att ett halvskrivet kort inte försvinner. */}
+      <div hidden={reportOpen}>
+        <CompanyForm
+          key={company.id}
+          company={company}
+          isNew={view.kind === 'new'}
+          holdings={holdings}
+          linksFailed={linksFailed}
+          reportCount={reports.length}
+          reports={reports}
+          onOpenReport={openReport}
+          onSave={async (c) => {
+            await saveCompany(c);
+            toList();
+          }}
+          onRemove={async () => {
+            await removeCompany(company.id);
+            toList();
+          }}
+          onClose={toList}
+        />
+      </div>
+      {view.kind === 'report' &&
+        (report ? (
+          <ReportForm
+            key={report.id}
+            report={report}
+            isNew={view.reportId === null}
+            companyName={company.name}
+            reports={reports}
+            onSave={async (r) => {
+              await saveReport(r);
+              toCard();
+            }}
+            onRemove={async () => {
+              await removeReport(report.id);
+              toCard();
+            }}
+            onClose={toCard}
+          />
+        ) : (
+          <div className="empty" role="status">
+            <p>Rapporten finns inte längre.</p>
+            <button type="button" onClick={toCard}>
+              Till bolagskortet
+            </button>
+          </div>
+        ))}
+    </>
   );
 }

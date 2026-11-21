@@ -562,3 +562,91 @@ button.akademin-row:focus-visible,
 .akademin-confirm-title {
   font-weight: 650;
 }
+
+/* Rapportmallen */
+.akademin-field {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.akademin-help {
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.akademin-help summary {
+  min-height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.akademin-help summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.akademin-help p {
+  margin: 0.25rem 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.akademin-note {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--line);
+  border-radius: var(--radius-group);
+  background: var(--surface);
+  line-height: 1.5;
+}
+
+.akademin-calc {
+  padding: 1rem;
+  border-radius: var(--radius-group);
+  background: var(--surface);
+}
+
+.akademin-calc h4 {
+  margin: 0 0 0.6rem;
+}
+
+.akademin-calc dl {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.akademin-calc-row {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.akademin-calc dt {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.akademin-calc dd {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.akademin-reports {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.akademin-reports h4 {
+  margin: 0;
+}
+
+.akademin-reports > button {
+  justify-self: start;
+}
