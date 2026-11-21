@@ -2,7 +2,7 @@
 // privata synk, se ../vanor/store.ts), så allt fungerar utan nät. Skriver aldrig i ekonomidatan.
 
 import { useEffect, useState } from 'react';
-import { loadAkademinRecords, onHabitChange, saveAkademinRecord } from '../vanor/store';
+import { deleteAkademinRecords, loadAkademinRecords, onHabitChange, saveAkademinRecord } from '../vanor/store';
 import { nextAnswer } from './logic';
 import { ALL_LESSONS } from './kurser';
 import type { Answer, Company, DateKey, HabitSetting, JournalEntry, Lesson, Progress, Report } from './types';
@@ -65,6 +65,37 @@ export function recordReview(questionId: string, right: boolean, today: DateKey)
   return serial(async () => {
     const prev = (await loadAkademinRecords<Answer>('akademin_answers')).find((a) => a.id === questionId);
     await saveAkademinRecord('akademin_answers', { ...nextAnswer(prev, questionId, right, today), reviewedOn: today } satisfies Answer);
+  });
+}
+
+/** Ett nytt bolagskort: bevakar, tomma texter. Sparas först när användaren trycker Spara. */
+export function newCompany(name: string): Company {
+  return {
+    id: crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+    name,
+    status: 'bevakar',
+    about: '',
+    earns: '',
+    competitors: '',
+    risks: '',
+    thesis: '',
+    sellRules: '',
+    created: Date.now(),
+  };
+}
+
+export function saveCompany(company: Company): Promise<void> {
+  return serial(() => saveAkademinRecord('akademin_companies', company));
+}
+
+/** Tar bort bolaget och dess rapporter i en transaktion. Dagboksinlägg rörs inte: de är användarens egna anteckningar. */
+export function removeCompany(id: string): Promise<void> {
+  return serial(async () => {
+    const reports = await loadAkademinRecords<Report>('akademin_reports');
+    await deleteAkademinRecords([
+      { store: 'akademin_companies', id },
+      ...reports.filter((r) => r.companyId === id).map((r) => ({ store: 'akademin_reports' as const, id: r.id })),
+    ]);
   });
 }
 

@@ -416,3 +416,149 @@ button.akademin-row:focus-visible,
   min-height: 2.5rem;
   font-size: 0.9375rem;
 }
+
+/* Bolagsbiblioteket */
+.akademin-rows > .akademin-companies-block + .akademin-row {
+  border-top: 1px solid var(--line);
+}
+
+.akademin-companies-preview {
+  display: grid;
+  margin: 0;
+  padding: 0 1rem 0.75rem;
+  list-style: none;
+}
+
+.akademin-companies-preview li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.2rem 0;
+  border-top: 0;
+  font-size: 0.9375rem;
+}
+
+.akademin-companies-preview .akademin-company-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.akademin-companies {
+  display: grid;
+  gap: 1rem;
+}
+
+.akademin-company-list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.akademin-company-list li {
+  border-top: 0;
+}
+
+.akademin-company-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.akademin-company-row {
+  min-height: 3.5rem;
+}
+
+.akademin-company-main {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.akademin-company-name {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.akademin-chip {
+  flex: none;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.akademin-chip-ager {
+  border-color: var(--pine);
+  color: var(--pine);
+}
+
+.akademin-company-form {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.akademin-company-form textarea {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.akademin-company-form input[aria-invalid='true'] {
+  border-color: var(--lingon);
+}
+
+.akademin-company-form input:focus-visible,
+.akademin-company-form select:focus-visible,
+.akademin-company-form textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.akademin-hint {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.akademin-ipo {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border-radius: var(--radius-group);
+  background: var(--surface);
+}
+
+.akademin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.akademin-actions button.danger {
+  margin-left: auto;
+}
+
+.akademin-confirm {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  border-left: 3px solid var(--lingon);
+  border-radius: var(--radius-group);
+  background: var(--surface);
+  line-height: 1.5;
+}
+
+.akademin-confirm-title {
+  font-weight: 650;
+}
