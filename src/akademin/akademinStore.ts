@@ -114,6 +114,19 @@ export function removeReport(id: string): Promise<void> {
   return serial(() => deleteAkademinRecords([{ store: 'akademin_reports', id }]));
 }
 
+/** Ett nytt, tomt dagboksinlägg för dagen. Sparas först när användaren trycker Spara. */
+export function newJournalEntry(today: DateKey): JournalEntry {
+  return { id: newId(), date: today, companyName: '', type: 'kopte', why: '', change: '' };
+}
+
+export function saveJournalEntry(entry: JournalEntry): Promise<void> {
+  return serial(() => saveAkademinRecord('akademin_journal', entry));
+}
+
+export function removeJournalEntry(id: string): Promise<void> {
+  return serial(() => deleteAkademinRecords([{ store: 'akademin_journal', id }]));
+}
+
 /** Första olästa lektionen i kursordning, eller null när alla är klara. */
 export function nextLesson(progress: Progress[]): Lesson | null {
   const done = new Set(progress.map((p) => p.id));

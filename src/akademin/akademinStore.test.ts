@@ -215,3 +215,27 @@ describe('rapporter', () => {
     expect(s.newReport('c1').id).not.toBe(r.id);
   });
 });
+
+describe('dagboken', () => {
+  const entry = (id: string): JournalEntry => ({ id, date: '2026-11-20', companyName: 'A', type: 'avstod', why: 'x', change: 'y' });
+
+  it('saveJournalEntry sparar och skriver över samma id, och removeJournalEntry tar bort just det', async () => {
+    const s = await freshStore();
+    await s.saveJournalEntry(entry('j1'));
+    await s.saveJournalEntry(entry('j2'));
+    await s.saveJournalEntry({ ...entry('j1'), followUp: { date: '2026-11-21', text: 'Ja' } });
+    let journal = (await s.loadAkademin()).journal;
+    expect(journal.map((j: JournalEntry) => j.id).sort()).toEqual(['j1', 'j2']);
+    expect(journal.find((j: JournalEntry) => j.id === 'j1')?.followUp?.text).toBe('Ja');
+    await s.removeJournalEntry('j1');
+    journal = (await s.loadAkademin()).journal;
+    expect(journal.map((j: JournalEntry) => j.id)).toEqual(['j2']);
+  });
+
+  it('newJournalEntry ger dagens datum, tomma texter och ny id', async () => {
+    const s = await freshStore();
+    const e = s.newJournalEntry('2026-11-20');
+    expect(e).toMatchObject({ date: '2026-11-20', companyName: '', type: 'kopte', why: '', change: '' });
+    expect(s.newJournalEntry('2026-11-20').id).not.toBe(e.id);
+  });
+});

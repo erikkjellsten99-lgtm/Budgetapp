@@ -16,7 +16,7 @@ const done = (...ids: string[]): Progress[] => ids.map((id) => ({ id, doneAt: '2
 const withData = (patch: Partial<AkademinData>): AkademinData => ({ ...EMPTY, ...patch });
 const noop = () => {};
 const start = (data: AkademinData) =>
-  renderToStaticMarkup(<StartPage data={data} today={TODAY} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} />);
+  renderToStaticMarkup(<StartPage data={data} today={TODAY} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} onJournal={noop} />);
 
 const lesson1 = lessonById('k1-01')!;
 
@@ -45,11 +45,12 @@ describe('Akademins startsida', () => {
     expect(html).toContain('Index och vad marknaden är');
   });
 
-  it('Mina bolag är en rad som öppnar bolagsbiblioteket, Beslutsdagbok kommer', () => {
+  it('Mina bolag är en rad som öppnar bolagsbiblioteket, Beslutsdagbok är en rad som öppnar dagboken', () => {
     const html = start(EMPTY);
     expect(html).toContain('Mina bolag');
     expect(html).toContain('Inga än');
-    expect(html).toContain('<span>Beslutsdagbok</span><span class="akademin-muted">kommer</span>');
+    expect(html).toContain('Beslutsdagbok');
+    expect(html).not.toContain('<span>Beslutsdagbok</span><span class="akademin-muted">kommer</span>');
     expect(start(withData({ companies: [{ ...newCompany('Volvo B'), nextReport: '2026-12-01' }] }))).toContain('Rapport 2026-12-01');
   });
 
@@ -152,7 +153,7 @@ describe('Quiz', () => {
     expect(data.answers).toHaveLength(4);
     expect(data.answers.every((a) => a.streak === 1)).toBe(true);
     // Efter quizet visar startsidan Klar för idag och en länk till nästa lektion.
-    const html = renderToStaticMarkup(<StartPage data={data} today={TODAY} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} />);
+    const html = renderToStaticMarkup(<StartPage data={data} today={TODAY} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} onJournal={noop} />);
     expect(html).toContain('Klar för idag');
     expect(html).toContain('Hur börsen fungerar');
     vi.unstubAllGlobals();
@@ -306,7 +307,7 @@ describe('repetitionen per dag', () => {
     const ids = reviewToday(data.answers, TODAY);
     expect(ids).toEqual(['k1-01-q1', 'k1-01-q2', 'k1-01-q3']);
     const page = (d: AkademinData, day: string) =>
-      renderToStaticMarkup(<StartPage data={d} today={day} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} />);
+      renderToStaticMarkup(<StartPage data={d} today={day} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} onJournal={noop} />);
     expect(page(data, TODAY)).toContain('Repetition · 3 frågor');
 
     await store.recordReview(ids[0], false, TODAY);
