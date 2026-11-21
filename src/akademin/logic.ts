@@ -86,7 +86,8 @@ export function parseNumber(text: string): number | null | 'fel' {
   const m = /^([-\u2212]?)(\d+(?:[.,]\d+)?)$/.exec(t.replace(GROUP_SEPARATORS, ''));
   if (!m) return 'fel';
   const n = Number(m[2].replace(',', '.'));
-  if (!Number.isFinite(n)) return 'fel';
+  // Tal som skrivs ut med exponent (1e-7, 1e21) kan formuläret inte läsa tillbaka.
+  if (!Number.isFinite(n) || /e/i.test(String(n))) return 'fel';
   return m[1] === '' ? n : -n;
 }
 

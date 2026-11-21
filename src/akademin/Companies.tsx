@@ -5,7 +5,7 @@ import { useToday } from '../vanor/useToday';
 import { newCompany, newReport, removeCompany, removeReport, saveCompany, saveReport, type AkademinData } from './akademinStore';
 import { loadEconomyLinks, type EconomyLinks } from './economyLinks';
 import { fromDraft, sortCompanies, toDraft, validateDraft, type Draft } from './companyDraft';
-import { PERIOD_LABEL, sortReports } from './logic';
+import { formatPercent, margin, PERIOD_LABEL, sortReports } from './logic';
 import { ReportForm } from './ReportForm';
 import type { Company, CompanyStatus, DateKey, Report } from './types';
 
@@ -52,7 +52,7 @@ export function CompaniesRow({ companies, today, onOpen }: { companies: Company[
 export function CompanyList({ companies, today, onOpen, onAdd }: { companies: Company[]; today: DateKey; onOpen: (id: string) => void; onAdd: () => void }) {
   return (
     <section className="akademin-companies" aria-labelledby="akademin-companies-title">
-      <h3 id="akademin-companies-title">Mina bolag</h3>
+      <h3 id="akademin-companies-title" className="akademin-focus-target" tabIndex={-1}>Mina bolag</h3>
       {companies.length === 0 ? (
         <div className="empty">
           <p>Inga bolag än. Här samlar du ett kort per bolag: vad det gör, din tes och dina säljregler.</p>
@@ -107,11 +107,18 @@ export function DeleteConfirm({ name, reportCount, busy, onConfirm, onCancel }: 
 
 const THESIS_TEXT = { ja: 'ja', nej: 'nej', osaker: 'osäker' } as const;
 
+/** Radens andra rad: marginalen och tesens svar när de finns, annars att inget mer finns. */
+function reportSummary(r: Report): string {
+  const m = margin(r);
+  const parts = [m !== null && `Rörelsemarginal ${formatPercent(m)}`, r.thesis && `Håller tesen: ${THESIS_TEXT[r.thesis]}`].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : 'Inga fler uppgifter';
+}
+
 /** Bolagskortets rapportlista: nyast först, med en knapp för en ny rapport. */
 export function ReportList({ reports, onOpen }: { reports: Report[]; onOpen: (id: string | null) => void }) {
   return (
     <section className="akademin-reports" aria-labelledby="akademin-reports-title">
-      <h4 id="akademin-reports-title">Rapporter</h4>
+      <h4 id="akademin-reports-title" tabIndex={-1}>Rapporter</h4>
       {reports.length === 0 ? (
         <p className="akademin-meta">Inga rapporter än. Lägg in en när bolaget har rapporterat.</p>
       ) : (
@@ -123,7 +130,7 @@ export function ReportList({ reports, onOpen }: { reports: Report[]; onOpen: (id
                   <span className="akademin-company-name">
                     {PERIOD_LABEL[r.type]} {r.year}
                   </span>
-                  <span className="akademin-meta">{[r.date, r.thesis && `Håller tesen: ${THESIS_TEXT[r.thesis]}`].filter(Boolean).join(' · ') || 'Inga fler uppgifter'}</span>
+                  <span className="akademin-meta">{reportSummary(r)}</span>
                 </span>
                 <Chevron />
               </button>
@@ -205,17 +212,21 @@ export function CompanyForm(props: CompanyFormProps) {
 
   return (
     <form className="akademin-company-form" onSubmit={save} noValidate aria-label={isNew ? 'Nytt bolag' : company.name}>
-      <h3>{isNew ? 'Nytt bolag' : company.name || 'Bolag'}</h3>
+      <h3 className="akademin-focus-target" tabIndex={-1}>
+        {isNew ? 'Nytt bolag' : company.name || 'Bolag'}
+      </h3>
 
-      <label>
-        Namn
-        <input type="text" {...text('name')} autoComplete="off" aria-invalid={errors.name ? 'true' : undefined} aria-describedby={errors.name ? 'akademin-err-name' : undefined} />
+      <div className="akademin-field">
+        <label>
+          Namn
+          <input type="text" {...text('name')} autoComplete="off" aria-invalid={errors.name ? 'true' : undefined} aria-describedby={errors.name ? 'akademin-err-name' : undefined} />
+        </label>
         {errors.name && (
           <span id="akademin-err-name" className="error" role="alert">
             {errors.name}
           </span>
         )}
-      </label>
+      </div>
       <label>
         Kortnamn (valfritt)
         <input type="text" {...text('ticker')} autoComplete="off" />
@@ -312,15 +323,17 @@ export function CompanyForm(props: CompanyFormProps) {
         Nästa rapportdatum
         <input type="date" {...text('nextReport')} />
       </label>
-      <label>
-        Länk till bolagets sida för investerare
-        <input type="url" inputMode="url" {...text('irUrl')} autoComplete="off" placeholder="https://" aria-invalid={errors.irUrl ? 'true' : undefined} aria-describedby={errors.irUrl ? 'akademin-err-ir' : undefined} />
+      <div className="akademin-field">
+        <label>
+          Länk till bolagets sida för investerare
+          <input type="url" inputMode="url" {...text('irUrl')} autoComplete="off" placeholder="https://" aria-invalid={errors.irUrl ? 'true' : undefined} aria-describedby={errors.irUrl ? 'akademin-err-ir' : undefined} />
+        </label>
         {errors.irUrl && (
           <span id="akademin-err-ir" className="error" role="alert">
             {errors.irUrl}
           </span>
         )}
-      </label>
+      </div>
 
       {isNew ? (
         <p className="akademin-meta">Spara bolaget först, sedan går det att lägga in rapporter.</p>
@@ -360,7 +373,7 @@ export function CompanyForm(props: CompanyFormProps) {
   );
 }
 
-type CompaniesView =
+export type CompaniesView =
   | { kind: 'list' }
   | { kind: 'card'; id: string }
   | { kind: 'new'; company: Company }
@@ -368,7 +381,7 @@ type CompaniesView =
   | { kind: 'report'; companyId: string; reportId: string | null; fresh?: Report };
 
 /** Bolagsbiblioteket: listan och korten. Innehaven läses en gång när vyn öppnas. */
-export default function Companies({ data }: { data: AkademinData }) {
+export default function Companies({ data, onExit }: { data: AkademinData; onExit: () => void }) {
   const today = useToday();
   const [links, setLinks] = useState<EconomyLinks | null>(null);
   const [linksFailed, setLinksFailed] = useState(false);
@@ -382,16 +395,53 @@ export default function Companies({ data }: { data: AkademinData }) {
       alive = false;
     };
   }, []);
-  return <CompaniesBody data={data} today={today} holdings={links?.holdings ?? null} linksFailed={linksFailed} />;
+  return <CompaniesBody data={data} today={today} holdings={links?.holdings ?? null} linksFailed={linksFailed} onExit={onExit} />;
 }
 
-export function CompaniesBody({ data, today, holdings, linksFailed, initialView = { kind: 'list' } }: { data: AkademinData; today: DateKey; holdings: { id: string; name: string }[] | null; linksFailed: boolean; initialView?: CompaniesView }) {
+/** Vart Tillbaka leder i bolagsvyn: rapport, kort, lista och sist ut till startsidan. */
+export function companiesBack(view: CompaniesView): CompaniesView | 'exit' {
+  if (view.kind === 'report') return { kind: 'card', id: view.companyId };
+  if (view.kind === 'list') return 'exit';
+  return { kind: 'list' };
+}
+
+export function CompaniesBody({ data, today, holdings, linksFailed, initialView = { kind: 'list' }, onExit }: { data: AkademinData; today: DateKey; holdings: { id: string; name: string }[] | null; linksFailed: boolean; initialView?: CompaniesView; onExit: () => void }) {
   const [view, setView] = useState<CompaniesView>(initialView);
   const toList = () => setView({ kind: 'list' });
+  const root = useRef<HTMLDivElement>(null);
+  const prevKind = useRef(view.kind);
+  const first = useRef(true);
+  const back = () => {
+    const to = companiesBack(view);
+    if (to === 'exit') onExit();
+    else setView(to);
+  };
+  // Ny vy: fokus till dess rubrik. Tillbaka från en rapport till kortet: till rubriken Rapporter, inte sidans topp.
   useEffect(() => {
-    if (typeof window !== 'undefined') window.scrollTo(0, 0);
+    const fromReport = prevKind.current === 'report' && view.kind === 'card';
+    prevKind.current = view.kind;
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const target = fromReport
+      ? root.current?.querySelector<HTMLElement>('#akademin-reports-title')
+      : Array.from(root.current?.querySelectorAll<HTMLElement>('.akademin-focus-target') ?? []).find((el) => !el.closest('[hidden]'));
+    if (!fromReport && typeof window !== 'undefined') window.scrollTo(0, 0);
+    target?.focus();
   }, [view.kind]);
 
+  return (
+    <div ref={root}>
+      <button type="button" className="akademin-back" onClick={back}>
+        Tillbaka
+      </button>
+      <CompaniesScreen view={view} setView={setView} toList={toList} data={data} today={today} holdings={holdings} linksFailed={linksFailed} />
+    </div>
+  );
+}
+
+function CompaniesScreen({ view, setView, toList, data, today, holdings, linksFailed }: { view: CompaniesView; setView: (v: CompaniesView) => void; toList: () => void; data: AkademinData; today: DateKey; holdings: { id: string; name: string }[] | null; linksFailed: boolean }) {
   if (view.kind === 'list')
     return <CompanyList companies={data.companies} today={today} onOpen={(id) => setView({ kind: 'card', id })} onAdd={() => setView({ kind: 'new', company: newCompany('') })} />;
 

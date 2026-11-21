@@ -13,12 +13,12 @@ function Field({ id, label, help, error, children }: { id: keyof typeof FIELD_HE
       <label>
         {label}
         {children}
-        {error && (
-          <span id={`akademin-err-${id}`} className="error" role="alert">
-            {error}
-          </span>
-        )}
       </label>
+      {error && (
+        <span id={`akademin-err-${id}`} className="error" role="alert">
+          {error}
+        </span>
+      )}
       <details className="akademin-help">
         <summary aria-label={`Förklaring: ${label}`}>Förklaring</summary>
         <p>{help}</p>
@@ -148,7 +148,7 @@ export function ReportForm(props: ReportFormProps) {
 
   return (
     <form className="akademin-company-form akademin-report-form" onSubmit={save} noValidate aria-label={title}>
-      <h3>{title}</h3>
+      <h3 className="akademin-focus-target" tabIndex={-1}>{title}</h3>
       <p className="akademin-meta">{companyName.trim() || 'Bolaget'}. Alla siffror är valfria.</p>
 
       <Field id="year" label="Räkenskapsår" help={FIELD_HELP.year} error={errors.year}>

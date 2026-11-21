@@ -57,7 +57,7 @@ describe('Akademins startsida', () => {
     const html = renderToStaticMarkup(<AkademinBody data={EMPTY} failed={false} initialView={{ kind: 'companies' }} />);
     expect(html).toContain('Inga bolag än');
     expect(html).toContain('Lägg till bolag');
-    expect(html).toContain('Tillbaka');
+    expect(html.match(/>Tillbaka</g)?.length).toBe(1);
   });
 
   it('en lektion klar idag: Klar för idag och en länk till nästa lektion', () => {

@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { newCompany } from './akademinStore';
-import { CompanyForm, CompaniesBody } from './Companies';
+import { CompanyForm, CompaniesBody, companiesBack } from './Companies';
 import { emptyDraft, FIELD_HELP, prepareSave, toDraft, validateReport, type ReportDraft } from './reportDraft';
 import { ReportCalculations, ReportForm } from './ReportForm';
 import type { AkademinData } from './akademinStore';
@@ -184,9 +184,13 @@ describe('Bolagskortet och rapporterna', () => {
     expect(html).toContain('Lägg till rapport');
   });
 
-  it('visar om tesen höll och marginalen i listan', () => {
-    const html = card([rep({ thesis: 'ja', revenue: 200, ebit: 25 })]);
-    expect(html).toContain('Håller tesen: ja');
+  it('radens andra rad visar marginalen och sedan tesens svar, och Inga fler uppgifter bara när inget finns', () => {
+    const html = card([rep({ thesis: 'ja', revenue: 47920, ebit: 9950 })]);
+    expect(html).toContain('Rörelsemarginal 20,8 % · Håller tesen: ja');
+    expect(html).not.toContain('Inga fler uppgifter');
+    expect(card([rep({ revenue: 200, ebit: 25 })])).toContain('Rörelsemarginal 12,5 %');
+    expect(card([rep({ thesis: 'nej' })])).toContain('Håller tesen: nej');
+    expect(card([rep()])).toContain('Inga fler uppgifter');
   });
 
   it('inga rapporter: designat tomt läge', () => {
@@ -199,12 +203,34 @@ describe('Bolagskortet och rapporterna', () => {
     expect(html).not.toContain('Lägg till rapport');
   });
 
-  it('bolagsvyn kan visa rapportformuläret för en befintlig rapport, och det går att komma tillbaka till kortet', () => {
+  it('bolagsvyn visar rapportformuläret för en befintlig rapport, och ett tomt läge för en rapport som saknas', () => {
     const data: AkademinData = { progress: [], answers: [], companies: [COMPANY], reports: [rep()], journal: [], habit: null };
-    const html = renderToStaticMarkup(<CompaniesBody data={data} today="2026-11-20" holdings={[]} linksFailed={false} initialView={{ kind: 'report', companyId: 'c1', reportId: 'r1' }} />);
+    const html = renderToStaticMarkup(<CompaniesBody data={data} today="2026-11-20" holdings={[]} linksFailed={false} initialView={{ kind: 'report', companyId: 'c1', reportId: 'r1' }} onExit={noop} />);
     expect(html).toContain('Rapport Q3 2026');
     expect(html).toContain('Rörelsemarginal');
-    const missing = renderToStaticMarkup(<CompaniesBody data={data} today="2026-11-20" holdings={[]} linksFailed={false} initialView={{ kind: 'report', companyId: 'c1', reportId: 'borta' }} />);
+    const missing = renderToStaticMarkup(<CompaniesBody data={data} today="2026-11-20" holdings={[]} linksFailed={false} initialView={{ kind: 'report', companyId: 'c1', reportId: 'borta' }} onExit={noop} />);
     expect(missing).toContain('Rapporten finns inte längre');
+  });
+
+  it('Tillbaka går rapport, kort, lista, start', () => {
+    expect(companiesBack({ kind: 'report', companyId: 'c1', reportId: 'r1' })).toEqual({ kind: 'card', id: 'c1' });
+    expect(companiesBack({ kind: 'report', companyId: 'c1', reportId: null })).toEqual({ kind: 'card', id: 'c1' });
+    expect(companiesBack({ kind: 'card', id: 'c1' })).toEqual({ kind: 'list' });
+    expect(companiesBack({ kind: 'new', company: COMPANY })).toEqual({ kind: 'list' });
+    expect(companiesBack({ kind: 'list' })).toBe('exit');
+  });
+
+  it('bolagsvyn har exakt en Tillbaka, vid rapport, kort och lista', () => {
+    const data: AkademinData = { progress: [], answers: [], companies: [COMPANY], reports: [rep()], journal: [], habit: null };
+    for (const initialView of [{ kind: 'report', companyId: 'c1', reportId: 'r1' }, { kind: 'card', id: 'c1' }, { kind: 'list' }] as const) {
+      const html = renderToStaticMarkup(<CompaniesBody data={data} today="2026-11-20" holdings={[]} linksFailed={false} initialView={initialView} onExit={noop} />);
+      expect(html.match(/>Tillbaka</g)?.length).toBe(1);
+    }
+  });
+
+  it('felmeddelandet ligger utanför etiketten, och fältet pekar på det', () => {
+    const html = form(rep(), [], { initialDraft: draft({ revenue: 'abc' }), submitted: true });
+    expect(html).toMatch(/<\/label><span id="akademin-err-revenue"/);
+    expect(html).toContain('aria-describedby="akademin-err-revenue"');
   });
 });

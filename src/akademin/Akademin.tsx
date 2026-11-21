@@ -252,7 +252,7 @@ export function AkademinBody({ data, failed, initialView = { kind: 'start' } }: 
   const lesson = view.kind === 'lesson' ? lessonById(view.id) : undefined;
   return (
     <div className="akademin">
-      {view.kind !== 'start' && (
+      {view.kind !== 'start' && view.kind !== 'companies' && (
         <button type="button" className="akademin-back" onClick={back}>
           Tillbaka
         </button>
@@ -274,7 +274,7 @@ export function AkademinBody({ data, failed, initialView = { kind: 'start' } }: 
         </div>
       )}
       {view.kind === 'review' && <Review ids={view.ids} onClose={back} />}
-      {view.kind === 'companies' && <Companies data={data} />}
+      {view.kind === 'companies' && <Companies data={data} onExit={back} />}
       {view.kind === 'glossary' && <Glossary progress={data.progress} onOpenLesson={(id) => setView({ kind: 'lesson', id, from: 'glossary' })} />}
     </div>
   );

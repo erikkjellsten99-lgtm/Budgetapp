@@ -151,7 +151,7 @@ describe('parseNumber', () => {
     expect(parseNumber('  ')).toBeNull();
   });
   it('allt annat är fel, och aldrig NaN eller Infinity', () => {
-    for (const bad of ['abc', '12 kr', '1,2,3', '-', '1.234,5', '+5', '5,', '1e5', '--1', '9'.repeat(400)]) expect(parseNumber(bad)).toBe('fel');
+    for (const bad of ['abc', '12 kr', '1,2,3', '-', '1.234,5', '+5', '5,', '1e5', '--1', '9'.repeat(400), '0,0000001', '1' + '0'.repeat(21)]) expect(parseNumber(bad)).toBe('fel');
   });
 });
 
