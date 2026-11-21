@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { todayKey } from '../vanor/dates';
 import { useToday } from '../vanor/useToday';
-import { doneToday, nextLesson, recordReview, useAkademin, type AkademinData } from './akademinStore';
+import { answerHabitOffer, doneToday, habitOfferReady, nextLesson, recordReview, useAkademin, type AkademinData } from './akademinStore';
 import Companies, { CompaniesRow } from './Companies';
 import Journal, { JournalRow } from './Journal';
 import Glossary, { glossaryEntries } from './Glossary';
@@ -79,6 +79,52 @@ function TodayLesson({ card, onOpenLesson, onReview }: { card: TodayCard; onOpen
   );
 }
 
+/** Svarar på frågan om vanan. Ett misslyckat svar går till onError i stället för att kastas. */
+export async function answerOffer(yes: boolean, answer: (yes: boolean) => Promise<void>, onError: () => void): Promise<void> {
+  try {
+    await answer(yes);
+  } catch {
+    onError();
+  }
+}
+
+/** Frågan om vanan Studera aktier. Försvinner när svaret sparats (startsidan läser om datan), och finns kvar vid fel. */
+export function HabitOffer({ answer = answerHabitOffer, initialFailed = false }: { answer?: (yes: boolean) => Promise<void>; initialFailed?: boolean }) {
+  const [failed, setFailed] = useState(initialFailed);
+  const [busy, setBusy] = useState(false);
+  const reply = async (yes: boolean) => {
+    setBusy(true);
+    setFailed(false);
+    await answerOffer(yes, answer, () => setFailed(true));
+    setBusy(false);
+  };
+  return (
+    <section className="card akademin-offer" aria-labelledby="akademin-offer-text">
+      <p id="akademin-offer-text" className="akademin-offer-text">
+        Vill du ha vanan Studera aktier? Den bockas av när du har läst dagens lektion, repeterat, lagt in en rapport eller skrivit i dagboken.
+      </p>
+      {failed && (
+        <p className="akademin-error" role="alert">
+          Det gick inte att spara svaret. Försök igen.
+        </p>
+      )}
+      <div className="akademin-offer-actions">
+        <button type="button" className="primary" disabled={busy} onClick={() => void reply(true)}>
+          Ja
+        </button>
+        <button type="button" disabled={busy} onClick={() => void reply(false)}>
+          Nej
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/** Kan frågan om vanan visas? Först när det är säkert (offerReady) och inget svar finns sparat. */
+export function showHabitOffer(data: AkademinData, offerReady: boolean | null | undefined): boolean {
+  return offerReady === true && data.habit === null;
+}
+
 export function StartPage({
   data,
   today,
@@ -87,6 +133,7 @@ export function StartPage({
   onGlossary,
   onCompanies,
   onJournal,
+  offerReady,
 }: {
   data: AkademinData;
   today: string;
@@ -95,12 +142,15 @@ export function StartPage({
   onGlossary: () => void;
   onCompanies: () => void;
   onJournal: () => void;
+  /** Får frågan om vanan visas? Null eller utelämnad medan det inte är känt. */
+  offerReady?: boolean | null;
 }) {
   const doneIds = new Set(data.progress.map((p) => p.id));
   const due = reviewToday(data.answers, today).length;
   const words = glossaryEntries(data.progress, '').length;
   return (
     <div className="akademin-start">
+      {showHabitOffer(data, offerReady) && <HabitOffer />}
       <TodayLesson card={todayCard(data.progress, data.answers, today)} onOpenLesson={onOpenLesson} onReview={onReview} />
 
       <div className="group akademin-rows">
@@ -219,11 +269,30 @@ export function backFrom(view: View): View {
 
 export default function Akademin() {
   const { data, failed } = useAkademin();
-  return <AkademinBody data={data} failed={failed} />;
+  const offerReady = useHabitOfferReady(data);
+  return <AkademinBody data={data} failed={failed} offerReady={offerReady} />;
+}
+
+/** Null medan det inte är känt. Frågas om igen när datan ändras, eftersom en första hämtning från kontot kan ha kommit in. */
+function useHabitOfferReady(data: AkademinData | null): boolean | null {
+  const [ready, setReady] = useState<boolean | null>(null);
+  const answered = data === null ? null : data.habit !== null;
+  useEffect(() => {
+    if (answered !== false) return;
+    let alive = true;
+    habitOfferReady().then(
+      (r) => alive && setReady(r),
+      () => alive && setReady(false),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [data, answered]);
+  return ready;
 }
 
 /** Laddar, fel eller innehåll. Felet visas bara när det inte finns något att visa, så att ett misslyckat omläsande inte tar bort en pågående lektion. */
-export function AkademinBody({ data, failed, initialView = { kind: 'start' } }: { data: AkademinData | null; failed: boolean; initialView?: View }) {
+export function AkademinBody({ data, failed, initialView = { kind: 'start' }, offerReady }: { data: AkademinData | null; failed: boolean; initialView?: View; offerReady?: boolean | null }) {
   const [view, setView] = useState<View>(initialView);
   // Byter vid midnatt och när appen visas igen, så att kortet och repetitionen följer dagen.
   const today = useToday();
@@ -266,6 +335,7 @@ export function AkademinBody({ data, failed, initialView = { kind: 'start' } }: 
           onGlossary={() => setView({ kind: 'glossary' })}
           onCompanies={() => setView({ kind: 'companies' })}
           onJournal={() => setView({ kind: 'journal' })}
+          offerReady={offerReady}
         />
       )}
       {lesson && <LessonView key={lesson.id} lesson={lesson} onClose={back} />}

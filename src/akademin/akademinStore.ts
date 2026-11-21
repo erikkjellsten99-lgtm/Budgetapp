@@ -2,8 +2,11 @@
 // privata synk, se ../vanor/store.ts), så allt fungerar utan nät. Skriver aldrig i ekonomidatan.
 
 import { useEffect, useState } from 'react';
-import { deleteAkademinRecords, loadAkademinRecords, onHabitChange, saveAkademinRecord } from '../vanor/store';
-import { nextAnswer } from './logic';
+import { supabase } from '../sync';
+import { todayKey } from '../vanor/dates';
+import { sameName } from '../vanor/habits';
+import { addHabit, deleteAkademinRecords, getMeta, loadAkademinRecords, loadHabitData, onHabitChange, saveAkademinRecord, setCheck } from '../vanor/store';
+import { nextAnswer, reviewToday } from './logic';
 import { ALL_LESSONS } from './kurser';
 import type { Answer, Company, DateKey, HabitSetting, JournalEntry, Lesson, Progress, Report } from './types';
 
@@ -50,13 +53,14 @@ export function completeLesson(lessonId: string, firstTry: Record<string, boolea
   return serial(async () => {
     const [progress, answers] = await Promise.all([loadAkademinRecords<Progress>('akademin_progress'), loadAkademinRecords<Answer>('akademin_answers')]);
     const done = progress.find((p) => p.id === lessonId);
-    if (done?.doneAt === today) return;
+    if (done?.doneAt === today) return tickStudied(today);
     for (const [questionId, right] of Object.entries(firstTry)) {
       const prev = answers.find((a) => a.id === questionId);
       if (prev?.last === today) continue;
       await saveAkademinRecord('akademin_answers', nextAnswer(prev, questionId, right, today));
     }
     if (!done) await saveAkademinRecord('akademin_progress', { id: lessonId, doneAt: today } satisfies Progress);
+    await tickStudied(today);
   });
 }
 
@@ -65,7 +69,65 @@ export function recordReview(questionId: string, right: boolean, today: DateKey)
   return serial(async () => {
     const prev = (await loadAkademinRecords<Answer>('akademin_answers')).find((a) => a.id === questionId);
     await saveAkademinRecord('akademin_answers', { ...nextAnswer(prev, questionId, right, today), reviewedOn: today } satisfies Answer);
+    // Dagens sista fråga besvarad (rätt eller fel): inget mer väntar i dagens repetition.
+    try {
+      if (reviewToday(await loadAkademinRecords<Answer>('akademin_answers'), today).length === 0) await tickStudied(today);
+    } catch {
+      // Frågan är sparad. Bockningen får aldrig få repetitionen att se misslyckad ut.
+    }
   });
+}
+
+// Vanan "Studera aktier". Den bockas med vanornas vanliga funktioner (addHabit, setCheck): inget nytt slags regel.
+
+export const HABIT_NAME = 'Studera aktier';
+
+/**
+ * Får erbjudandet visas? Ja när inget svar sparats, och användaren är utloggad eller kontots poster har hämtats en gång
+ * (samma villkor som followLibraryWhenReady i Kunskap). Annars kunde två telefoner skapa var sin vana.
+ */
+export async function habitOfferReady(): Promise<boolean> {
+  const settings = await loadAkademinRecords<{ id?: string }>('akademin_settings');
+  if (settings.some((r) => r.id === 'habit')) return false;
+  const { data } = await supabase.auth.getSession();
+  if (data.session && !(await getMeta<{ lastPull: string | null }>('sync'))?.lastPull) return false;
+  return true;
+}
+
+/**
+ * Svaret på frågan om vanan. Ja skapar vanan (eller länkar en aktiv med samma namn) och sparar dess id, nej sparar bara
+ * svaret. Ett sparat svar ändras aldrig, så ett dubbeltryck eller två vyer ger en vana. Misslyckas sparningen kan
+ * frågan besvaras igen.
+ */
+export function answerHabitOffer(yes: boolean): Promise<void> {
+  return serial(async () => {
+    const settings = await loadAkademinRecords<{ id?: string }>('akademin_settings');
+    if (settings.some((r) => r.id === 'habit')) return;
+    if (!yes) return saveAkademinRecord('akademin_settings', { id: 'habit', answer: 'nej' } satisfies HabitSetting);
+    const existing = (await loadHabitData()).habits.find((h) => !h.archived && sameName(h.name, HABIT_NAME));
+    const habitId = existing?.id ?? (await addHabit(HABIT_NAME, 7));
+    await saveAkademinRecord('akademin_settings', { id: 'habit', answer: 'ja', habitId } satisfies HabitSetting);
+  });
+}
+
+/** Bockar vanan för dagen. Rör ingenting utan sparat ja och en aktiv vana, och tar aldrig bort en bock. Kastar aldrig. */
+async function tickStudied(today: DateKey): Promise<void> {
+  try {
+    const setting = (await loadAkademinRecords<HabitSetting>('akademin_settings')).find((r) => r.id === 'habit');
+    if (setting?.answer !== 'ja' || !setting.habitId) return;
+    const { habits, checks } = await loadHabitData();
+    const habit = habits.find((h) => h.id === setting.habitId);
+    if (!habit || habit.archived) return;
+    if (checks.some((c) => c.habitId === habit.id && c.date === today)) return;
+    await setCheck(habit.id, today, 'done');
+  } catch {
+    // Lektionen, svaret eller texten är redan sparad och går före bockningen.
+  }
+}
+
+/** Bockar vanan Studera aktier för dagen. Gör ingenting utan ja och en aktiv vana. Kastar aldrig. */
+export function markStudied(today: DateKey): Promise<void> {
+  return serial(() => tickStudied(today));
 }
 
 const newId = () => crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -107,7 +169,10 @@ export function newReport(companyId: string): Report {
 }
 
 export function saveReport(report: Report): Promise<void> {
-  return serial(() => saveAkademinRecord('akademin_reports', report));
+  return serial(async () => {
+    await saveAkademinRecord('akademin_reports', report);
+    await tickStudied(todayKey());
+  });
 }
 
 export function removeReport(id: string): Promise<void> {
@@ -120,7 +185,10 @@ export function newJournalEntry(today: DateKey): JournalEntry {
 }
 
 export function saveJournalEntry(entry: JournalEntry): Promise<void> {
-  return serial(() => saveAkademinRecord('akademin_journal', entry));
+  return serial(async () => {
+    await saveAkademinRecord('akademin_journal', entry);
+    await tickStudied(todayKey());
+  });
 }
 
 export function removeJournalEntry(id: string): Promise<void> {
