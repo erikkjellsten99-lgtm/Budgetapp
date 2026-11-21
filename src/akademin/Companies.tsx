@@ -110,7 +110,7 @@ const THESIS_TEXT = { ja: 'ja', nej: 'nej', osaker: 'osäker' } as const;
 /** Radens andra rad: marginalen och tesens svar när de finns, annars att inget mer finns. */
 function reportSummary(r: Report): string {
   const m = margin(r);
-  const parts = [m !== null && `Rörelsemarginal ${formatPercent(m)}`, r.thesis && `Håller tesen: ${THESIS_TEXT[r.thesis]}`].filter(Boolean);
+  const parts = [r.date, m !== null && `Rörelsemarginal ${formatPercent(m)}`, r.thesis && `Håller tesen: ${THESIS_TEXT[r.thesis]}`].filter(Boolean);
   return parts.length > 0 ? parts.join(' · ') : 'Inga fler uppgifter';
 }
 
