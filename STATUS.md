@@ -232,7 +232,10 @@
 - Fungerar: läget Akademin i Mindhub med startsida (Dagens lektion, Repetition, Kurser, Ordlista), sju lektioner i kurs 1
   med quiz, repetition av frågor (upp till 3 per dag) och sökbar ordlista. Framsteg och svar sparas i vanor-databasen
   och synkas privat, så allt fungerar utan nät efter första öppnandet.
-- Halvfärdigt: Mina bolag och Beslutsdagbok visas som rader med texten kommer. Kurs 2 till 10 är bara planerade.
+- Mina bolag finns (PR 2): bolagskort med tes och säljregler, och rapportmallen (en rapport per bolag, år och period,
+  alla siffror valfria, förklaring per fält). Appen räknar rörelsemarginal och omsättningstillväxt och visar uträkningen,
+  eller varför den saknas. Inte kopplat än: vanan bockas inte av en sparad rapport, och inga lektionslänkar vid fälten.
+- Halvfärdigt: Beslutsdagbok visas som rad med texten kommer. Kurs 2 till 10 är bara planerade.
 - Repetitionen: högst 3 frågor per dag (en fråga räknas när den repeterats, också vid fel svar). Raden, kortet Dagens
   lektion och repetitionen räknar likadant, dagen byter vid midnatt och när appen visas igen, och svar på frågor som
   inte finns i appens version (från en nyare telefon) hoppas över.
