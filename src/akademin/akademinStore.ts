@@ -2,7 +2,7 @@
 // privata synk, se ../vanor/store.ts), så allt fungerar utan nät. Skriver aldrig i ekonomidatan.
 
 import { useEffect, useState } from 'react';
-import { loadAkademinRecords, onHabitChange, saveAkademinRecord } from '../vanor/store';
+import { deleteAkademinRecords, loadAkademinRecords, onHabitChange, saveAkademinRecord } from '../vanor/store';
 import { nextAnswer } from './logic';
 import { ALL_LESSONS } from './kurser';
 import type { Answer, Company, DateKey, HabitSetting, JournalEntry, Lesson, Progress, Report } from './types';
@@ -66,6 +66,52 @@ export function recordReview(questionId: string, right: boolean, today: DateKey)
     const prev = (await loadAkademinRecords<Answer>('akademin_answers')).find((a) => a.id === questionId);
     await saveAkademinRecord('akademin_answers', { ...nextAnswer(prev, questionId, right, today), reviewedOn: today } satisfies Answer);
   });
+}
+
+const newId = () => crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+/** Ett nytt bolagskort: bevakar, tomma texter. Sparas först när användaren trycker Spara. */
+export function newCompany(name: string): Company {
+  return {
+    id: newId(),
+    name,
+    status: 'bevakar',
+    about: '',
+    earns: '',
+    competitors: '',
+    risks: '',
+    thesis: '',
+    sellRules: '',
+    created: Date.now(),
+  };
+}
+
+export function saveCompany(company: Company): Promise<void> {
+  return serial(() => saveAkademinRecord('akademin_companies', company));
+}
+
+/** Tar bort bolaget och dess rapporter i en transaktion. Dagboksinlägg rörs inte: de är användarens egna anteckningar. */
+export function removeCompany(id: string): Promise<void> {
+  return serial(async () => {
+    const reports = await loadAkademinRecords<Report>('akademin_reports');
+    await deleteAkademinRecords([
+      { store: 'akademin_companies', id },
+      ...reports.filter((r) => r.companyId === id).map((r) => ({ store: 'akademin_reports' as const, id: r.id })),
+    ]);
+  });
+}
+
+/** En ny, tom rapport för bolaget. Sparas först när användaren trycker Spara. */
+export function newReport(companyId: string): Report {
+  return { id: newId(), companyId, year: '', type: 'Q1', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '' };
+}
+
+export function saveReport(report: Report): Promise<void> {
+  return serial(() => saveAkademinRecord('akademin_reports', report));
+}
+
+export function removeReport(id: string): Promise<void> {
+  return serial(() => deleteAkademinRecords([{ store: 'akademin_reports', id }]));
 }
 
 /** Första olästa lektionen i kursordning, eller null när alla är klara. */

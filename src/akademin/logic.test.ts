@@ -1,6 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { answerQuiz, continueQuiz, dueQuestions, nextAnswer, quizDone, reviewToday, startQuiz } from './logic';
-import type { Answer } from './types';
+import {
+  answerQuiz,
+  continueQuiz,
+  describeGrowth,
+  describeMargin,
+  dueQuestions,
+  growth,
+  margin,
+  nextAnswer,
+  parseNumber,
+  PERIOD_LABEL,
+  previousYear,
+  quizDone,
+  reviewToday,
+  sortReports,
+  startQuiz,
+} from './logic';
+import type { Answer, Report } from './types';
 
 const TODAY = '2026-11-20';
 
@@ -112,5 +128,118 @@ describe('reviewToday', () => {
 
   it('utan egen kontroll känns frågorna igen ur kurserna', () => {
     expect(reviewToday([due('k1-01-q1'), due('k9-99-q1')], TODAY)).toEqual(['k1-01-q1']);
+  });
+});
+
+const rep = (patch: Partial<Report> = {}): Report => ({ id: 'r', companyId: 'c1', year: '2026', type: 'Q3', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '', ...patch });
+
+describe('parseNumber', () => {
+  it('tar tusentalsavskiljare och decimalkomma', () => {
+    expect(parseNumber('1 234,5')).toBe(1234.5);
+    expect(parseNumber('1\u00a0234,5')).toBe(1234.5);
+    expect(parseNumber('1\u202f234,5')).toBe(1234.5);
+    expect(parseNumber('1.5')).toBe(1.5);
+    expect(parseNumber('12')).toBe(12);
+  });
+  it('negativa tal, med bindestreck och riktigt minustecken', () => {
+    expect(parseNumber('-12')).toBe(-12);
+    expect(parseNumber('\u221212')).toBe(-12);
+    expect(parseNumber('-1 234,5')).toBe(-1234.5);
+  });
+  it('tomt är null', () => {
+    expect(parseNumber('')).toBeNull();
+    expect(parseNumber('  ')).toBeNull();
+  });
+  it('allt annat är fel, och aldrig NaN eller Infinity', () => {
+    for (const bad of ['abc', '12 kr', '1,2,3', '-', '1.234,5', '+5', '5,', '1e5', '--1', '9'.repeat(400), '0,0000001', '1' + '0'.repeat(21)]) expect(parseNumber(bad)).toBe('fel');
+  });
+});
+
+describe('previousYear', () => {
+  it('kalenderår och brutet år', () => {
+    expect(previousYear('2026')).toBe('2025');
+    expect(previousYear('2025/26')).toBe('2024/25');
+    expect(previousYear('2000/01')).toBe('1999/00');
+    expect(previousYear(' 2026 ')).toBe('2025');
+  });
+  it('går det inte att tolka är det null', () => {
+    expect(previousYear('i år')).toBeNull();
+    expect(previousYear('')).toBeNull();
+    expect(previousYear('26')).toBeNull();
+  });
+});
+
+describe('margin', () => {
+  it('rörelseresultat delat på omsättning, som andel', () => {
+    expect(margin(rep({ ebit: 25, revenue: 200 }))).toBe(0.125);
+    expect(margin(rep({ ebit: -20, revenue: 200 }))).toBe(-0.1);
+  });
+  it('null när något saknas eller omsättningen är noll', () => {
+    expect(margin(rep({ ebit: 25, revenue: 0 }))).toBeNull();
+    expect(margin(rep({ ebit: 25 }))).toBeNull();
+    expect(margin(rep({ revenue: 200 }))).toBeNull();
+  });
+});
+
+describe('growth', () => {
+  const prev = rep({ id: 'p', year: '2025', revenue: 100 });
+  const cur = rep({ revenue: 110 });
+  it('mot samma periodtyp året före, samma bolag och enhet', () => {
+    expect(growth(cur, [cur, prev])).toEqual({ value: 0.1 });
+    expect(growth(rep({ year: '2025/26', revenue: 120 }), [rep({ id: 'q', year: '2024/25', revenue: 100 })])).toEqual({ value: 0.2 });
+  });
+  it('saknas något står det vad', () => {
+    const missing = (r: Report, all: Report[]) => {
+      const g = growth(r, all);
+      expect('missing' in g).toBe(true);
+      return 'missing' in g ? g.missing : '';
+    };
+    expect(missing(cur, [cur])).toBe('Lägg in Q3 2025 för att se tillväxten');
+    expect(missing(cur, [rep({ ...prev, type: 'Q2' })])).toContain('Q3 2025');
+    expect(missing(cur, [rep({ ...prev, companyId: 'c2' })])).toContain('Q3 2025');
+    expect(missing(cur, [rep({ ...prev, unit: 'MUSD' })])).toBe('Enheten skiljer sig från Q3 2025');
+    expect(missing(cur, [rep({ ...prev, revenue: 0 })])).toContain('Q3 2025');
+    expect(missing(cur, [rep({ ...prev, revenue: undefined })])).toContain('Q3 2025');
+    expect(missing(rep({ year: 'i år', revenue: 110 }), [prev])).toContain('i år');
+    expect(missing(rep({ revenue: undefined }), [prev])).toContain('omsättning');
+    expect(missing(rep({ type: 'H1', year: '2026', revenue: 5 }), [prev])).toBe('Lägg in Halvår 1 2025 för att se tillväxten');
+  });
+  it('samma enhet går före en annan om båda finns', () => {
+    expect(growth(cur, [rep({ ...prev, id: 'x', unit: 'MUSD' }), prev])).toEqual({ value: 0.1 });
+  });
+});
+
+describe('uträkningarna i text', () => {
+  it('marginal med svenskt decimalkomma och uträkningen', () => {
+    expect(describeMargin(rep({ ebit: 25, revenue: 200 }))).toEqual({ text: '25 / 200 = 12,5 %' });
+    expect(describeMargin(rep({ ebit: -20, revenue: 200 }))).toEqual({ text: '\u221220 / 200 = \u221210,0 %' });
+    expect(describeMargin(rep({ ebit: 0.4, revenue: 1000 }))).toEqual({ text: '0,4 / 1\u00a0000 = 0,0 %' });
+  });
+  it('marginal som inte går att räkna säger varför, aldrig 0 %', () => {
+    for (const r of [rep(), rep({ ebit: 5 }), rep({ ebit: 5, revenue: 0 })]) {
+      const d = describeMargin(r);
+      expect('missing' in d && d.missing.length > 0).toBe(true);
+    }
+  });
+  it('tillväxt med uträkning, eller skälet', () => {
+    const prev = rep({ id: 'p', year: '2025', revenue: 100 });
+    expect(describeGrowth(rep({ revenue: 110 }), [prev])).toEqual({ text: '(110 \u2212 100) / 100 = 10,0 %' });
+    expect(describeGrowth(rep({ revenue: 110 }), [])).toEqual({ missing: 'Lägg in Q3 2025 för att se tillväxten' });
+  });
+});
+
+describe('sortReports', () => {
+  it('nyast först: år, sedan Q1 < Q2 = H1 < Q3 < Q4 = H2 < FY', () => {
+    const r = (id: string, year: string, type: Report['type']) => rep({ id, year, type });
+    const sorted = sortReports([r('a', '2025', 'FY'), r('b', '2026', 'Q1'), r('c', '2025/26', 'Q4'), r('d', '2026', 'Q3'), r('e', '2026', 'Q2'), r('f', '2024', 'Q4')]);
+    expect(sorted.map((x) => x.id)).toEqual(['d', 'e', 'b', 'c', 'a', 'f']);
+  });
+  it('rör inte ursprungslistan och tar årtal som inte går att tolka sist', () => {
+    const input = [rep({ id: 'x', year: 'i år' }), rep({ id: 'y', year: '2020' })];
+    expect(sortReports(input).map((x) => x.id)).toEqual(['y', 'x']);
+    expect(input[0].id).toBe('x');
+  });
+  it('etiketterna', () => {
+    expect(Object.values(PERIOD_LABEL)).toEqual(['Q1', 'Q2', 'Q3', 'Q4', 'Halvår 1', 'Halvår 2', 'Helår']);
   });
 });

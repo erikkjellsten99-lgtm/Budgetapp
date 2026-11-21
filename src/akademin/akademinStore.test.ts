@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Answer, Progress } from './types';
+import type { Answer, JournalEntry, Progress, Report } from './types';
 
 /** Nytt modulläge med färsk databas: store.ts håller sin anslutning på modulnivå. */
 /** failAt: vilken sparning (räknat från 1 efter nollställning) som ska misslyckas, 0 för ingen. */
@@ -158,5 +158,63 @@ describe('Akademins lagring', () => {
     expect(a['k1-01-q2']).toEqual({ id: 'k1-01-q2', streak: 0, due: '2026-11-21', last: '2026-11-20' });
     expect(d.answers).toHaveLength(4);
     expect(d.progress).toHaveLength(1);
+  });
+
+  it('newCompany: status Bevakar, tomma texter, id och created satta', () => {
+    const before = Date.now();
+    const c = s.newCompany('Volvo B');
+    expect(c).toMatchObject({ name: 'Volvo B', status: 'bevakar', about: '', earns: '', competitors: '', risks: '', thesis: '', sellRules: '' });
+    expect(c.id).toBeTruthy();
+    expect(c.created).toBeGreaterThanOrEqual(before);
+    expect(s.newCompany('Volvo B').id).not.toBe(c.id);
+  });
+
+  it('saveCompany sparar bolaget och det går att läsa tillbaka', async () => {
+    const c = s.newCompany('Volvo B');
+    await s.saveCompany({ ...c, thesis: 'Skäl' });
+    expect((await s.loadAkademin()).companies).toEqual([{ ...c, thesis: 'Skäl' }]);
+  });
+
+  it('removeCompany tar bort bolaget och dess rapporter, men inte ett dagboksinlägg med samma companyId', async () => {
+    const { saveAkademinRecord } = await import('../vanor/store');
+    const a = s.newCompany('A');
+    const b = s.newCompany('B');
+    await s.saveCompany(a);
+    await s.saveCompany(b);
+    const report = (id: string, companyId: string): Report => ({ id, companyId, year: '2026', type: 'Q1', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '' });
+    await saveAkademinRecord('akademin_reports', report('r1', a.id));
+    await saveAkademinRecord('akademin_reports', report('r2', a.id));
+    await saveAkademinRecord('akademin_reports', report('r3', b.id));
+    const entry: JournalEntry = { id: 'j1', date: '2026-11-20', companyId: a.id, companyName: 'A', type: 'kopte', why: 'x', change: 'y' };
+    await saveAkademinRecord('akademin_journal', entry);
+    await s.removeCompany(a.id);
+    const d = await s.loadAkademin();
+    expect(d.companies.map((c: { id: string }) => c.id)).toEqual([b.id]);
+    expect(d.reports.map((r: Report) => r.id)).toEqual(['r3']);
+    expect(d.journal).toEqual([entry]);
+  });
+});
+
+describe('rapporter', () => {
+  const report = (id: string, companyId: string): Report => ({ id, companyId, year: '2026', type: 'Q3', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '' });
+
+  it('saveReport sparar, skriver över samma id, och removeReport tar bort just den', async () => {
+    const s = await freshStore();
+    await s.saveReport(report('r1', 'c1'));
+    await s.saveReport(report('r2', 'c1'));
+    await s.saveReport({ ...report('r1', 'c1'), revenue: 5 });
+    let reports = (await s.loadAkademin()).reports;
+    expect(reports.map((r: Report) => r.id).sort()).toEqual(['r1', 'r2']);
+    expect(reports.find((r: Report) => r.id === 'r1')?.revenue).toBe(5);
+    await s.removeReport('r1');
+    reports = (await s.loadAkademin()).reports;
+    expect(reports.map((r: Report) => r.id)).toEqual(['r2']);
+  });
+
+  it('newReport ger tomma texter och ny id', async () => {
+    const s = await freshStore();
+    const r = s.newReport('c1');
+    expect(r).toMatchObject({ companyId: 'c1', type: 'Q1', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '' });
+    expect(s.newReport('c1').id).not.toBe(r.id);
   });
 });

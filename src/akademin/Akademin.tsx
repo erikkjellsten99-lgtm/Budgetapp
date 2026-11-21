@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { todayKey } from '../vanor/dates';
 import { useToday } from '../vanor/useToday';
 import { doneToday, nextLesson, recordReview, useAkademin, type AkademinData } from './akademinStore';
+import Companies, { CompaniesRow } from './Companies';
 import Glossary, { glossaryEntries } from './Glossary';
 import { COURSES, PLANNED, lessonById, questionById } from './kurser';
 import { LessonView } from './LessonView';
@@ -88,12 +89,14 @@ export function StartPage({
   onOpenLesson,
   onReview,
   onGlossary,
+  onCompanies,
 }: {
   data: AkademinData;
   today: string;
   onOpenLesson: (id: string) => void;
   onReview: () => void;
   onGlossary: () => void;
+  onCompanies: () => void;
 }) {
   const doneIds = new Set(data.progress.map((p) => p.id));
   const due = reviewToday(data.answers, today).length;
@@ -159,10 +162,7 @@ export function StartPage({
       </section>
 
       <div className="group akademin-rows">
-        <div className="akademin-row akademin-soon">
-          <span>Mina bolag</span>
-          <span className="akademin-muted">kommer</span>
-        </div>
+        <CompaniesRow companies={data.companies} today={today} onOpen={onCompanies} />
         <div className="akademin-row akademin-soon">
           <span>Beslutsdagbok</span>
           <span className="akademin-muted">kommer</span>
@@ -215,7 +215,7 @@ export function Review({ ids, onClose, record }: { ids: string[]; onClose: () =>
   );
 }
 
-export type View = { kind: 'start' } | { kind: 'lesson'; id: string; from: 'start' | 'glossary' } | { kind: 'review'; ids: string[] } | { kind: 'glossary' };
+export type View = { kind: 'start' } | { kind: 'lesson'; id: string; from: 'start' | 'glossary' } | { kind: 'review'; ids: string[] } | { kind: 'glossary' } | { kind: 'companies' };
 
 /** Vart Tillbaka leder: en lektion som öppnats från ordlistan går tillbaka dit, allt annat till startsidan. */
 export function backFrom(view: View): View {
@@ -257,7 +257,7 @@ export function AkademinBody({ data, failed, initialView = { kind: 'start' } }: 
   const lesson = view.kind === 'lesson' ? lessonById(view.id) : undefined;
   return (
     <div className="akademin">
-      {view.kind !== 'start' && (
+      {view.kind !== 'start' && view.kind !== 'companies' && (
         <button type="button" className="akademin-back" onClick={back}>
           Tillbaka
         </button>
@@ -269,6 +269,7 @@ export function AkademinBody({ data, failed, initialView = { kind: 'start' } }: 
           onOpenLesson={(id) => setView({ kind: 'lesson', id, from: 'start' })}
           onReview={() => setView({ kind: 'review', ids: reviewToday(data.answers, today) })}
           onGlossary={() => setView({ kind: 'glossary' })}
+          onCompanies={() => setView({ kind: 'companies' })}
         />
       )}
       {lesson && <LessonView key={lesson.id} lesson={lesson} onClose={back} />}
@@ -278,6 +279,7 @@ export function AkademinBody({ data, failed, initialView = { kind: 'start' } }: 
         </div>
       )}
       {view.kind === 'review' && <Review ids={view.ids} onClose={back} />}
+      {view.kind === 'companies' && <Companies data={data} onExit={back} />}
       {view.kind === 'glossary' && <Glossary progress={data.progress} onOpenLesson={(id) => setView({ kind: 'lesson', id, from: 'glossary' })} />}
     </div>
   );
