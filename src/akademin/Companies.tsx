@@ -1,105 +1,15 @@
 // Akademin: bolagsbiblioteket. Ett kort per bolag med användarens egen tes och säljregler. Sparas bara i
 // akademin_companies (akademinStore). Innehaven i Investeringar läses bara för namn och id, via economyLinks.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useToday } from '../vanor/useToday';
 import { newCompany, removeCompany, saveCompany, type AkademinData } from './akademinStore';
 import { loadEconomyLinks, type EconomyLinks } from './economyLinks';
+import { fromDraft, sortCompanies, toDraft, validateDraft, type Draft } from './companyDraft';
 import type { Company, CompanyStatus, DateKey } from './types';
 
 export const STATUS_LABEL: Record<CompanyStatus, string> = { bevakar: 'Bevakar', ager: 'Äger', salt: 'Sålt' };
 const STATUSES: CompanyStatus[] = ['bevakar', 'ager', 'salt'];
 const LIST_SUGGESTIONS = ['Large Cap', 'Mid Cap', 'Small Cap', 'First North'];
-
-/** Närmast kommande rapport först (idag räknas), sedan resten efter namn. */
-export function sortCompanies(companies: Company[], today: DateKey): Company[] {
-  const byName = (a: Company, b: Company) => a.name.localeCompare(b.name, 'sv');
-  const upcoming = (c: Company) => c.nextReport !== undefined && c.nextReport >= today;
-  return [
-    ...companies.filter(upcoming).sort((a, b) => (a.nextReport! < b.nextReport! ? -1 : a.nextReport! > b.nextReport! ? 1 : byName(a, b))),
-    ...companies.filter((c) => !upcoming(c)).sort(byName),
-  ];
-}
-
-// Formuläret arbetar med text, och sparar först när allt är giltigt.
-export interface Draft {
-  name: string;
-  ticker: string;
-  list: string;
-  status: CompanyStatus;
-  holdingId: string;
-  about: string;
-  earns: string;
-  competitors: string;
-  risks: string;
-  thesis: string;
-  sellRules: string;
-  newlyListed: boolean;
-  ipoDate: string;
-  ipoPrice: string;
-  ipoPromised: string;
-  nextReport: string;
-  irUrl: string;
-}
-
-export function toDraft(c: Company): Draft {
-  return {
-    name: c.name,
-    ticker: c.ticker ?? '',
-    list: c.list ?? '',
-    status: c.status,
-    holdingId: c.holdingId ?? '',
-    about: c.about,
-    earns: c.earns,
-    competitors: c.competitors,
-    risks: c.risks,
-    thesis: c.thesis,
-    sellRules: c.sellRules,
-    newlyListed: c.ipo !== undefined,
-    ipoDate: c.ipo?.date ?? '',
-    ipoPrice: c.ipo?.price ?? '',
-    ipoPromised: c.ipo?.promised ?? '',
-    nextReport: c.nextReport ?? '',
-    irUrl: c.irUrl ?? '',
-  };
-}
-
-const orUndefined = (s: string) => (s.trim() === '' ? undefined : s.trim());
-
-/** Bolaget med formulärets värden. Tomma valfria fält tas bort. Id och created behålls. */
-export function fromDraft(base: Company, d: Draft): Company {
-  const ipo = d.newlyListed ? { date: orUndefined(d.ipoDate), price: orUndefined(d.ipoPrice), promised: orUndefined(d.ipoPromised) } : undefined;
-  return {
-    id: base.id,
-    created: base.created,
-    name: d.name.trim(),
-    ticker: orUndefined(d.ticker),
-    list: orUndefined(d.list),
-    status: d.status,
-    holdingId: orUndefined(d.holdingId),
-    about: d.about,
-    earns: d.earns,
-    competitors: d.competitors,
-    risks: d.risks,
-    thesis: d.thesis,
-    sellRules: d.sellRules,
-    ipo,
-    nextReport: orUndefined(d.nextReport),
-    irUrl: orUndefined(d.irUrl),
-  };
-}
-
-export interface DraftErrors {
-  name?: string;
-  irUrl?: string;
-}
-
-export function validateDraft(d: Draft): DraftErrors {
-  const errors: DraftErrors = {};
-  if (d.name.trim() === '') errors.name = 'Skriv ett namn på bolaget.';
-  const url = d.irUrl.trim();
-  if (url !== '' && !url.startsWith('https://')) errors.irUrl = 'Länken måste börja med https://';
-  return errors;
-}
 
 const reportsText = (n: number) => (n === 0 ? 'Inga rapporter följer med.' : n === 1 ? '1 rapport följer med.' : `${n} rapporter följer med.`);
 
@@ -172,8 +82,11 @@ export function CompanyList({ companies, today, onOpen, onAdd }: { companies: Co
 }
 
 export function DeleteConfirm({ name, reportCount, busy, onConfirm, onCancel }: { name: string; reportCount: number; busy: boolean; onConfirm: () => void; onCancel: () => void }) {
+  // Fokus till Avbryt när frågan öppnas, och Escape avbryter.
+  const cancel = useRef<HTMLButtonElement>(null);
+  useEffect(() => cancel.current?.focus(), []);
   return (
-    <div className="akademin-confirm" role="alertdialog" aria-label="Ta bort bolaget">
+    <div className="akademin-confirm" role="alertdialog" aria-label="Ta bort bolaget" onKeyDown={(e) => e.key === 'Escape' && !busy && onCancel()}>
       <p className="akademin-confirm-title">Ta bort {name.trim() || 'bolaget'}?</p>
       <p>
         {reportsText(reportCount)} Dagboksinlägg om bolaget finns kvar. Det går inte att ångra.
@@ -182,7 +95,7 @@ export function DeleteConfirm({ name, reportCount, busy, onConfirm, onCancel }: 
         <button type="button" className="danger akademin-confirm-yes" disabled={busy} onClick={onConfirm}>
           Ja, ta bort
         </button>
-        <button type="button" disabled={busy} onClick={onCancel}>
+        <button type="button" ref={cancel} disabled={busy} onClick={onCancel}>
           Avbryt
         </button>
       </div>
@@ -213,6 +126,8 @@ export function CompanyForm(props: CompanyFormProps) {
   const [confirming, setConfirming] = useState(props.confirmingDelete ?? false);
   const [failed, setFailed] = useState<'save' | 'remove' | null>(props.failed ?? null);
   const [busy, setBusy] = useState(false);
+  // Ref, så att två tryck i samma tick inte båda tar sig förbi spärren.
+  const working = useRef(false);
   const errors = submitted ? validateDraft(draft) : {};
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
   const text = (key: keyof Draft) => ({ value: draft[key] as string, onChange: (e: { target: { value: string } }) => set(key, e.target.value as never) });
@@ -220,20 +135,23 @@ export function CompanyForm(props: CompanyFormProps) {
 
   const save = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    if (busy) return;
+    if (working.current) return;
     setSubmitted(true);
     if (Object.keys(validateDraft(draft)).length > 0) return;
+    working.current = true;
     setBusy(true);
     setFailed(null);
     try {
       await props.onSave(fromDraft(company, draft));
     } catch {
       setFailed('save');
+      working.current = false;
       setBusy(false);
     }
   };
   const remove = async () => {
-    if (busy) return;
+    if (working.current) return;
+    working.current = true;
     setBusy(true);
     setFailed(null);
     try {
@@ -241,6 +159,7 @@ export function CompanyForm(props: CompanyFormProps) {
     } catch {
       setFailed('remove');
       setConfirming(false);
+      working.current = false;
       setBusy(false);
     }
   };
@@ -285,7 +204,7 @@ export function CompanyForm(props: CompanyFormProps) {
         Innehav i Investeringar (valfritt)
         <select value={draft.holdingId} disabled={holdings === null} onChange={(e) => set('holdingId', e.target.value)}>
           {holdings === null ? (
-            <option value={draft.holdingId}>Läser innehav</option>
+            <option value={draft.holdingId}>{linksFailed ? 'Innehav kunde inte läsas' : 'Läser innehav'}</option>
           ) : (
             <>
               <option value="">Ingen koppling</option>
@@ -407,7 +326,7 @@ export default function Companies({ data }: { data: AkademinData }) {
     let alive = true;
     loadEconomyLinks().then(
       (l) => alive && setLinks(l),
-      () => alive && (setLinks({ holdings: [], trades: [] }), setLinksFailed(true)),
+      () => alive && setLinksFailed(true),
     );
     return () => {
       alive = false;

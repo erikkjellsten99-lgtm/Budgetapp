@@ -2,16 +2,8 @@ import 'fake-indexeddb/auto';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { newCompany } from './akademinStore';
-import {
-  CompanyForm,
-  CompanyList,
-  CompaniesRow,
-  DeleteConfirm,
-  fromDraft,
-  sortCompanies,
-  toDraft,
-  validateDraft,
-} from './Companies';
+import { CompanyForm, CompanyList, CompaniesRow, DeleteConfirm } from './Companies';
+import { fromDraft, sortCompanies, toDraft, validateDraft } from './companyDraft';
 import type { Company } from './types';
 
 const TODAY = '2026-11-20';
@@ -127,8 +119,13 @@ describe('Bolagskortet', () => {
     expect(fromDraft(gone, { ...toDraft(gone), holdingId: '' }).holdingId).toBeUndefined();
   });
 
-  it('Läsa innehav som misslyckades säger det', () => {
-    expect(form(co('A'), { holdings: [], linksFailed: true })).toContain('Innehaven i Investeringar gick inte att läsa');
+  it('när innehaven inte gick att läsa står det, och kopplingen kallas inte borttagen och behålls vid sparande', () => {
+    const linked = co('A', { holdingId: 'h1' });
+    const html = form(linked, { holdings: null, linksFailed: true });
+    expect(html).toContain('Innehaven i Investeringar gick inte att läsa');
+    expect(html).not.toContain('finns inte längre');
+    expect(html).not.toContain('är borttaget');
+    expect(fromDraft(linked, toDraft(linked)).holdingId).toBe('h1');
   });
 
   it('ett namn på bara mellanslag går inte att spara', () => {
