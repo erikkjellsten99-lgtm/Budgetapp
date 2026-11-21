@@ -8,16 +8,23 @@ import { K1_04 } from './kurs-1/04';
 import { K1_05 } from './kurs-1/05';
 import { K1_06 } from './kurs-1/06';
 import { K1_07 } from './kurs-1/07';
+import { K2_01 } from './kurs-2/01';
+import { K2_02 } from './kurs-2/02';
+import { K2_03 } from './kurs-2/03';
+import { K2_04 } from './kurs-2/04';
+import { K2_05 } from './kurs-2/05';
+import { K2_06 } from './kurs-2/06';
+import { K2_07 } from './kurs-2/07';
 
 export const COURSES: Course[] = [
   { id: 1, title: 'Grunderna', lessons: [K1_01, K1_02, K1_03, K1_04, K1_05, K1_06, K1_07] },
+  { id: 2, title: 'Företagets ekonomi', lessons: [K2_01, K2_02, K2_03, K2_04, K2_05, K2_06, K2_07] },
 ];
 
 export const ALL_LESSONS: Lesson[] = COURSES.flatMap(c => c.lessons);
 
 /** Kurserna som ännu inte är skrivna. Visas som kommer. */
 export const PLANNED: { id: number; title: string }[] = [
-  { id: 2, title: 'Företagets ekonomi' },
   { id: 3, title: 'Kvartalsrapporten' },
   { id: 4, title: 'Värdering' },
   { id: 5, title: 'Affärsanalys' },

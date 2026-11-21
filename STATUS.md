@@ -235,7 +235,9 @@
 - Mina bolag finns (PR 2): bolagskort med tes och säljregler, och rapportmallen (en rapport per bolag, år och period,
   alla siffror valfria, förklaring per fält). Appen räknar rörelsemarginal och omsättningstillväxt och visar uträkningen,
   eller varför den saknas. Inte kopplat än: vanan bockas inte av en sparad rapport, och inga lektionslänkar vid fälten.
-- Halvfärdigt: Beslutsdagbok visas som rad med texten kommer. Kurs 2 till 10 är bara planerade.
+- Kurs 2, Företagets ekonomi, finns med sju lektioner (2026-11-20): resultaträkning, balansräkning, kassaflödesanalys,
+  sambanden, marginaler, skulder och årsredovisningen.
+- Halvfärdigt: Beslutsdagbok visas som rad med texten kommer. Kurs 3 till 10 är bara planerade.
 - Repetitionen: högst 3 frågor per dag (en fråga räknas när den repeterats, också vid fel svar). Raden, kortet Dagens
   lektion och repetitionen räknar likadant, dagen byter vid midnatt och när appen visas igen, och svar på frågor som
   inte finns i appens version (från en nyare telefon) hoppas över.

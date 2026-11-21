@@ -23,6 +23,11 @@ export function todayCard(progress: Progress[], answers: Answer[], today: string
   return reviewToday(answers, today).length > 0 ? { kind: 'review' } : { kind: 'coming' };
 }
 
+/** Meningen om nästa kurs som kommer, eller tom text om ingen kurs är planerad. */
+export function comingNote(planned: { id: number }[] = PLANNED): string {
+  return planned.length > 0 ? ` Kurs ${planned[0].id} kommer.` : '';
+}
+
 const Chevron = () => (
   <svg className="akademin-chevron" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
     <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -61,19 +66,19 @@ function TodayLesson({ card, onOpenLesson, onReview }: { card: TodayCard; onOpen
               </button>
             </p>
           ) : (
-            <p className="akademin-meta">Du har läst alla lektionerna i kursen. Kurs 2 kommer.</p>
+            <p className="akademin-meta">Du har läst alla lektionerna.{comingNote()}</p>
           )}
         </>
       )}
       {card.kind === 'review' && (
         <>
-          <p className="akademin-meta">Alla lektioner i kursen är lästa. Några frågor är värda en repetition.</p>
+          <p className="akademin-meta">Alla lektioner är lästa. Några frågor är värda en repetition.</p>
           <button type="button" className="primary" onClick={onReview}>
             Repetera nu
           </button>
         </>
       )}
-      {card.kind === 'coming' && <p className="akademin-meta">Alla lektioner i kursen är lästa och inget väntar på repetition. Kurs 2 kommer.</p>}
+      {card.kind === 'coming' && <p className="akademin-meta">Alla lektioner är lästa och inget väntar på repetition.{comingNote()}</p>}
     </section>
   );
 }
