@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useToday } from '../vanor/useToday';
 import { newJournalEntry, removeJournalEntry, saveJournalEntry, type AkademinData } from './akademinStore';
 import { loadEconomyLinks, type EconomyLinks } from './economyLinks';
-import { entryTrades, fromDraft, hasTrade, JOURNAL_TYPES, listOrder, pendingFollowUp, toDraft, validateDraft, type JournalDraft } from './journalDraft';
+import { changeCompany, changeType, entryTrades, fromDraft, hasTrade, JOURNAL_TYPES, listOrder, pendingFollowUp, toDraft, validateDraft, type JournalDraft } from './journalDraft';
 import { JOURNAL_LABEL, needsFollowUp } from './logic';
 import type { DateKey, JournalEntry, JournalType } from './types';
 
@@ -139,6 +139,17 @@ export function JournalForm(props: JournalFormProps) {
   const [busy, setBusy] = useState(false);
   // Ref, så att två tryck i samma tick inte båda tar sig förbi spärren.
   const working = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const deleteBtn = useRef<HTMLButtonElement>(null);
+  const [invalidTick, setInvalidTick] = useState(0);
+  const [cancelledTick, setCancelledTick] = useState(0);
+  // Ett misslyckat försök: fokus till första ogiltiga fältet. Avbryt i borttagningsfrågan: fokus tillbaka till Ta bort.
+  useEffect(() => {
+    if (invalidTick > 0) formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [invalidTick]);
+  useEffect(() => {
+    if (cancelledTick > 0) deleteBtn.current?.focus();
+  }, [cancelledTick]);
   const errors = submitted ? validateDraft(draft) : {};
   const set = <K extends keyof JournalDraft>(key: K, value: JournalDraft[K]) => setDraft((d) => ({ ...d, [key]: value }));
   const text = (key: 'date' | 'why' | 'change' | 'followUp') => ({ value: draft[key], onChange: (e: { target: { value: string } }) => set(key, e.target.value) });
@@ -154,12 +165,15 @@ export function JournalForm(props: JournalFormProps) {
     e.preventDefault();
     if (working.current) return;
     setSubmitted(true);
-    if (Object.keys(validateDraft(draft)).length > 0) return;
+    if (Object.keys(validateDraft(draft)).length > 0) {
+      setInvalidTick((n) => n + 1);
+      return;
+    }
     working.current = true;
     setBusy(true);
     setFailed(null);
     try {
-      await props.onSave(fromDraft(entry, draft, companies, today));
+      await props.onSave(fromDraft(entry, draft, companies, today, links));
     } catch {
       setFailed('save');
       working.current = false;
@@ -182,7 +196,7 @@ export function JournalForm(props: JournalFormProps) {
   };
 
   return (
-    <form className="akademin-company-form" onSubmit={save} noValidate aria-label={isNew ? 'Nytt inlägg' : `Inlägg om ${entry.companyName}`}>
+    <form ref={formRef} className="akademin-company-form" onSubmit={save} noValidate aria-label={isNew ? 'Nytt inlägg' : `Inlägg om ${entry.companyName}`}>
       <h3 className="akademin-focus-target" tabIndex={-1}>
         {isNew ? 'Nytt inlägg' : entry.companyName || 'Inlägg'}
       </h3>
@@ -210,7 +224,7 @@ export function JournalForm(props: JournalFormProps) {
         ) : (
           <label>
             Bolag
-            <select value={draft.companyId} onChange={(e) => set('companyId', e.target.value)} aria-invalid={errors.company ? 'true' : undefined} aria-describedby={errors.company ? 'akademin-err-company' : undefined}>
+            <select value={draft.companyId} onChange={(e) => setDraft((d) => changeCompany(d, e.target.value, companies, links))} aria-invalid={errors.company ? 'true' : undefined} aria-describedby={errors.company ? 'akademin-err-company' : undefined}>
               <option value="">Välj bolag</option>
               {missingCompany && <option value={draft.companyId}>{entry.companyName}</option>}
               {companies.map((c) => (
@@ -231,7 +245,7 @@ export function JournalForm(props: JournalFormProps) {
 
       <label>
         Typ
-        <select value={draft.type} onChange={(e) => set('type', e.target.value as JournalType)}>
+        <select value={draft.type} onChange={(e) => setDraft((d) => changeType(d, e.target.value as JournalType))}>
           {JOURNAL_TYPES.map((t) => (
             <option key={t} value={t}>
               {JOURNAL_LABEL[t]}
@@ -241,25 +255,31 @@ export function JournalForm(props: JournalFormProps) {
       </label>
 
       {tradeSelect ? (
-        <label>
-          Affär i Investeringar (valfritt)
-          <select value={draft.tradeId} disabled={links === null} onChange={(e) => set('tradeId', e.target.value)}>
-            {links === null ? (
-              <option value={draft.tradeId}>{linksFailed ? 'Affärerna gick inte att läsa just nu' : 'Läser affärer'}</option>
-            ) : (
-              <>
-                <option value="">Ingen koppling</option>
-                {missingTrade && <option value={draft.tradeId}>Affären finns inte längre</option>}
-                {trades.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.date} {SIDE_LABEL[t.side]}
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
-          {missingTrade && <span className="akademin-meta">Affären är borttagen i Investeringar. Välj Ingen koppling, eller spara som det är.</span>}
-        </label>
+        <div className="akademin-field">
+          <label>
+            Affär i Investeringar (valfritt)
+            <select value={draft.tradeId} disabled={links === null} onChange={(e) => set('tradeId', e.target.value)} aria-describedby={missingTrade ? 'akademin-hint-trade' : undefined}>
+              {links === null ? (
+                <option value={draft.tradeId}>{linksFailed ? 'Affärerna gick inte att läsa just nu' : 'Läser affärer'}</option>
+              ) : (
+                <>
+                  <option value="">Ingen koppling</option>
+                  {missingTrade && <option value={draft.tradeId}>Affären finns inte längre</option>}
+                  {trades.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.date} {SIDE_LABEL[t.side]}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+          </label>
+          {missingTrade && (
+            <span id="akademin-hint-trade" className="akademin-meta">
+              Affären är borttagen i Investeringar. Välj Ingen koppling, eller spara som det är.
+            </span>
+          )}
+        </div>
       ) : (
         hasTrade(draft.type) &&
         draft.companyId !== '' && <p className="akademin-meta">Bolaget är inte kopplat till något innehav, så ingen affär går att välja. Koppla innehavet på bolagskortet i Mina bolag.</p>
@@ -307,7 +327,10 @@ export function JournalForm(props: JournalFormProps) {
       )}
 
       {confirming ? (
-        <DeleteConfirm busy={busy} onConfirm={remove} onCancel={() => setConfirming(false)} />
+        <DeleteConfirm busy={busy} onConfirm={remove} onCancel={() => {
+          setConfirming(false);
+          setCancelledTick((n) => n + 1);
+        }} />
       ) : (
         <div className="akademin-actions">
           <button type="submit" className="primary" disabled={busy}>
@@ -317,7 +340,7 @@ export function JournalForm(props: JournalFormProps) {
             Avbryt
           </button>
           {!isNew && (
-            <button type="button" className="danger" disabled={busy} onClick={() => setConfirming(true)}>
+            <button type="button" ref={deleteBtn} className="danger" disabled={busy} onClick={() => setConfirming(true)}>
               Ta bort
             </button>
           )}

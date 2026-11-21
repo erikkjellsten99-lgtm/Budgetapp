@@ -66,8 +66,11 @@ export function toDraft(e: JournalEntry): JournalDraft {
  * Inlägget med formulärets värden. Bolagets namn kopieras från biblioteket; är bolaget borttaget behålls det gamla
  * namnet. Affären behålls bara för Köpte och Sålde. Ett nytt eller ändrat svar får dagens datum, ett oförändrat behåller sitt.
  */
-export function fromDraft(base: JournalEntry, d: JournalDraft, companies: Company[], today: DateKey): JournalEntry {
+export function fromDraft(base: JournalEntry, d: JournalDraft, companies: Company[], today: DateKey, links: EconomyLinks | null = null): JournalEntry {
   const company = companies.find((c) => c.id === d.companyId);
+  // En affär som finns men hör till ett annat innehav än bolagets släpps. Okända länkar eller en affär som inte finns rör vi inte.
+  const trade = links?.trades.find((t) => t.id === d.tradeId);
+  const foreign = company !== undefined && trade !== undefined && trade.holdingId !== company.holdingId;
   const text = d.followUp.trim();
   const followUp = text === '' ? undefined : base.followUp && base.followUp.text === text ? base.followUp : { date: today, text };
   return {
@@ -78,7 +81,7 @@ export function fromDraft(base: JournalEntry, d: JournalDraft, companies: Compan
     type: d.type,
     why: d.why.trim(),
     change: d.change.trim(),
-    tradeId: hasTrade(d.type) && d.tradeId !== '' ? d.tradeId : undefined,
+    tradeId: hasTrade(d.type) && d.tradeId !== '' && !foreign ? d.tradeId : undefined,
     followUp,
   };
 }
@@ -98,4 +101,15 @@ export function validateDraft(d: JournalDraft): JournalErrors {
   if (d.why.trim() === '') errors.why = 'Skriv ett skäl.';
   if (d.hadFollowUp && d.followUp.trim() === '') errors.followUp = 'Skriv ett svar.';
   return errors;
+}
+
+/** Byte av bolag: affären behålls bara om det nya bolagets innehav har den. Medan affärerna är okända rörs den inte. */
+export function changeCompany(d: JournalDraft, companyId: string, companies: Company[], links: EconomyLinks | null): JournalDraft {
+  const keep = links === null || entryTrades(links, companies, companyId).some((t) => t.id === d.tradeId);
+  return { ...d, companyId, tradeId: keep ? d.tradeId : '' };
+}
+
+/** Byte av typ: Avstod och Annat har ingen affär. */
+export function changeType(d: JournalDraft, type: JournalType): JournalDraft {
+  return { ...d, type, tradeId: hasTrade(type) ? d.tradeId : '' };
 }

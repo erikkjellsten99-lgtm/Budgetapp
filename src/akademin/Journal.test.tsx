@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { newCompany, newJournalEntry as newEntry, type AkademinData } from './akademinStore';
 import { AkademinBody } from './Akademin';
 import { JournalBody, JournalForm, JournalList, JournalRow, journalBack } from './Journal';
-import { entryTrades, fromDraft, pendingFollowUp, sortJournal, toDraft, validateDraft } from './journalDraft';
+import { changeCompany, changeType, entryTrades, fromDraft, pendingFollowUp, sortJournal, toDraft, validateDraft } from './journalDraft';
 import type { EconomyLinks } from './economyLinks';
 import type { Company, JournalEntry } from './types';
 
@@ -188,6 +188,50 @@ describe('Koppling till en affär', () => {
   it('byte till Avstod tar bort kopplingen vid sparande', () => {
     const e = entry('a', '2026-11-01', { tradeId: 't1' });
     expect(fromDraft(e, { ...toDraft(e), type: 'avstod' }, COMPANIES, TODAY).tradeId).toBeUndefined();
+  });
+});
+
+describe('Affärslänken följer bolaget', () => {
+  const LINKS2: EconomyLinks = { ...LINKS, holdings: [...LINKS.holdings, { id: 'h2', name: 'Investor B' }], trades: [...LINKS.trades, { id: 't4', holdingId: 'h2', date: '2026-06-01', side: 'buy' }] };
+  const COS = [co('Volvo B', { id: 'c1', holdingId: 'h1' }), co('Investor B', { id: 'c2', holdingId: 'h2' }), co('Utan', { id: 'c3' })];
+  const e = entry('a', '2026-11-01', { tradeId: 't1' });
+
+  it('byte av bolag och sparande ger tradeId undefined', () => {
+    const d = changeCompany(toDraft(e), 'c2', COS, LINKS2);
+    expect(d.tradeId).toBe('');
+    expect(fromDraft(e, d, COS, TODAY, LINKS2).tradeId).toBeUndefined();
+  });
+
+  it('en affär som hör till det nya bolagets innehav behålls vid bolagsbyte', () => {
+    expect(changeCompany(toDraft(e), 'c1', COS, LINKS2).tradeId).toBe('t1');
+  });
+
+  it('fromDraft släpper en affär som hör till ett annat innehav än bolagets', () => {
+    expect(fromDraft(e, { ...toDraft(e), companyId: 'c2' }, COS, TODAY, LINKS2).tradeId).toBeUndefined();
+    expect(fromDraft(e, { ...toDraft(e), companyId: 'c3' }, COS, TODAY, LINKS2).tradeId).toBeUndefined();
+  });
+
+  it('en affär som inte finns någonstans behålls vid sparande men släpps vid bolagsbyte', () => {
+    const gone = entry('a', '2026-11-01', { tradeId: 'borta' });
+    expect(fromDraft(gone, toDraft(gone), COS, TODAY, LINKS2).tradeId).toBe('borta');
+    expect(changeCompany(toDraft(gone), 'c2', COS, LINKS2).tradeId).toBe('');
+  });
+
+  it('okända affärer: bolagsbyte och sparande rör inte tradeId', () => {
+    expect(changeCompany(toDraft(e), 'c2', COS, null).tradeId).toBe('t1');
+    expect(fromDraft(e, { ...toDraft(e), companyId: 'c2' }, COS, TODAY, null).tradeId).toBe('t1');
+  });
+
+  it('Köpte till Avstod och Annat tar bort tradeId', () => {
+    expect(fromDraft(e, changeType(toDraft(e), 'avstod'), COS, TODAY, LINKS2).tradeId).toBeUndefined();
+    expect(changeType(toDraft(e), 'annat').tradeId).toBe('');
+    expect(changeType(toDraft(e), 'salde').tradeId).toBe('t1');
+  });
+
+  it('tipset om en borttagen affär ligger utanför etiketten och är kopplat med aria-describedby', () => {
+    const html = form(entry('a', '2026-11-01', { tradeId: 'borta' }));
+    expect(html).toContain('aria-describedby="akademin-hint-trade"');
+    expect(html).toMatch(/<\/label><span id="akademin-hint-trade"/);
   });
 });
 
