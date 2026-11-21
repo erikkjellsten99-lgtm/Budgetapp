@@ -206,6 +206,10 @@ describe('Affärslänken följer bolaget', () => {
     expect(changeCompany(toDraft(e), 'c1', COS, LINKS2).tradeId).toBe('t1');
   });
 
+  it('fromDraft behåller en giltig affär som hör till bolagets eget innehav när länkarna är kända', () => {
+    expect(fromDraft(e, toDraft(e), COS, TODAY, LINKS2).tradeId).toBe('t1');
+  });
+
   it('fromDraft släpper en affär som hör till ett annat innehav än bolagets', () => {
     expect(fromDraft(e, { ...toDraft(e), companyId: 'c2' }, COS, TODAY, LINKS2).tradeId).toBeUndefined();
     expect(fromDraft(e, { ...toDraft(e), companyId: 'c3' }, COS, TODAY, LINKS2).tradeId).toBeUndefined();

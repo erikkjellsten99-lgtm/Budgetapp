@@ -369,6 +369,24 @@ describe('vanan Studera aktier', () => {
     expect(await checks()).toEqual([]);
   });
 
+  it('arkiverad länkad vana: en annan aktiv vana med samma namn bockas', async () => {
+    // Telefon B:s vana ('studera  Aktier') och telefon A:s vana, som kontots svar pekar på och som sedan tas bort.
+    const other = await v.addHabit('studera  Aktier', 7);
+    const linked = await v.addHabit('Telefon A:s vana', 7);
+    await v.saveAkademinRecord('akademin_settings', { id: 'habit', answer: 'ja', habitId: linked });
+    await v.removeHabit(linked);
+    await s.markStudied(DAY);
+    expect(await checks()).toEqual([{ key: `${DAY}|${other}`, date: DAY, habitId: other }]);
+  });
+
+  it('arkiverad länkad vana och ingen annan aktiv med samma namn: ingenting bockas och inget kastas', async () => {
+    const linked = await adopt();
+    await v.removeHabit(linked);
+    await v.addHabit('Något annat', 7);
+    await expect(s.markStudied(DAY)).resolves.toBeUndefined();
+    expect(await checks()).toEqual([]);
+  });
+
   it('markStudied gör ingenting när vanan saknas helt', async () => {
     await v.saveAkademinRecord('akademin_settings', { id: 'habit', answer: 'ja', habitId: 'finns-inte' });
     await expect(s.markStudied(DAY)).resolves.toBeUndefined();
@@ -378,8 +396,11 @@ describe('vanan Studera aktier', () => {
   it('markStudied kastar inte när lagringen misslyckas', async () => {
     await adopt();
     const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(s.markStudied(DAY)).resolves.toBeUndefined();
     expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
     spy.mockRestore();
   });
 
@@ -400,8 +421,11 @@ describe('vanan Studera aktier', () => {
   it('completeLesson lyckas även när bockningen misslyckas', async () => {
     await adopt();
     const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(s.completeLesson('k1-01', FIRST, DAY)).resolves.toBeUndefined();
     expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
     spy.mockRestore();
     expect((await s.loadAkademin()).progress).toHaveLength(1);
   });
@@ -427,8 +451,11 @@ describe('vanan Studera aktier', () => {
   it('recordReview lyckas även när bockningen misslyckas', async () => {
     await adopt();
     const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(s.recordReview('k1-01-q1', true, DAY)).resolves.toBeUndefined();
     expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
     spy.mockRestore();
     expect((await s.loadAkademin()).answers).toHaveLength(1);
   });
@@ -442,8 +469,11 @@ describe('vanan Studera aktier', () => {
   it('saveReport lyckas även när bockningen misslyckas', async () => {
     await adopt();
     const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(s.saveReport(report('r1'))).resolves.toBeUndefined();
     expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
     spy.mockRestore();
     expect((await s.loadAkademin()).reports).toHaveLength(1);
   });
@@ -457,8 +487,11 @@ describe('vanan Studera aktier', () => {
   it('saveJournalEntry lyckas även när bockningen misslyckas', async () => {
     await adopt();
     const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(s.saveJournalEntry({ id: 'j1', date: DAY, companyName: 'A', type: 'avstod', why: 'x', change: 'y' })).resolves.toBeUndefined();
     expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
     spy.mockRestore();
     expect((await s.loadAkademin()).journal).toHaveLength(1);
   });

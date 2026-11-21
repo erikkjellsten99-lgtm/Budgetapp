@@ -515,7 +515,9 @@ button.akademin-row:focus-visible,
   resize: vertical;
 }
 
-.akademin-company-form input[aria-invalid='true'] {
+.akademin-company-form input[aria-invalid='true'],
+.akademin-company-form select[aria-invalid='true'],
+.akademin-company-form textarea[aria-invalid='true'] {
   border-color: var(--lingon);
 }
 

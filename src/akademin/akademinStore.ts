@@ -116,12 +116,14 @@ async function tickStudied(today: DateKey): Promise<void> {
     const setting = (await loadAkademinRecords<HabitSetting>('akademin_settings')).find((r) => r.id === 'habit');
     if (setting?.answer !== 'ja' || !setting.habitId) return;
     const { habits, checks } = await loadHabitData();
-    const habit = habits.find((h) => h.id === setting.habitId);
-    if (!habit || habit.archived) return;
+    // Länkade vanan borttagen eller saknas (t.ex. två telefoner skapade var sin): bocka en aktiv med samma namn.
+    const habit = [habits.find((h) => h.id === setting.habitId), habits.find((h) => !h.archived && sameName(h.name, HABIT_NAME))].find((h) => h && !h.archived);
+    if (!habit) return;
     if (checks.some((c) => c.habitId === habit.id && c.date === today)) return;
     await setCheck(habit.id, today, 'done');
-  } catch {
+  } catch (e) {
     // Lektionen, svaret eller texten är redan sparad och går före bockningen.
+    console.warn('Akademin: bockningen misslyckades', e);
   }
 }
 

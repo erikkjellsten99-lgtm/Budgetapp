@@ -237,8 +237,11 @@
   eller varför den saknas. Inte kopplat än: inga lektionslänkar vid fälten.
 - Beslutsdagboken finns (PR 3): inlägg med skäl och uppföljning, kopplade till bolag och affärer utan att något skrivs i
   ekonomin.
-- Vanan Studera aktier (PR 3): Akademin frågar en gång (Ja eller Nej, frågan kommer inte tillbaka) och väntar tills
-  kontots poster hämtats, så att två telefoner inte skapar var sin vana. Vanan bockas för dagen när en lektion blir klar
+- Vanan Studera aktier (PR 3): Akademin frågar en gång (Ja eller Nej, frågan kommer inte tillbaka) och väntar, på en
+  inloggad telefon som aldrig hämtat kontots poster, tills de hämtats. En telefon utan nät, eller en som används utloggad
+  och loggar in senare, kan ändå skapa en andra vana. Ta då bort den ena under Vanor: den kvarvarande bockas (bockningen
+  hittar en aktiv vana som heter Studera aktier om den länkade är borta). På ett alldeles nytt konto utan sparade poster
+  visas frågan först efter att något sparats (samma beteende som Följ biblioteket i Kunskap). Vanan bockas för dagen när en lektion blir klar
   (också en gammal som görs om), dagens sista repetitionsfråga besvarats, en rapport sparas eller ett dagboksinlägg
   sparas. Bockningen går via vanornas vanliga funktioner och får aldrig få en sparning att misslyckas.
 - Halvfärdigt: kurs 2 till 10 är bara planerade.

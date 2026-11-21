@@ -1,6 +1,6 @@
 // Akademin: kursen i aktier, ett läge i Mindhub. Startsidan, repetitionen och vägen till lektionerna och ordlistan.
 // Läser och sparar bara framsteg och svar (akademinStore). Ingenting här rör ekonomin.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import { todayKey } from '../vanor/dates';
 import { useToday } from '../vanor/useToday';
 import { answerHabitOffer, doneToday, habitOfferReady, nextLesson, recordReview, useAkademin, type AkademinData } from './akademinStore';
@@ -36,10 +36,12 @@ const Check = () => (
   </svg>
 );
 
-function TodayLesson({ card, onOpenLesson, onReview }: { card: TodayCard; onOpenLesson: (id: string) => void; onReview: () => void }) {
+function TodayLesson({ card, onOpenLesson, onReview, headingRef }: { card: TodayCard; onOpenLesson: (id: string) => void; onReview: () => void; headingRef?: Ref<HTMLHeadingElement> }) {
   return (
     <section className="card akademin-today" aria-labelledby="akademin-today-title">
-      <h3 id="akademin-today-title">Dagens lektion</h3>
+      <h3 id="akademin-today-title" ref={headingRef} tabIndex={-1}>
+        Dagens lektion
+      </h3>
       {card.kind === 'next' && (
         <>
           <p className="akademin-meta">
@@ -89,14 +91,16 @@ export async function answerOffer(yes: boolean, answer: (yes: boolean) => Promis
 }
 
 /** Frågan om vanan Studera aktier. Försvinner när svaret sparats (startsidan läser om datan), och finns kvar vid fel. */
-export function HabitOffer({ answer = answerHabitOffer, initialFailed = false }: { answer?: (yes: boolean) => Promise<void>; initialFailed?: boolean }) {
+export function HabitOffer({ answer = answerHabitOffer, initialFailed = false, onAnswered }: { answer?: (yes: boolean) => Promise<void>; initialFailed?: boolean; onAnswered?: (yes: boolean) => void }) {
   const [failed, setFailed] = useState(initialFailed);
   const [busy, setBusy] = useState(false);
   const reply = async (yes: boolean) => {
     setBusy(true);
     setFailed(false);
-    await answerOffer(yes, answer, () => setFailed(true));
+    let ok = true;
+    await answerOffer(yes, answer, () => ((ok = false), setFailed(true)));
     setBusy(false);
+    if (ok) onAnswered?.(yes);
   };
   return (
     <section className="card akademin-offer" aria-labelledby="akademin-offer-text">
@@ -145,13 +149,28 @@ export function StartPage({
   /** Får frågan om vanan visas? Null eller utelämnad medan det inte är känt. */
   offerReady?: boolean | null;
 }) {
+  // Efter svaret försvinner kortet: fokus går till rubriken, och efter Ja står det kvar var vanan finns.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const [joined, setJoined] = useState(false);
   const doneIds = new Set(data.progress.map((p) => p.id));
   const due = reviewToday(data.answers, today).length;
   const words = glossaryEntries(data.progress, '').length;
   return (
     <div className="akademin-start">
-      {showHabitOffer(data, offerReady) && <HabitOffer />}
-      <TodayLesson card={todayCard(data.progress, data.answers, today)} onOpenLesson={onOpenLesson} onReview={onReview} />
+      {showHabitOffer(data, offerReady) && (
+        <HabitOffer
+          onAnswered={(yes) => {
+            setJoined(yes);
+            heading.current?.focus();
+          }}
+        />
+      )}
+      {joined && (
+        <p className="akademin-meta" role="status">
+          Vanan finns nu under Vanor.
+        </p>
+      )}
+      <TodayLesson card={todayCard(data.progress, data.answers, today)} onOpenLesson={onOpenLesson} onReview={onReview} headingRef={heading} />
 
       <div className="group akademin-rows">
         {due > 0 && (
