@@ -1,16 +1,20 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { todayKey } from '../vanor/dates';
 import type { Answer, JournalEntry, Progress, Report } from './types';
 
 /** Nytt modulläge med färsk databas: store.ts håller sin anslutning på modulnivå. */
 /** failAt: vilken sparning (räknat från 1 efter nollställning) som ska misslyckas, 0 för ingen. */
-const hook = { failAt: 0, saves: 0 };
+const hook = { failAt: 0, saves: 0, session: false };
 
 async function freshStore() {
   const { IDBFactory, IDBKeyRange } = await import('fake-indexeddb');
   vi.resetModules();
   hook.failAt = 0;
   hook.saves = 0;
+  hook.session = false;
+  // Kontot: inloggad eller inte styrs av hook.session.
+  vi.doMock('../sync', () => ({ supabase: { auth: { getSession: async () => ({ data: { session: hook.session ? {} : null } }) } } }));
   // Låter en viss sparning misslyckas, för att pröva delvis misslyckade skrivningar.
   vi.doMock('../vanor/store', async (orig) => {
     const real = await orig<typeof import('../vanor/store')>();
@@ -41,6 +45,7 @@ describe('Akademins lagring', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.doUnmock('../vanor/store');
+    vi.doUnmock('../sync');
   });
 
   it('completeLesson sparar en Progress och fyra svar enligt nextAnswer', async () => {
@@ -213,5 +218,281 @@ describe('rapporter', () => {
     const r = s.newReport('c1');
     expect(r).toMatchObject({ companyId: 'c1', type: 'Q1', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '' });
     expect(s.newReport('c1').id).not.toBe(r.id);
+  });
+});
+
+describe('dagboken', () => {
+  const entry = (id: string): JournalEntry => ({ id, date: '2026-11-20', companyName: 'A', type: 'avstod', why: 'x', change: 'y' });
+
+  it('saveJournalEntry sparar och skriver över samma id, och removeJournalEntry tar bort just det', async () => {
+    const s = await freshStore();
+    await s.saveJournalEntry(entry('j1'));
+    await s.saveJournalEntry(entry('j2'));
+    await s.saveJournalEntry({ ...entry('j1'), followUp: { date: '2026-11-21', text: 'Ja' } });
+    let journal = (await s.loadAkademin()).journal;
+    expect(journal.map((j: JournalEntry) => j.id).sort()).toEqual(['j1', 'j2']);
+    expect(journal.find((j: JournalEntry) => j.id === 'j1')?.followUp?.text).toBe('Ja');
+    await s.removeJournalEntry('j1');
+    journal = (await s.loadAkademin()).journal;
+    expect(journal.map((j: JournalEntry) => j.id)).toEqual(['j2']);
+  });
+
+  it('newJournalEntry ger dagens datum, tomma texter och ny id', async () => {
+    const s = await freshStore();
+    const e = s.newJournalEntry('2026-11-20');
+    expect(e).toMatchObject({ date: '2026-11-20', companyName: '', type: 'kopte', why: '', change: '' });
+    expect(s.newJournalEntry('2026-11-20').id).not.toBe(e.id);
+  });
+});
+
+describe('vanan Studera aktier', () => {
+  const DAY = '2026-11-20';
+  let s: Awaited<ReturnType<typeof freshStore>>;
+  let v: typeof import('../vanor/store');
+  beforeEach(async () => {
+    s = await freshStore();
+    v = await import('../vanor/store');
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.doUnmock('../vanor/store');
+    vi.doUnmock('../sync');
+  });
+
+  const habits = async () => (await v.loadHabitData()).habits;
+  const checks = async () => (await v.loadHabitData()).checks;
+  const adopt = async () => {
+    await s.answerHabitOffer(true);
+    return (await s.loadAkademin()).habit!.habitId!;
+  };
+  const report = (id: string): Report => ({ id, companyId: 'c1', year: '2026', type: 'Q1', unit: 'MSEK', outlook: '', good: '', bad: '', thesisWhy: '' });
+
+  it('HABIT_NAME är Studera aktier', () => {
+    expect(s.HABIT_NAME).toBe('Studera aktier');
+  });
+
+  it('habitOfferReady: true utloggad utan svar, false när ett svar finns', async () => {
+    expect(await s.habitOfferReady()).toBe(true);
+    await s.answerHabitOffer(false);
+    expect(await s.habitOfferReady()).toBe(false);
+  });
+
+  it('habitOfferReady: false när svaret är ja', async () => {
+    await s.answerHabitOffer(true);
+    expect(await s.habitOfferReady()).toBe(false);
+  });
+
+  it('habitOfferReady: false inloggad utan lastPull, true med lastPull', async () => {
+    hook.session = true;
+    expect(await s.habitOfferReady()).toBe(false);
+    await v.setMeta('sync', { lastPull: null });
+    expect(await s.habitOfferReady()).toBe(false);
+    await v.setMeta('sync', { lastPull: '2026-11-20T08:00:00Z' });
+    expect(await s.habitOfferReady()).toBe(true);
+  });
+
+  it('answerHabitOffer(true) skapar vanan med målet 7 och sparar dess id', async () => {
+    await s.answerHabitOffer(true);
+    const hs = await habits();
+    expect(hs).toHaveLength(1);
+    expect(hs[0]).toMatchObject({ name: 'Studera aktier', goal: 7, archived: false });
+    expect((await s.loadAkademin()).habit).toEqual({ id: 'habit', answer: 'ja', habitId: hs[0].id });
+  });
+
+  it('answerHabitOffer(true) två gånger i rad (också överlappande) ger en vana', async () => {
+    await Promise.all([s.answerHabitOffer(true), s.answerHabitOffer(true)]);
+    await s.answerHabitOffer(true);
+    expect(await habits()).toHaveLength(1);
+  });
+
+  it('en redan aktiv vana med samma namn länkas i stället för att en andra skapas', async () => {
+    const id = await v.addHabit('Studera aktier', 3);
+    await s.answerHabitOffer(true);
+    expect(await habits()).toHaveLength(1);
+    expect((await s.loadAkademin()).habit).toEqual({ id: 'habit', answer: 'ja', habitId: id });
+  });
+
+  it('answerHabitOffer(false) sparar nej och skapar ingen vana', async () => {
+    await s.answerHabitOffer(false);
+    expect(await habits()).toHaveLength(0);
+    expect((await s.loadAkademin()).habit).toEqual({ id: 'habit', answer: 'nej' });
+  });
+
+  it('ett nej ändras inte av ett senare ja', async () => {
+    await s.answerHabitOffer(false);
+    await s.answerHabitOffer(true);
+    expect(await habits()).toHaveLength(0);
+    expect((await s.loadAkademin()).habit?.answer).toBe('nej');
+  });
+
+  it('en misslyckad sparning av svaret lämnar frågan kvar och ett nytt försök ger en vana', async () => {
+    hook.failAt = 1;
+    await expect(s.answerHabitOffer(true)).rejects.toThrow();
+    expect(await s.habitOfferReady()).toBe(true);
+    hook.failAt = 0;
+    hook.saves = 0;
+    await s.answerHabitOffer(true);
+    expect(await habits()).toHaveLength(1);
+    expect((await s.loadAkademin()).habit?.answer).toBe('ja');
+  });
+
+  it('markStudied bockar vanan för dagen, och två anrop ger en bock', async () => {
+    const id = await adopt();
+    await s.markStudied(DAY);
+    await s.markStudied(DAY);
+    expect(await checks()).toEqual([{ key: `${DAY}|${id}`, date: DAY, habitId: id }]);
+  });
+
+  it('markStudied ändrar inte en bock som bara är minimum', async () => {
+    const id = await adopt();
+    await v.setCheck(id, DAY, 'min');
+    await s.markStudied(DAY);
+    expect(await checks()).toEqual([{ key: `${DAY}|${id}`, date: DAY, habitId: id, min: true }]);
+  });
+
+  it('markStudied gör ingenting utan HabitSetting', async () => {
+    await v.addHabit('Studera aktier', 7);
+    await expect(s.markStudied(DAY)).resolves.toBeUndefined();
+    expect(await checks()).toEqual([]);
+  });
+
+  it('markStudied gör ingenting med svaret nej', async () => {
+    await s.answerHabitOffer(false);
+    await expect(s.markStudied(DAY)).resolves.toBeUndefined();
+    expect(await checks()).toEqual([]);
+  });
+
+  it('markStudied gör ingenting när vanan är arkiverad', async () => {
+    const id = await adopt();
+    await v.removeHabit(id);
+    await expect(s.markStudied(DAY)).resolves.toBeUndefined();
+    expect(await checks()).toEqual([]);
+  });
+
+  it('arkiverad länkad vana: en annan aktiv vana med samma namn bockas', async () => {
+    // Telefon B:s vana ('studera  Aktier') och telefon A:s vana, som kontots svar pekar på och som sedan tas bort.
+    const other = await v.addHabit('studera  Aktier', 7);
+    const linked = await v.addHabit('Telefon A:s vana', 7);
+    await v.saveAkademinRecord('akademin_settings', { id: 'habit', answer: 'ja', habitId: linked });
+    await v.removeHabit(linked);
+    await s.markStudied(DAY);
+    expect(await checks()).toEqual([{ key: `${DAY}|${other}`, date: DAY, habitId: other }]);
+  });
+
+  it('arkiverad länkad vana och ingen annan aktiv med samma namn: ingenting bockas och inget kastas', async () => {
+    const linked = await adopt();
+    await v.removeHabit(linked);
+    await v.addHabit('Något annat', 7);
+    await expect(s.markStudied(DAY)).resolves.toBeUndefined();
+    expect(await checks()).toEqual([]);
+  });
+
+  it('markStudied gör ingenting när vanan saknas helt', async () => {
+    await v.saveAkademinRecord('akademin_settings', { id: 'habit', answer: 'ja', habitId: 'finns-inte' });
+    await expect(s.markStudied(DAY)).resolves.toBeUndefined();
+    expect(await checks()).toEqual([]);
+  });
+
+  it('markStudied kastar inte när lagringen misslyckas', async () => {
+    await adopt();
+    const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(s.markStudied(DAY)).resolves.toBeUndefined();
+    expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
+    spy.mockRestore();
+  });
+
+  it('completeLesson bockar vanan', async () => {
+    const id = await adopt();
+    await s.completeLesson('k1-01', FIRST, DAY);
+    expect(await checks()).toEqual([{ key: `${DAY}|${id}`, date: DAY, habitId: id }]);
+  });
+
+  it('completeLesson på en gammal lektion en senare dag bockar den dagen', async () => {
+    const id = await adopt();
+    await s.completeLesson('k1-01', FIRST, DAY);
+    await s.completeLesson('k1-01', FIRST, '2026-11-22');
+    expect((await checks()).map((c: { date: string; habitId: string }) => c.date).sort()).toEqual([DAY, '2026-11-22']);
+    expect((await checks()).every((c: { habitId: string }) => c.habitId === id)).toBe(true);
+  });
+
+  it('completeLesson lyckas även när bockningen misslyckas', async () => {
+    await adopt();
+    const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(s.completeLesson('k1-01', FIRST, DAY)).resolves.toBeUndefined();
+    expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
+    spy.mockRestore();
+    expect((await s.loadAkademin()).progress).toHaveLength(1);
+  });
+
+  it('recordReview bockar först när dagens sista fråga besvarats, rätt eller fel', async () => {
+    const id = await adopt();
+    // Tre frågor förfaller idag: dagens repetition är tre frågor.
+    for (const q of ['k1-01-q1', 'k1-01-q2', 'k1-01-q3']) await v.saveAkademinRecord('akademin_answers', { id: q, streak: 1, due: '2026-11-19', last: '2026-11-18' });
+    await s.recordReview('k1-01-q1', true, DAY);
+    await s.recordReview('k1-01-q2', false, DAY);
+    expect(await checks()).toEqual([]);
+    await s.recordReview('k1-01-q3', false, DAY);
+    expect(await checks()).toEqual([{ key: `${DAY}|${id}`, date: DAY, habitId: id }]);
+  });
+
+  it('recordReview bockar när en enda fråga förföll och besvarats', async () => {
+    const id = await adopt();
+    await v.saveAkademinRecord('akademin_answers', { id: 'k1-01-q1', streak: 1, due: '2026-11-19', last: '2026-11-18' });
+    await s.recordReview('k1-01-q1', true, DAY);
+    expect((await checks()).map((c: { habitId: string }) => c.habitId)).toEqual([id]);
+  });
+
+  it('recordReview lyckas även när bockningen misslyckas', async () => {
+    await adopt();
+    const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(s.recordReview('k1-01-q1', true, DAY)).resolves.toBeUndefined();
+    expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
+    spy.mockRestore();
+    expect((await s.loadAkademin()).answers).toHaveLength(1);
+  });
+
+  it('saveReport bockar vanan för dagens datum', async () => {
+    const id = await adopt();
+    await s.saveReport(report('r1'));
+    expect(await checks()).toEqual([{ key: `${todayKey()}|${id}`, date: todayKey(), habitId: id }]);
+  });
+
+  it('saveReport lyckas även när bockningen misslyckas', async () => {
+    await adopt();
+    const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(s.saveReport(report('r1'))).resolves.toBeUndefined();
+    expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
+    spy.mockRestore();
+    expect((await s.loadAkademin()).reports).toHaveLength(1);
+  });
+
+  it('saveJournalEntry bockar vanan för dagens datum', async () => {
+    const id = await adopt();
+    await s.saveJournalEntry({ id: 'j1', date: '2026-01-01', companyName: 'A', type: 'avstod', why: 'x', change: 'y' });
+    expect(await checks()).toEqual([{ key: `${todayKey()}|${id}`, date: todayKey(), habitId: id }]);
+  });
+
+  it('saveJournalEntry lyckas även när bockningen misslyckas', async () => {
+    await adopt();
+    const spy = vi.spyOn(v, 'setCheck').mockRejectedValue(new Error('fel'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(s.saveJournalEntry({ id: 'j1', date: DAY, companyName: 'A', type: 'avstod', why: 'x', change: 'y' })).resolves.toBeUndefined();
+    expect(spy).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Akademin: bockningen misslyckades', expect.any(Error));
+    warn.mockRestore();
+    spy.mockRestore();
+    expect((await s.loadAkademin()).journal).toHaveLength(1);
   });
 });

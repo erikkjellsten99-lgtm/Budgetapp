@@ -5,8 +5,11 @@ import {
   describeGrowth,
   describeMargin,
   dueQuestions,
+  FOLLOW_UP_DAYS,
   growth,
+  JOURNAL_LABEL,
   margin,
+  needsFollowUp,
   nextAnswer,
   parseNumber,
   PERIOD_LABEL,
@@ -16,7 +19,7 @@ import {
   sortReports,
   startQuiz,
 } from './logic';
-import type { Answer, Report } from './types';
+import type { Answer, JournalEntry, Report } from './types';
 
 const TODAY = '2026-11-20';
 
@@ -241,5 +244,24 @@ describe('sortReports', () => {
   });
   it('etiketterna', () => {
     expect(Object.values(PERIOD_LABEL)).toEqual(['Q1', 'Q2', 'Q3', 'Q4', 'Halvår 1', 'Halvår 2', 'Helår']);
+  });
+});
+
+describe('beslutsdagbokens uppföljning', () => {
+  const e = (patch: Partial<JournalEntry> = {}): JournalEntry => ({ id: 'j', date: '2026-08-22', companyName: 'A', type: 'kopte', why: 'x', change: 'y', ...patch });
+
+  it('uppföljning efter 90 dagar: inte dag 89, ja dag 90 och senare', () => {
+    expect(FOLLOW_UP_DAYS).toBe(90);
+    expect(needsFollowUp(e(), '2026-11-19')).toBe(false);
+    expect(needsFollowUp(e(), '2026-11-20')).toBe(true);
+    expect(needsFollowUp(e(), '2027-03-01')).toBe(true);
+  });
+
+  it('inte när uppföljningen finns', () => {
+    expect(needsFollowUp(e({ followUp: { date: '2026-11-20', text: 'Ja' } }), '2026-12-01')).toBe(false);
+  });
+
+  it('typerna heter Köpte, Sålde, Avstod, Annat', () => {
+    expect(JOURNAL_LABEL).toEqual({ kopte: 'Köpte', salde: 'Sålde', avstod: 'Avstod', annat: 'Annat' });
   });
 });

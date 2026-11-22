@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Kunskap, { AkademinUnavailable, EYEBROW, MODES } from '../kunskap/Kunskap';
-import { AkademinBody, backFrom, Review, ReviewFinished, reviewQuiz, StartPage, todayCard } from './Akademin';
+import { AkademinBody, answerOffer, backFrom, HabitOffer, Review, ReviewFinished, reviewQuiz, StartPage, todayCard } from './Akademin';
 import { newCompany, type AkademinData } from './akademinStore';
 import { glossaryEntries } from './Glossary';
 import { createQuiz, QuizView } from './Quiz';
@@ -16,7 +16,7 @@ const done = (...ids: string[]): Progress[] => ids.map((id) => ({ id, doneAt: '2
 const withData = (patch: Partial<AkademinData>): AkademinData => ({ ...EMPTY, ...patch });
 const noop = () => {};
 const start = (data: AkademinData) =>
-  renderToStaticMarkup(<StartPage data={data} today={TODAY} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} />);
+  renderToStaticMarkup(<StartPage data={data} today={TODAY} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} onJournal={noop} />);
 
 const lesson1 = lessonById('k1-01')!;
 
@@ -45,11 +45,12 @@ describe('Akademins startsida', () => {
     expect(html).toContain('Index och vad marknaden är');
   });
 
-  it('Mina bolag är en rad som öppnar bolagsbiblioteket, Beslutsdagbok kommer', () => {
+  it('Mina bolag är en rad som öppnar bolagsbiblioteket, Beslutsdagbok är en rad som öppnar dagboken', () => {
     const html = start(EMPTY);
     expect(html).toContain('Mina bolag');
     expect(html).toContain('Inga än');
-    expect(html).toContain('<span>Beslutsdagbok</span><span class="akademin-muted">kommer</span>');
+    expect(html).toContain('Beslutsdagbok');
+    expect(html).not.toContain('<span>Beslutsdagbok</span><span class="akademin-muted">kommer</span>');
     expect(start(withData({ companies: [{ ...newCompany('Volvo B'), nextReport: '2026-12-01' }] }))).toContain('Rapport 2026-12-01');
   });
 
@@ -152,7 +153,7 @@ describe('Quiz', () => {
     expect(data.answers).toHaveLength(4);
     expect(data.answers.every((a) => a.streak === 1)).toBe(true);
     // Efter quizet visar startsidan Klar för idag och en länk till nästa lektion.
-    const html = renderToStaticMarkup(<StartPage data={data} today={TODAY} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} />);
+    const html = renderToStaticMarkup(<StartPage data={data} today={TODAY} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} onJournal={noop} />);
     expect(html).toContain('Klar för idag');
     expect(html).toContain('Hur börsen fungerar');
     vi.unstubAllGlobals();
@@ -306,7 +307,7 @@ describe('repetitionen per dag', () => {
     const ids = reviewToday(data.answers, TODAY);
     expect(ids).toEqual(['k1-01-q1', 'k1-01-q2', 'k1-01-q3']);
     const page = (d: AkademinData, day: string) =>
-      renderToStaticMarkup(<StartPage data={d} today={day} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} />);
+      renderToStaticMarkup(<StartPage data={d} today={day} onOpenLesson={noop} onReview={noop} onGlossary={noop} onCompanies={noop} onJournal={noop} />);
     expect(page(data, TODAY)).toContain('Repetition · 3 frågor');
 
     await store.recordReview(ids[0], false, TODAY);
@@ -395,3 +396,53 @@ describe('navigeringen', () => {
 });
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe('frågan om vanan', () => {
+  const text = (html: string) => html.replace(/<[^>]+>/g, '').replace(/&#x27;/g, "'");
+  const body = (data: AkademinData, offerReady?: boolean | null) => renderToStaticMarkup(<AkademinBody data={data} failed={false} offerReady={offerReady} />);
+
+  it('visas på startsidan med texten och knapparna Ja och Nej när ingen vana är besvarad', () => {
+    const html = body(EMPTY, true);
+    expect(text(html)).toContain('Vill du ha vanan Studera aktier? Den bockas av när du har läst dagens lektion, repeterat, lagt in en rapport eller skrivit i dagboken.');
+    expect(html).toMatch(/<button[^>]*>Ja<\/button>/);
+    expect(html).toMatch(/<button[^>]*>Nej<\/button>/);
+  });
+
+  it('visas inte medan det är okänt om den får visas, eller när den inte är redo', () => {
+    expect(body(EMPTY, null)).not.toContain('Studera aktier');
+    expect(body(EMPTY, undefined)).not.toContain('Studera aktier');
+    expect(body(EMPTY, false)).not.toContain('Studera aktier');
+  });
+
+  it('kommer inte tillbaka efter Nej eller Ja', () => {
+    expect(body(withData({ habit: { id: 'habit', answer: 'nej' } }), true)).not.toContain('Studera aktier');
+    expect(body(withData({ habit: { id: 'habit', answer: 'ja', habitId: 'h1' } }), true)).not.toContain('Studera aktier');
+  });
+
+  it('visas inte i en lektion, bara på startsidan', () => {
+    const html = renderToStaticMarkup(<AkademinBody data={EMPTY} failed={false} offerReady initialView={{ kind: 'journal' }} />);
+    expect(html).not.toContain('Vill du ha vanan');
+  });
+
+  it('answerOffer skickar svaret och rapporterar inget fel när det lyckas', async () => {
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const onError = vi.fn();
+    await answerOffer(false, answer, onError);
+    expect(answer).toHaveBeenCalledWith(false);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('answerOffer rapporterar ett misslyckat svar utan att kasta', async () => {
+    const onError = vi.fn();
+    await expect(answerOffer(true, () => Promise.reject(new Error('fel')), onError)).resolves.toBeUndefined();
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('ett misslyckat svar visar felet och lämnar kortet kvar', () => {
+    const html = renderToStaticMarkup(<HabitOffer initialFailed />);
+    expect(html).toContain('role="alert"');
+    expect(html).toContain('Det gick inte att spara svaret. Försök igen.');
+    expect(html).toMatch(/<button[^>]*>Ja<\/button>/);
+    expect(renderToStaticMarkup(<HabitOffer />)).not.toContain('role="alert"');
+  });
+});

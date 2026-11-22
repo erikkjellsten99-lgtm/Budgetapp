@@ -444,7 +444,8 @@ button.akademin-row:focus-visible,
   overflow-wrap: anywhere;
 }
 
-.akademin-companies {
+.akademin-companies,
+.akademin-pending {
   display: grid;
   gap: 1rem;
 }
@@ -514,7 +515,9 @@ button.akademin-row:focus-visible,
   resize: vertical;
 }
 
-.akademin-company-form input[aria-invalid='true'] {
+.akademin-company-form input[aria-invalid='true'],
+.akademin-company-form select[aria-invalid='true'],
+.akademin-company-form textarea[aria-invalid='true'] {
   border-color: var(--lingon);
 }
 
@@ -649,4 +652,43 @@ button.akademin-row:focus-visible,
 
 .akademin-reports > button {
   justify-self: start;
+}
+
+/* Beslutsdagboken */
+.akademin-pending {
+  gap: 0.6rem;
+  padding: 1rem;
+  border-left: 3px solid var(--pine);
+  border-radius: var(--radius-group);
+  background: var(--surface);
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.akademin-followup {
+  padding: 1rem;
+  border-left: 3px solid var(--pine);
+  border-radius: var(--radius-group);
+  background: var(--surface);
+}
+
+/* Frågan om vanan */
+.akademin-offer {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.akademin-offer-text {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.akademin-offer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.akademin-offer-actions button {
+  min-height: 2.75rem;
 }

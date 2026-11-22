@@ -228,14 +228,23 @@
   insikter i stället), och den verkliga kostnaden per batch.
 - Inte prövat: synken mot riktig Supabase (testat lokalt med blockerat nät) och på iPhone.
 
-## Akademin (läge i Kunskap, PR 1 av flera, 2026-11-20)
+## Akademin (läge i Kunskap, PR 1 till 3, 2026-11-20)
 - Fungerar: läget Akademin i Mindhub med startsida (Dagens lektion, Repetition, Kurser, Ordlista), sju lektioner i kurs 1
   med quiz, repetition av frågor (upp till 3 per dag) och sökbar ordlista. Framsteg och svar sparas i vanor-databasen
   och synkas privat, så allt fungerar utan nät efter första öppnandet.
 - Mina bolag finns (PR 2): bolagskort med tes och säljregler, och rapportmallen (en rapport per bolag, år och period,
   alla siffror valfria, förklaring per fält). Appen räknar rörelsemarginal och omsättningstillväxt och visar uträkningen,
-  eller varför den saknas. Inte kopplat än: vanan bockas inte av en sparad rapport, och inga lektionslänkar vid fälten.
-- Halvfärdigt: Beslutsdagbok visas som rad med texten kommer. Kurs 2 till 10 är bara planerade.
+  eller varför den saknas. Inte kopplat än: inga lektionslänkar vid fälten.
+- Beslutsdagboken finns (PR 3): inlägg med skäl och uppföljning, kopplade till bolag och affärer utan att något skrivs i
+  ekonomin.
+- Vanan Studera aktier (PR 3): Akademin frågar en gång (Ja eller Nej, frågan kommer inte tillbaka) och väntar, på en
+  inloggad telefon som aldrig hämtat kontots poster, tills de hämtats. En telefon utan nät, eller en som används utloggad
+  och loggar in senare, kan ändå skapa en andra vana. Ta då bort den ena under Vanor: den kvarvarande bockas (bockningen
+  hittar en aktiv vana som heter Studera aktier om den länkade är borta). På ett alldeles nytt konto utan sparade poster
+  visas frågan först efter att något sparats (samma beteende som Följ biblioteket i Kunskap). Vanan bockas för dagen när en lektion blir klar
+  (också en gammal som görs om), dagens sista repetitionsfråga besvarats, en rapport sparas eller ett dagboksinlägg
+  sparas. Bockningen går via vanornas vanliga funktioner och får aldrig få en sparning att misslyckas.
+- Halvfärdigt: kurs 2 till 10 är bara planerade.
 - Repetitionen: högst 3 frågor per dag (en fråga räknas när den repeterats, också vid fel svar). Raden, kortet Dagens
   lektion och repetitionen räknar likadant, dagen byter vid midnatt och när appen visas igen, och svar på frågor som
   inte finns i appens version (från en nyare telefon) hoppas över.
@@ -243,7 +252,8 @@
   den gamla koden som uppgraderas till version 7.
 - Kontrollerat i webbläsare på 375 px och 320 px, ljust och mörkt: startsidan, en lektion, quiz med fel svar och
   dubbeltryck, klart-läget, omladdning och dagsgränsen för repetition. Startsidan även på 1200 px.
-- Inte prövat: lektion och quiz på skrivbordsbredd, två riktiga telefoner, en riktig iPhone, offline-läsning efter
+- Inte prövat: lektion och quiz på skrivbordsbredd, två riktiga telefoner (lägg in ett bolag och en rapport på den ena, se
+  dem på den andra, och att bara en vana skapas), en riktig iPhone, offline-läsning efter
   uppdatering.
 - Regler för innehållet: `src/akademin/CLAUDE.md`. Ingen köp- eller säljsignal, inget anrop till Claude, inget skrivs i
   ekonomidatan.

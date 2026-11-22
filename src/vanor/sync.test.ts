@@ -200,6 +200,21 @@ describe('Akademin i vanor-synken', () => {
     expect(await b.store.loadAkademinRecords('akademin_answers')).toEqual([{ id: 'k1-01-q1', streak: 1, due: '2026-11-21', last: '2026-11-20' }]);
   });
 
+  it('svaret om vanan på telefon A gör att telefon B inte erbjuder den igen och pekar på A:s vana', async () => {
+    const a = await phone(new IDBFactory());
+    const aStore = await import('../akademin/akademinStore');
+    await aStore.answerHabitOffer(true);
+    const habitId = (await aStore.loadAkademin()).habit!.habitId!;
+    await a.sync.syncHabits();
+
+    // Telefon B startas efteråt: phone() nollställer modulerna, så akademinStore nedan läser B:s databas.
+    const b = await phone(new IDBFactory());
+    const bStore = await import('../akademin/akademinStore');
+    expect(await bStore.habitOfferReady()).toBe(false);
+    expect((await bStore.loadAkademin()).habit).toEqual({ id: 'habit', answer: 'ja', habitId });
+    expect((await b.store.loadHabitData()).habits.map((h) => h.id)).toEqual([habitId]);
+  });
+
   it('en telefon på den gamla koden får Akademins poster efter uppgraderingen, utan att lokala ändringar eller poster går förlorade', async () => {
     // Telefon A (ny kod) har vanor och en klar lektion, och skriver sedan mer, så att servern har rader efter Akademins.
     const a = await phone(new IDBFactory());

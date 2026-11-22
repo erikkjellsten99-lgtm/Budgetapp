@@ -1,7 +1,7 @@
 // Akademin: quiz och repetition. Rena funktioner, ingen I/O.
 import { addDays } from '../vanor/dates';
 import { questionById } from './kurser';
-import type { Answer, DateKey, PeriodType, Report } from './types';
+import type { Answer, DateKey, JournalEntry, JournalType, PeriodType, Report } from './types';
 
 export interface QuizState {
   /** Frågorna som återstår; den främsta är den aktuella. */
@@ -176,4 +176,16 @@ export function sortReports(reports: Report[]): Report[] {
     if (ya === null || yb === null) return ya === yb ? a.year.localeCompare(b.year, 'sv') : ya === null ? 1 : -1;
     return yb - ya || TYPE_RANK[b.type] - TYPE_RANK[a.type] || (a.type < b.type ? -1 : a.type > b.type ? 1 : 0);
   });
+}
+
+// Beslutsdagboken: när ett inlägg ska följas upp och vad typerna heter.
+
+/** Dagar från inläggets datum till att appen ber om en uppföljning. */
+export const FOLLOW_UP_DAYS = 90;
+
+export const JOURNAL_LABEL: Record<JournalType, string> = { kopte: 'Köpte', salde: 'Sålde', avstod: 'Avstod', annat: 'Annat' };
+
+/** Dag 90 räknas: sant från och med datum + 90 dagar, så länge uppföljning saknas. */
+export function needsFollowUp(entry: JournalEntry, today: DateKey): boolean {
+  return entry.followUp === undefined && today >= addDays(entry.date, FOLLOW_UP_DAYS);
 }
